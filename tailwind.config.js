@@ -14,6 +14,17 @@ export default {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+            boxShadow: {
+                // Sombra suave y amplia de la tarjeta principal
+                'medical-card': '0 22px 70px 4px rgba(0,0,0,0.06)',
+                // Sombra de resplandor para el botón
+                'medical-btn': '0 8px 30px rgb(37,99,235,0.2)',
+            },
+            ringWidth: {
+                // Soporte para ring-opacity (se usa en los inputs)
+                DEFAULT: '2px',
+                'ring-opacity': '0.5',
+            },
         },
     },
 
