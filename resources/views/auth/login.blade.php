@@ -14,17 +14,17 @@
         {{-- LOGO Y TITULO --}}
         <div class="text-center mb-10">
 
-            {{-- ICONO --}}
-           {{-- LOGO --}}
-<div class="flex justify-center mb-6">
+            {{-- LOGO --}}
+            <div class="flex justify-center mb-6">
 
-    <img
-        src="{{ asset('images/logo.png') }}"
-        alt="Logo Hospital"
-        class="w-32 h-32 object-contain drop-shadow-[0_0_35px_rgba(34,197,94,0.7)] animate-pulse"
-    >
+                <img
+                    src="{{ asset('images/logo.png') }}"
+                    alt="Logo Hospital"
+                    class="w-32 h-32 object-contain drop-shadow-[0_0_35px_rgba(34,197,94,0.7)] animate-pulse"
+                >
 
-</div>
+            </div>
+
             {{-- TITULO --}}
             <h1 class="text-6xl font-black text-white tracking-tight">
                 MEDICO - ONLINE
@@ -140,15 +140,16 @@
 
                 </div>
 
-                {{-- BOTON LOGIN --}}
-                
-                    Acceder al sistema
-              
-<div class="d-grid gap-2">
-  <button class="btn btn-warning text-2xl font-black text-white tracking-tight" type="button"> iniciar sesión</button>
+              {{-- BOTON LOGIN --}}
+<button
+    type="submit"
+    class="w-full py-4 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-lg shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:scale-[1.02] transition duration-300"
+>
 
-  
-</div>
+    Iniciar sesión
+
+</button>
+
             </form>
 
         </div>
