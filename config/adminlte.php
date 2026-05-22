@@ -420,7 +420,7 @@ return [
                 [
                 'text' => 'Inventario',
                 'icon' => 'fas fa-fw fa-pump-medical',
-                'url' => '#',
+                'url' => 'Medicamentos',
                 ],
                 [
                 'text' => 'Registrar Medicamento',
