@@ -4,13 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 use App\Models\Consulta;
 use App\Models\ConsultaTranscripcion;
-use App\Models\SintomaDetectado;
+
+
+use App\Services\IAClinicaService;
 
 class ConsultaIAController extends Controller
-{
+{   
+     protected $iaClinicaService;
+
+    /*
+    |--------------------------------------------------------------------------
+    | CONSTRUCTOR
+    |--------------------------------------------------------------------------
+    */
+
+    public function __construct(IAClinicaService $iaClinicaService){
+        $this->iaClinicaService = $iaClinicaService;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -52,11 +67,13 @@ class ConsultaIAController extends Controller
             $consulta -> motivo_consulta = 'Consulta Inteligente';
             $consulta -> estado = 'en_proceso';
             $consulta -> consulta_inteligente = 1;
+            $consulta->session_uuid = Str::uuid();
             $consulta -> save();
             return response()->json([
             'success' => true,
             'consulta_id' => $consulta->id,
-            'consulta_folio' => $consulta -> folio
+            'consulta_folio' => $consulta -> folio,
+            'session_uuid' => $consulta->session_uuid
         ]);
         }
 
@@ -64,33 +81,43 @@ class ConsultaIAController extends Controller
         $consulta = Consulta::find(
             $request->consulta_id
         );
+        
+        if(!$consulta){
+            return response()->json([
+                'success' => false,
+                'error' => 'Consulta no encontrada'
+            ]);
+        }
+
 
         /* ---------------Codigo para  guardar la transcripción en la tabla transcripcíón ----------- */
         if($request -> transcripcion){
             $transcripcion = new ConsultaTranscripcion();
             $transcripcion->consulta_id = $consulta->id;
-            $transcripcion-> consulta_folio = $consulta -> folio;
+            $transcripcion-> consulta_folio = $consulta->folio;
+            $transcripcion->session_uuid = $consulta->session_uuid;
             $transcripcion->mensaje = $request->transcripcion;
             $transcripcion->tipo_usuario = 'paciente';
             $transcripcion->save();
-        }
 
-        /* ---------------Codigo para  guardar los sintomas en la tabla sintomas ----------- */
-        if($request->sintomas){
-            foreach($request->sintomas as $sintoma){ /* El recorrido se hace porque no es un campo estatico es decir se tienen que recorrer varias filas */
-                $nuevoSintoma = new SintomaDetectado();
-                $nuevoSintoma->consulta_id = $consulta->id;
-                $nuevoSintoma -> consulta_folio = $consulta -> folio;
-                $nuevoSintoma->nombre_sintoma = $sintoma;
-                $nuevoSintoma->detectado_por_ia = 1;
-                $nuevoSintoma->save();
-            }
-        }
+             /*
+                |--------------------------------------------------------------------------
+                | ANALIZAR TRANSCRIPCIÓN CON IA
+                |--------------------------------------------------------------------------
+                */
+            $this->iaClinicaService ->analizarTranscripcion(
+                        $request->transcripcion,
+                        $consulta
+                    );
+            } 
+        
 
         /*Retornamos el JSON para finalizar y enviar todo a las tablas de la base de datos */
         return response()-> json([
-            'succes' => true,
-            'consulta_id' => $consulta->id
+            'success' => true,
+            'consulta_id' => $consulta->id,
+            'consulta_folio' => $consulta->folio,
+            'session_uuid' => $consulta->session_uuid
         ]);
         }catch(\Exception $e){
             return response()->json([
