@@ -5,6 +5,7 @@
 @section('content_header')
 
 <div class="d-flex justify-content-between align-items-center">
+    <input type="hidden" name="route" value="{{ url('/') }}">
     <div>
         <h1 class="font-weight-bold text-dark">
             TRIAGE Clínico
