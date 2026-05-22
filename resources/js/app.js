@@ -11,6 +11,13 @@ import ConsultaInteligente from './components/ConsultaInteligente.vue'
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
 const app = createApp({})
 
+import TRIAGE from './components/atencion-medica/AtencionMedica.vue'
+import EvaluacionIA from './components/atencion-medica/EvaluacionesIA.vue'
+
+
+const app = createApp({});
+
+
 app.component(
      'consulta-inteligente',
      ConsultaInteligente
@@ -24,8 +31,11 @@ app.component(
 app.mount('#app')
 
 import Alpine from 'alpinejs';
+
 window.Alpine = Alpine;
+
 Alpine.start();
 
-import axios from  'axios';
+import axios from 'axios';
+
 window.axios = axios;

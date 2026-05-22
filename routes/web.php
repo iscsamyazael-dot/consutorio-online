@@ -65,3 +65,26 @@ Route::get('Medicamentos',function(){
 
 
 require __DIR__.'/auth.php';
+
+
+
+
+Route::prefix('atencion-medica')->group(function () {
+
+    Route::get('/triage', function () {
+        return view('atencion-medica.triage');
+    });
+
+    Route::get('/evaluacion-ia', function () {
+        return view('atencion-medica.evaluacion-ia');
+    });
+
+    Route::get('/archivos-clinicos', function () {
+        return view('atencion-medica.archivos-clinicos');
+    });
+
+    Route::get('/derivaciones', function () {
+        return view('atencion-medica.derivaciones');
+    });
+
+});
