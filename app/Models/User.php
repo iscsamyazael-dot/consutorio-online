@@ -29,6 +29,11 @@ class User extends Authenticatable
          return $this->hasMany(Consulta::class);
     }
 
+    public function citas()
+    {
+         return $this->hasMany(Cita::class);
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *

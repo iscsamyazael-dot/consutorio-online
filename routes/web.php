@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ConsultaController;
+use App\Http\Controllers\CitaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MedicamentoController;
 use App\Http\Controllers\PacienteController;
@@ -27,6 +28,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::resource('pacientes', PacienteController::class);
+Route::resource('agenda', CitaController::class);
 Route::resource('consultas', ConsultaController::class);
 Route::resource('medicamentos', MedicamentoController::class);
 Route::resource('recetas', RecetaController::class);

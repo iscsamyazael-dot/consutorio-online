@@ -393,12 +393,12 @@ return [
                 [
                 'text' => 'Citas',
                 'icon' => 'fas fa-fw fa-calendar-check',
-                'url' => '#',
+                'url' => 'agenda',
                 ],
                 [
                 'text' => 'Programar cita',
                 'icon' => 'fas fa-fw fa-user-clock',
-                'url' => '#',
+                'url' => 'agenda/create',
                 ],
             ],
         ],
