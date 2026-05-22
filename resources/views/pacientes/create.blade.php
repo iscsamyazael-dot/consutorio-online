@@ -16,6 +16,9 @@
 
 @section('content') 
     {{-- Contenedor con padding extra abajo --}}
+    <div id="app">
+        <medicamentos-inventario></medicamentos-inventario>
+    </div>
     <div class="container-fluid pb-5">
         <div class="card shadow border-0 rounded-lg">
             
@@ -196,5 +199,6 @@
 @stop
 
 @section('js')
+     @vite('resources/js/app.js')
     <script> console.log('Alta de pacientes optimizada visualmente.'); </script>
 @stop

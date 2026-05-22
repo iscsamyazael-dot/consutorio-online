@@ -1,19 +1,26 @@
+console.log('APP JS CARGADO');
 
 import './bootstrap';
-import './medicamentosJs/receta.js';
+// import './medicamentosJs/receta.js';
 
 import 'bootstrap';
 import 'admin-lte';
 
 import { createApp } from 'vue';
 import ConsultaInteligente from './components/ConsultaInteligente.vue'
-
+import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
 const app = createApp({})
 
 app.component(
-    'consulta-inteligente',
-    ConsultaInteligente
-)
+     'consulta-inteligente',
+     ConsultaInteligente
+ );
+
+app.component(
+    'medicamentos-inventario',
+    medicamentos
+);
+
 app.mount('#app')
 
 import Alpine from 'alpinejs';

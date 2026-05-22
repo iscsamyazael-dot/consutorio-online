@@ -57,4 +57,11 @@ Route::get('ConsultaInteligente',function(){
           return view('consultas.consulta_inteligente');
 });
 
+//Código que lleva a la vita de medicamentos e inventario//
+Route::get('Medicamentos',function(){
+          return view('medicamentos.index');
+});
+
+
+
 require __DIR__.'/auth.php';
