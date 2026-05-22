@@ -6,7 +6,7 @@ import 'admin-lte';
 
 import { createApp } from 'vue';
 
-// import ConsultaInteligente from './components/ConsultaInteligente.vue'
+import ConsultaInteligente from './components/ConsultaInteligente.vue'
 
 import TRIAGE from './components/atencion-medica/AtencionMedica.vue'
 import EvaluacionIA from './components/atencion-medica/EvaluacionesIA.vue'
@@ -14,12 +14,12 @@ import EvaluacionIA from './components/atencion-medica/EvaluacionesIA.vue'
 
 const app = createApp({});
 
-/*
+
 app.component(
     'consulta-inteligente',
     ConsultaInteligente
 )
-*/
+
 
 app.component(
     'atencion-medica',
