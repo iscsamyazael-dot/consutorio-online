@@ -1,175 +1,149 @@
-<x-guest-layout>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar sesión - Consultorio Online IA</title>
 
-<div 
-    class="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-cover bg-center px-4 py-10"
-    style="background-image: url('/images/hospital.jpg');"
->
+    <link rel="stylesheet" href="{{ asset('css/adminlte.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-    {{-- OVERLAY OSCURO --}}
-    <div class="absolute inset-0 bg-black/70 backdrop-blur-[2px] z-0"></div>
+    <style>
+        body.login-page {
+            background:
+                linear-gradient(rgba(13,110,253,.85), rgba(0,123,255,.75)),
+                url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3');
+            background-size: cover;
+            background-position: center;
+        }
 
-    {{-- CONTENIDO --}}
-    <div class="w-full max-w-5xl relative z-10">
+        .login-box .card {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,.2);
+        }
 
-        {{-- LOGO Y TITULO --}}
-        <div class="text-center mb-10">
+        .form-control {
+            border-radius: 12px;
+        }
 
-            {{-- LOGO --}}
-            <div class="flex justify-center mb-6">
+        .btn-primary,
+        .btn-danger {
+            border-radius: 12px;
+            font-weight: bold;
+        }
 
-                <img
-                    src="{{ asset('images/logo.png') }}"
-                    alt="Logo Hospital"
-                    class="w-32 h-32 object-contain drop-shadow-[0_0_35px_rgba(34,197,94,0.7)] animate-pulse"
-                >
+        .medical-logo {
+            font-size: 70px;
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body class="login-page">
 
+<div class="login-box">
+    <div class="card">
+        <div class="card-body login-card-body">
+
+            <div class="text-center mb-4">
+                <i class="fas fa-hospital-user medical-logo"></i>
+                <h2 class="mt-3 font-weight-bold text-primary">Consultorio Online IA</h2>
+                <p class="text-muted">Plataforma Inteligente de Atención Médica</p>
             </div>
 
-            {{-- TITULO --}}
-            <h1 class="text-6xl font-black text-white tracking-tight">
-                MEDICO - ONLINE
-            </h1>
+            @if (session('status'))
+                <div class="alert alert-success" role="alert">{{ session('status') }}</div>
+            @endif
 
-            {{-- SUBTITULO --}}
-            <p class="text-yellow-300 uppercase tracking-[6px] mt-4 text-sm">
-                Plataforma tecnológica segura
-            </p>
+            @if ($errors->any())
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
-        </div>
-
-        {{-- FORMULARIO --}}
-        <div class="relative z-20 bg-white/10 backdrop-blur-2xl border border-green-400/20 rounded-[40px] shadow-2xl p-12 md:p-16">
-
-            <form method="POST" action="{{ route('login') }}" class="space-y-10">
-
+            <form method="POST" action="{{ route('login') }}">
                 @csrf
 
-                <div class="grid md:grid-cols-2 gap-8">
-
-                    {{-- EMAIL --}}
-                    <div>
-
-                        <label class="block text-sm font-semibold text-white mb-3">
-                            Usuario
-                        </label>
-
-                        <div class="relative">
-
-                            <span class="absolute left-0 pl-4 inset-y-0 flex items-center text-green-400 pointer-events-none">
-                                👤
-                            </span>
-
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                value="{{ old('email') }}"
-                                required
-                                autofocus
-                                placeholder="usuario@correo.com"
-                                class="w-full pl-12 pr-4 py-4 rounded-2xl bg-black/30 border border-green-400/30 text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-green-400/30 focus:border-green-400 transition duration-300"
-                            >
-
+                <div class="input-group mb-4">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text bg-primary text-white">
+                            <span class="fas fa-envelope"></span>
                         </div>
-
                     </div>
 
-                    {{-- PASSWORD --}}
-                    <div>
+                    <input
+                        type="email"
+                        name="email"
+                        value="{{ old('email') }}"
+                        class="form-control"
+                        placeholder="Correo Médico"
+                        required
+                        autofocus
+                        autocomplete="username"
+                    >
+                </div>
 
-                        <label class="block text-sm font-semibold text-white mb-3">
-                            Contraseña
-                        </label>
-
-                        <div class="relative">
-
-                            <span class="absolute left-0 pl-4 inset-y-0 flex items-center text-yellow-400 pointer-events-none">
-                                🔒
-                            </span>
-
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                required
-                                autocomplete="current-password"
-                                placeholder="••••••••"
-                                class="w-full pl-12 pr-14 py-4 rounded-2xl bg-black/30 border border-yellow-400/30 text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-yellow-400/30 focus:border-yellow-400 transition duration-300 relative z-50 pointer-events-auto"
-                            >
-
-                            {{-- BOTON VER PASSWORD --}}
-                            <button
-                                type="button"
-                                onclick="togglePassword()"
-                                class="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-300 z-50"
-                            >
-                                👁
-                            </button>
-
+                <div class="input-group mb-4">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text bg-primary text-white">
+                            <span class="fas fa-lock"></span>
                         </div>
-
                     </div>
 
+                    <input
+                        type="password"
+                        name="password"
+                        class="form-control"
+                        placeholder="Contraseña"
+                        required
+                        autocomplete="current-password"
+                    >
                 </div>
 
-                {{-- OPCIONES --}}
-                <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
+                <div class="row mb-3">
+                    <div class="col-8">
+                        <div class="icheck-primary">
+                            <input type="checkbox" id="remember" name="remember" {{ old('remember') ? 'checked' : '' }}>
+                            <label for="remember">Mantener sesión</label>
+                        </div>
+                    </div>
 
-                    <label class="text-slate-300 flex items-center gap-2">
-
-                        <input
-                            type="checkbox"
-                            name="remember"
-                            class="accent-green-500"
-                        >
-
-                        Mantener sesión activa
-
-                    </label>
-
-                    @if (Route::has('password.request'))
-
-                        <a
-                            href="{{ route('password.request') }}"
-                            class="text-red-400 hover:text-red-300 hover:underline"
-                        >
-                            Recuperar acceso
-                        </a>
-
-                    @endif
-
+                    <div class="col-4 text-right">
+                        @if (Route::has('password.request'))
+                            <a href="{{ route('password.request') }}" class="text-primary">¿Olvidaste tu contraseña?</a>
+                        @endif
+                    </div>
                 </div>
 
-              {{-- BOTON LOGIN --}}
-<button
-    type="submit"
-    class="w-full py-4 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-lg shadow-[0_0_30px_rgba(250,204,21,0.5)] hover:scale-[1.02] transition duration-300"
->
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Iniciar Sesión
+                </button>
 
-    Iniciar sesión
+                <hr>
 
-</button>
+                @if (Route::has('google.login'))
+                    <a href="{{ route('google.login') }}" class="btn btn-danger btn-block">
+                        <i class="fab fa-google"></i>
+                        Login con Google
+                    </a>
+                @endif
 
+                @if (Route::has('register'))
+                    <div class="text-center mt-3">
+                        <a href="{{ route('register') }}" class="text-primary">Crear cuenta médica</a>
+                    </div>
+                @endif
             </form>
 
         </div>
-
     </div>
-
 </div>
 
-{{-- SCRIPT --}}
-<script>
+</body>
+</html>
 
-    function togglePassword() {
-
-        const pass = document.getElementById('password');
-
-        pass.type = pass.type === 'password'
-            ? 'text'
-            : 'password';
-    }
-
-</script>
-
-</x-guest-layout>
