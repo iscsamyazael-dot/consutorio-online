@@ -9,6 +9,7 @@ import { createApp } from 'vue';
 // import ConsultaInteligente from './components/ConsultaInteligente.vue'
 
 import TRIAGE from './components/atencion-medica/AtencionMedica.vue'
+import EvaluacionIA from './components/atencion-medica/EvaluacionesIA.vue'
 
 
 const app = createApp({});
@@ -25,6 +26,10 @@ app.component(
     TRIAGE
 );
 
+app.component(
+    'atencion-medica-evaluacionia',
+    EvaluacionIA
+);
 
 
 app.mount('#app')

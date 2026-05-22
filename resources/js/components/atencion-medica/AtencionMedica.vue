@@ -25,6 +25,7 @@
     <!-- ========================================= -->
     <RecomendacionesIA></RecomendacionesIA>
    </div>
+   
     </template>
 
 <script>
