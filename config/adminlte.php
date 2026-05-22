@@ -367,22 +367,22 @@ return [
                 [
                 'text' => 'Triage',
                 'icon' => 'fas fa-fw fa-exclamation',
-                'url' => '/atencion-medica/triage',
+                'url' => 'TRIAGE',
                 ],
                 [
                 'text' => 'Evaluación IA',
                 'icon' => 'fas fa-fw fa-robot',
-                'url' => '/atencion-medica/evaluacion-ia',
+                'url' => 'EvaluacionIa',
                 ],
                 [
                 'text' => 'Archivos Clínicos',
                 'icon' => 'fas fa-fw fa-folder-open',
-                'url' => '/atencion-medica/archivos-clinicos',
+                'url' => 'ArchivosClinicos',
                 ],
                 [
                 'text' => 'Derivaciones',
                 'icon' => 'fas fa-fw fa-eye',
-                'url' => '/atencion-medica/derivaciones',
+                'url' => 'Derivaciones',
                 ],
             ],
         ],
