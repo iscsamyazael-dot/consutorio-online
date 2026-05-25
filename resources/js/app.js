@@ -10,6 +10,8 @@ import ConsultaInteligente from './components/ConsultaInteligente.vue'
 
 import TRIAGE from './components/atencion-medica/AtencionMedica.vue'
 import EvaluacionIA from './components/atencion-medica/EvaluacionesIA.vue'
+import ArchivosClinico from './components/atencion-medica/ArchivosClinicos.vue'
+import Derivacion from './components/atencion-medica/Derivaciones.vue'
 
 
 const app = createApp({});
@@ -30,6 +32,20 @@ app.component(
     'atencion-medica-evaluacionia',
     EvaluacionIA
 );
+
+app.component(
+    'atencion-medica-archivosclinicos',
+    ArchivosClinico
+);
+
+
+app.component(
+    'atencion-medica-derivaciones',
+    Derivacion
+);
+
+
+
 
 
 app.mount('#app')
