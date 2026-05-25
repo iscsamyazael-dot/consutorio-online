@@ -4,7 +4,7 @@
 
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center mb-3">
-        
+        <input type="hidden" name="route" value="{{ url('/') }}">
         <div>
             <h1 class="fw-bold text-dark mb-1">
                 <i class="fas fa-user-injured text-primary"></i>
@@ -80,7 +80,9 @@
         </div>
 
     </div>
-
+<div id="app">
+    <pacientes-index></pacientes-index>
+</div>
     {{-- CARD PRINCIPAL --}}
     <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
 
@@ -469,8 +471,11 @@ body{
 
 @stop
 
+
+
 @section('js')
 <script>
     console.log('Vista premium cargada');
 </script>
+@vite(['resources/css/app.css', 'resources/js/app.js'])
 @stop
