@@ -47,4 +47,7 @@ Route::view('HistorialConsulta', 'consultas.consultaIndividual');
 //Código que lleva a la consulta inteligente con el apoyo de la IA//
 Route::view('ConsultaInteligente', 'consultas.consulta_inteligente');
 
+Route::view('citas', 'agenda.citas')->middleware('auth');
+Route::view('programar-cita', 'agenda.programar_cita')->middleware('auth');
+
 require __DIR__.'/auth.php';
