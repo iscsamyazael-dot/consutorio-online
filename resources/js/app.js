@@ -7,16 +7,14 @@ import 'bootstrap';
 import 'admin-lte';
 
 import { createApp } from 'vue';
-import ConsultaInteligente from './components/ConsultaInteligente.vue'
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
-const app = createApp({})
-
+import ConsultaInteligente from './components/ConsultaInteligente.vue'
 import TRIAGE from './components/atencion-medica/AtencionMedica.vue'
 import EvaluacionIA from './components/atencion-medica/EvaluacionesIA.vue'
-
+import ArchivosClinico from './components/atencion-medica/ArchivosClinicos.vue'
+import Derivacion from './components/atencion-medica/Derivaciones.vue'
 
 const app = createApp({});
-
 
 app.component(
      'consulta-inteligente',
@@ -27,6 +25,30 @@ app.component(
     'medicamentos-inventario',
     medicamentos
 );
+
+app.component(
+    'atencion-medica-evaluacionia',
+    EvaluacionIA
+);
+
+app.component(
+    'atencion-medica-archivosclinicos',
+    ArchivosClinico
+);
+
+app.component(
+    'atencion-medica-derivaciones',
+    Derivacion
+);
+
+app.component(
+    'atencion-medica',
+     TRIAGE
+);
+
+
+
+
 
 app.mount('#app')
 

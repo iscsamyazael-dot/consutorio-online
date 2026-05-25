@@ -4,6 +4,7 @@
 
 @section('content_header')
 @section('content')
+<input type="hidden" name="route" value="{{ url('/') }}">
 <div id="app">
     <atencion-medica-evaluacionia></atencion-medica-evaluacionia>
 </div>
