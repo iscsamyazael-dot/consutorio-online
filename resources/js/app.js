@@ -2,6 +2,7 @@ console.log('APP JS CARGADO');
 
 import './bootstrap';
 // import './medicamentosJs/receta.js';
+//import './medicamentosJs/receta.js';
 
 import 'bootstrap';
 import 'admin-lte';
@@ -13,6 +14,7 @@ import TRIAGE from './components/atencion-medica/AtencionMedica.vue'
 import EvaluacionIA from './components/atencion-medica/EvaluacionesIA.vue'
 import ArchivosClinico from './components/atencion-medica/ArchivosClinicos.vue'
 import Derivacion from './components/atencion-medica/Derivaciones.vue'
+import PacientesIndex from './components/pasientes/pacientesindex.vue'
 
 const app = createApp({});
 
@@ -49,7 +51,15 @@ app.component(
 
 
 
-
+app.component(
+    'pacientes-index',
+    PacientesIndex
+);
+    
+app.component(
+    'consulta-inteligente',
+    ConsultaInteligente
+)
 app.mount('#app')
 
 import Alpine from 'alpinejs';
@@ -59,5 +69,7 @@ window.Alpine = Alpine;
 Alpine.start();
 
 import axios from 'axios';
-
 window.axios = axios;
+import axios from  'axios';
+window.axios = axios;
+

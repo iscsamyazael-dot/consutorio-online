@@ -344,15 +344,15 @@ return [
             'icon' => 'fas fa-fw fa-stethoscope',
              'submenu' =>[
                 [
-                'text' => 'Lista de consuta',
-                'icon' => 'fas fa-fw fa-receipt',
-                'url' => '#',
-                ],
+    'text' => 'Lista de consulta',
+    'url'  => 'consultas',
+    'icon' => 'fas fa-fw fa-notes-medical',
+],
                 [
-                'text' => 'Nueva consulta',
-                'icon' => 'fas fa-fw fa-book-medical',
-                'url' => '#',
-                ],
+    'text' => 'Nueva consulta',
+    'url'  => 'consultas/create',
+    'icon' => 'fas fa-plus-circle',
+],
                 [
                 'text' => 'Consulta Inteligente',
                 'icon' => 'fas fa-network-wired',
