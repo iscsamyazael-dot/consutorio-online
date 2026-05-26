@@ -71,7 +71,3 @@ Route::get('/consultas/create', function () {
     return view('consultas.create');
 });
 
-//ruta de nuevo paciente //
-Route::get('/pacientes/create', function () {
-    return view('pacientes.create');
-});

@@ -16,7 +16,7 @@
         </p>
     </div>
     
-    <div class="d-flex align-items-center gap-3">
+    <div class="d-flex align-items-center gap-3 header-actions">
         <div class="bg-white px-3 py-2 rounded-pill shadow-xs d-flex align-items-center gap-2 border border-light-subtle">
             <span class="live-dot"></span>
             <small class="fw-bold text-secondary text-uppercase tracking-wider" style="font-size: 0.75rem;">Sistema Activo</small>
@@ -381,7 +381,11 @@
 
                 </div>
                 <div class="modal-footer bg-light border-top-0 d-flex justify-content-end p-3 px-4 gap-2">
-                    <button type="button" class="btn btn-light border px-4 rounded-3 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button"
+class="btn btn-light border px-4 rounded-3 fw-bold"
+data-close-modal="expedientePacienteModal">
+    Cancelar
+</button>
                     <button type="submit" class="btn btn-success px-4 rounded-3 fw-bold d-flex align-items-center gap-2 btn-hover-transform">
                         <i class="fas fa-save"></i> Guardar e Inicializar Expediente
                     </button>
@@ -391,381 +395,1155 @@
     </div>
 </div>
 @stop
-
 @section('css')
+
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-    .content-wrapper-custom, .content-header {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
+/* =========================
+   FONDO GENERAL
+========================= */
+
+body,
+.content-wrapper,
+.wrapper,
+.content {
+    background: #f3f7fb !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* =========================
+   TITULOS
+========================= */
+
+.fw-black{
+    font-weight:800 !important;
+}
+
+.tracking-tight{
+    letter-spacing:-0.03em;
+}
+
+.tracking-wider{
+    letter-spacing:.08em;
+}
+
+/* =========================
+   CARDS PREMIUM
+========================= */
+
+.card{
+    border:none !important;
+    border-radius:24px !important;
+    overflow:hidden;
+    background:rgba(255,255,255,.92)!important;
+    backdrop-filter:blur(18px);
+    box-shadow:
+        0 10px 30px rgba(15,23,42,.05),
+        inset 0 1px 0 rgba(255,255,255,.6)!important;
+}
+
+.card-header{
+    background:transparent !important;
+    border:none !important;
+}
+
+/* =========================
+   STATS
+========================= */
+
+.modern-stat-card{
+    background:rgba(255,255,255,.95);
+    border-radius:24px;
+    overflow:hidden;
+    position:relative;
+    transition:.35s ease;
+    border:none !important;
+    box-shadow:
+        0 12px 24px rgba(0,0,0,.04);
+}
+
+.modern-stat-card:hover{
+    transform:translateY(-6px);
+    box-shadow:
+        0 20px 35px rgba(0,0,0,.08);
+}
+
+.card-body-custom{
+    padding:1.5rem;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.border-start-blue{
+    border-left:5px solid #3b82f6 !important;
+}
+
+.border-start-green{
+    border-left:5px solid #22c55e !important;
+}
+
+.border-start-orange{
+    border-left:5px solid #f59e0b !important;
+}
+
+.border-start-red{
+    border-left:5px solid #ef4444 !important;
+}
+
+/* =========================
+   ICONOS
+========================= */
+
+.stat-icon-box{
+    width:58px;
+    height:58px;
+    border-radius:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.3rem;
+}
+
+.bg-blue-soft{
+    background:rgba(59,130,246,.12)!important;
+}
+
+.bg-green-soft{
+    background:rgba(34,197,94,.12)!important;
+}
+
+.bg-orange-soft{
+    background:rgba(245,158,11,.12)!important;
+}
+
+.bg-red-soft{
+    background:rgba(239,68,68,.12)!important;
+}
+
+.text-blue{
+    color:#2563eb!important;
+}
+
+.text-green{
+    color:#16a34a!important;
+}
+
+.text-orange{
+    color:#d97706!important;
+}
+
+.text-red{
+    color:#dc2626!important;
+}
+
+/* =========================
+   AVATARS
+========================= */
+
+.avatar-premium{
+    width:55px!important;
+    height:55px!important;
+    border-radius:18px;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    box-shadow:0 10px 20px rgba(59,130,246,.25);
+}
+
+.avatar-premium i{
+    font-size:1.2rem!important;
+}
+
+.mini-avatar-premium{
+    width:42px!important;
+    height:42px!important;
+    border-radius:14px;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+}
+
+.mini-avatar-premium i{
+    font-size:1rem!important;
+}
+
+/* =========================
+   PANEL PACIENTE
+========================= */
+
+.patient-hero-card{
+    background:
+    linear-gradient(
+        135deg,
+        rgba(59,130,246,.08),
+        rgba(255,255,255,.9)
+    );
+    border:1px solid #e2e8f0;
+    border-radius:22px!important;
+}
+
+.panel-details-table td{
+    border-bottom:1px dashed #e5e7eb;
+    padding:.9rem 0!important;
+}
+
+/* =========================
+   BADGES
+========================= */
+
+.badge-premium{
+    padding:.6rem .9rem;
+    border-radius:12px;
+    font-weight:700;
+    letter-spacing:.03em;
+}
+
+/* =========================
+   TABLA
+========================= */
+
+.premium-table{
+    border-collapse:separate;
+    border-spacing:0 12px;
+}
+
+.premium-table thead th{
+    border:none!important;
+    font-size:.72rem!important;
+}
+
+.premium-row{
+    transition:.25s ease;
+}
+
+.premium-row td{
+    background:#fff!important;
+    border-top:1px solid #eef2f7!important;
+    border-bottom:1px solid #eef2f7!important;
+}
+
+.premium-row td:first-child{
+    border-left:1px solid #eef2f7!important;
+    border-top-left-radius:18px;
+    border-bottom-left-radius:18px;
+}
+
+.premium-row td:last-child{
+    border-right:1px solid #eef2f7!important;
+    border-top-right-radius:18px;
+    border-bottom-right-radius:18px;
+}
+
+.premium-row:hover{
+    transform:translateY(-2px);
+    box-shadow:0 10px 24px rgba(0,0,0,.06);
+}
+
+/* =========================
+   BOTONES
+========================= */
+
+.btn{
+    border-radius:14px!important;
+    font-weight:700!important;
+}
+
+.btn-primary{
+    border:none!important;
+    background:linear-gradient(
+        135deg,
+        #2563eb,
+        #3b82f6
+    )!important;
+
+    box-shadow:
+    0 10px 20px rgba(37,99,235,.25);
+}
+
+.btn-primary:hover{
+    transform:translateY(-2px);
+}
+
+.btn-icon-premium{
+    width:38px;
+    height:38px;
+    border:none;
+    border-radius:12px;
+    background:#f8fafc;
+    transition:.2s;
+}
+
+.btn-icon-premium:hover{
+    transform:scale(1.1);
+    background:#eef2ff;
+}
+
+/* =========================
+   MODALES
+========================= */
+
+.modal-content{
+    border:none!important;
+    border-radius:28px!important;
+    overflow:hidden;
+    background:rgba(255,255,255,.96)!important;
+    backdrop-filter:blur(20px);
+}
+
+.modal-header.bg-dark{
+    background:linear-gradient(
+        135deg,
+        #0f172a,
+        #1e293b
+    )!important;
+}
+
+.modal-header.bg-primary{
+    background:linear-gradient(
+        135deg,
+        #2563eb,
+        #3b82f6
+    )!important;
+}
+
+/* =========================
+   INPUTS
+========================= */
+
+.form-control,
+.input-group-text{
+    border-radius:14px!important;
+    border-color:#e2e8f0!important;
+    min-height:48px;
+}
+
+.form-control:focus{
+    border-color:#3b82f6!important;
+    box-shadow:
+    0 0 0 .2rem rgba(37,99,235,.12)!important;
+}
+
+/* =========================
+   DRAG ZONE
+========================= */
+
+.upload-drag-zone{
+    border:2px dashed #cbd5e1;
+    background:#f8fafc;
+    border-radius:22px;
+    transition:.25s ease;
+}
+
+.upload-drag-zone:hover{
+    border-color:#3b82f6;
+    background:#eff6ff;
+}
+
+/* =========================
+   LIVE DOT
+========================= */
+
+.live-dot{
+    width:10px;
+    height:10px;
+    background:#22c55e;
+    border-radius:999px;
+    animation:pulseDot 2s infinite;
+}
+
+@keyframes pulseDot{
+    0%{
+        box-shadow:0 0 0 0 rgba(34,197,94,.5);
+    }
+    70%{
+        box-shadow:0 0 0 10px rgba(34,197,94,0);
+    }
+    100%{
+        box-shadow:0 0 0 0 rgba(34,197,94,0);
+    }
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:768px){
+
+    .card{
+        border-radius:20px!important;
     }
 
-    .fw-black { font-weight: 800 !important; }
-    .tracking-tight { tracking: -0.025em; }
-    .tracking-wider { letter-spacing: 0.05em; }
-    .flex-grow-2 { flex-grow: 2 !important; }
-    .cursor-pointer { cursor: pointer; }
-    .extra-small { font-size: 0.75rem; }
-
-    .bg-primary-soft { background-color: rgba(13, 110, 253, 0.08) !important; }
-    .bg-success-soft { background-color: rgba(25, 135, 84, 0.08) !important; }
-    .bg-blue-soft { background-color: rgba(59, 130, 246, 0.1) !important; }
-    .text-blue { color: #2563eb !important; }
-    .bg-green-soft { background-color: rgba(34, 197, 94, 0.1) !important; }
-    .text-green { color: #16a34a !important; }
-    .bg-orange-soft { background-color: rgba(245, 158, 11, 0.1) !important; }
-    .text-orange { color: #d97706 !important; }
-    .bg-red-soft { background-color: rgba(239, 68, 68, 0.1) !important; }
-    .text-red { color: #dc2626 !important; }
-
-    .modern-stat-card {
-        background: #ffffff;
-        border: 1px solid #f1f5f9;
-        border-radius: 12px;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .modern-stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.04) !important;
-    }
-    .card-body-custom {
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .stat-icon-box {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-    }
-    .border-start-blue { border-left: 4px solid #3b82f6; }
-    .border-start-green { border-left: 4px solid #22c55e; }
-    .border-start-orange { border-left: 4px solid #f59e0b; }
-    .border-start-red { border-left: 4px solid #ef4444; }
-
-    .badge-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-    .patient-hero-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border: 1px solid #e2e8f0;
+    .modern-stat-card{
+        border-radius:20px;
     }
 
-    .avatar-premium {
-        width: 42px !important;
-        height: 42px !important;
-        border-radius: 10px;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+    .patient-hero-card{
+        flex-direction:column;
+        align-items:flex-start!important;
+        gap:1rem;
     }
-    .avatar-premium i {
-        font-size: 1.1rem !important;
-        line-height: 1 !important;
-        margin: 0 !important;
-        padding: 0 !important;
+}
+/* =========================
+   LAYOUT ESTABLE Y RESPONSIVE
+========================= */
+
+/* SIDEBAR */
+
+.main-sidebar{
+    position: fixed !important;
+    top: 0;
+    left: 0;
+
+    height: 100vh;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    z-index: 1035;
+}
+
+/* HEADER */
+
+.main-header{
+    position: sticky;
+    top: 0;
+
+    z-index: 1030;
+
+    background: rgba(255,255,255,.92) !important;
+
+    backdrop-filter: blur(10px);
+
+    border-bottom: 1px solid rgba(226,232,240,.7);
+}
+
+/* CONTENIDO */
+
+.content-wrapper{
+
+    margin-left: 250px !important;
+
+    min-height: 100vh;
+
+    overflow-x: hidden;
+
+    background: #f3f7fb !important;
+
+    padding-bottom: 30px;
+}
+
+/* ÁREA PRINCIPAL */
+
+.content{
+
+    padding-top: 1rem;
+
+    padding-bottom: 2rem;
+}
+
+/* TABLAS */
+
+.table-responsive{
+    overflow-x: auto;
+}
+
+/* MODALES */
+
+.modal{
+    z-index: 9999 !important;
+}
+
+/* EVITAR DESCUADRES */
+
+.row{
+    --bs-gutter-x: 1.5rem;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 991px){
+
+    .content-wrapper{
+        margin-left: 0 !important;
     }
 
-    .mini-avatar-premium {
-        width: 34px !important;
-        height: 34px !important;
-        border-radius: 8px;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    .mini-avatar-premium i {
-        font-size: 0.95rem !important;
-        line-height: 1 !important;
-        margin: 0 !important;
-        padding: 0 !important;
+    .main-sidebar{
+        position: fixed !important;
+        transform: translateX(-100%);
+        transition: .3s ease;
     }
 
-    #modal-avatar i {
-        font-size: 1.5rem !important;
+    .sidebar-open .main-sidebar{
+        transform: translateX(0);
     }
 
-    .badge-premium {
-        padding: 0.5rem 0.75rem;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.8rem;
-        display: inline-block;
-        text-align: center;
-    }
-    
-    .panel-details-table td {
-        font-size: 0.9rem;
+    .modern-stat-card{
+        margin-bottom: 1rem;
     }
 
-    .symptoms-alert {
-        background-color: rgba(220, 53, 69, 0.03);
-        border: 1px dashed rgba(220, 53, 69, 0.25);
+    .card-body-custom{
+        padding: 1.2rem;
     }
 
-    .premium-table th {
-        font-size: 0.75rem !important;
-        border-bottom: 1px solid #e2e8f0 !important;
-    }
-    .premium-row {
-        transition: background-color 0.2s ease;
-    }
-    .premium-row:hover {
-        background-color: #f8fafc !important;
-    }
-    
-    .btn-icon-premium {
-        background: transparent;
-        border: none;
-        padding: 0.4rem;
-        border-radius: 6px;
-        transition: all 0.2s;
-    }
-    .btn-icon-premium:hover {
-        background: #f1f5f9;
-        transform: scale(1.15);
+    .patient-hero-card{
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
     }
 
-    .btn-hover-transform {
-        transition: all 0.2s ease;
+    .table-responsive{
+        border-radius: 18px;
     }
-    .btn-hover-transform:hover {
-        transform: scale(1.02);
-    }
-    .live-dot {
-        width: 8px;
-        height: 8px;
-        background: #22c55e;
-        border-radius: 50%;
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
-        animation: pulseDot 2s infinite;
-    }
+}
 
-    /* ESTILO PREMIUM ZONA DRAG & DROP */
-    .upload-drag-zone {
-        border: 2px dashed #cbd5e1;
-        background-color: #f8fafc;
-        transition: all 0.2s ease;
-    }
-    .upload-drag-zone:hover {
-        border-color: #3b82f6;
-        background-color: rgba(59, 130, 246, 0.02);
-    }
+/* SCROLL PERSONALIZADO */
 
-    @keyframes pulseDot {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
-        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-    }
+::-webkit-scrollbar{
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-thumb{
+    background: rgba(5, 6, 8, 0.35);
+    border-radius: 20px;
+}
+
+::-webkit-scrollbar-track{
+    background: transparent;
+}
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-@stop
 
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+@stop
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    
-    // Configuración de Instancias de Modales
-    const modalDetalles = new bootstrap.Modal(document.getElementById('verPacienteModal'));
-    const modalExpediente = new bootstrap.Modal(document.getElementById('expedientePacienteModal'));
 
-    // Al dar clic en 'Expediente' del Panel Izquierdo
-    jQuery('.btn-expediente').on('click', function(){
-        const currentNombre = jQuery('#side-nombre').text();
-        const currentFolio = jQuery('#side-folio-code').text();
-        
-        abrirModalExpediente(currentNombre, currentFolio);
-    });
+    // =========================================
+    // ELEMENTOS
+    // =========================================
 
-    // Al dar clic en 'Abrir Expediente Completo' desde dentro del Modal 1
-    jQuery('#modal-btn-action').on('click', function() {
-        const nombre = document.getElementById('modal-nombre').innerText;
-        const rawFolio = document.getElementById('modal-folio').innerText;
-        const folio = rawFolio.replace('ID REGISTRO: ', '');
+    const modalDetalles =
+        document.getElementById('verPacienteModal');
 
-        modalDetalles.hide(); // Ocultamos el primero
-        abrirModalExpediente(nombre, folio); // Lanzamos el segundo
-    });
+    const modalExpediente =
+        document.getElementById('expedientePacienteModal');
 
-    // Función unificada para configurar y abrir el modal del expediente
-    function abrirModalExpediente(nombre, folio) {
-        document.getElementById('exp-modal-nombre').innerText = nombre;
-        document.getElementById('exp-modal-folio').innerText = folio;
-        
-        // Seteamos dinámicamente el action del form por si usas una ruta Laravel RESTful
-        document.getElementById('form-expediente-rapido').action = `{{ url('consultas') }}/${folio}/expediente`;
-        
-        // Limpiamos campos previos
-        document.getElementById('form-expediente-rapido').reset();
-        document.getElementById('preview-files-box').innerHTML = '';
+    // =========================================
+    // FUNCIONES MODAL PREMIUM
+    // =========================================
 
-        modalExpediente.show();
+    function abrirModal(modal){
+
+        modal.style.display = 'block';
+
+        setTimeout(() => {
+
+            modal.classList.add('show');
+
+        }, 10);
+
+        modal.setAttribute('aria-modal', 'true');
+
+        modal.removeAttribute('aria-hidden');
+
+        document.body.classList.add('modal-open');
+
+        document.body.style.overflow = 'hidden';
+
+        // BACKDROP
+
+        const backdrop = document.createElement('div');
+
+        backdrop.className =
+            'modal-backdrop fade show';
+
+        backdrop.id = 'custom-backdrop';
+
+        document.body.appendChild(backdrop);
     }
 
-    // Lector de Previsualización de Imágenes en tiempo real
-    document.getElementById('input-radiografias').addEventListener('change', function(e) {
-        const previewBox = document.getElementById('preview-files-box');
-        previewBox.innerHTML = ''; // Limpiar anteriores
-        
-        if (this.files) {
-            Array.from(this.files).forEach(file => {
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const div = document.createElement('div');
-                        div.className = "position-relative border rounded p-1 bg-light";
-                        div.style.width = "75px";
-                        div.style.height = "75px";
-                        div.innerHTML = `
-                            <img src="${event.target.result}" class="w-100 h-100 object-fit-cover rounded" style="object-fit: cover;">
-                            <span class="position-absolute top-0 end-0 badge bg-dark opacity-75 cursor-pointer rounded-circle m-1" onclick="this.parentElement.remove()" style="padding: 2px 5px; font-size:10px;">&times;</span>
-                        `;
-                        previewBox.appendChild(div);
-                    }
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-    });
+    function cerrarModal(modal){
 
-    // TRIGER MODAL DETALLES DESDE LA TABLA
-    jQuery('#tabla-consultas').on('click', '.btn-modal-trigger', function () {
-        const fila = jQuery(this).closest('tr');
-        cargarModalDesdeRow(fila);
-    });
+        modal.classList.remove('show');
 
-    jQuery('.btn-view-active').on('click', function() {
-        const dataActive = {
-            nombre: jQuery('#side-nombre').text(),
-            folio: jQuery('#side-folio-code').text(),
-            estado: jQuery('#side-estado').text().trim(),
-            triage: jQuery('#side-triage').text().trim(),
-            fecha: jQuery('#side-fecha').text(),
-            sintomas: jQuery('#side-sintomas').text().trim()
-        };
-        rellenarModal(dataActive);
-        modalDetalles.show();
-    });
+        setTimeout(() => {
 
-    function cargarModalDesdeRow(fila) {
-        const data = {
-            nombre: fila.data('nombre'),
-            folio: fila.data('folio'),
-            estado: fila.data('estado'),
-            triage: fila.data('triage'),
-            fecha: fila.data('fecha'),
-            sintomas: fila.data('sintomas')
-        };
-        rellenarModal(data);
-        modalDetalles.show();
+            modal.style.display = 'none';
+
+        }, 200);
+
+        modal.setAttribute('aria-hidden', 'true');
+
+        modal.removeAttribute('aria-modal');
+
+        document.body.classList.remove('modal-open');
+
+        document.body.style.overflow = '';
+
+        // ELIMINAR BACKDROP
+
+        document.querySelectorAll('.modal-backdrop')
+        .forEach(backdrop => {
+
+            backdrop.remove();
+
+        });
     }
 
-    function rellenarModal(data) {
-        document.getElementById('modal-nombre').innerText = data.nombre;
-        document.getElementById('modal-folio').innerText = `ID REGISTRO: ${data.folio}`;
-        document.getElementById('modal-fecha').innerText = data.fecha;
-        document.getElementById('modal-sintomas').innerText = data.sintomas;
+    // =========================================
+    // BOTONES CERRAR
+    // =========================================
 
-        const estadoContainer = document.getElementById('modal-estado-container');
-        if(data.estado.toLowerCase() === 'en consulta') {
-            estadoContainer.innerHTML = `<span class="badge badge-premium bg-success-soft text-success border border-success-subtle w-100 py-2">En consulta</span>`;
-        } else {
-            estadoContainer.innerHTML = `<span class="badge badge-premium bg-primary-soft text-primary border border-primary-subtle w-100 py-2">Esperando</span>`;
-        }
+    document.querySelectorAll('[data-close-modal]')
+    .forEach(btn => {
 
-        const triageContainer = document.getElementById('modal-triage-container');
-        if(data.triage.toLowerCase() === 'grave') {
-            triageContainer.innerHTML = `<span class="badge badge-premium bg-danger text-white w-100 py-2">Grave</span>`;
-        } else {
-            triageContainer.innerHTML = `<span class="badge badge-premium bg-light text-secondary border w-100 py-2">Normal</span>`;
-        }
-    }
+        btn.addEventListener('click', function(){
 
-    // CAMBIAR PACIENTE ACTIVO EN PANEL IZQUIERDO
-    jQuery('#tabla-consultas').on('click', '.btn-select-active', function() {
-        const fila = jQuery(this).closest('tr');
-        
-        const nombre = fila.data('nombre');
-        const diagnostico = fila.data('diagnostico');
-        const folio = fila.data('folio');
-        const estado = fila.data('estado');
-        const triage = fila.data('triage');
-        const fecha = fila.data('fecha');
-        const sintomas = fila.data('sintomas');
+            const target =
+                this.dataset.closeModal;
 
-        const panel = jQuery('#active-panel');
-        panel.addClass('animate__animated animate__fadeIn');
-        setTimeout(() => panel.removeClass('animate__animated animate__fadeIn'), 600);
+            cerrarModal(
+                document.getElementById(target)
+            );
 
-        jQuery('#side-nombre').text(nombre);
-        jQuery('#side-diagnostico').text(diagnostico);
-        jQuery('#side-folio-code').text(folio);
-        jQuery('#side-fecha').text(fecha);
-        jQuery('#side-sintomas').text(sintomas);
-        jQuery('#link-editar-panel').attr('href', `{{ url('consultas') }}/${folio}/edit`);
+        });
 
-        const sideEstado = jQuery('#side-estado');
-        sideEstado.text(estado);
-        if(estado.toLowerCase() === 'en consulta') {
-            sideEstado.removeClass('bg-primary-soft text-primary border-primary-subtle').addClass('bg-success-soft text-success border-success-subtle');
-        } else {
-            sideEstado.removeClass('bg-success-soft text-success border-success-subtle').addClass('bg-primary-soft text-primary border-primary-subtle');
-        }
-
-        const sideTriage = jQuery('#side-triage');
-        sideTriage.text(triage);
-        if(triage.toLowerCase() === 'grave') {
-            sideTriage.removeClass('bg-light text-secondary border').addClass('bg-danger text-white');
-        } else {
-            sideTriage.removeClass('bg-danger text-white').addClass('bg-light text-secondary border');
-        }
     });
 
-    // REMOVER REGISTROS
-    jQuery('#tabla-consultas').on('click', '.btn-delete-row', function() {
-        const fila = jQuery(this).closest('tr');
-        const triage = fila.data('triage').toLowerCase();
-        const estado = fila.data('estado').toLowerCase();
+    // =========================================
+    // BOTÓN X
+    // =========================================
 
-        if (confirm('¿Está seguro de remover a este paciente de la lista de espera?')) {
-            fila.addClass('animate__animated animate__fadeOutRight');
+    document.querySelectorAll('.btn-close')
+    .forEach(btn => {
+
+        btn.addEventListener('click', function(){
+
+            const modal =
+                this.closest('.modal');
+
+            cerrarModal(modal);
+
+        });
+
+    });
+
+    // =========================================
+    // CLICK FUERA DEL MODAL
+    // =========================================
+
+    document.querySelectorAll('.modal')
+    .forEach(modal => {
+
+        modal.addEventListener('click', function(e){
+
+            if(e.target === modal){
+
+                cerrarModal(modal);
+
+            }
+
+        });
+
+    });
+
+    // =========================================
+    // CAMBIAR PACIENTE ACTIVO
+    // =========================================
+
+    document.querySelectorAll('.btn-select-active')
+    .forEach(btn => {
+
+        btn.addEventListener('click', function(){
+
+            const fila =
+                this.closest('tr');
+
+            const nombre =
+                fila.dataset.nombre;
+
+            const diagnostico =
+                fila.dataset.diagnostico;
+
+            const folio =
+                fila.dataset.folio;
+
+            const estado =
+                fila.dataset.estado;
+
+            const triage =
+                fila.dataset.triage;
+
+            const fecha =
+                fila.dataset.fecha;
+
+            const sintomas =
+                fila.dataset.sintomas;
+
+            // PANEL
+
+            document.getElementById('side-nombre')
+            .innerText = nombre;
+
+            document.getElementById('side-diagnostico')
+            .innerText = diagnostico;
+
+            document.getElementById('side-folio-code')
+            .innerText = folio;
+
+            document.getElementById('side-fecha')
+            .innerText = fecha;
+
+            document.getElementById('side-sintomas')
+            .innerText = sintomas;
+
+            // ESTADO
+
+            const estadoPanel =
+                document.getElementById('side-estado');
+
+            estadoPanel.innerText = estado;
+
+            if(estado.toLowerCase() === 'en consulta'){
+
+                estadoPanel.className =
+                    'badge badge-premium bg-success-soft text-success border border-success-subtle';
+
+            }else{
+
+                estadoPanel.className =
+                    'badge badge-premium bg-primary-soft text-primary border border-primary-subtle';
+            }
+
+            // TRIAGE
+
+            const triagePanel =
+                document.getElementById('side-triage');
+
+            triagePanel.innerText = triage;
+
+            if(triage.toLowerCase() === 'grave'){
+
+                triagePanel.className =
+                    'badge badge-premium bg-danger text-white';
+
+            }else{
+
+                triagePanel.className =
+                    'badge badge-premium bg-light text-secondary border';
+            }
+
+            // ANIMACIÓN PANEL
+
+            const panel =
+                document.getElementById('active-panel');
+
+            panel.classList.add(
+                'animate__animated',
+                'animate__pulse'
+            );
+
             setTimeout(() => {
-                fila.remove();
-                recalcularContadores(triage, estado);
-            }, 500);
-        }
+
+                panel.classList.remove(
+                    'animate__animated',
+                    'animate__pulse'
+                );
+
+            }, 800);
+
+        });
+
     });
 
-    function recalcularContadores(triage, estado) {
-        let hoy = parseInt(jQuery('#stat-hoy').text());
-        if(hoy > 0) jQuery('#stat-hoy').text(hoy - 1);
+    // =========================================
+    // MODAL DETALLES
+    // =========================================
 
-        if(estado === 'en consulta') {
-            let activos = parseInt(jQuery('#stat-activos').text());
-            if(activos > 0) jQuery('#stat-activos').text(activos - 1);
-        } else if(estado === 'esperando') {
-            let pendientes = parseInt(jQuery('#stat-pendientes').text());
-            if(pendientes > 0) jQuery('#stat-pendientes').text(pendientes - 1);
-        }
+    document.querySelectorAll('.btn-modal-trigger')
+    .forEach(btn => {
 
-        if(triage === 'grave') {
-            let urgencias = parseInt(jQuery('#stat-urgencias').text());
-            if(urgencias > 0) jQuery('#stat-urgencias').text(urgencias - 1);
-        }
+        btn.addEventListener('click', function(){
 
-        const numeroFilas = jQuery('#tabla-consultas tbody tr').length;
-        jQuery('#total-badge').text(`${numeroFilas} Pacientes`);
+            const fila =
+                this.closest('tr');
+
+            cargarModal(fila);
+
+            abrirModal(modalDetalles);
+
+        });
+
+    });
+
+    function cargarModal(fila){
+
+        const nombre =
+            fila.dataset.nombre;
+
+        const folio =
+            fila.dataset.folio;
+
+        const estado =
+            fila.dataset.estado;
+
+        const triage =
+            fila.dataset.triage;
+
+        const fecha =
+            fila.dataset.fecha;
+
+        const sintomas =
+            fila.dataset.sintomas;
+
+        document.getElementById('modal-nombre')
+        .innerText = nombre;
+
+        document.getElementById('modal-folio')
+        .innerText = 'ID REGISTRO: ' + folio;
+
+        document.getElementById('modal-fecha')
+        .innerText = fecha;
+
+        document.getElementById('modal-sintomas')
+        .innerText = sintomas;
+
+        // ESTADO
+
+        const estadoContainer =
+            document.getElementById(
+                'modal-estado-container'
+            );
+
+        estadoContainer.innerHTML =
+            estado.toLowerCase() === 'en consulta'
+            ?
+            `<span class="badge badge-premium bg-success-soft text-success border border-success-subtle w-100">
+                En consulta
+            </span>`
+            :
+            `<span class="badge badge-premium bg-primary-soft text-primary border border-primary-subtle w-100">
+                Esperando
+            </span>`;
+
+        // TRIAGE
+
+        const triageContainer =
+            document.getElementById(
+                'modal-triage-container'
+            );
+
+        triageContainer.innerHTML =
+            triage.toLowerCase() === 'grave'
+            ?
+            `<span class="badge badge-premium bg-danger text-white w-100">
+                Grave
+            </span>`
+            :
+            `<span class="badge badge-premium bg-light text-secondary border w-100">
+                Normal
+            </span>`;
     }
+
+    // =========================================
+    // VER DETALLE PANEL
+    // =========================================
+
+    document.querySelector('.btn-view-active')
+    .addEventListener('click', function(){
+
+        document.getElementById('modal-nombre')
+        .innerText =
+            document.getElementById('side-nombre')
+            .innerText;
+
+        document.getElementById('modal-folio')
+        .innerText =
+            'ID REGISTRO: ' +
+            document.getElementById('side-folio-code')
+            .innerText;
+
+        document.getElementById('modal-fecha')
+        .innerText =
+            document.getElementById('side-fecha')
+            .innerText;
+
+        document.getElementById('modal-sintomas')
+        .innerText =
+            document.getElementById('side-sintomas')
+            .innerText;
+
+        abrirModal(modalDetalles);
+
+    });
+
+    // =========================================
+    // EXPEDIENTE
+    // =========================================
+
+    document.querySelector('.btn-expediente')
+    .addEventListener('click', function(){
+
+        const nombre =
+            document.getElementById('side-nombre')
+            .innerText;
+
+        const folio =
+            document.getElementById('side-folio-code')
+            .innerText;
+
+        abrirExpediente(nombre, folio);
+
+    });
+
+    document.getElementById('modal-btn-action')
+    .addEventListener('click', function(){
+
+        const nombre =
+            document.getElementById('modal-nombre')
+            .innerText;
+
+        const folio =
+            document.getElementById('modal-folio')
+            .innerText
+            .replace('ID REGISTRO: ', '');
+
+        cerrarModal(modalDetalles);
+
+        abrirExpediente(nombre, folio);
+
+    });
+
+    function abrirExpediente(nombre, folio){
+
+        document.getElementById('exp-modal-nombre')
+        .innerText = nombre;
+
+        document.getElementById('exp-modal-folio')
+        .innerText = folio;
+
+        document.getElementById('form-expediente-rapido')
+        .reset();
+
+        document.getElementById('preview-files-box')
+        .innerHTML = '';
+
+        abrirModal(modalExpediente);
+
+    }
+
+    // =========================================
+    // PREVIEW IMÁGENES
+    // =========================================
+
+    document.getElementById('input-radiografias')
+    .addEventListener('change', function(){
+
+        const preview =
+            document.getElementById(
+                'preview-files-box'
+            );
+
+        preview.innerHTML = '';
+
+        Array.from(this.files).forEach(file => {
+
+            if(file.type.startsWith('image/')){
+
+                const reader =
+                    new FileReader();
+
+                reader.onload = function(e){
+
+                    const div =
+                        document.createElement('div');
+
+                    div.className =
+                        'preview-image';
+
+                    div.innerHTML = `
+                        <img src="${e.target.result}"
+                             style="
+                                width:90px;
+                                height:90px;
+                                object-fit:cover;
+                                border-radius:14px;
+                                border:2px solid #e2e8f0;
+                             ">
+
+                        <button type="button"
+                                class="remove-preview btn btn-sm btn-danger"
+                                style="
+                                    position:absolute;
+                                    top:-8px;
+                                    right:-8px;
+                                    border-radius:50%;
+                                    width:24px;
+                                    height:24px;
+                                    padding:0;
+                                ">
+                            ×
+                        </button>
+                    `;
+
+                    div.style.position = 'relative';
+
+                    div.querySelector('button')
+                    .addEventListener('click', function(){
+
+                        div.remove();
+
+                    });
+
+                    preview.appendChild(div);
+
+                }
+
+                reader.readAsDataURL(file);
+
+            }
+
+        });
+
+    });
+
+    // =========================================
+    // ELIMINAR FILA
+    // =========================================
+
+    document.querySelectorAll('.btn-delete-row')
+    .forEach(btn => {
+
+        btn.addEventListener('click', function(){
+
+            const fila =
+                this.closest('tr');
+
+            const triage =
+                fila.dataset.triage.toLowerCase();
+
+            const estado =
+                fila.dataset.estado.toLowerCase();
+
+            if(confirm('¿Deseas eliminar este paciente?')){
+
+                fila.style.transition =
+                    '.3s ease';
+
+                fila.style.opacity = '0';
+
+                fila.style.transform =
+                    'translateX(120px)';
+
+                setTimeout(() => {
+
+                    fila.remove();
+
+                    actualizarContadores(
+                        triage,
+                        estado
+                    );
+
+                }, 300);
+
+            }
+
+        });
+
+    });
+
+    // =========================================
+    // CONTADORES
+    // =========================================
+
+    function actualizarContadores(
+        triage,
+        estado
+    ){
+
+        let hoy =
+            parseInt(
+                document.getElementById(
+                    'stat-hoy'
+                ).innerText
+            );
+
+        if(hoy > 0){
+
+            document.getElementById(
+                'stat-hoy'
+            ).innerText = hoy - 1;
+        }
+
+        if(estado === 'en consulta'){
+
+            let activos =
+                parseInt(
+                    document.getElementById(
+                        'stat-activos'
+                    ).innerText
+                );
+
+            if(activos > 0){
+
+                document.getElementById(
+                    'stat-activos'
+                ).innerText = activos - 1;
+            }
+
+        }else{
+
+            let pendientes =
+                parseInt(
+                    document.getElementById(
+                        'stat-pendientes'
+                    ).innerText
+                );
+
+            if(pendientes > 0){
+
+                document.getElementById(
+                    'stat-pendientes'
+                ).innerText = pendientes - 1;
+            }
+        }
+
+        if(triage === 'grave'){
+
+            let urgencias =
+                parseInt(
+                    document.getElementById(
+                        'stat-urgencias'
+                    ).innerText
+                );
+
+            if(urgencias > 0){
+
+                document.getElementById(
+                    'stat-urgencias'
+                ).innerText = urgencias - 1;
+            }
+        }
+
+        const total =
+            document.querySelectorAll(
+                '#tabla-consultas tbody tr'
+            ).length;
+
+        document.getElementById(
+            'total-badge'
+        ).innerText =
+            total + ' Pacientes';
+    }
+
 });
 </script>
+
 @stop
