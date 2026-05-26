@@ -1,5 +1,9 @@
 <template>
     <!-- ========================================= -->
+    <!-- ACCCIONES DEL MÉNU DE LOS MEDICAMENTOS -->
+    <!-- ========================================= -->
+     <acciones_botones></acciones_botones>
+    <!-- ========================================= -->
     <!-- KPI CARDS -->
     <!-- ========================================= -->
      <kpicards></kpicards>
@@ -11,7 +15,7 @@
     <!-- INVENTARIO MEDICAMENTOS -->
     <!-- ========================================= -->
      <inventario></inventario>
-     <h1>hola mundo</h1>
+     
 </template>
 <script>
     import kpicards
@@ -20,13 +24,15 @@
     from './alertas.vue'
     import inventario
     from './TablaMedicamentos.vue'
+    import acciones_botones from './accionesMedicamento.vue'
     
     export default {
 
         components: {
             kpicards,
             alertas,
-            inventario
+            inventario,
+            acciones_botones
         },
         data(){ 
             return{}
