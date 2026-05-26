@@ -8,8 +8,20 @@ import 'admin-lte';
 import { createApp } from 'vue';
 import ConsultaInteligente from './components/ConsultaInteligente.vue'
 import PacientesIndex from './components/pasientes/pacientesindex.vue'
+import NuevaConsultaComponent from './components/NuevaConsulta.vue'; // Ajusta la ruta de tu archivo .vue
+import NuevaConsultaComponent from './components/NuevaConsulta.vue';
 
 const app = createApp({})
+
+app.component(
+    'nueva-consulta',
+    NuevaConsultaComponent
+)
+
+app.component(
+    'nueva-consulta',
+    NuevaConsultaComponent
+)
 
 app.component(
     'pacientes-index',

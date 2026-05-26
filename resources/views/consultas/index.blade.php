@@ -27,7 +27,7 @@
     </div>
 </div>
 @stop
-
+<input type="hidden" name="route" value="{{ url('/') }}">
 @section('content')
 <div class="container-fluid content-wrapper-custom">
 

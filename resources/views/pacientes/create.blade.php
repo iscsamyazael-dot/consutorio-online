@@ -7,7 +7,7 @@
     <div>
         <h1>
             <i class="fas fa-heartbeat heartbeat-icon"></i>
-            Nueva Consulta Médica
+            REGISTRO DE NUEVO PACIENTE
         </h1>
         <p>
             Plataforma clínica inteligente • Sistema Hospitalario Premium
