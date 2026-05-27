@@ -1,6 +1,7 @@
 <template>
-    <div>
-        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+    <div class="mt-4">
+        <!-- SE AGREGÓ bg-white PARA CUMPLIR CON EL ESTILO DE ADMINLTE Y LEVANTAR LA SOMBRA -->
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white">
 
             <div class="card-header bg-white border-0 py-3">
                 <div class="search-box">
@@ -84,11 +85,11 @@
                                     </a>
 
                                     <button type="button"
-        class="btn btn-danger btn-sm action-btn"
-        data-bs-toggle="modal"
-        data-bs-target="#eliminarpacienteModal">
-    <i class="fas fa-trash"></i>
-</button>
+                                            class="btn btn-danger btn-sm action-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#eliminarpacienteModal">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
 
                                 </div>
                             </td>
@@ -99,6 +100,7 @@
 
         </div>
 
+        <!-- MODAL EDITAR -->
         <div class="modal fade" id="editarpacienteModal" tabindex="-1">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content border-0 rounded-4 overflow-hidden">
@@ -108,7 +110,6 @@
                             <i class="fas fa-edit"></i>
                             Editar Paciente
                         </h5>
-
                         <button type="button"
                                 class="btn-close"
                                 data-bs-dismiss="modal"></button>
@@ -155,7 +156,6 @@
                                         data-bs-dismiss="modal">
                                     Cancelar
                                 </button>
-
                                 <button type="button"
                                         class="btn btn-warning">
                                     Guardar cambios

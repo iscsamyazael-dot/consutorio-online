@@ -1,4 +1,3 @@
-
 import './bootstrap';
 //import './medicamentosJs/receta.js';
 
@@ -6,28 +5,30 @@ import 'bootstrap';
 import 'admin-lte';
 
 import { createApp } from 'vue';
-import ConsultaInteligente from './components/ConsultaInteligente.vue'
-import PacientesIndex from './components/pasientes/pacientesindex.vue'
-import crearteConsulta from './components/consultas/CrearConsulta.vue'
-import NuevaConsultaComponent from './components/NuevaConsulta.vue';
-import IndexConsultas from './components/consultas/IndexConsultas.vue'
 
-const app = createApp({})
+// 1. IMPORTACIONES (Verifica que las rutas y mayúsculas coincidan con tus archivos reales)
+import ConsultaInteligente from './components/ConsultaInteligente.vue';
+import PacientesIndex from './components/pasientes/pacientesIndex.vue';
+import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- Corregida 'C' mayúscula
+import IndexConsultas from './components/consultas/IndexConsultas.vue';
+import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
 
+const app = createApp({});
+
+// 2. REGISTRO DE COMPONENTES
 app.component(
     'index-consultas',
     IndexConsultas
 );
 
 app.component(
-    'crearte-consulta',
-    crearteConsulta
+    'crear-consulta',
+    CreateConsulta // <-- Corregido para que coincida exactamente con la importación de arriba
 );
-
 
 app.component(
     'nueva-consulta',
-    NuevaConsultaComponent
+    NuevaConsulta // <-- Corregido para usar la variable importada
 );
 
 app.component(
@@ -35,18 +36,18 @@ app.component(
     PacientesIndex
 );
 
-
 app.component(
     'consulta-inteligente',
     ConsultaInteligente
 );
 
-app.mount('#app')
+// 3. MONTAJE DE LA APP
+app.mount('#app');
 
+// 4. OTROS COMPLEMENTOS
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 Alpine.start();
 
-import axios from  'axios';
+import axios from 'axios';
 window.axios = axios;
-

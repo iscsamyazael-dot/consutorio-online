@@ -1,29 +1,24 @@
 <template>
-    <div class="container-fluid main-wrapper">
 
-        <div class="row g-4">
+    <div class="col-lg-4">
 
-            <div class="col-lg-4">
-                <SidebarConsulta />
-            </div>
+       <SidebarConsulta></SidebarConsulta>
 
-            <div class="col-lg-8">
+    </div>
 
-                <div class="form-scroll">
+    <div class="col-lg-8">
 
-                    <div class="card main-card border-0">
+        <div class="form-scroll">
 
-                        <div class="card-body p-5">
+            <div class="card main-card border-0">
 
-                            <PacienteForm />
+                <div class="card-body p-5">
 
-                            <EvaluacionClinica />
+                    <PacienteForm></PacienteForm>
 
-                            <ActionButtons />
+                    <EvaluacionClinica></EvaluacionClinica>
 
-                        </div>
-
-                    </div>
+                    <ActionButtons></ActionButtons>
 
                 </div>
 
@@ -32,11 +27,22 @@
         </div>
 
     </div>
+
 </template>
 
-<script setup>
-import SidebarConsulta from '../../components/consultas/SidebarConsulta.vue'
-import PacienteForm from '../../components/consultas/PacienteForm.vue'
-import EvaluacionClinica from '../../components/consultas/EvaluacionClinica.vue'
-import ActionButtons from '../../components/consultas/ActionButtons.vue'
+<script>
+// Rutas corregidas: Salen de 'consultas' usando '../' y entran a 'layouts'
+import SidebarConsulta from '../layouts/SidebarConsulta.vue'
+import PacienteForm from '../layouts/PacienteForm.vue'
+import EvaluacionClinica from '../layouts/EvaluacionClinica.vue'
+import ActionButtons from '../layouts/ActionButtons.vue'
+
+export default {
+    components: {
+        SidebarConsulta,
+        PacienteForm,
+        EvaluacionClinica,
+        ActionButtons
+    }
+}
 </script>

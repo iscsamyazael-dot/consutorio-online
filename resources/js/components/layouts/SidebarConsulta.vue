@@ -21,11 +21,9 @@
 
         </div>
 
-        <InfoCard />
-
-    </div>
+        </div>
 </template>
 
 <script setup>
-import InfoCard from './InfoCard.vue'
+// Se limpió la importación de InfoCard que causaba el error
 </script>
