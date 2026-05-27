@@ -27,8 +27,8 @@
                         <i class="fas fa-exclamation-triangle"></i>
                             Alertas
                     </button>
-                    <button class="btn btn-warning text-dark"  @click="$emit('cambiarVista', 'inventario')">
-                        <i class="fas fa-exclamation-triangle"></i>
+                    <button class="btn btn-primary"  @click="$emit('cambiarVista', 'inventario')">
+                        <i class="fas fa-warehouse"></i>
                             Inventario
                     </button>
                 </div>

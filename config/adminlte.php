@@ -422,11 +422,11 @@ return [
                 'icon' => 'fas fa-fw fa-pump-medical',
                 'url' => 'Medicamentos',
                 ],
-                [
-                'text' => 'Registrar Medicamento',
-                'icon' => 'fas fa-fw fa-cart-plus',
-                'url' => '#',
-                ],
+                // [
+                // 'text' => 'Registrar Medicamento',
+                // 'icon' => 'fas fa-fw fa-cart-plus',
+                // 'url' => '#',
+                // ],
             ],
         ],
         ['header'=> 'CONFIGURACIÓN MÉDICA'],
