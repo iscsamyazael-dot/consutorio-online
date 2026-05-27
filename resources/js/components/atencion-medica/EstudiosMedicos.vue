@@ -20,78 +20,59 @@
     <i class="fas fa-file-medical me-2"></i>
             Subir Archivo
         </button>
-
     </div>
 </div>
 </div>
 
 <div class="row">
     <div class="col">
-
             <div class="card shadow-lg">
-
     <div class="card-header bg-success text-white">
-
         <h5 class="mb-0">
             Estudios Médicos
         </h5>
-
     </div>
 
+
     <div class="card-body table-responsive">
-
         <table class="table table-hover table-bordered">
-
             <thead class="bg-light">
-
                 <tr>
-
                     <th>Paciente</th>
                     <th>Tipo</th>
                     <th>Fecha</th>
                     <th>Estado</th>
                     <th>Archivo</th>
-
                 </tr>
-
             </thead>
-
             <tbody>
-
                 <tr>
-
                     <td>María López</td>
                     <td>Radiografía</td>
                     <td>20/05/2026</td>
-
                     <td>
-
                         <span class="badge badge-success">
                             Procesado
                         </span>
-
                     </td>
-
                     <td>
-
-                        <button class="btn btn-primary btn-sm">
-
+                        <button class="btn btn-sm btn-info"
+                            @click="verArchivoClinico({
+                                paciente: 'Juan Pérez',
+                                tipo: 'Radiografía',
+                                fecha: '2026-05-27',
+                                estado: 'Completado',
+                                archivo: 'radiografia_torax.pdf'
+                            })" 
+                            >
                             <i class="fas fa-file-medical"></i>
-
                         </button>
-
                     </td>
-
                 </tr>
-
             </tbody>
-
         </table>
-
     </div>
-
 </div>
-
     </div>
 </div>
 
@@ -556,14 +537,248 @@ MODAL ARCHIVO CLINICO
 </div>
 
 
+<!-- =========================================
+MODAL VER ARCHIVO CLINICO
+========================================= -->
+
+<div
+    v-if="modalArchivoClinico"
+    class="modal fade show d-block"
+    tabindex="-1"
+    style="
+        background: rgba(15,23,42,.75);
+        backdrop-filter: blur(6px);
+    "
+>
+
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+
+        <div
+            class="modal-content border-0 rounded-5 overflow-hidden shadow-lg"
+        >
+
+            <!-- HEADER -->
+
+            <div
+                class="p-4 text-white"
+                style="
+                    background:
+                    linear-gradient(
+                        135deg,
+                        #7c3aed,
+                        #a855f7
+                    );
+                "
+            >
+
+                <div
+                    class="d-flex justify-content-between align-items-center"
+                >
+
+                    <div class="d-flex align-items-center">
+
+                        <div
+                            class="rounded-circle d-flex justify-content-center align-items-center me-4"
+                            style="
+                                width:80px;
+                                height:80px;
+                                background:rgba(255,255,255,.2);
+                            "
+                        >
+
+                            <i
+                                class="fas fa-file-medical"
+                                style="font-size:35px;"
+                            ></i>
+
+                        </div>
+
+                        <div>
+
+                            <h2 class="fw-bold mb-1">
+
+                                Archivo Clínico
+
+                            </h2>
+
+                            <p class="mb-0 opacity-75">
+
+                                Información del expediente médico
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <button
+                        class="btn btn-light rounded-circle"
+                        @click="modalArchivoClinico = false"
+                    >
+
+                        <i class="fas fa-times"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- BODY -->
+
+            <div
+                class="modal-body p-5"
+                style="background:#f1f5f9;"
+            >
+
+                <div class="row">
+
+                    <div class="col-md-6 mb-4">
+
+                        <div class="bg-white rounded-4 shadow-sm p-4">
+
+                            <small class="text-muted">
+
+                                <i class="fas fa-user me-2 text-primary"></i>
+
+                                Paciente
+
+                            </small>
+
+                            <h5 class="fw-bold mt-3">
+
+                                {{ archivoSeleccionado.paciente }}
+
+                            </h5>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+
+                        <div class="bg-white rounded-4 shadow-sm p-4">
+
+                            <small class="text-muted">
+
+                                <i class="fas fa-folder-open me-2 text-warning"></i>
+
+                                Tipo Archivo
+
+                            </small>
+
+                            <h5 class="fw-bold mt-3">
+
+                                {{ archivoSeleccionado.tipo }}
+
+                            </h5>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+
+                        <div class="bg-white rounded-4 shadow-sm p-4">
+
+                            <small class="text-muted">
+
+                                <i class="fas fa-calendar me-2 text-info"></i>
+
+                                Fecha
+
+                            </small>
+
+                            <h5 class="fw-bold mt-3">
+
+                                {{ archivoSeleccionado.fecha }}
+
+                            </h5>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-6 mb-4">
+
+                        <div class="bg-white rounded-4 shadow-sm p-4">
+
+                            <small class="text-muted">
+
+                                <i class="fas fa-check-circle me-2 text-success"></i>
+
+                                Estado
+
+                            </small>
+
+                            <h5 class="fw-bold mt-3">
+
+                                {{ archivoSeleccionado.estado }}
+
+                            </h5>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-12">
+
+                        <div
+                            class="bg-white rounded-4 shadow-sm p-5 text-center"
+                        >
+
+                            <i
+                                class="fas fa-file-pdf text-danger mb-3"
+                                style="font-size:70px;"
+                            ></i>
+
+                            <h5 class="fw-bold">
+
+                                {{ archivoSeleccionado.archivo }}
+
+                            </h5>
+
+                            <button
+                                class="btn btn-primary rounded-pill px-4 mt-4"
+                            >
+
+                                <i class="fas fa-eye me-2"></i>
+
+                                Visualizar Archivo
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
 </template>
 
 <script>
+
 export default {
 
     data() {
 
         return {
+
+            // =====================================
+            // FORMULARIO ARCHIVO CLINICO
+            // =====================================
 
             archivo: {
 
@@ -575,7 +790,15 @@ export default {
 
                 estado: ''
 
-            }
+            },
+
+            // =====================================
+            // MODAL VER ARCHIVO
+            // =====================================
+
+            modalArchivoClinico: false,
+
+            archivoSeleccionado: {}
 
         }
 
@@ -583,13 +806,30 @@ export default {
 
     methods: {
 
+        // =====================================
+        // GUARDAR ARCHIVO
+        // =====================================
+
         guardarArchivoClinico() {
 
             console.log(this.archivo)
+
+        },
+
+        // =====================================
+        // VER ARCHIVO CLINICO
+        // =====================================
+
+        verArchivoClinico(data) {
+
+            this.archivoSeleccionado = data
+
+            this.modalArchivoClinico = true
 
         }
 
     }
 
 }
+
 </script>
