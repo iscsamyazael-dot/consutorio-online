@@ -14,15 +14,24 @@ class Cita extends Model
         'user_id',
         'fecha_hora',
         'duracion',
+        'duracion_minutos',
         'estado',
         'motivo',
         'notas',
         'tipo_cita',
         'ubicacion',
+        'color',
+        'confirmada_paciente',
+        'recordatorio_enviado',
+        'razon_cancelacion',
+        'cancelada_en',
     ];
 
     protected $casts = [
         'fecha_hora' => 'datetime',
+        'cancelada_en' => 'datetime',
+        'confirmada_paciente' => 'boolean',
+        'recordatorio_enviado' => 'boolean',
     ];
 
     public function paciente()

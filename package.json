@@ -23,6 +23,12 @@
         "@popperjs/core": "^2.11.8",
         "admin-lte": "^4.0.0-rc6",
         "bootstrap": "^5.3.8",
+        "@fullcalendar/core": "^6.1.10",
+        "@fullcalendar/daygrid": "^6.1.10",
+        "@fullcalendar/timegrid": "^6.1.10",
+        "@fullcalendar/interaction": "^6.1.10",
+        "@fullcalendar/list": "^6.1.10",
+        "@fullcalendar/html": "^6.1.10",
         "jquery": "^4.0.0",
         "vue": "^3.5.30"
     }

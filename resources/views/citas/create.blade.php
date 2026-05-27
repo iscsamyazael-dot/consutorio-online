@@ -34,7 +34,8 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="paciente_id">Paciente</label>
-                                    <select name="paciente_id" id="paciente_id" class="form-control" required>
+                            
+                                     <select name="paciente_id" id="paciente_id" class="form-control" required>
                                         <option value="">Seleccionar paciente</option>
                                         @foreach($pacientes as $paciente)
                                             <option value="{{ $paciente->id }}" {{ old('paciente_id', $cita->paciente_id ?? '') == $paciente->id ? 'selected' : '' }}>
@@ -52,8 +53,8 @@
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="tipo_cita">Tipo de cita</label>
-                                    <input type="text" name="tipo_cita" id="tipo_cita" class="form-control" value="{{ old('tipo_cita', $cita->tipo_cita ?? '') }}" placeholder="Presencial / Virtual">
+                                    <label for="tipo_cita">Doctores</label>
+                                    <input type="text" name="tipo_cita" id="tipo_cita" class="form-control" value="{{ old('tipo_cita', $cita->tipo_cita ?? '') }}" placeholder="escriba el doctor">
                                 </div>
 
                                 <div class="col-md-6 mb-3">

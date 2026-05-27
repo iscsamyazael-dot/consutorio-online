@@ -37,7 +37,7 @@
                                     <th>Fecha y hora</th>
                                     <th>Motivo</th>
                                     <th>Estado</th>
-                                    <th>Tipo</th>
+                                    <th>Doctor</th>
                                     <th width="180">Acciones</th>
                                 </tr>
                             </thead>

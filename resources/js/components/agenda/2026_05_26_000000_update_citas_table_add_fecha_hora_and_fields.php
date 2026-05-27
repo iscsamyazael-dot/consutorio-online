@@ -15,7 +15,7 @@ return new class extends Migration
 
         Schema::table('citas', function (Blueprint $table) {
             if (! Schema::hasColumn('citas', 'fecha_hora')) {
-                $table->dateTime('fecha_hora')->nullable()->after('user_id');
+                $table->dateTime('fecha_hora')->nullable();
             }
             if (! Schema::hasColumn('citas', 'duracion')) {
                 $table->string('duracion')->nullable()->after('fecha_hora');

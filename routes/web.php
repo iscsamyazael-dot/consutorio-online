@@ -9,7 +9,7 @@ use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
 use App\Http\Controllers\CitaController;
-
+use App\Http\Controllers\Api\CitaController as ApiCitaController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,12 +25,25 @@ Route::middleware('auth')->group(function () {
 
 Route::resource('pacientes', PacienteController::class);
 Route::resource('citas', CitaController::class);
+Route::get('/citas/calendario/view', [CitaController::class, 'calendario'])->name('citas.calendario');
 Route::resource('consultas', ConsultaController::class);
 Route::resource('medicamentos', MedicamentoController::class);
 Route::resource('recetas', RecetaController::class);
 Route::resource('receta-detalles', RecetaDetalleController::class);
 Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
+
+// API endpoints para citas (AJAX)
+Route::prefix('api')->group(function () {
+    Route::get('/citas/rango', [ApiCitaController::class, 'listaPorRango']);
+    Route::post('/citas', [ApiCitaController::class, 'store']);
+    Route::put('/citas/{cita}', [ApiCitaController::class, 'update']);
+    Route::delete('/citas/{cita}', [ApiCitaController::class, 'destroy']);
+    Route::put('/citas/{cita}/estado', [ApiCitaController::class, 'cambiarEstado']);
+    Route::post('/citas/{cita}/confirmar', [ApiCitaController::class, 'confirmarPaciente']);
+    Route::get('/pacientes/buscar', [ApiCitaController::class, 'buscarPaciente']);
+    Route::get('/medicos', [ApiCitaController::class, 'obtenerMedicos']);
+});
 
 
 

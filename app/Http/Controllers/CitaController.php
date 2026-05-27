@@ -16,6 +16,11 @@ class CitaController extends Controller
         return view('citas.index', compact('citas'));
     }
 
+    public function calendario()
+    {
+        return view('citas.calendario');
+    }
+
     public function create()
     {
         $pacientes = Paciente::orderBy('nombre')->get();
