@@ -8,7 +8,7 @@ import 'admin-lte';
 import { createApp } from 'vue';
 import ConsultaInteligente from './components/ConsultaInteligente.vue'
 import PacientesIndex from './components/pasientes/pacientesindex.vue'
-import crearteConsulta from './components/crearteConsulta.vue'
+import crearteConsulta from './components/consultas/CrearConsulta.vue'
 import NuevaConsultaComponent from './components/NuevaConsulta.vue';
 import IndexConsultas from './components/consultas/IndexConsultas.vue'
 
