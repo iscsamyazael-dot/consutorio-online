@@ -11,6 +11,7 @@ import PacientesIndex from './components/pasientes/pacientesindex.vue'
 import crearteConsulta from './components/crearteConsulta.vue'
 import NuevaConsultaComponent from './components/NuevaConsulta.vue';
 import IndexConsultas from './components/consultas/IndexConsultas.vue'
+
 const app = createApp({})
 
 app.component(
