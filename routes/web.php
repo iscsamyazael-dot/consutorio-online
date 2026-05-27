@@ -87,19 +87,19 @@ Route::get('Derivaciones',function(){
 require __DIR__.'/auth.php';
 
 
-Route::get('/consultas', function () {
-    return view('consultas.index');
-});
+// Route::get('/consultas', function () {
+//     return view('consultas.index');
+// });
 
-Route::get('/consultas', function () {
-    return view('consultas.index');
-});
+// Route::get('/consultas', function () {
+//     return view('consultas.index');
+// });
 
-Route::get('/consultas/create', function () {
-    return view('consultas.create');
-});
+// Route::get('/consultas/create', function () {
+//     return view('consultas.create');
+// });
 
-//ruta de nuevo paciente //
-Route::get('/pacientes/create', function () {
-    return view('pacientes.create');
-});
+// //ruta de nuevo paciente //
+// Route::get('/pacientes/create', function () {
+//     return view('pacientes.create');
+// });
