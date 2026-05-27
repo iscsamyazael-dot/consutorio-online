@@ -385,5 +385,348 @@
         </div>
     </div>
 </div>
+<!--Modal para editar un medicamento-->
+<!-- ===================================== -->
+<!-- MODAL EDITAR MEDICAMENTO -->
+<!-- ===================================== -->
 
+<div
+    class="modal fade" id="modalEditarMedicamento" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <!-- HEADER -->
+            <div class="modal-header text-white" style="background: linear-gradient( 135deg,#007bff,#0056);">
+
+                <div class="d-flex align-items-center">
+
+                    <div
+                        class="mr-3 d-flex justify-content-center align-items-center"
+                        style="
+                            width:50px;
+                            height:50px;
+                            border-radius:50%;
+                            background:rgba(255,255,255,.15);
+                        "
+                    >
+                        <i class="fas fa-edit fa-lg"></i>
+                    </div>
+
+                    <div>
+
+                        <h4 class="mb-0 font-weight-bold">
+                            Editar Medicamento
+                        </h4>
+
+                        <small>
+                            Actualización farmacéutica
+                        </small>
+
+                    </div>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="close text-white"
+                    data-dismiss="modal"
+                >
+                    <span>&times;</span>
+                </button>
+
+            </div>
+
+            <!-- BODY -->
+
+            <div class="modal-body p-4">
+
+                <div class="row">
+
+                    <!-- CODIGO -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Código
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.codigo"
+                                disabled
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- NOMBRE -->
+
+                    <div class="col-md-9">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Medicamento
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.nombre"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- PRESENTACION -->
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Presentación
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.presentacion"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- LOTE -->
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Lote
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.lote"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- PRECIO -->
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Precio
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.precio"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- STOCK MINIMO -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Stock mínimo
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.stock_minimo"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- CADUCIDAD -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Caducidad
+                            </label>
+
+                            <input
+                                type="date"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.caducidad"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- UBICACION -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Ubicación
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.ubicacion"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- PROVEEDOR -->
+
+                    <div class="col-md-3">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Proveedor
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.proveedor"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- RECETA -->
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Requiere receta
+                            </label>
+
+                            <select
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.requiere_receta"
+                            >
+                                <option :value="1">
+                                    Sí
+                                </option>
+
+                                <option :value="0">
+                                    No
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <!-- ESTADO -->
+
+                    <div class="col-md-4">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Estado
+                            </label>
+
+                            <select
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.estado"
+                            >
+                                <option :value="1">
+                                    Activo
+                                </option>
+
+                                <option :value="0">
+                                    Inactivo
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <!-- DESCRIPCION -->
+
+                    <div class="col-md-12">
+
+                        <div class="form-group">
+
+                            <label class="font-weight-bold">
+                                Descripción
+                            </label>
+
+                            <textarea
+                                rows="4"
+                                class="form-control"
+                                v-model="medicamentoSeleccionado.descripcion"
+                            ></textarea>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+
+            <div class="modal-footer bg-light">
+
+                <button
+                    class="btn btn-secondary"
+                    data-dismiss="modal"
+                >
+                    <i class="fas fa-times mr-1"></i>
+                    Cancelar
+                </button>
+
+                <button class="btn btn-primary">
+
+                    <i class="fas fa-save mr-1"></i>
+
+                    Guardar Cambios
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 </template>
