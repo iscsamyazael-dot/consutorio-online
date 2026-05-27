@@ -165,7 +165,7 @@
                         <!-- CAMPOS -->
                         <div class="row g-4 mt-2">
 
-                            <div class="col-md-6">
+                            <div class="col-md-3">
 
                                 <label class="form-label">
                                     Paciente
@@ -217,7 +217,7 @@
 
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
 
                                 <label class="form-label">
                                     Fecha de Nacimiento
@@ -330,8 +330,6 @@
                                       placeholder="Ingrese síntomas del paciente"></textarea>
 
                         </div>
-
-                       
 
                         <!-- ESTADO -->
                         <div class="mt-4">
@@ -674,7 +672,7 @@ body{
 }
 
 .premium-input{
-    height: 62px;
+    height: 47px;
     border: none;
     border-radius: 20px;
     padding-left: 22px;

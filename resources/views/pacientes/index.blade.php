@@ -5,6 +5,7 @@
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center mb-3">
         <input type="hidden" name="route" value="{{ url('/') }}">
+
         <div>
             <h1 class="fw-bold text-dark mb-1">
                 <i class="fas fa-user-injured text-primary"></i>
@@ -16,11 +17,10 @@
             </small>
         </div>
 
-       <a href="{{ url('pacientes/create') }}" class="btn btn-primary shadow-sm px-4 rounded-pill">
-    <i class="fas fa-user-plus"></i>
-    Nuevo Paciente
-</a>
-
+        <a href="{{ url('pacientes/create') }}" class="btn btn-primary shadow-sm px-4 rounded-pill">
+            <i class="fas fa-user-plus"></i>
+            Nuevo Paciente
+        </a>
     </div>
 @stop
 
@@ -71,7 +71,7 @@
             <div class="small-box bg-danger shadow border-0 rounded-4">
                 <div class="inner">
                     <h3>5</h3>
-                    <p>Hospitalizados</p>
+                    <p>pendientes</p>
                 </div>
                 <div class="icon">
                     <i class="fas fa-procedures"></i>
@@ -80,11 +80,11 @@
         </div>
 
     </div>
-<div id="app">
-    <pacientes-index></pacientes-index>
-</div>
-    
-    
+
+    <div id="app">
+        <pacientes-index></pacientes-index>
+    </div>
+
 </div>
 
 {{-- MODAL VER --}}
@@ -176,22 +176,164 @@
 
 </div>
 
+{{-- MODAL EDITAR --}}
+<div class="modal fade" id="editarpacienteModal" tabindex="-1">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+
+        <div class="modal-content border-0 rounded-4 overflow-hidden">
+
+            <div class="modal-header bg-warning border-0">
+
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-edit"></i>
+                    Editar Paciente
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body p-4">
+
+                <form>
+
+                    <div class="row g-4">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre</label>
+                            <input type="text"
+                                   class="form-control"
+                                   value="Samy Azael Lopez Acosta">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text"
+                                   class="form-control"
+                                   value="9889677449">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Edad</label>
+                            <input type="number"
+                                   class="form-control"
+                                   value="32">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Sexo</label>
+                            <select class="form-control">
+                                <option selected>Masculino</option>
+                                <option>Femenino</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Estado</label>
+                            <select class="form-control">
+                                <option selected>Consulta activa</option>
+                                <option>Paciente activo</option>
+                                <option>Pendiente</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-warning">
+                            Guardar cambios
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{{-- MODAL CONFIRMAR ELIMINAR --}}
+<div class="modal fade" id="eliminarpacienteModal" tabindex="-1">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 rounded-4 overflow-hidden">
+
+            <div class="modal-header bg-danger text-white border-0">
+
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-trash"></i>
+                    Eliminar Paciente
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+
+            </div>
+
+            <div class="modal-body p-4 text-center">
+
+                <div class="delete-icon mb-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+
+                <h5 class="fw-bold mb-2">
+                    ¿Estás seguro de eliminar este paciente?
+                </h5>
+
+                <p class="text-muted mb-0">
+                    Esta acción no se puede deshacer.
+                </p>
+
+            </div>
+
+            <div class="modal-footer border-0 justify-content-center pb-4">
+
+                <button type="button"
+                        class="btn btn-secondary rounded-pill px-4"
+                        data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button type="button"
+                        class="btn btn-danger rounded-pill px-4">
+                    Sí, eliminar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
 @stop
 
 @section('css')
 
 <style>
-
 body{
     background:#f4f6f9;
 }
 
-/* CARD */
 .card{
     border-radius:24px;
 }
 
-/* TABLA */
 .table thead th{
     border:none;
     padding:18px;
@@ -209,7 +351,6 @@ body{
     transition:.3s;
 }
 
-/* AVATAR */
 .avatar-circle{
     width:50px;
     height:50px;
@@ -237,7 +378,6 @@ body{
     font-weight:bold;
 }
 
-/* BOTONES */
 .action-btn{
     border-radius:12px;
     transition:.3s;
@@ -248,7 +388,6 @@ body{
     transform:translateY(-3px);
 }
 
-/* SEARCH */
 .search-box{
     position:relative;
     width:300px;
@@ -268,7 +407,6 @@ body{
     height:45px;
 }
 
-/* MODAL */
 .modal-content{
     box-shadow:0 10px 40px rgba(0,0,0,.15);
 }
@@ -295,7 +433,6 @@ body{
     font-weight:700;
 }
 
-/* TARJETAS */
 .small-box{
     border-radius:22px !important;
 }
@@ -308,12 +445,9 @@ body{
     transform:translateY(-5px);
     transition:.3s;
 }
-
 </style>
 
 @stop
-
-
 
 @section('js')
 <script>
