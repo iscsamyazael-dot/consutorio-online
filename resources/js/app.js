@@ -23,8 +23,12 @@ import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- C
 import IndexConsultas from './components/consultas/IndexConsultas.vue';
 import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
 
+//Modulo de inventario de medicamentos
+import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 
-const app = createApp({});
+
+
+const app = createApp({})
 
 app.component(
      'consulta-inteligente',
@@ -40,6 +44,12 @@ app.component(
     'atencion-medica-evaluacionia',
     EvaluacionIA
 );
+app.component(
+    'alerta-farmacia',
+    AlertaFarmacia
+);
+
+app.mount('#app')
 
 app.component(
     'atencion-medica-archivosclinicos',

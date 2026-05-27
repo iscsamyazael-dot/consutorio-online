@@ -1,3 +1,4 @@
+<!-- Interfaz alertas pequeñas-->
 <template>
     <div class="card shadow-sm border-0 rounded-4">
                 <div class="card-header bg-white border-0">

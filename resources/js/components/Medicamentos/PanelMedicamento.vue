@@ -1,37 +1,60 @@
 <template>
     <!-- ========================================= -->
+    <!-- ACCCIONES DEL MÉNU DE LOS MEDICAMENTOS -->
+    <!-- ========================================= -->
+     <acciones_botones @cambiarVista="vista = $event"></acciones_botones>
+    <!-- ========================================= -->
     <!-- KPI CARDS -->
     <!-- ========================================= -->
      <kpicards></kpicards>
     <!-- ========================================= -->
     <!-- ALERTAS -->
     <!-- ========================================= -->
-     <alertas></alertas>
+     
 
     <!-- INVENTARIO MEDICAMENTOS -->
     <!-- ========================================= -->
-     <inventario></inventario>
-     <h1>hola mundo</h1>
+     
+
+    <!-- ALERTA FARMACIA -->
+    <!-- ========================================= -->
+     
+    <template v-if="vista === 'inventario'">
+        <alertasResumen></alertasResumen>
+        <inventario></inventario>
+    </template>
+
+    <template v-if="vista === 'alertas'">
+        <alerta_farmacia></alerta_farmacia>
+    </template>
+    
 </template>
+
 <script>
-    import kpicards
-    from './KPI_CARDS.vue'
-    import alertas
-    from './alertas.vue'
-    import inventario
-    from './TablaMedicamentos.vue'
+    import kpicards from './KPI_CARDS.vue'
+    import alertasResumen from './alertasResumen.vue'
+    import inventario from './TablaMedicamentos.vue'
+    import acciones_botones from './accionesMedicamento.vue'
+    import alerta_farmacia from './alertasMedicamentos.vue'
     
     export default {
 
         components: {
             kpicards,
-            alertas,
-            inventario
+            alertasResumen,
+            inventario,
+            acciones_botones,
+            alerta_farmacia
         },
         data(){ 
-            return{}
+            return{
+                vista:'inventario'
+            }
         },
         methods: {
+            cambiarVista(vistaNueva){
+                this.vista = vistaNueva
+            }
         }
 }
 
