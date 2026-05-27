@@ -625,192 +625,209 @@ MODAL VER TRIAGE PREMIUM
 
             <div class="modal-body">
 
-                <!-- PACIENTE -->
+    <div class="row">
 
-                <div class="mb-3">
+        <!-- PACIENTE -->
 
-                    <label class="form-label">
-                        <i class="fas fa-user me-2 text-primary"></i>
-                        Paciente
+        <div class="col-md-6 mb-4">
 
-                    </label>
+            <label class="form-label fw-bold">
 
-                    <input
-                        type="text"
-                        class="form-control"
-                        v-model="triageEditar.paciente"
-                    >
+                <i class="fas fa-user text-primary me-2"></i>
 
-                </div>
+                Paciente
 
-                <!-- SINTOMAS -->
+            </label>
 
-                <div class="mb-3">
+            <input
+                type="text"
+                class="form-control"
+                v-model="triageEditar.paciente"
+            >
 
-                    <label class="form-label">
-                        <i class="fas fa-notes-medical me-2 text-primary"></i>
-                        Síntomas
+        </div>
 
-                    </label>
+        <!-- ESTADO -->
 
-                    <textarea
-                        class="form-control"
-                        rows="3"
-                        v-model="triageEditar.sintomas"
-                    ></textarea>
+        <div class="col-md-6 mb-4">
 
-                </div>
+            <label class="form-label fw-bold">
 
-                <!-- ESTADO -->
+                <i class="fas fa-heartbeat text-success me-2"></i>
 
-                <div class="mb-3">
+                Estado
 
-                    <label class="form-label">
-                        <i class="fas fa-heartbeat me-2 text-success"></i>
-                        Estado
+            </label>
 
-                    </label>
+            <select
+                class="form-control"
+                v-model="triageEditar.estado"
+            >
 
-                    <select
-                        class="form-control"
-                        v-model="triageEditar.estado"
-                    >
+                <option>Riesgo Alto</option>
 
-                        <option>
+                <option>Observación</option>
 
-                            Riesgo Alto
+                <option>Estable</option>
 
-                        </option>
+            </select>
 
-                        <option>
+        </div>
 
-                            Observación
+        <!-- PRIORIDAD -->
 
-                        </option>
+        <div class="col-md-6 mb-4">
 
-                        <option>
+            <label class="form-label fw-bold">
 
-                            Estable
+                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
 
-                        </option>
+                Prioridad
 
-                    </select>
+            </label>
 
-                </div>
+           <select
+    class="form-control"
+    v-model="triageEditar.prioridad"
+>
 
-                <!-- PRIORIDAD -->
+    <option value="Nivel 1">
 
-                <div class="mb-3">
+        🔴 Nivel 1 - Reanimación / Emergencia
 
-                      <label class="form-label">
-                        <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
-                            Prioridad
-                                    </label>
+    </option>
 
-    <select
-        class="form-control"
-        v-model="triageEditar.prioridad"
-    >
+    <option value="Nivel 2">
 
-        <option>
+        🟠 Nivel 2 - Emergencia
 
-            CRÍTICO
+    </option>
 
-        </option>
+    <option value="Nivel 3">
 
-        <option>
+        🟡 Nivel 3 - Urgencia
 
-            URGENTE
+    </option>
 
-        </option>
+    <option value="Nivel 4">
 
-        <option>
+        🟢 Nivel 4 - Urgencia menor
 
-            MODERADO
+    </option>
 
-        </option>
+    <option value="Nivel 5">
 
-    </select>
+        🔵 Nivel 5 - No urgente
 
-</div>
+    </option>
 
+</select>
 
-    <!-- PRESION -->
+        </div>
 
-        <div class="mb-3">
+        <!-- PRESION -->
 
-    <label class="form-label">
-        <i class="fas fa-stethoscope me-2 text-dark"></i>
-        Presión
+        <div class="col-md-6 mb-4">
 
-    </label>
+            <label class="form-label fw-bold">
 
-    <input
-        type="text"
-        class="form-control"
-        v-model="triageEditar.presion"
-    >
+                <i class="fas fa-stethoscope text-dark me-2"></i>
 
-</div>
+                Presión
+
+            </label>
+
+            <input
+                type="text"
+                class="form-control"
+                v-model="triageEditar.presion"
+            >
+
+        </div>
 
         <!-- SATURACION -->
 
-        <div class="mb-3">
+        <div class="col-md-6 mb-4">
 
-    <label class="form-label">
-        <i class="fas fa-lungs me-2 text-info"></i>
-        Saturación
+            <label class="form-label fw-bold">
 
-    </label>
+                <i class="fas fa-lungs text-info me-2"></i>
 
-    <input
-        type="text"
-        class="form-control"
-        v-model="triageEditar.saturacion"
-    >
+                Saturación
+
+            </label>
+
+            <input
+                type="text"
+                class="form-control"
+                v-model="triageEditar.saturacion"
+            >
+
+        </div>
+
+        <!-- TEMPERATURA -->
+
+        <div class="col-md-6 mb-4">
+
+            <label class="form-label fw-bold">
+
+                <i class="fas fa-thermometer-half text-warning me-2"></i>
+
+                Temperatura
+
+            </label>
+
+            <input
+                type="text"
+                class="form-control"
+                v-model="triageEditar.temperatura"
+            >
+
+        </div>
+
+        <!-- TIEMPO -->
+
+        <div class="col-md-6 mb-4">
+
+            <label class="form-label fw-bold">
+
+                <i class="fas fa-clock text-secondary me-2"></i>
+
+                Tiempo de Atención
+
+            </label>
+
+            <input
+                type="text"
+                class="form-control"
+                v-model="triageEditar.tiempo"
+            >
+
+        </div>
+
+        <!-- SINTOMAS -->
+
+        <div class="col-12">
+
+            <label class="form-label fw-bold">
+
+                <i class="fas fa-notes-medical text-primary me-2"></i>
+
+                Síntomas
+
+            </label>
+
+            <textarea
+                class="form-control"
+                rows="5"
+                v-model="triageEditar.sintomas"
+            ></textarea>
+
+        </div>
+
+    </div>
 
 </div>
-
-    <!-- TEMPERATURA -->
-
-    <div class="mb-3">
-
-    <label class="form-label">
-        <i class="fas fa-thermometer-half me-2 text-warning"></i>
-        Temperatura
-
-    </label>
-
-    <input
-        type="text"
-        class="form-control"
-        v-model="triageEditar.temperatura"
-    >
-
-</div>
-
-
-    <!-- TIEMPO -->
-
-    <div class="mb-3">
-
-    <label class="form-label">
-        <i class="fas fa-clock me-2 text-secondary"></i>
-        Tiempo de Atención
-
-    </label>
-
-    <input
-        type="text"
-        class="form-control"
-        v-model="triageEditar.tiempo"
-    >
-
-</div>
-
-
-
-            </div>
 
             <!-- FOOTER -->
 
