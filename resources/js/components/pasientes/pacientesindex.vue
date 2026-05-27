@@ -1,4 +1,5 @@
 <template>
+
     <div class="card border-0 shadow-sm rounded-4 mt-4 bg-white">
 
         <div class="card-body p-4">
@@ -27,16 +28,20 @@
                 <table class="table table-hover align-middle">
 
                     <thead>
+
                         <tr>
+
                             <th>Paciente</th>
                             <th>Teléfono</th>
                             <th>Edad</th>
                             <th>Estado</th>
                             <th class="text-end">Acciones</th>
+
                         </tr>
+
                     </thead>
 
-                    <tbody class="table-group-divider" >
+                    <tbody class="table-group-divider">
 
                         <tr
                             v-for="paciente in filteredPacientes"
@@ -53,6 +58,7 @@
                                     </div>
 
                                     <div>
+
                                         <h6 class="fw-bold mb-0">
                                             {{ paciente.nombre }}
                                         </h6>
@@ -60,6 +66,7 @@
                                         <small class="text-muted">
                                             ID: {{ paciente.id }}
                                         </small>
+
                                     </div>
 
                                 </div>
@@ -90,6 +97,7 @@
                             <!-- ACCIONES -->
                             <td class="text-end">
 
+                                <!-- VER -->
                                 <button
                                     class="btn btn-light btn-sm action-btn me-2"
                                     data-bs-toggle="modal"
@@ -98,6 +106,15 @@
                                     <i class="fas fa-eye text-primary"></i>
                                 </button>
 
+                                <!-- EXPEDIENTE -->
+                                <a
+                                    class="btn btn-light btn-sm action-btn me-2"
+                                    href="/ExpedientePacientes"
+                                >
+                                    <i class="fas fa-folder-open text-info"></i>
+                                </a>
+
+                                <!-- EDITAR -->
                                 <button
                                     class="btn btn-light btn-sm action-btn me-2"
                                     data-bs-toggle="modal"
@@ -106,6 +123,7 @@
                                     <i class="fas fa-edit text-warning"></i>
                                 </button>
 
+                                <!-- ELIMINAR -->
                                 <button
                                     class="btn btn-light btn-sm action-btn"
                                     data-bs-toggle="modal"
@@ -127,14 +145,17 @@
         </div>
 
     </div>
+
 </template>
 
 <script setup>
+
 import { ref, computed } from 'vue'
 
 const searchQuery = ref('')
 
 const pacientes = ref([
+
     {
         id: 1,
         nombre: 'Samy Azael Lopez Acosta',
@@ -142,6 +163,7 @@ const pacientes = ref([
         edad: 32,
         estado: 'Consulta activa'
     },
+
     {
         id: 2,
         nombre: 'Maria Lopez',
@@ -149,6 +171,7 @@ const pacientes = ref([
         edad: 28,
         estado: 'Paciente activo'
     }
+
 ])
 
 const filteredPacientes = computed(() => {
@@ -162,6 +185,7 @@ const filteredPacientes = computed(() => {
     )
 
 })
+
 </script>
 
 <style>
