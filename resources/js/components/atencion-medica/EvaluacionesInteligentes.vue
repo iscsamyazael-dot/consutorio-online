@@ -9,7 +9,7 @@
             Análisis clínico inteligente
         </small>
     </div>
-    <button class=" btn btn-primary btn-lg rounded-pill shadow mb-4"
+    <button class=" btn btn-primary btn-lg rounded-pill shadow mb-2"
         @click="abrirModalEvaluacionIA">
         <i class="fas fa-robot me-2"></i>
         Nueva Evaluación
