@@ -118,10 +118,10 @@
                                         <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#modalDetalleMedicamento">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-primary">
+                                        <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#modalEditarMedicamento">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-warning text-dark">
+                                        <button class="btn btn-sm btn-warning text-dark" data-toggle="modal" data-target="#modalMovimientoInventario">
                                             <i class="fas fa-exchange-alt"></i>
                                         </button>
                                         <button class="btn btn-sm btn-danger">
@@ -396,337 +396,421 @@
         <div class="modal-content border-0 shadow-lg">
             <!-- HEADER -->
             <div class="modal-header text-white" style="background: linear-gradient( 135deg,#007bff,#0056);">
-
                 <div class="d-flex align-items-center">
-
                     <div
-                        class="mr-3 d-flex justify-content-center align-items-center"
-                        style="
-                            width:50px;
-                            height:50px;
-                            border-radius:50%;
-                            background:rgba(255,255,255,.15);
-                        "
-                    >
+                        class="mr-3 d-flex justify-content-center align-items-center" style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.15);">
                         <i class="fas fa-edit fa-lg"></i>
                     </div>
-
                     <div>
-
                         <h4 class="mb-0 font-weight-bold">
                             Editar Medicamento
                         </h4>
-
                         <small>
                             Actualización farmacéutica
                         </small>
-
                     </div>
-
                 </div>
-
-                <button
-                    type="button"
-                    class="close text-white"
-                    data-dismiss="modal"
-                >
+                <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
                 </button>
-
             </div>
 
             <!-- BODY -->
-
             <div class="modal-body p-4">
-
                 <div class="row">
-
                     <!-- CODIGO -->
-
                     <div class="col-md-3">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Código
                             </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.codigo"
-                                disabled
-                            >
-
+                            <input type="text" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- NOMBRE -->
-
                     <div class="col-md-9">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Medicamento
                             </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.nombre"
-                            >
-
+                            <input type="text" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- PRESENTACION -->
 
                     <div class="col-md-4">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Presentación
                             </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.presentacion"
-                            >
-
+                            <input type="text" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- LOTE -->
-
                     <div class="col-md-4">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Lote
                             </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.lote"
-                            >
-
+                            <input type="text" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- PRECIO -->
-
                     <div class="col-md-4">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Precio
                             </label>
-
-                            <input
-                                type="number"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.precio"
-                            >
-
+                            <input type="number" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- STOCK MINIMO -->
 
                     <div class="col-md-3">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Stock mínimo
                             </label>
-
-                            <input
-                                type="number"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.stock_minimo"
-                            >
-
+                            <input type="number" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- CADUCIDAD -->
 
                     <div class="col-md-3">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Caducidad
                             </label>
-
-                            <input
-                                type="date"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.caducidad"
-                            >
-
+                            <input type="date" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- UBICACION -->
 
                     <div class="col-md-3">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Ubicación
                             </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.ubicacion"
-                            >
-
+                            <input type="text" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- PROVEEDOR -->
 
                     <div class="col-md-3">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Proveedor
                             </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.proveedor"
-                            >
-
+                            <input type="text" class="form-control">
                         </div>
-
                     </div>
 
                     <!-- RECETA -->
-
                     <div class="col-md-4">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Requiere receta
                             </label>
-
                             <select
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.requiere_receta"
-                            >
+                                class="form-control">
                                 <option :value="1">
                                     Sí
                                 </option>
-
                                 <option :value="0">
                                     No
                                 </option>
-
                             </select>
-
                         </div>
-
                     </div>
 
                     <!-- ESTADO -->
 
                     <div class="col-md-4">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Estado
                             </label>
-
                             <select
-                                class="form-control"
-                                v-model="medicamentoSeleccionado.estado"
-                            >
+                                class="form-control">
                                 <option :value="1">
                                     Activo
                                 </option>
-
                                 <option :value="0">
                                     Inactivo
                                 </option>
-
                             </select>
-
                         </div>
-
                     </div>
 
                     <!-- DESCRIPCION -->
-
                     <div class="col-md-12">
-
                         <div class="form-group">
-
                             <label class="font-weight-bold">
                                 Descripción
                             </label>
-
                             <textarea
                                 rows="4"
                                 class="form-control"
-                                v-model="medicamentoSeleccionado.descripcion"
                             ></textarea>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
 
             <!-- FOOTER -->
 
             <div class="modal-footer bg-light">
-
-                <button
-                    class="btn btn-secondary"
-                    data-dismiss="modal"
-                >
+                <button class="btn btn-secondary" data-dismiss="modal">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
-
                 <button class="btn btn-primary">
-
                     <i class="fas fa-save mr-1"></i>
-
                     Guardar Cambios
-
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Modal para el movimiento del Inventario-->
+<!-- ===================================== -->
+<!-- MODAL MOVIMIENTO INVENTARIO -->
+<!-- ===================================== -->
 
+<div
+    class="modal fade" id="modalMovimientoInventario" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <!-- HEADER -->
+            <div
+                class="modal-header text-white"
+                :class="{
+                    'bg-success': tipoMovimiento === 'entrada',
+                    'bg-danger': tipoMovimiento === 'salida',
+                    'bg-primary': tipoMovimiento === 'ajuste'}">
+
+                <div class="d-flex align-items-center">
+                    <div
+                        class="mr-3 d-flex justify-content-center align-items-center" style=" width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,.15);">
+                        <i
+                            class="fas"
+                            :class="{
+                                'fa-plus': tipoMovimiento === 'entrada',
+                                'fa-minus': tipoMovimiento === 'salida',
+                                'fa-random': tipoMovimiento === 'ajuste'
+                            }"
+                        ></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0 font-weight-bold">
+                            {{
+                                tipoMovimiento === 'entrada'
+                                ? 'Entrada de Inventario'
+                                : tipoMovimiento === 'salida'
+                                    ? 'Salida de Inventario'
+                                    : 'Ajuste de Inventario'
+                            }}
+
+                        </h4>
+                        <small>
+                            Movimiento farmacéutico
+                        </small>
+                    </div>
+                </div>
+
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
             </div>
 
+            <!-- BODY -->
+
+            <div class="modal-body p-4">
+                <!-- ALERTA -->
+                <div
+                    class="alert"
+                    :class="{
+                        'alert-success': tipoMovimiento === 'entrada',
+                        'alert-danger': tipoMovimiento === 'salida',
+                        'alert-primary': tipoMovimiento === 'ajuste'
+                    }">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Registro de movimiento del inventario farmacéutico.
+                </div>
+                <!-- INFORMACION MEDICAMENTO -->
+                <div class="card card-outline card-primary mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-pills mr-1"></i>
+                            Medicamento
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Nombre
+                                    </label>
+                                    <input type="text" class="form-control" :value="medicamentoSeleccionado.nombre" disabled>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Stock actual
+                                    </label>
+                                    <input type="text" class="form-control" :value="medicamentoSeleccionado.stock" disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DATOS MOVIMIENTO -->
+                <div class="card card-outline card-success mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-boxes mr-1"></i>
+                            Movimiento
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- CANTIDAD -->
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Cantidad
+                                    </label>
+                                    <input type="number" class="form-control" v-model="movimiento.cantidad">
+                                </div>
+                            </div>
+
+                            <!-- LOTE -->
+
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Lote
+                                    </label>
+                                    <input type="text" class="form-control" v-model="movimiento.lote">
+                                </div>
+                            </div>
+
+                            <!-- CADUCIDAD -->
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Caducidad
+                                    </label>
+                                    <input type="date" class="form-control" v-model="movimiento.caducidad">
+                                </div>
+                            </div>
+
+                            <!-- PROVEEDOR -->
+
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Proveedor
+                                    </label>
+                                    <input type="text" class="form-control" v-model="movimiento.proveedor">
+                                </div>
+                            </div>
+
+                            <!-- OBSERVACIONES -->
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Observaciones
+                                    </label>
+                                    <textarea rows="4" class="form-control" v-model="movimiento.observaciones"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOTER -->
+
+            <div class="modal-footer bg-light">
+                <button class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>
+                    Cancelar
+                </button>
+                <button class="btn" :class="{
+                        'btn-success': tipoMovimiento === 'entrada',
+                        'btn-danger': tipoMovimiento === 'salida',
+                        'btn-primary': tipoMovimiento === 'ajuste'}">
+                    <i class="fas fa-save mr-1"></i>
+                    Guardar Movimiento
+                </button>
+            </div>
         </div>
-
     </div>
-
 </div>
 </template>
+
+<script>
+export default {
+
+    props: {
+        medicamento: {
+            type: Object,
+            default: () => ({})
+        }
+    },
+
+   data(){
+        return{
+            movimiento:{
+                medicamento:'',
+                tipo:'entrada',
+                cantidad:'',
+                lote:'',
+                caducidad:'',
+                observaciones:''
+            },
+            medicamentoSeleccionado:{}
+        }
+    },
+
+    watch: {
+        medicamento: {
+            immediate: true,
+            handler(nuevo){
+
+                if(nuevo){
+
+                    this.movimiento.medicamento = nuevo.nombre || ''
+
+                }
+
+            }
+        }
+    },
+
+    methods: {
+
+        guardarMovimiento(){
+
+            console.log(this.movimiento)
+
+            $('#modalMovimientoInventario').modal('hide')
+
+        }
+
+    }
+
+}
+</script>
