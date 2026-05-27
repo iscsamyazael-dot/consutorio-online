@@ -9,6 +9,7 @@ import 'admin-lte';
 import { createApp } from 'vue';
 import ConsultaInteligente from './components/ConsultaInteligente.vue'
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
+import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 const app = createApp({})
 
 app.component(
@@ -19,6 +20,11 @@ app.component(
 app.component(
     'medicamentos-inventario',
     medicamentos
+);
+
+app.component(
+    'alerta-farmacia',
+    AlertaFarmacia
 );
 
 app.mount('#app')

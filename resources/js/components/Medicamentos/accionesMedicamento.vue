@@ -23,9 +23,13 @@
                          <i class="fas fa-boxes"></i>
                             Entrada Inventario
                     </button>
-                    <button class="btn btn-warning text-dark">
+                    <button class="btn btn-warning text-dark"  @click="$emit('cambiarVista', 'alertas')">
                         <i class="fas fa-exclamation-triangle"></i>
                             Alertas
+                    </button>
+                    <button class="btn btn-warning text-dark"  @click="$emit('cambiarVista', 'inventario')">
+                        <i class="fas fa-exclamation-triangle"></i>
+                            Inventario
                     </button>
                 </div>
             </div>
