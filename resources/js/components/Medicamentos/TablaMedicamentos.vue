@@ -74,26 +74,17 @@
                     <table class="table table-hover align-middle" id="tablaMedicamentos">
                         <thead class="table-light">
                             <tr>
-                                <th>Estado</th>
                                 <th>Código</th>
                                 <th>Medicamento</th>
                                 <th>Presentación</th>
                                 <th>Lote</th>
                                 <th>Stock</th>
-                                <th>Mínimo</th>
                                 <th>Caducidad</th>
-                                <th>Ubicación</th>
-                                <th>Precio</th>
                                 <th width="180">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td>
-                                    <span class="badge bg-success">
-                                        Disponible
-                                    </span>
-                                </td>
                                 <td>MED-001</td>
                                 <td>
                                     <strong>Paracetamol 500mg</strong>
@@ -105,14 +96,12 @@
                                         120
                                     </span>
                                 </td>
-                                <td>30</td>
                                 <td>
                                     <span class="text-warning fw-bold">
                                         12/10/2026
                                     </span>
                                 </td>
-                                <td>Estante A-2</td>
-                                <td>$85.00</td>
+                                
                                 <td>
                                     <div class="btn-group">
                                         <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#modalDetalleMedicamento">
@@ -130,48 +119,6 @@
                                     </div>
                                 </td>
                             </tr>
-                            <tr>
-                                <td>
-                                    <span class="badge bg-danger">
-                                        Crítico
-                                    </span>
-                                </td>
-                                <td>MED-002</td>
-                                <td>
-                                    <strong>Insulina NPH</strong>
-                                </td>
-                                <td>Frasco</td>
-                                <td>L-2026-08</td>
-                                <td>
-                                    <span class="fw-bold text-danger">
-                                        5
-                                    </span>
-                                </td>
-                                <td>20</td>
-                                <td>
-                                    <span class="text-danger fw-bold">
-                                        02/06/2026
-                                    </span>
-                                </td>
-                                <td>Refrigerador</td>
-                                <td>$320.00</td>
-                                <td>
-                                    <div class="btn-group">
-                                        <button class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-primary">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-warning text-dark">
-                                            <i class="fas fa-exchange-alt"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -179,18 +126,24 @@
         </div>
 </section>
 
-<!--Modal para ver los detalles del médicamento-->
-    <div class="modal fade" id="modalDetalleMedicamento" tabindex="-1">
+<!-- ============================================= -->
+<!-- MODAL DETALLE MEDICAMENTO -->
+<!-- ============================================= -->
+<div class="modal fade" id="modalDetalleMedicamento" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
             <!-- ===================================== -->
             <!-- HEADER -->
             <!-- ===================================== -->
-
             <div class="modal-header text-white" style="background: linear-gradient(135deg,#17a2b8,#138496);">
                 <div class="d-flex align-items-center">
-                    <div
-                        class="mr-3 d-flex justify-content-center align-items-center" style="width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,.15);">
+                    <div class="mr-3 d-flex justify-content-center align-items-center"
+                        style="
+                            width:55px;
+                            height:55px;
+                            border-radius:50%;
+                            background:rgba(255,255,255,.15);">
+
                         <i class="fas fa-pills fa-lg"></i>
                     </div>
                     <div>
@@ -206,6 +159,7 @@
                     <span>&times;</span>
                 </button>
             </div>
+
             <!-- ===================================== -->
             <!-- BODY -->
             <!-- ===================================== -->
@@ -213,9 +167,8 @@
                 <!-- ALERTA -->
                 <div class="alert alert-light border-left border-info mb-4">
                     <i class="fas fa-info-circle text-info mr-2"></i>
-                    Información detallada del medicamento e inventario.
+                    Información detallada del medicamento registrado en el sistema.
                 </div>
-
                 <!-- ===================================== -->
                 <!-- INFORMACION GENERAL -->
                 <!-- ===================================== -->
@@ -223,139 +176,86 @@
                     <div class="card-header">
                         <h5 class="card-title font-weight-bold">
                             <i class="fas fa-capsules mr-1"></i>
-                                Información General
+                            Información General
                         </h5>
-
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <!-- CODIGO -->
+                            <div class="col-md-3 mb-3">
                                 <label class="font-weight-bold text-muted">
                                     Código
                                 </label>
-                                <div class="h5">
+                                <div class="h6">
                                     MED-001
                                 </div>
                             </div>
-                            <div class="col-md-8 mb-3">
+
+                            <!-- NOMBRE COMERCIAL -->
+                            <div class="col-md-5 mb-3">
                                 <label class="font-weight-bold text-muted">
-                                    Medicamento
+                                    Nombre Comercial
                                 </label>
                                 <div class="h5 font-weight-bold">
                                     Paracetamol 500mg
                                 </div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="font-weight-bold text-muted">
-                                    Presentación
-                                </label>
-                                <div>
-                                    Caja x 20 tabletas
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="font-weight-bold text-muted">
-                                    Lote
-                                </label>
-                                <div>
-                                    L-2026-01
-                                </div>
-                            </div>
+                            <!-- ESTADO -->
+
                             <div class="col-md-4 mb-3">
                                 <label class="font-weight-bold text-muted">
                                     Estado
                                 </label>
                                 <div>
                                     <span class="badge badge-success px-3 py-2">
-                                        Disponible
+                                        Activo
                                     </span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- ===================================== -->
-                <!-- INVENTARIO -->
-                <!-- ===================================== -->
-
-                <div class="card card-outline card-success mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title font-weight-bold">
-                            <i class="fas fa-boxes mr-1"></i>
-                                 Inventario
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 mb-3">
+                            <!-- NOMBRE GENERICO -->
+                            <div class="col-md-4 mb-3">
                                 <label class="font-weight-bold text-muted">
-                                    Stock Actual
-                                </label>
-                                <div class="h4 text-success font-weight-bold">
-                                    120
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="font-weight-bold text-muted">
-                                    Stock Mínimo
-                                </label>
-                                <div class="h4 text-danger font-weight-bold">
-                                    30
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="font-weight-bold text-muted">
-                                    Caducidad
-                                </label>
-                                <div class="font-weight-bold text-warning">
-                                    12/10/2026
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="font-weight-bold text-muted">
-                                    Ubicación
+                                    Nombre Genérico
                                 </label>
                                 <div>
-                                    Estante A-2
+                                    Paracetamol
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===================================== -->
-                <!-- INFORMACION ECONOMICA -->
-                <!-- ===================================== -->
-
-                <div class="card card-outline card-warning">
-                    <div class="card-header">
-                        <h5 class="card-title font-weight-bold">
-                            <i class="fas fa-dollar-sign mr-1"></i>
-                                Información Económica
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
+                            <!-- CONCENTRACION -->
+                            <div class="col-md-4 mb-3">
                                 <label class="font-weight-bold text-muted">
-                                    Precio
-                                </label>
-                                <div class="h4 text-primary">
-                                    $85.00
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="font-weight-bold text-muted">
-                                    Proveedor
+                                    Concentración
                                 </label>
                                 <div>
-                                    Farmacéutica Mérida
+                                    500 mg
                                 </div>
                             </div>
-                            <div class="col-md-4">
+
+                            <!-- VIA ADMINISTRACION -->
+                            <div class="col-md-4 mb-3">
                                 <label class="font-weight-bold text-muted">
-                                    Requiere receta
+                                    Vía de Administración
+                                </label>
+                                <div>
+                                    Oral
+                                </div>
+                            </div>
+
+                            <!-- PRESENTACION -->
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold text-muted">
+                                    Presentación
+                                </label>
+                                <div>
+                                    Caja con 20 tabletas
+                                </div>
+                            </div>
+
+                            <!-- REQUIERE RECETA -->
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold text-muted">
+                                    Requiere Receta
                                 </label>
                                 <div>
                                     <span class="badge badge-danger px-3 py-2">
@@ -366,20 +266,100 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ===================================== -->
+                <!-- INFORMACION MEDICA -->
+                <!-- ===================================== -->
+
+                <div class="card card-outline card-danger mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-notes-medical mr-1"></i>
+                            Información Médica
+                        </h5>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- DESCRIPCION -->
+                            <div class="col-md-12 mb-4">
+                                <label class="font-weight-bold text-muted">
+                                    Descripción Farmacológica
+                                </label>
+                                <div class="border rounded p-3 bg-light">
+                                    Analgésico y antipirético utilizado para el tratamiento del dolor leve a moderado y control de fiebre.
+                                </div>
+                            </div>
+
+                            <!-- CONTRAINDICACIONES -->
+                            <div class="col-md-12">
+                                <label class="font-weight-bold text-muted">
+                                    Contraindicaciones
+                                </label>
+                                <div class="border rounded p-3 bg-light">
+                                    No administrar en pacientes con insuficiencia hepática severa o alergia al paracetamol.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===================================== -->
+                <!-- INFORMACION ECONOMICA -->
+                <!-- ===================================== -->
+                <div class="card card-outline card-warning">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-dollar-sign mr-1"></i>
+                            Información Económica
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- PRECIO -->
+                            <div class="col-md-4 mb-3">
+                                <label class="font-weight-bold text-muted">
+                                    Precio
+                                </label>
+                                <div class="h4 text-primary">
+                                    $85.00
+                                </div>
+                            </div>
+                            <!-- PROVEEDOR -->
+                            <div class="col-md-4 mb-3">
+                                <label class="font-weight-bold text-muted">
+                                    Proveedor
+                                </label>
+                                <div>
+                                    Farmacéutica Mérida
+                                </div>
+                            </div>
+
+                            <!-- FECHA REGISTRO -->
+                            <div class="col-md-4 mb-3">
+                                <label class="font-weight-bold text-muted">
+                                    Fecha Registro
+                                </label>
+                                <div>
+                                    28/05/2026
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- ===================================== -->
             <!-- FOOTER -->
             <!-- ===================================== -->
-
             <div class="modal-footer bg-light">
                 <button class="btn btn-secondary" data-dismiss="modal">
                     <i class="fas fa-times mr-1"></i>
-                        Cerrar
+                    Cerrar
                 </button>
                 <button class="btn btn-primary">
                     <i class="fas fa-edit mr-1"></i>
-                        Editar Medicamento
+                    Editar Medicamento
                 </button>
             </div>
         </div>
@@ -389,16 +369,20 @@
 <!-- ===================================== -->
 <!-- MODAL EDITAR MEDICAMENTO -->
 <!-- ===================================== -->
-
-<div
-    class="modal fade" id="modalEditarMedicamento" tabindex="-1">
+<div class="modal fade" id="modalEditarMedicamento" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
+            <!-- ===================================== -->
             <!-- HEADER -->
-            <div class="modal-header text-white" style="background: linear-gradient( 135deg,#007bff,#0056);">
+            <!-- ===================================== -->
+            <div class="modal-header text-white" style="background: linear-gradient(135deg,#007bff,#0056b3);">
                 <div class="d-flex align-items-center">
-                    <div
-                        class="mr-3 d-flex justify-content-center align-items-center" style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.15);">
+                    <div class="mr-3 d-flex justify-content-center align-items-center"
+                        style="
+                            width:55px;
+                            height:55px;
+                            border-radius:50%;
+                            background:rgba(255,255,255,.15);">
                         <i class="fas fa-edit fa-lg"></i>
                     </div>
                     <div>
@@ -406,7 +390,7 @@
                             Editar Medicamento
                         </h4>
                         <small>
-                            Actualización farmacéutica
+                            Actualización de información farmacéutica
                         </small>
                     </div>
                 </div>
@@ -414,165 +398,250 @@
                     <span>&times;</span>
                 </button>
             </div>
-
+            <!-- ===================================== -->
             <!-- BODY -->
+            <!-- ===================================== -->
             <div class="modal-body p-4">
-                <div class="row">
-                    <!-- CODIGO -->
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Código
-                            </label>
-                            <input type="text" class="form-control">
+                <!-- ALERTA -->
+                <div class="alert alert-light border-left border-primary mb-4">
+                    <i class="fas fa-info-circle text-primary mr-2"></i>
+                    Modifique la información del medicamento según sea necesario.
+                </div>
+                <!-- ===================================== -->
+                <!-- INFORMACION GENERAL -->
+                <!-- ===================================== -->
+                <div class="card card-outline card-primary mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-capsules mr-1"></i>
+                            Información General
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- CODIGO -->
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Código
+                                    </label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-barcode"></i>
+                                            </span>
+                                        </div>
+                                        <input type="text" class="form-control"
+                                            v-model="medicamentoSeleccionado.codigo">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- NOMBRE COMERCIAL -->
+                            <div class="col-md-5">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Nombre Comercial
+                                    </label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-pills"></i>
+                                            </span>
+                                        </div>
+                                        <input type="text" class="form-control" v-model="medicamentoSeleccionado.nombre">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- ESTADO -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Estado
+                                    </label>
+                                    <select class="form-control" v-model="medicamentoSeleccionado.activo">
+                                        <option :value="1">
+                                            Activo
+                                        </option>
+                                        <option :value="0">
+                                            Inactivo
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- NOMBRE GENERICO -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Nombre Genérico
+                                    </label>
+                                    <input type="text" class="form-control" v-model="medicamentoSeleccionado.nombre_generico">
+                                </div>
+                            </div>
+                            <!-- CONCENTRACION -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Concentración
+                                    </label>
+                                    <input type="text" class="form-control" v-model="medicamentoSeleccionado.concentracion">
+                                </div>
+                            </div>
+
+                            <!-- VIA ADMINISTRACION -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Vía de Administración
+                                    </label>
+                                    <select
+                                        class="form-control" v-model="medicamentoSeleccionado.via_administracion">
+                                        <option value="Oral">
+                                            Oral
+                                        </option>
+                                        <option value="Intravenosa">
+                                            Intravenosa
+                                        </option>
+                                        <option value="Intramuscular">
+                                            Intramuscular
+                                        </option>
+                                        <option value="Subcutánea">
+                                            Subcutánea
+                                        </option>
+                                        <option value="Tópica">
+                                            Tópica
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- PRESENTACION -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Presentación
+                                    </label>
+                                    <input type="text" class="form-control" v-model="medicamentoSeleccionado.presentacion">
+                                </div>
+                            </div>
+                            <!-- REQUIERE RECETA -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Requiere Receta
+                                    </label>
+                                    <select
+                                        class="form-control" v-model="medicamentoSeleccionado.requiere_receta">
+                                        <option :value="1">
+                                            Sí
+                                        </option>
+                                        <option :value="0">
+                                            No
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- NOMBRE -->
-                    <div class="col-md-9">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Medicamento
-                            </label>
-                            <input type="text" class="form-control">
+                <!-- ===================================== -->
+                <!-- INFORMACION MEDICA -->
+                <!-- ===================================== -->
+                <div class="card card-outline card-danger mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-notes-medical mr-1"></i>
+                            Información Médica
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- DESCRIPCION -->
+                            <div class="col-md-12 mb-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Descripción Farmacológica
+                                    </label>
+                                    <textarea rows="4" class="form-control" v-model="medicamentoSeleccionado.descripcion">
+                                    </textarea>
+                                </div>
+                            </div>
+
+                            <!-- CONTRAINDICACIONES -->
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Contraindicaciones
+                                    </label>
+                                    <textarea rows="4" class="form-control" v-model="medicamentoSeleccionado.contraindicaciones">
+                                    </textarea>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- PRESENTACION -->
-
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Presentación
-                            </label>
-                            <input type="text" class="form-control">
-                        </div>
+                <!-- ===================================== -->
+                <!-- INFORMACION ECONOMICA -->
+                <!-- ===================================== -->
+                <div class="card card-outline card-warning">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-dollar-sign mr-1"></i>
+                            Información Económica
+                        </h5>
                     </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- PRECIO -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Precio
+                                    </label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">
+                                                $
+                                            </span>
+                                        </div>
+                                        <input type="number" class="form-control"
+                                            v-model="medicamentoSeleccionado.precio">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- PROVEEDOR -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Proveedor
+                                    </label>
+                                    <input type="text" class="form-control" v-model="medicamentoSeleccionado.proveedor">
+                                </div>
+                            </div>
 
-                    <!-- LOTE -->
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Lote
-                            </label>
-                            <input type="text" class="form-control">
-                        </div>
-                    </div>
-
-                    <!-- PRECIO -->
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Precio
-                            </label>
-                            <input type="number" class="form-control">
-                        </div>
-                    </div>
-
-                    <!-- STOCK MINIMO -->
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Stock mínimo
-                            </label>
-                            <input type="number" class="form-control">
-                        </div>
-                    </div>
-
-                    <!-- CADUCIDAD -->
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Caducidad
-                            </label>
-                            <input type="date" class="form-control">
-                        </div>
-                    </div>
-
-                    <!-- UBICACION -->
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Ubicación
-                            </label>
-                            <input type="text" class="form-control">
-                        </div>
-                    </div>
-
-                    <!-- PROVEEDOR -->
-
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Proveedor
-                            </label>
-                            <input type="text" class="form-control">
-                        </div>
-                    </div>
-
-                    <!-- RECETA -->
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Requiere receta
-                            </label>
-                            <select
-                                class="form-control">
-                                <option :value="1">
-                                    Sí
-                                </option>
-                                <option :value="0">
-                                    No
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- ESTADO -->
-
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Estado
-                            </label>
-                            <select
-                                class="form-control">
-                                <option :value="1">
-                                    Activo
-                                </option>
-                                <option :value="0">
-                                    Inactivo
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- DESCRIPCION -->
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            <label class="font-weight-bold">
-                                Descripción
-                            </label>
-                            <textarea
-                                rows="4"
-                                class="form-control"
-                            ></textarea>
+                            <!-- STOCK MINIMO -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Stock Mínimo
+                                    </label>
+                                    <input type="number" class="form-control" v-model="medicamentoSeleccionado.stock_minimo">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            <!-- ===================================== -->
             <!-- FOOTER -->
-
+            <!-- ===================================== -->
             <div class="modal-footer bg-light">
                 <button class="btn btn-secondary" data-dismiss="modal">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
-                <button class="btn btn-primary">
+                <button class="btn btn-primary"
+                    @click="actualizarMedicamento">
                     <i class="fas fa-save mr-1"></i>
                     Guardar Cambios
                 </button>
