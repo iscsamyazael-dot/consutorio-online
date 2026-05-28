@@ -671,6 +671,31 @@ textarea:focus{
 
 }
 
+/* FIX SIDEBAR ADMINLTE */
+
+.main-sidebar{
+    position: fixed !important;
+    height: 100vh !important;
+    overflow-y: auto;
+}
+
+.content-wrapper,
+.main-footer,
+.main-header{
+    margin-left: 250px !important;
+}
+
+/* EVITA QUE BAJE EL MENÚ */
+
+.wrapper{
+    overflow-x: hidden;
+}
+
+/* SCROLL SOLO EN CONTENIDO */
+
+.content-wrapper{
+    min-height: 100vh;
+}
 </style>
 
 @stop
