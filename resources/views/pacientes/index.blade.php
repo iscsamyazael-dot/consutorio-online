@@ -42,7 +42,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
             <div class="small-box bg-success shadow border-0 rounded-4">
                 <div class="inner">
@@ -54,7 +53,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
             <div class="small-box bg-warning shadow border-0 rounded-4">
                 <div class="inner">
@@ -66,7 +64,6 @@
                 </div>
             </div>
         </div>
-
         <div class="col-md-3">
             <div class="small-box bg-danger shadow border-0 rounded-4">
                 <div class="inner">
@@ -78,249 +75,11 @@
                 </div>
             </div>
         </div>
-
     </div>
-
     <div id="app">
         <pacientes-index></pacientes-index>
     </div>
-
 </div>
-
-{{-- MODAL VER --}}
-<div class="modal fade" id="verpacienteModal" tabindex="-1">
-
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-
-        <div class="modal-content border-0 rounded-4 overflow-hidden">
-
-            <div class="modal-header bg-primary text-white border-0">
-
-                <h5 class="modal-title fw-bold">
-                    <i class="fas fa-user-circle"></i>
-                    Información del Paciente
-                </h5>
-
-                <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal"></button>
-
-            </div>
-
-            <div class="modal-body p-4">
-
-                <div class="patient-profile mb-4">
-
-                    <div class="avatar-large">
-                        S
-                    </div>
-
-                    <div>
-                        <h3 class="fw-bold mb-1">
-                            Samy Azael Lopez Acosta
-                        </h3>
-
-                        <span class="badge bg-success">
-                            Consulta activa
-                        </span>
-                    </div>
-
-                </div>
-
-                <div class="row g-4">
-
-                    <div class="col-md-6">
-                        <div class="info-card">
-                            <label>Teléfono</label>
-                            <h6>9889677449</h6>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="info-card">
-                            <label>Sexo</label>
-                            <h6>Masculino</h6>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="info-card">
-                            <label>Tipo de Sangre</label>
-                            <h6>O Positivo</h6>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="info-card">
-                            <label>Alergias</label>
-                            <h6>Ninguna</h6>
-                        </div>
-                    </div>
-
-                    <div class="col-md-12">
-                        <div class="info-card">
-                            <label>Dirección</label>
-                            <h6>
-                                Calle 10a x 15 y 17 Sudzal Yucatán
-                            </h6>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-{{-- MODAL EDITAR --}}
-<div class="modal fade" id="editarpacienteModal" tabindex="-1">
-
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-
-        <div class="modal-content border-0 rounded-4 overflow-hidden">
-
-            <div class="modal-header bg-warning border-0">
-
-                <h5 class="modal-title fw-bold">
-                    <i class="fas fa-edit"></i>
-                    Editar Paciente
-                </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"></button>
-
-            </div>
-
-            <div class="modal-body p-4">
-
-                <form>
-
-                    <div class="row g-4">
-
-                        <div class="col-md-6">
-                            <label class="form-label">Nombre</label>
-                            <input type="text"
-                                   class="form-control"
-                                   value="Samy Azael Lopez Acosta">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Teléfono</label>
-                            <input type="text"
-                                   class="form-control"
-                                   value="9889677449">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Edad</label>
-                            <input type="number"
-                                   class="form-control"
-                                   value="32">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Sexo</label>
-                            <select class="form-control">
-                                <option selected>Masculino</option>
-                                <option>Femenino</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-12">
-                            <label class="form-label">Estado</label>
-                            <select class="form-control">
-                                <option selected>Consulta activa</option>
-                                <option>Paciente activo</option>
-                                <option>Pendiente</option>
-                            </select>
-                        </div>
-
-                    </div>
-
-                    <div class="text-end mt-4">
-                        <button type="button"
-                                class="btn btn-secondary"
-                                data-bs-dismiss="modal">
-                            Cancelar
-                        </button>
-
-                        <button type="button"
-                                class="btn btn-warning">
-                            Guardar cambios
-                        </button>
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-{{-- MODAL CONFIRMAR ELIMINAR --}}
-<div class="modal fade" id="eliminarpacienteModal" tabindex="-1">
-
-    <div class="modal-dialog modal-dialog-centered">
-
-        <div class="modal-content border-0 rounded-4 overflow-hidden">
-
-            <div class="modal-header bg-danger text-white border-0">
-
-                <h5 class="modal-title fw-bold">
-                    <i class="fas fa-trash"></i>
-                    Eliminar Paciente
-                </h5>
-
-                <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal"></button>
-
-            </div>
-
-            <div class="modal-body p-4 text-center">
-
-                <div class="delete-icon mb-3">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-
-                <h5 class="fw-bold mb-2">
-                    ¿Estás seguro de eliminar este paciente?
-                </h5>
-
-                <p class="text-muted mb-0">
-                    Esta acción no se puede deshacer.
-                </p>
-
-            </div>
-
-            <div class="modal-footer border-0 justify-content-center pb-4">
-
-                <button type="button"
-                        class="btn btn-secondary rounded-pill px-4"
-                        data-bs-dismiss="modal">
-                    Cancelar
-                </button>
-
-                <button type="button"
-                        class="btn btn-danger rounded-pill px-4">
-                    Sí, eliminar
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
 @stop
 
 @section('css')
