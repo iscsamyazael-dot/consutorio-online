@@ -409,7 +409,7 @@ return [
                 [
                 'text' => 'Historialde recetas',
                 'icon' => 'fas fa-fw fa-book-medical',
-                'url' => '#',
+                'url' => 'HistorialRecetas',
                 ],
             ],
         ],

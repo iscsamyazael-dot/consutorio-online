@@ -24,7 +24,8 @@ import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación 
 //Modulo de inventario de medicamentos
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 
-
+//Modulo de Historial de recetas 
+import Historialreceta from './components/recetass/PanelRecetas.vue'
 
 const app = createApp({})
 
@@ -81,6 +82,11 @@ app.component(
 app.component(
     'pacientes-index',
     PacientesIndex
+);
+
+app.component(
+    'recetass-historial',
+    Historialreceta
 );
     
 // 3. MONTAJE DE LA APP

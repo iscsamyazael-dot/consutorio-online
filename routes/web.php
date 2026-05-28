@@ -82,6 +82,12 @@ Route::get('Derivaciones',function(){
 });
 
 
+Route::get('HistorialRecetas',function(){
+          return view('recetas.historial-recetas');
+});
+
+
+
 
 
 require __DIR__.'/auth.php';
