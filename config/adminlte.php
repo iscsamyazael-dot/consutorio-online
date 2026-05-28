@@ -345,12 +345,12 @@ return [
              'submenu' =>[
                 [
     'text' => 'Lista de consulta',
-    'url'  => 'consultas',
+    'url'  => 'ListaConsultas',
     'icon' => 'fas fa-fw fa-notes-medical',
 ],
                 [
     'text' => 'Nueva consulta',
-    'url'  => 'consultas/create',
+    'url'  => 'NuevaConsulta',
     'icon' => 'fas fa-plus-circle',
 ],
                 [

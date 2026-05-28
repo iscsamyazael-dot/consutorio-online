@@ -21,7 +21,7 @@
             <span class="live-dot"></span>
             <small class="fw-bold text-secondary text-uppercase tracking-wider" style="font-size: 0.75rem;">Sistema Activo</small>
         </div>
-        <a href="{{ url('consultas/create') }}" class="btn btn-primary rounded-3 px-4 py-2 shadow-sm fw-bold d-flex align-items-center gap-2 btn-hover-transform">
+        <a href="{{ url('NuevaConsulta') }}" class="btn btn-primary rounded-3 px-4 py-2 shadow-sm fw-bold d-flex align-items-center gap-2 btn-hover-transform">
             <i class="fas fa-plus-circle"></i> Nueva Consulta
         </a>
     </div>

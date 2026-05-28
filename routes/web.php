@@ -91,13 +91,13 @@ require __DIR__.'/auth.php';
 //     return view('consultas.index');
 // });
 
-// Route::get('/consultas', function () {
-//     return view('consultas.index');
-// });
+Route::get('ListaConsultas', function () {
+    return view('consultas.index');
+});
 
-// Route::get('/consultas/create', function () {
-//     return view('consultas.create');
-// });
+Route::get('NuevaConsulta', function () {
+    return view('consultas.create');
+});
 
 //ruta de nuevo paciente //
 Route::get('/pacientes/create', function () {
