@@ -387,21 +387,21 @@ return [
             ],
         ],
         [
-            'text' => 'Agenda',
-            'icon' => 'fas fa-fw fa-calendar',
-             'submenu' =>[
-                [
-                'text' => 'Citas',
-                'icon' => 'fas fa-fw fa-calendar-check',
-                'url' => '#',
-                ],
-                [
-                'text' => 'Programar cita',
-                'icon' => 'fas fa-fw fa-user-clock',
-                'url' => '#',
-                ],
-            ],
+    'text'    => 'Agenda',
+    'icon'    => 'fas fa-fw fa-calendar',
+    'submenu' => [
+        [
+            'text' => 'Citas',
+            'route'  => 'citas.index', // Apunta a tu ruta de listado
+            'icon' => 'fas fa-fw fa-list',
         ],
+        [
+            'text' => 'Programar cita',
+            'route'  => 'citas.create', // Apunta a tu ruta de formulario
+            'icon' => 'fas fa-fw fa-user-clock',
+        ],
+    ],
+],
         [
             'text' => 'Recetas',
             'icon' => 'fas fa-fw fa-prescription',
