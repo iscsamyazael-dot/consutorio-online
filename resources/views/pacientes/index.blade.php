@@ -17,7 +17,7 @@
             </small>
         </div>
 
-        <a href="{{ url('pacientes/create') }}" class="btn btn-primary shadow-sm px-4 rounded-pill">
+        <a href="{{ url('PacienteNuevo') }}" class="btn btn-primary shadow-sm px-4 rounded-pill">
             <i class="fas fa-user-plus"></i>
             Nuevo Paciente
         </a>
