@@ -56,6 +56,10 @@ Route::get('HistorialConsulta',function(){
 Route::get('ConsultaInteligente',function(){
           return view('consultas.consulta_inteligente');
 });
+//codigo  de las citas //
+Route::resource('citas', App\Http\Controllers\CitaController::class);
+// api de calendario//
+Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
 
 //Código que lleva a la vita de medicamentos e inventario//
 Route::get('Medicamentos',function(){
