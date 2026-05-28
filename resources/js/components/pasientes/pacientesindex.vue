@@ -206,7 +206,7 @@ const filteredPacientes = computed(() => {
     padding:18px !important;
     font-weight:700 !important;
     color:#495057 !important;
-    background:#659bd1 !important;
+    background:#eef0f3 !important;
     font-size:15px !important;
 }
 
