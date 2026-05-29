@@ -654,173 +654,210 @@
 <!-- MODAL MOVIMIENTO INVENTARIO -->
 <!-- ===================================== -->
 
-<div
-    class="modal fade" id="modalMovimientoInventario" tabindex="-1">
+<div class="modal fade" id="modalMovimientoInventario" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
+            <!-- ===================================== -->
             <!-- HEADER -->
-            <div
-                class="modal-header text-white"
-                :class="{
-                    'bg-success': tipoMovimiento === 'entrada',
-                    'bg-danger': tipoMovimiento === 'salida',
-                    'bg-primary': tipoMovimiento === 'ajuste'}">
-
+            <!-- ===================================== -->
+            <!-- ===================================== -->
+            <!-- HEADER -->
+            <!-- ===================================== -->
+            <div class="modal-header text-white border-0" style="background:linear-gradient(135deg,#ffc107,#ffc107);">
                 <div class="d-flex align-items-center">
-                    <div
-                        class="mr-3 d-flex justify-content-center align-items-center" style=" width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,.15);">
-                        <i
-                            class="fas"
-                            :class="{
-                                'fa-plus': tipoMovimiento === 'entrada',
-                                'fa-minus': tipoMovimiento === 'salida',
-                                'fa-random': tipoMovimiento === 'ajuste'
-                            }"
-                        ></i>
+                    <div class="mr-3 d-flex justify-content-center align-items-center"
+                        style="
+                            width:55px;
+                            height:55px;
+                            border-radius:50%;
+                            background:rgba(255,255,255,.15);">
+                        <i class="fas fa-boxes fa-lg"></i>
                     </div>
                     <div>
                         <h4 class="mb-0 font-weight-bold">
-                            {{
-                                tipoMovimiento === 'entrada'
-                                ? 'Entrada de Inventario'
-                                : tipoMovimiento === 'salida'
-                                    ? 'Salida de Inventario'
-                                    : 'Ajuste de Inventario'
-                            }}
-
+                            Movmiento Inventario
                         </h4>
-                        <small>
-                            Movimiento farmacéutico
+                        <small class="text-light">
+                            Registro farmacéutico
                         </small>
                     </div>
                 </div>
-
                 <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
-
+            <!-- ===================================== -->
             <!-- BODY -->
-
+            <!-- ===================================== -->
             <div class="modal-body p-4">
                 <!-- ALERTA -->
-                <div
-                    class="alert"
-                    :class="{
-                        'alert-success': tipoMovimiento === 'entrada',
-                        'alert-danger': tipoMovimiento === 'salida',
-                        'alert-primary': tipoMovimiento === 'ajuste'
-                    }">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    Registro de movimiento del inventario farmacéutico.
+                <div class="alert alert-light border-left border-primary shadow-sm">
+                    <i class="fas fa-info-circle text-primary mr-2"></i>
+                    Capture correctamente la información del movimiento de inventario.
                 </div>
-                <!-- INFORMACION MEDICAMENTO -->
-                <div class="card card-outline card-primary mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title font-weight-bold">
-                            <i class="fas fa-pills mr-1"></i>
+                <div class="row">
+                    <!-- MEDICAMENTO -->
+                    <div class="col-12">
+                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="fas fa-pills mr-2"></i>
+                            Información del Medicamento
+                        </h5>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="font-weight-bold">
                             Medicamento
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">
-                                        Nombre
-                                    </label>
-                                    <input type="text" class="form-control" :value="medicamentoSeleccionado.nombre" disabled>
-                                </div>
+                        </label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    <i class="fas fa-capsules"></i>
+                                </span>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">
-                                        Stock actual
-                                    </label>
-                                    <input type="text" class="form-control" :value="medicamentoSeleccionado.stock" disabled>
-                                </div>
-                            </div>
+                            <input type="text" class="form-control" :value="medicamentoSeleccionado?.nombre" disabled>
                         </div>
                     </div>
-                </div>
+                    <div class="col-md-3">
+                        <label class="font-weight-bold">
+                            Stock Actual
+                        </label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    <i class="fas fa-boxes"></i>
+                                </span>
+                            </div>
+                            <input type="text" class="form-control" :value="medicamentoSeleccionado?.stock" disabled>
+                        </div>
+                    </div>
 
-                <!-- DATOS MOVIMIENTO -->
-                <div class="card card-outline card-success mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title font-weight-bold">
-                            <i class="fas fa-boxes mr-1"></i>
-                            Movimiento
+                    <div class="col-md-3">
+                        <label class="font-weight-bold">
+                            Stock Mínimo
+                        </label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </span>
+                            </div>
+                            <input type="text" class="form-control" :value="medicamentoSeleccionado?.stock_minimo" disabled>
+                        </div>
+                    </div>
+                    <!-- MOVIMIENTO -->
+                    <div class="col-12 mt-4">
+                        <h5 class="text-success border-bottom pb-2 mb-3">
+                            <i class="fas fa-random mr-2"></i>
+                            Datos del Movimiento
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <!-- CANTIDAD -->
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">
-                                        Cantidad
-                                    </label>
-                                    <input type="number" class="form-control" v-model="movimiento.cantidad">
-                                </div>
-                            </div>
+                    <div class="col-md-3">
+                        <label class="font-weight-bold">
+                            Tipo Movimiento
+                        </label>
+                        <select
+                            class="form-control"
+                            v-model="movimiento.tipo_movimiento">
+                            <option value="entrada">
+                                Entrada
+                            </option>
+                            <option value="salida">
+                                Salida
+                            </option>
+                            <option value="ajuste">
+                                Ajuste
+                            </option>
+                        </select>
+                    </div>
 
-                            <!-- LOTE -->
+                    <div class="col-md-3">
+                        <label class="font-weight-bold">
+                            Cantidad
+                        </label>
+                        <input type="number" class="form-control" v-model="movimiento.cantidad">
+                    </div>
 
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">
-                                        Lote
-                                    </label>
-                                    <input type="text" class="form-control" v-model="movimiento.lote">
-                                </div>
-                            </div>
+                    <div class="col-md-6">
+                        <label class="font-weight-bold">
+                            Motivo Movimiento
+                        </label>
 
-                            <!-- CADUCIDAD -->
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">
-                                        Caducidad
-                                    </label>
-                                    <input type="date" class="form-control" v-model="movimiento.caducidad">
-                                </div>
-                            </div>
+                        <input type="text" class="form-control" v-model="movimiento.motivo_movimiento">
+                    </div>
 
-                            <!-- PROVEEDOR -->
+                    <!-- LOTE -->
+                    <div class="col-12 mt-4">
+                        <h5 class="text-warning border-bottom pb-2 mb-3">
+                            <i class="fas fa-barcode mr-2"></i>
+                            Información del Lote
+                        </h5>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">
+                            Lote
+                        </label>
+                        <input type="text" class="form-control" v-model="movimiento.lote">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">
+                            Fecha Caducidad
+                        </label>
+                        <input type="date" class="form-control" v-model="movimiento.fecha_caducidad">
+                    </div>
 
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">
-                                        Proveedor
-                                    </label>
-                                    <input type="text" class="form-control" v-model="movimiento.proveedor">
-                                </div>
-                            </div>
-
-                            <!-- OBSERVACIONES -->
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">
-                                        Observaciones
-                                    </label>
-                                    <textarea rows="4" class="form-control" v-model="movimiento.observaciones"></textarea>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">
+                            Ubicación
+                        </label>
+                        <input type="text" class="form-control" v-model="movimiento.ubicacion">
+                    </div>
+                    <!-- FINANCIERA -->
+                    <div class="col-12 mt-4">
+                        <h5 class="text-info border-bottom pb-2 mb-3">
+                            <i class="fas fa-dollar-sign mr-2"></i>
+                            Información Financiera
+                        </h5>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="font-weight-bold">
+                            Proveedor
+                        </label>
+                        <input type="text" class="form-control" v-model="movimiento.proveedor">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="font-weight-bold">
+                            Costo Unitario
+                        </label>
+                        <input type="number" class="form-control" v-model="movimiento.costo_unitario">
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <label class="font-weight-bold">
+                            Referencia Documento
+                        </label>
+                        <input type="text" class="form-control" v-model="movimiento.referencia_documento">
+                    </div>
+                    <!-- OBSERVACIONES -->
+                    <div class="col-12 mt-4">
+                        <h5 class="text-secondary border-bottom pb-2 mb-3">
+                            <i class="fas fa-notes-medical mr-2"></i>
+                            Observaciones
+                        </h5>
+                    </div>
+                    <div class="col-md-12">
+                        <textarea rows="4" class="form-control" v-model="movimiento.observaciones">
+                        </textarea>
                     </div>
                 </div>
             </div>
-
+            <!-- ===================================== -->
             <!-- FOOTER -->
-
+            <!-- ===================================== -->
             <div class="modal-footer bg-light">
                 <button class="btn btn-secondary" data-dismiss="modal">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
-                <button class="btn" :class="{
-                        'btn-success': tipoMovimiento === 'entrada',
-                        'btn-danger': tipoMovimiento === 'salida',
-                        'btn-primary': tipoMovimiento === 'ajuste'}">
+                <button
+                    class="btn btn-success">
                     <i class="fas fa-save mr-1"></i>
                     Guardar Movimiento
                 </button>
