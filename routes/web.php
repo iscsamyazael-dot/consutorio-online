@@ -8,10 +8,13 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
+use App\Http\Controllers\SpecialtyController; // <--- AGREGA ESTA LÍNEA
+
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
+Route::resource('especialidades', SpecialtyController::class);
 Route::get('/', function () {
     return view('welcome');
 });
@@ -60,6 +63,9 @@ Route::get('ConsultaInteligente',function(){
 Route::resource('citas', App\Http\Controllers\CitaController::class);
 // api de calendario//
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
+
+//  especialidades //
+Route::resource('specialties', SpecialtyController::class);
 
 //Código que lleva a la vita de medicamentos e inventario//
 Route::get('Medicamentos',function(){
