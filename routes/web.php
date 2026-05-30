@@ -15,6 +15,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::resource('especialidades', SpecialtyController::class);
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -70,6 +71,11 @@ Route::resource('specialties', SpecialtyController::class);
 //Código que lleva a la vita de medicamentos e inventario//
 Route::get('Medicamentos',function(){
           return view('medicamentos.index');
+});
+
+//Código que lleva a la vita de medicamentos e inventario//
+Route::get('especialidades',function(){
+          return view('specialties.index');
 });
 
 //Codigo que lleva a TRIAGE
