@@ -392,6 +392,71 @@
 
 <style>
 
+/* ================================================ */
+/* FIX BUSCADOR SIDEBAR — input + lupa integrados   */
+/* ================================================ */
+
+/* El form de búsqueda de AdminLTE tiene la clase .sidebar-search
+   y dentro un .input-group con input + .input-group-append         */
+
+.main-sidebar .sidebar-search,
+.main-sidebar form.form-inline {
+    padding: 8px 14px !important;
+}
+
+/* Pastilla unificada */
+.main-sidebar .input-group {
+    background: rgba(255,255,255,0.10) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    overflow: hidden !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+}
+
+/* Input sin borde propio */
+.main-sidebar .input-group .form-control {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #fff !important;
+    font-size: 13px !important;
+    height: 36px !important;
+    padding: 6px 10px !important;
+    border-radius: 0 !important;
+    outline: none !important;
+}
+
+.main-sidebar .input-group .form-control::placeholder {
+    color: rgba(255,255,255,0.40) !important;
+}
+
+/* Botón lupa pegado, sin fondo extra */
+.main-sidebar .input-group-append {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.main-sidebar .input-group-append .btn,
+.main-sidebar .input-group .btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: rgba(255,255,255,0.55) !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: color .2s !important;
+}
+
+.main-sidebar .input-group .btn:hover,
+.main-sidebar .input-group .btn:focus {
+    color: #fff !important;
+    background: transparent !important;
+}
+
 /* ======================= */
 /* FONDO */
 /* ======================= */
