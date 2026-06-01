@@ -397,18 +397,18 @@
 
 /* =========================
    FIX BUSCADOR SIDEBAR
-   Input + lupa en una sola pastilla
 ========================= */
 
-.main-sidebar .sidebar-search,
-.main-sidebar form.form-inline {
-    padding: 8px 14px !important;
+.main-sidebar form.form-inline,
+.main-sidebar .sidebar-search {
+    width: 74% !important;
+    margin: 0 0 0 8px !important;
 }
 
 .main-sidebar .input-group {
-    background: rgba(255,255,255,0.10) !important;
-    border-radius: 10px !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    border: none !important;
     overflow: hidden !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
@@ -416,19 +416,19 @@
 
 .main-sidebar .input-group .form-control {
     background: transparent !important;
-    border: none !important;
+    border-color: rgba(255,255,255,0.2) !important;
     box-shadow: none !important;
     color: #fff !important;
-    font-size: 13px !important;
-    height: 36px !important;
-    padding: 6px 10px !important;
+    font-size: 12px !important;
+    height: 37px !important;
+    padding: 4px 8px !important;
     border-radius: 0 !important;
     outline: none !important;
     min-height: unset !important;
 }
 
 .main-sidebar .input-group .form-control::placeholder {
-    color: rgba(255,255,255,0.40) !important;
+    color: rgba(255,255,255,0.45) !important;
 }
 
 .main-sidebar .input-group-append {
@@ -439,11 +439,12 @@
 .main-sidebar .input-group-append .btn,
 .main-sidebar .input-group .btn {
     background: transparent !important;
-    border: none !important;
+    border-color: rgba(255,255,255,0.2) !important;
     box-shadow: none !important;
     color: rgba(255,255,255,0.60) !important;
-    height: 36px !important;
-    padding: 0 12px !important;
+    height: 37px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
     border-radius: 0 !important;
     display: flex !important;
     align-items: center !important;
