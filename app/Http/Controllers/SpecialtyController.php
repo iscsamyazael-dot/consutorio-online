@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Specialty;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SpecialtyController extends Controller
 {
@@ -26,9 +27,16 @@ class SpecialtyController extends Controller
         $request->validate([
             'nombre'      => 'required|string|max:255',
             'descripcion' => 'nullable|string',
+            'imagen'      => 'nullable|image|max:2048',
         ]);
 
-        Specialty::create($request->only('nombre', 'descripcion'));
+        $data = $request->only('nombre', 'descripcion');
+
+        if ($request->hasFile('imagen')) {
+            $data['imagen'] = $request->file('imagen')->store('especialidades', 'public');
+        }
+
+        Specialty::create($data);
 
         return redirect()->route('specialties.index')
             ->with('success', 'Especialidad creada correctamente.');
@@ -49,9 +57,19 @@ class SpecialtyController extends Controller
         $request->validate([
             'nombre'      => 'required|string|max:255',
             'descripcion' => 'nullable|string',
+            'imagen'      => 'nullable|image|max:2048',
         ]);
 
-        $specialty->update($request->only('nombre', 'descripcion'));
+        $data = $request->only('nombre', 'descripcion');
+
+        if ($request->hasFile('imagen')) {
+            if ($specialty->imagen) {
+                Storage::disk('public')->delete($specialty->imagen);
+            }
+            $data['imagen'] = $request->file('imagen')->store('especialidades', 'public');
+        }
+
+        $specialty->update($data);
 
         return redirect()->route('specialties.index')
             ->with('success', 'Especialidad actualizada correctamente.');
@@ -59,6 +77,10 @@ class SpecialtyController extends Controller
 
     public function destroy(Specialty $specialty)
     {
+        if ($specialty->imagen) {
+            Storage::disk('public')->delete($specialty->imagen);
+        }
+
         $specialty->delete();
 
         return redirect()->route('specialties.index')

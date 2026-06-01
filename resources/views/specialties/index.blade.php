@@ -68,10 +68,10 @@
             'ginecología'      => ['icon' => 'fas fa-venus',        'bg' => '#FBEAF0', 'color' => '#72243E'],
             'medicina general' => ['icon' => 'fas fa-stethoscope',  'bg' => '#E6F1FB', 'color' => '#0C447C'],
         ];
-        $key    = strtolower(trim($specialty->name));
+        $key    = strtolower(trim($specialty->nombre));
         $estilo = $iconos[$key] ?? ['icon' => 'fas fa-notes-medical', 'bg' => '#E6F1FB', 'color' => '#185FA5'];
 
-        $fotos = [
+        $fotosBD = [
             'cardiología'      => 'https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?w=600&q=80',
             'pediatría'        => 'https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?w=600&q=80',
             'neurología'       => 'https://images.unsplash.com/photo-1559757175-5700dde675bc?w=600&q=80',
@@ -81,14 +81,19 @@
             'ginecología'      => 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80',
             'medicina general' => 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80',
         ];
-        $foto = $fotos[$key] ?? null;
+
+        if ($specialty->imagen) {
+            $foto = asset('storage/' . $specialty->imagen);
+        } else {
+            $foto = $fotosBD[$key] ?? null;
+        }
     @endphp
 
     <div class="spec-card">
 
         {{-- IMAGEN --}}
         @if($foto)
-            <img src="{{ $foto }}" alt="{{ $specialty->name }}" class="card-img">
+            <img src="{{ $foto }}" alt="{{ $specialty->nombre }}" class="card-img">
         @else
             <div class="card-img-placeholder" style="background:{{ $estilo['bg'] }}; color:{{ $estilo['color'] }};">
                 <i class="{{ $estilo['icon'] }}" style="font-size:48px;"></i>
@@ -98,19 +103,18 @@
         {{-- CUERPO --}}
         <div class="card-body-custom">
             <div class="card-top">
-                <span class="card-name">{{ $specialty->name }}</span>
+                <span class="card-name">{{ $specialty->nombre }}</span>
                 <span class="status-chip status-active">Activa</span>
             </div>
 
-            <p class="card-desc">{{ Str::limit($specialty->description, 80) }}</p>
+            <p class="card-desc">{{ Str::limit($specialty->descripcion, 80) }}</p>
 
             <div class="card-actions">
 
-                {{-- ── VER ── abre modal con la info completa --}}
                 <button type="button" class="btn-action"
                     onclick="abrirModalVer(
-                        '{{ addslashes($specialty->name) }}',
-                        '{{ addslashes($specialty->description) }}',
+                        '{{ addslashes($specialty->nombre) }}',
+                        '{{ addslashes($specialty->descripcion) }}',
                         '{{ $foto ?? '' }}',
                         '{{ $estilo['icon'] }}',
                         '{{ $estilo['bg'] }}',
@@ -119,23 +123,21 @@
                     <i class="fas fa-eye"></i> Ver
                 </button>
 
-                {{-- ── EDITAR ── abre modal con formulario --}}
                 <button type="button" class="btn-action btn-edit"
                     onclick="abrirModalEditar(
                         {{ $specialty->id }},
-                        '{{ addslashes($specialty->name) }}',
-                        '{{ addslashes($specialty->description) }}',
+                        '{{ addslashes($specialty->nombre) }}',
+                        '{{ addslashes($specialty->descripcion) }}',
                         '{{ route('specialties.update', $specialty) }}'
                     )">
                     <i class="fas fa-edit"></i> Editar
                 </button>
 
-                {{-- ── ELIMINAR ── confirmación SweetAlert --}}
                 <form action="{{ route('specialties.destroy', $specialty) }}" method="POST"
                     class="d-inline" id="form-delete-{{ $specialty->id }}">
                     @csrf @method('DELETE')
                     <button type="button" class="btn-action btn-del"
-                        onclick="confirmarEliminar({{ $specialty->id }}, '{{ addslashes($specialty->name) }}')">
+                        onclick="confirmarEliminar({{ $specialty->id }}, '{{ addslashes($specialty->nombre) }}')">
                         <i class="fas fa-trash"></i> Eliminar
                     </button>
                 </form>
@@ -151,9 +153,6 @@
         @if(request('search'))
             <p class="text-muted">para "<strong>{{ request('search') }}</strong>"</p>
         @endif
-        <a href="{{ route('specialties.create') }}" class="btn-primary-custom mt-3">
-            <i class="fas fa-plus"></i> Agregar especialidad
-        </a>
     </div>
     @endforelse
 </div>
@@ -166,14 +165,11 @@
 @endif
 
 
-{{-- ══════════════════════════════════════════════
-     MODAL NUEVA ESPECIALIDAD
-══════════════════════════════════════════════ --}}
+{{-- MODAL NUEVA --}}
 <div class="modal-overlay" id="modalNueva" onclick="cerrarModal('modalNueva')">
     <div class="modal-box modal-box-lg" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="cerrarModal('modalNueva')"><i class="fas fa-times"></i></button>
 
-        {{-- Cabecera verde/azul distintiva --}}
         <div class="modal-header-bar modal-header-nueva">
             <div class="modal-header-icon-wrap">
                 <i class="fas fa-notes-medical"></i>
@@ -185,37 +181,41 @@
         </div>
 
         <div class="modal-body-inner">
-            <form id="formNueva" method="POST" action="{{ route('specialties.store') }}">
+            <form id="formNueva" method="POST" action="{{ route('specialties.store') }}" enctype="multipart/form-data">
                 @csrf
 
-                {{-- Fila 1: Nombre de especialidad --}}
                 <div class="field-group mb-3">
                     <label class="field-label">
                         <i class="fas fa-tag"></i> Nombre de la especialidad <span class="req">*</span>
                     </label>
-                    <input type="text" name="name" class="field-input"
+                    <input type="text" name="nombre" class="field-input"
                            placeholder="Ej: Cardiología, Pediatría…" required>
                 </div>
 
-                {{-- Fila 2: Nombre del doctor --}}
                 <div class="field-group mb-3">
                     <label class="field-label">
-                        <i class="fas fa-user-md"></i> Nombre del doctor <span class="req">*</span>
+                        <i class="fas fa-user-md"></i> Nombre del doctor
                     </label>
-                    <input type="text" name="doctor_name" class="field-input"
-                           placeholder="Ej: Dr. Juan Pérez" required>
+                    <input type="text" name="Nombre del Doctor" class="field-input"
+                           placeholder="Ej: Dr. Juan Pérez">
                 </div>
 
-                {{-- Fila 3: Descripción --}}
                 <div class="field-group mb-3">
                     <label class="field-label">
                         <i class="fas fa-align-left"></i> Descripción
                     </label>
-                    <textarea name="description" class="field-input field-textarea" rows="3"
-                              placeholder="Breve descripción de la especialidad y los servicios que ofrece…"></textarea>
+                    <textarea name="descripcion" class="field-input field-textarea" rows="3"
+                              placeholder="Breve descripción de la especialidad…"></textarea>
                 </div>
 
-                {{-- Fila 4: Estado --}}
+                <div class="field-group mb-3">
+                    <label class="field-label">
+                        <i class="fas fa-image"></i> Imagen
+                    </label>
+                    <input type="file" name="imagen" class="field-input" accept="image/*">
+                    <small class="text-muted">Opcional. Máximo 2MB.</small>
+                </div>
+
                 <div class="field-group mb-1">
                     <label class="field-label">
                         <i class="fas fa-toggle-on"></i> Estado inicial
@@ -250,9 +250,7 @@
 </div>
 
 
-{{-- ══════════════════════════════════════════════
-     MODAL VER
-══════════════════════════════════════════════ --}}
+{{-- MODAL VER --}}
 <div class="modal-overlay" id="modalVer" onclick="cerrarModal('modalVer')">
     <div class="modal-box" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="cerrarModal('modalVer')"><i class="fas fa-times"></i></button>
@@ -271,11 +269,9 @@
 </div>
 
 
-{{-- ══════════════════════════════════════════════
-     MODAL EDITAR
-══════════════════════════════════════════════ --}}
+{{-- MODAL EDITAR --}}
 <div class="modal-overlay" id="modalEditar" onclick="cerrarModal('modalEditar')">
-    <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-box modal-box-lg" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="cerrarModal('modalEditar')"><i class="fas fa-times"></i></button>
 
         <div class="modal-header-bar">
@@ -284,18 +280,26 @@
         </div>
 
         <div class="modal-body-inner">
-            <form id="formEditar" method="POST">
+            <form id="formEditar" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
-                <div class="field-group">
+                <div class="field-group mb-3">
                     <label class="field-label">Nombre</label>
-                    <input type="text" id="editNombre" name="name" class="field-input" required>
+                    <input type="text" id="editNombre" name="nombre" class="field-input" required>
                 </div>
 
-                <div class="field-group mt-3">
+                <div class="field-group mb-3">
                     <label class="field-label">Descripción</label>
-                    <textarea id="editDescripcion" name="description" class="field-input field-textarea" rows="4"></textarea>
+                    <textarea id="editDescripcion" name="descripcion" class="field-input field-textarea" rows="4"></textarea>
+                </div>
+
+                <div class="field-group mb-3">
+                    <label class="field-label">
+                        <i class="fas fa-image"></i> Nueva imagen
+                    </label>
+                    <input type="file" name="imagen" class="field-input" accept="image/*">
+                    <small class="text-muted">Deja vacío para mantener la imagen actual.</small>
                 </div>
 
                 <div class="modal-footer-actions">
@@ -400,7 +404,7 @@
         justify-content: center; gap: 4px;
         text-decoration: none; transition: all .15s;
     }
-    .btn-action:hover         { background: #f5f5f5; color: #333; }
+    .btn-action:hover          { background: #f5f5f5; color: #333; }
     .btn-action.btn-edit:hover { background: #FAEEDA; color: #854F0B; border-color: #EF9F27; }
     .btn-action.btn-del:hover  { background: #FCEBEB; color: #A32D2D; border-color: #F09595; }
 
@@ -411,243 +415,344 @@
     .empty-state p { font-size: 15px; margin-top: 8px; }
     .pagination-wrapper .pagination { justify-content: center; }
 
-    /* ── SIDEBAR FIX ── */
     .main-sidebar { position: fixed !important; height: 100vh !important; overflow-y: auto; }
     .content-wrapper, .main-footer, .main-header { margin-left: 250px !important; }
-    .wrapper { overflow-x: hidden; }
-    .content-wrapper { min-height: 100vh; }
+    .wrapper { overflow-x: hidde
 
-    /* ══════════════════════════════════════════════
-       MODALES
-    ══════════════════════════════════════════════ */
-    .modal-overlay {
-        display: none;
-        position: fixed; inset: 0; z-index: 9999;
-        background: rgba(10, 20, 40, 0.45);
-        backdrop-filter: blur(4px);
-        align-items: center; justify-content: center;
-        padding: 20px;
-        animation: fadeIn .2s ease;
+        .main-sidebar { 
+        position: fixed !important; 
+        height: 100vh !important; 
+        overflow-y: auto; 
     }
-    .modal-overlay.open { display: flex; }
 
-    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(24px) scale(.97); }
-                         to   { opacity: 1; transform: translateY(0)     scale(1);   } }
+    .content-wrapper, 
+    .main-footer, 
+    .main-header { 
+        margin-left: 250px !important; 
+    }
 
-    .modal-box {
+    .wrapper { 
+        overflow-x: hidden; 
+    }
+    
+
+    /* MODALES */
+    .modal-overlay{
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 20px;
+    }
+
+    .modal-overlay.active{
+        display: flex;
+    }
+
+    .modal-box{
         background: #fff;
+        width: 100%;
+        max-width: 520px;
         border-radius: 18px;
-        width: 100%; max-width: 480px;
-        box-shadow: 0 24px 60px rgba(0,0,0,0.18);
         overflow: hidden;
         position: relative;
-        animation: slideUp .25s ease;
+        animation: modalShow .2s ease;
     }
 
-    .modal-close {
-        position: absolute; top: 14px; right: 14px;
-        background: rgba(0,0,0,0.07); border: none;
-        border-radius: 50%; width: 30px; height: 30px;
-        display: flex; align-items: center; justify-content: center;
-        color: #555; cursor: pointer; font-size: 13px;
-        transition: background .15s;
-        z-index: 2;
-    }
-    .modal-close:hover { background: rgba(0,0,0,0.14); color: #222; }
-
-    /* Modal Ver – zona imagen */
-    #verImgWrap img  { width: 100%; height: 200px; object-fit: cover; display: block; }
-    #verImgWrap .ver-placeholder {
-        width: 100%; height: 200px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 56px;
+    .modal-box-lg{
+        max-width: 700px;
     }
 
-    .modal-body-inner { padding: 22px 24px 28px; }
-
-    .ver-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-
-    .modal-title { font-size: 18px; font-weight: 700; color: #1a1a2e; margin: 0; }
-    .modal-label { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase;
-                   letter-spacing: .06em; margin-bottom: 4px; }
-    .modal-text  { font-size: 14px; color: #555; line-height: 1.6; margin: 0; }
-
-    /* Modal Nueva – cabecera verde */
-    .modal-box-lg { max-width: 520px; }
-
-    .modal-header-nueva {
-        background: linear-gradient(135deg, #1A6B3C, #0F4D2B) !important;
-    }
-    .modal-header-icon-wrap {
-        width: 44px; height: 44px; border-radius: 12px;
-        background: rgba(255,255,255,0.15);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 20px; color: #fff; flex-shrink: 0;
-    }
-    .modal-header-bar { align-items: center; gap: 14px; }
-    .modal-subtitle {
-        color: rgba(255,255,255,0.7); font-size: 12px; margin: 2px 0 0;
+    @keyframes modalShow{
+        from{
+            opacity:0;
+            transform: translateY(10px) scale(.98);
+        }
+        to{
+            opacity:1;
+            transform: translateY(0) scale(1);
+        }
     }
 
-    /* Radio estado */
-    .status-selector { display: flex; gap: 10px; margin-top: 4px; }
-    .status-opt { cursor: pointer; }
-    .status-opt input[type=radio] { display: none; }
-    .status-opt-box {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 7px 16px; border-radius: 99px; font-size: 13px;
-        border: 1.5px solid transparent; font-weight: 500;
-        transition: all .15s; cursor: pointer;
-        background: #f5f5f5; color: #888;
+    .modal-close{
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        border: none;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #f3f3f3;
+        cursor: pointer;
+        z-index: 10;
     }
-    .status-opt input[type=radio]:checked + .status-opt-activa {
-        background: #EAF3DE; color: #3B6D11; border-color: #7DBF45;
-    }
-    .status-opt input[type=radio]:checked + .status-opt-revision {
-        background: #FAEEDA; color: #854F0B; border-color: #EF9F27;
-    }
-    .status-opt-activa:hover  { border-color: #7DBF45; }
-    .status-opt-revision:hover { border-color: #EF9F27; }
 
-    /* Botón guardar verde */
-    .btn-modal-save-green { background: #1A6B3C !important; }
-    .btn-modal-save-green:hover { background: #0F4D2B !important; }
-
-    /* Requerido asterisco */
-    .req { color: #A32D2D; }
-
-    /* Ícono pequeño en label */
-    .field-label i { font-size: 11px; color: #aaa; margin-right: 3px; }
-
-    /* Modal Nueva – cabecera verde */
-    .modal-header-bar {
-        background: linear-gradient(135deg, #185FA5, #0C447C);
-        padding: 20px 24px 16px;
-        display: flex; align-items: center; gap: 12px;
+    .modal-close:hover{
+        background: #e9e9e9;
     }
-    .modal-header-icon { color: rgba(255,255,255,.8); font-size: 18px; }
-    .modal-header-bar .modal-title { color: #fff; font-size: 16px; }
 
-    /* Campos del formulario */
-    .field-group { display: flex; flex-direction: column; }
-    .field-label  { font-size: 12px; font-weight: 600; color: #777; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .05em; }
-    .field-input  {
-        border: 1.5px solid rgba(0,0,0,0.13); border-radius: 8px;
-        padding: 9px 12px; font-size: 14px; color: #1a1a2e;
-        outline: none; transition: border-color .2s;
-        font-family: inherit;
+    .modal-header-bar{
+        padding: 22px 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-bottom: 1px solid #f1f1f1;
     }
-    .field-input:focus { border-color: #185FA5; }
-    .field-textarea { resize: vertical; min-height: 90px; }
 
-    .modal-footer-actions {
-        display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px;
+    .modal-header-nueva{
+        background: linear-gradient(135deg,#185FA5,#0C447C);
+        color: white;
     }
-    .btn-modal-cancel {
-        padding: 9px 18px; border-radius: 8px; font-size: 13px;
-        border: 1px solid rgba(0,0,0,0.13); background: #fff;
-        color: #666; cursor: pointer; transition: background .15s;
+
+    .modal-header-icon-wrap{
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        background: rgba(255,255,255,.15);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:22px;
     }
-    .btn-modal-cancel:hover { background: #f3f3f3; }
-    .btn-modal-save {
-        padding: 9px 20px; border-radius: 8px; font-size: 13px;
-        background: #185FA5; color: #fff; border: none;
-        cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-        transition: background .2s;
+
+    .modal-header-icon{
+        font-size: 22px;
+        color:#185FA5;
     }
-    .btn-modal-save:hover { background: #0C447C; }
+
+    .modal-title{
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .modal-subtitle{
+        margin: 2px 0 0;
+        opacity: .9;
+        font-size: 13px;
+    }
+
+    .modal-body-inner{
+        padding: 24px;
+    }
+
+    .field-group{
+        display:flex;
+        flex-direction:column;
+    }
+
+    .field-label{
+        font-size:13px;
+        font-weight:600;
+        margin-bottom:8px;
+        color:#444;
+    }
+
+    .field-input{
+        width:100%;
+        border:1px solid #ddd;
+        border-radius:10px;
+        padding:12px 14px;
+        font-size:14px;
+        transition:.2s;
+    }
+
+    .field-input:focus{
+        border-color:#185FA5;
+        outline:none;
+        box-shadow:0 0 0 3px rgba(24,95,165,.1);
+    }
+
+    .field-textarea{
+        resize:none;
+    }
+
+    .req{
+        color:#d62828;
+    }
+
+    .status-selector{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+    }
+
+    .status-opt input{
+        display:none;
+    }
+
+    .status-opt-box{
+        border:1px solid #ddd;
+        border-radius:10px;
+        padding:10px 16px;
+        display:flex;
+        align-items:center;
+        gap:8px;
+        cursor:pointer;
+        font-size:13px;
+        transition:.2s;
+    }
+
+    .status-opt input:checked + .status-opt-box{
+        border-color:#185FA5;
+        background:#EEF5FC;
+        color:#185FA5;
+    }
+
+    .modal-footer-actions{
+        display:flex;
+        justify-content:flex-end;
+        gap:10px;
+    }
+
+    .btn-modal-cancel{
+        border:none;
+        background:#ececec;
+        color:#444;
+        padding:10px 16px;
+        border-radius:10px;
+        cursor:pointer;
+    }
+
+    .btn-modal-save{
+        border:none;
+        background:#185FA5;
+        color:#fff;
+        padding:10px 18px;
+        border-radius:10px;
+        cursor:pointer;
+    }
+
+    .btn-modal-save:hover{
+        background:#0C447C;
+    }
+
+    .btn-modal-save-green{
+        background:#198754;
+    }
+
+    .btn-modal-save-green:hover{
+        background:#146c43;
+    }
+
+    .ver-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:14px;
+    }
+
+    .modal-label{
+        font-size:13px;
+        font-weight:600;
+        color:#666;
+        margin-bottom:6px;
+    }
+
+    .modal-text{
+        color:#555;
+        line-height:1.6;
+    }
+
+    #verImgWrap img{
+        width:100%;
+        height:240px;
+        object-fit:cover;
+    }
+
+    @media(max-width:768px){
+
+        .content-wrapper,
+        .main-footer,
+        .main-header{
+            margin-left:0 !important;
+        }
+
+        .specs-grid{
+            grid-template-columns:1fr;
+        }
+
+        .card-actions{
+            flex-direction:column;
+        }
+
+        .modal-footer-actions{
+            flex-direction:column;
+        }
+
+        .btn-modal-save,
+        .btn-modal-cancel{
+            width:100%;
+        }
+    }
 </style>
 @stop
 
 @section('js')
 <script>
-    /* ── Buscador con debounce ── */
-    let searchTimer;
-    document.getElementById('searchInput').addEventListener('input', function () {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => document.getElementById('searchForm').submit(), 500);
-    });
 
-    /* ── Filtros por status ── */
-    function applyFilter(status) {
-        const url = new URL(window.location.href);
-        if (status) url.searchParams.set('status', status);
-        else url.searchParams.delete('status');
-        window.location.href = url.toString();
+    function abrirModal(id){
+        document.getElementById(id).classList.add('active');
     }
 
-    /* ════════════════════════════════════════
-       HELPERS DE MODAL
-    ════════════════════════════════════════ */
-    function abrirModal(id)  {
-        const el = document.getElementById(id);
-        el.classList.add('open');
-        document.body.style.overflow = 'hidden';
+    function cerrarModal(id){
+        document.getElementById(id).classList.remove('active');
     }
-    function cerrarModal(id) {
-        document.getElementById(id).classList.remove('open');
-        document.body.style.overflow = '';
-    }
-    // Cerrar con Escape
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') {
-            ['modalVer','modalEditar','modalNueva'].forEach(cerrarModal);
-        }
-    });
 
-    /* ════════════════════════════════════════
-       MODAL VER
-    ════════════════════════════════════════ */
-    function abrirModalVer(nombre, descripcion, foto, icono, bg, color) {
-        document.getElementById('verNombre').textContent      = nombre;
-        document.getElementById('verDescripcion').textContent = descripcion || 'Sin descripción registrada.';
+    function abrirModalVer(nombre, descripcion, foto, icono, bg, color){
 
-        const wrap = document.getElementById('verImgWrap');
-        if (foto) {
-            wrap.innerHTML = `<img src="${foto}" alt="${nombre}">`;
-        } else {
+        document.getElementById('verNombre').innerText = nombre;
+        document.getElementById('verDescripcion').innerText = descripcion || 'Sin descripción disponible';
+
+        let wrap = document.getElementById('verImgWrap');
+
+        if(foto){
             wrap.innerHTML = `
-                <div class="ver-placeholder" style="background:${bg}; color:${color};">
-                    <i class="${icono}"></i>
-                </div>`;
+                <img src="${foto}" alt="${nombre}">
+            `;
+        }else{
+            wrap.innerHTML = `
+                <div class="card-img-placeholder" style="height:240px;background:${bg};color:${color};">
+                    <i class="${icono}" style="font-size:60px;"></i>
+                </div>
+            `;
         }
+
         abrirModal('modalVer');
     }
 
-    /* ════════════════════════════════════════
-       MODAL EDITAR
-    ════════════════════════════════════════ */
-    function abrirModalEditar(id, nombre, descripcion, actionUrl) {
-        document.getElementById('editNombre').value      = nombre;
+    function abrirModalEditar(id, nombre, descripcion, action){
+
+        document.getElementById('editNombre').value = nombre;
         document.getElementById('editDescripcion').value = descripcion;
-        document.getElementById('formEditar').action     = actionUrl;
+
+        document.getElementById('formEditar').action = action;
+
         abrirModal('modalEditar');
     }
 
-    /* ════════════════════════════════════════
-       ELIMINAR – SweetAlert2
-    ════════════════════════════════════════ */
-    function confirmarEliminar(id, nombre) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                title: '¿Eliminar especialidad?',
-                html: `<span style="color:#555;">Estás a punto de eliminar <strong>${nombre}</strong>.<br>Esta acción <u>no se puede deshacer</u>.</span>`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#A32D2D',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-trash"></i> Sí, eliminar',
-                cancelButtonText: 'Cancelar',
-                reverseButtons: true,
-                focusCancel: true,
-            }).then(r => {
-                if (r.isConfirmed) document.getElementById(`form-delete-${id}`).submit();
-            });
-        } else {
-            if (confirm(`¿Eliminar la especialidad "${nombre}"?`))
-                document.getElementById(`form-delete-${id}`).submit();
+    function confirmarEliminar(id, nombre){
+
+        if(confirm('¿Deseas eliminar la especialidad "' + nombre + '"?')){
+            document.getElementById('form-delete-' + id).submit();
         }
     }
+
+    function applyFilter(status){
+
+        const url = new URL(window.location.href);
+
+        if(status){
+            url.searchParams.set('status', status);
+        }else{
+            url.searchParams.delete('status');
+        }
+
+        window.location.href = url.toString();
+    }
+
 </script>
 @stop
