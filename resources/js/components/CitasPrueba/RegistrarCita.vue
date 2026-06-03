@@ -9,7 +9,8 @@
                         <input
                             type="text"
                             name="NombrePaciente"
-                            placeholder = "Escribe el nombre del paciente">
+                            placeholder = "Escribe el nombre del paciente"
+                            v-model="paciente.nombre">
                     </div>
                 </div>
                 <div class="form-group full">
@@ -19,7 +20,8 @@
                         <input
                             type="text"
                             name="Telefono"
-                            placeholder = "Escribe el telefono del paciente">
+                            placeholder = "Escribe el telefono del paciente"
+                            v-model="paciente.telefono">
                     </div>
                 </div>
                 <!-- FECHA -->
@@ -31,7 +33,7 @@
                             type="date"
                             name="fecha_cita"
                             required
-                        >
+                            v-model="paciente.fecha">
                     </div>
                 </div>
 
@@ -44,6 +46,7 @@
                             type="time"
                             name="hora_cita"
                             required
+                            v-model="paciente.hora"
                         >
                     </div>
                 </div>
@@ -72,7 +75,8 @@
                     <textarea
                         name="observaciones"
                         placeholder="Agregar observaciones médicas..."
-                    ></textarea>
+                        v-model="paciente.observaciones">
+                    </textarea>
                 </div>
             </div>
 
@@ -90,4 +94,25 @@
 </template>
 
 <script>
+    import ApiService from '../../services/ApiService.js'
+    export default{
+        data(){
+            return{
+                paciente:{
+                    nombre:'',
+                    telefono:'',
+                    fecha:'',
+                    hora:'',
+                    estado:'',
+                    observaciones:''
+                }
+            }
+        },
+        mounted(){
+            
+        },
+        methods:{
+            
+        },
+    }
 </script>
