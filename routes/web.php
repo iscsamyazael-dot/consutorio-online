@@ -8,6 +8,7 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
+use App\Http\Controllers\CitasController;
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -33,7 +34,19 @@ Route::resource('recetas', RecetaController::class);
 Route::resource('receta-detalles', RecetaDetalleController::class);
 Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
+Route::resource('citasPrueba', CitasController::class);
 
+// Formulario rápido para disparar el POST de prueba
+Route::get('/disparar-prueba', function () {
+    return '
+        <form action="'.url('citasPrueba').'" method="POST">
+            '.csrf_field().'
+            <button type="submit" style="padding: 10px 20px; background: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                🚀 Enviar Cita de Prueba a n8n
+            </button>
+        </form>
+    ';
+});
 
 
 //Codigo para las vistas y que son usadas en el menú de adminlte"

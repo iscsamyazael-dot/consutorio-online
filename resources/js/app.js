@@ -27,6 +27,10 @@ import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 //Modulo de Historial de recetas 
 import Historialreceta from './components/recetass/PanelRecetas.vue'
 
+
+//Modulo Citas-Prueba //////
+import CitaPrueba from './components/CitasPrueba/PanelCita.vue'
+
 const app = createApp({})
 
 app.component(
@@ -88,7 +92,12 @@ app.component(
     'recetass-historial',
     Historialreceta
 );
-    
+
+//app para la cita de prueba//
+app.component(
+    'cita-prueba',
+    CitaPrueba
+);
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 
