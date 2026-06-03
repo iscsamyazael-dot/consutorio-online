@@ -6,6 +6,7 @@ import './bootstrap';
 import 'bootstrap';
 import 'admin-lte';
 
+
 import { createApp } from 'vue';
 import ConsultaInteligente from './components/ConsultaInteligente.vue'
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
@@ -35,3 +36,6 @@ Alpine.start();
 
 import axios from  'axios';
 window.axios = axios;
+
+import Swal from 'sweetalert2';
+window.Swal = Swal;
