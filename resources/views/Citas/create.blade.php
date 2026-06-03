@@ -5,6 +5,7 @@
 @section('content')
 <div class="modern-wrapper">
     <input type="hidden" name="route" value="{{ url('/') }}">
+    <meta name="base-url" content="{{ url('/') }}">
     <!-- HEADER SIMPLE -->
     <div class="page-header">
         <div>

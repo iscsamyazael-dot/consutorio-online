@@ -112,7 +112,31 @@
             
         },
         methods:{
-            
+            //Función para guardar datos a la tabla de movimientos inventario y para actualizar los datos del inventario//
+            async guardarCitaPaciente(){
+                try {
+                    const response = await ApiService.post('/citasPrueba',this.paciente)
+                    console.log(response.data)
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Registro de Citas',
+                        text: 'La Cita fue registrada Exitosamente',
+                        confirmButtonText: 'Aceptar'
+                    })
+                    //Sive para enviar los datos otro componente usando la función $emit//
+                    this.paciente = {
+                        nombre:'',
+                        telefono:'',
+                        fecha:'',
+                        hora:'',
+                        estado:'',
+                        observaciones:''
+                    }
+                }
+                catch(error){
+                    console.error(error)
+                }
+            },
         },
     }
 </script>

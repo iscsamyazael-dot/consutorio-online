@@ -1,15 +1,12 @@
 import axios from 'axios'
-
 const baseURL = document
     .querySelector('meta[name="base-url"]')
     .getAttribute('content')
-
 const token = document
     .querySelector('meta[name="csrf-token"]')
     .getAttribute('content')
-
 const apiClient = axios.create({
-    baseURL: `${baseURL}/api`,
+    baseURL: `${baseURL}`,
     headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',

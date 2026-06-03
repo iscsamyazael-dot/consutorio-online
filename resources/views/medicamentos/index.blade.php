@@ -5,6 +5,7 @@
 @section('content')
     <div class="content">
         <input type="hidden" name="route" value="{{ url('/') }}">
+        <meta name="base-url" content="{{ url('/') }}">
         <div id="app">
             <medicamentos-inventario></medicamentos-inventario>
         </div>
