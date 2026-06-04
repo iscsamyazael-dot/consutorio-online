@@ -85,6 +85,17 @@ Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
 });
 
+Route::get('perfil',function(){
+          return view('configuracion-sistema.perfil');
+});
+
+
+Route::get('cambiar-contraseña', function () {
+    return view('configuracion-sistema.cambiar-contraseña');
+});
+
+
+
 
 
 

@@ -25,6 +25,12 @@ import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación 
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 
 
+//Modulo de Perfil
+import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
+import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
+
+
+
 
 const app = createApp({})
 
@@ -82,6 +88,19 @@ app.component(
     'pacientes-index',
     PacientesIndex
 );
+
+app.component(
+    'configuracion-sistema',
+    ConfiSistema
+);
+
+app.component(
+    'configuracion-sistema-panelcontrasena',
+    PanelContraseña
+);
+
+
+
     
 // 3. MONTAJE DE LA APP
 app.mount('#app');

@@ -438,12 +438,12 @@ return [
         ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
         [
             'text' => 'Perfil',
-            'url' => 'admin/settings',
+            'url' => 'perfil',
             'icon' => 'fas fa-fw fa-user',
         ],
         [
             'text' => 'Cambiar contraseña',
-            'url' => 'admin/settings',
+            'url' => 'cambiar-contraseña',
             'icon' => 'fas fa-fw fa-lock',
         ],
         [
