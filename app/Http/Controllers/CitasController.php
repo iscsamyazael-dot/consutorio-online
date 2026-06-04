@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -15,7 +13,7 @@ class CitasController extends Controller
      */
     public function index()
     {
-        return "Panel de Citas de Prueba";
+        return CitasPrueba::all();
     }
 
     /**
@@ -35,16 +33,16 @@ class CitasController extends Controller
         $urlN8n = 'http://localhost:5678/webhook-test/Nueva-cita'; 
 
         // 2. Simulamos los datos que eventualmente vendrán de tu formulario en Vue.js
-        $datosCita = [
-            'id_cita'    => rand(100, 999), // ID aleatorio para la prueba
-            'paciente'   => 'Juan Pérez',
-            'telefono'   => '+529991234567', // Cambia por tu número real si quieres probar WhatsApp después
-            'fecha_hora' => '2026-06-15 10:30:00'
-        ];
-
+        $citas = CitaPrueba::create([
+            'nombre_paciente' => $request->nombre,
+            'telefono' => $request->telefono,
+            'fecha_cita' => $request->fecha,
+            'hora_cita' => $request->hora,
+            'estado' => $request->estado,
+            'observaciones' => $request->observaciones,
+        ]);
         // 3. Enviamos la petición HTTP POST hacia n8n
-        $response = Http::post($urlN8n, $datosCita);
-
+        $response = Http::post($urlN8n, $citas);
         // 4. Retornamos la respuesta a la pantalla para saber qué pasó
         return response()->json([
             'status' => 'Petición enviada a n8n desde el método STORE',

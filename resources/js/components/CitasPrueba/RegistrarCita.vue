@@ -55,7 +55,7 @@
                     <label>Estado</label>
                     <div class="input-modern">
                         <i class="fas fa-check-circle"></i>
-                        <select name="estado">
+                        <select name="estado" v-model="paciente.estado">
                             <option value="Pendiente">
                                 Pendiente
                             </option>
@@ -79,18 +79,17 @@
                     </textarea>
                 </div>
             </div>
-
-            <!-- ACTIONS -->
+        </form>
+        <!-- ACTIONS -->
             <div class="actions">
                 <a href="" class="btn-cancel">
                     Cancelar
                 </a>
-                <button type="submit" class="btn-save">
+                <button type="submit" class="btn-save" @click="guardarCitaPaciente()">
                     <i class="fas fa-save"></i>
                     Guardar Consulta
                 </button>
             </div>
-        </form>
 </template>
 
 <script>
