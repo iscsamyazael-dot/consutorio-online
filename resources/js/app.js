@@ -7,8 +7,18 @@ import 'admin-lte';
 
 import { createApp } from 'vue';
 import ConsultaInteligente from './components/ConsultaInteligente.vue'
-
+import masteragenda from './components/citasmedicas/mastercitas.vue'
+import masterprocita from './components/citasmedicas/masterprograma.vue'
 const app = createApp({})
+
+app.component(
+    'masterprocita',
+    masterprocita
+)
+app.component(
+    'masteragenda',
+    masteragenda
+)
 
 app.component(
     'consulta-inteligente',

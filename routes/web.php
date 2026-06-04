@@ -11,6 +11,8 @@ use App\Http\Controllers\ConsultaIAController;
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Services\WhatsAppService;
+use Illuminate\Support\Facades\Http;
 
 Route::get('/', function () {
     return view('welcome');
@@ -62,3 +64,26 @@ Route::resource('citas', App\Http\Controllers\CitaController::class);
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
 
 require __DIR__.'/auth.php';
+
+Route::get('/test-whatsapp', function () {
+
+    WhatsAppService::enviar(
+        '529991234567',
+        'Hola, prueba de WhatsApp desde Laravel'
+    );
+
+    return 'Mensaje enviado';
+});
+Route::get('/probar-n8n', function () {
+
+    $response = Http::withoutVerifying()->post(
+        'https://luna110604.app.n8n.cloud/webhook-test/d5aca0e1-0db0-4105-9712-cafc5e5d947c',
+        [
+            'mensaje' => 'Hola desde Laravel',
+            'modulo' => 'agendas',
+            'estado' => 'funcionando'
+        ]
+    );
+
+    return $response->json();
+});
