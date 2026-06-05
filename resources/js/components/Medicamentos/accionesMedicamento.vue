@@ -102,7 +102,11 @@
                                             <i class="fas fa-barcode"></i>
                                         </span>
                                     </div>
-                                    <input type="text" class="form-control" placeholder="MED-001">
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        placeholder="MED-001"
+                                        v-model = "medicamento.codigo">
                                 </div>
                             </div>
                             <!-- NOMBRE -->
@@ -116,22 +120,11 @@
                                             <i class="fas fa-capsules"></i>
                                         </span>
                                     </div>
-                                    <input type="text" class="form-control" placeholder="Paracetamol 500mg">
-                                </div>
-                            </div>
-                              <div class="col-md-4 mt-3">
-                                <label class="font-weight-bold">
-                                    Stock mínimo
-                                </label>
-
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text">
-                                            <i class="fas fa-layer-group"></i>
-                                        </span>
-                                    </div>
-
-                                    <input type="number" class="form-control">
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        placeholder="Paracetamol 500mg"
+                                        v-model = "medicamento.nombre">
                                 </div>
                             </div>
                             <!-- GENERICO -->
@@ -145,7 +138,10 @@
                                             <i class="fas fa-file-medical"></i>
                                         </span>
                                     </div>
-                                    <input type="text" class="form-control">
+                                    <input 
+                                        type="text" 
+                                        class="form-control"
+                                        v-model = "medicamento.nombre_generico">
                                 </div>
                             </div>
                             <!-- PRESENTACION -->
@@ -162,7 +158,8 @@
                                     <input
                                         type="text"
                                         class="form-control"
-                                        placeholder="Caja x 20 tabletas">
+                                        placeholder="Caja x 20 tabletas"
+                                        v-model = "medicamento.presentacion">
                                 </div>
                             </div>
                             <!-- CONCENTRACION -->
@@ -176,7 +173,11 @@
                                             <i class="fas fa-flask"></i>
                                         </span>
                                     </div>
-                                    <input type="text" class="form-control" placeholder="500 mg">
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        placeholder="500 mg"
+                                        v-model = "medicamento.concentracion">
                                 </div>
                             </div>
                             <!-- VIA -->
@@ -190,7 +191,7 @@
                                             <i class="fas fa-syringe"></i>
                                         </span>
                                     </div>
-                                    <select class="form-control">
+                                    <select class="form-control" v-model = "medicamento.via_administracion">
                                         <option>Oral</option>
                                         <option>Intravenosa</option>
                                         <option>Intramuscular</option>
@@ -210,7 +211,10 @@
                                             $
                                         </span>
                                     </div>
-                                    <input type="number" class="form-control">
+                                    <input 
+                                        type="number" 
+                                        class="form-control"
+                                        v-model = "medicamento.precio">
                                 </div>
                             </div>
                           
@@ -219,9 +223,9 @@
                                 <label class="font-weight-bold">
                                     Requiere Receta
                                 </label>
-                                <select class="form-control">
-                                    <option>Sí</option>
-                                    <option>No</option>
+                                <select class="form-control" v-model = "medicamento.requiere_receta">
+                                    <option :value="1">Sí</option>
+                                    <option :value="0">No</option>
                                 </select>
                             </div>
                         </div>
@@ -242,25 +246,37 @@
                             <label class="font-weight-bold">
                                 Descripción
                             </label>
-                            <textarea rows="3" class="form-control"></textarea>
+                            <textarea 
+                                rows="3" 
+                                class="form-control"
+                                v-model = "medicamento.descripcion"></textarea>
                         </div>
                         <div class="form-group">
                             <label class="font-weight-bold">
                                 Indicaciones
                             </label>
-                            <textarea rows="3" class="form-control"></textarea>
+                            <textarea 
+                                rows="3" 
+                                class="form-control"
+                                v-model = "medicamento.indicaciones"></textarea>
                         </div>
                         <div class="form-group">
                             <label class="font-weight-bold">
                                 Contraindicaciones
                             </label>
-                            <textarea rows="3" class="form-control"></textarea>
+                            <textarea 
+                                rows="3" 
+                                class="form-control"
+                                v-model = "medicamento.contraindicaciones"></textarea>
                         </div>
                         <div class="form-group mb-0">
                             <label class="font-weight-bold">
                                 Efectos Secundarios
                             </label>
-                            <textarea rows="3" class="form-control"></textarea>
+                            <textarea 
+                                rows="3" 
+                                class="form-control"
+                                v-model = "medicamento.efectos_secundarios"></textarea>
                         </div>
                     </div>
                 </div>
@@ -273,7 +289,7 @@
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
-                <button class="btn btn-primary">
+                <button class="btn btn-primary" @click="guardarMedicamento">
                     <i class="fas fa-save mr-1"></i>
                     Guardar Medicamento
                 </button>
@@ -348,9 +364,13 @@
                                                 <i class="fas fa-pills text-success"></i>
                                             </span>
                                         </div>
-                                        <select class="form-control">
-                                            <option>
-                                                Seleccionar medicamento
+                                        <select 
+                                            class="form-control" 
+                                            v-model="movimiento.medicamento_id"
+                                            @change="seleccionarMedicamento">
+                                            <option disabled select class="font-weight-bold">Selecciona Uno</option>
+                                            <option v-for="medica in medicamentos" :key="medica.id" :value="medica.id">
+                                               {{ medica.codigo }} - {{ medica.nombre }}
                                             </option>
                                         </select>
                                     </div>
@@ -368,7 +388,10 @@
                                                 <i class="fas fa-warehouse text-primary"></i>
                                             </span>
                                         </div>
-                                        <input type="text" class="form-control bg-white" value="120" disabled>
+                                        <input 
+                                            type="text" 
+                                            class="form-control bg-white"
+                                            :value="stockActual" disabled>
                                     </div>
                                 </div>
                             </div>
@@ -384,7 +407,10 @@
                                                 <i class="fas fa-exclamation-triangle text-danger"></i>
                                             </span>
                                         </div>
-                                        <input type="text" class="form-control bg-white" value="30" disabled>
+                                        <input 
+                                            type="text" 
+                                            class="form-control bg-white" 
+                                            v-model="movimiento.stock_minimo">
                                     </div>
                                 </div>
                             </div>
@@ -428,10 +454,10 @@
                                                 <i class="fas fa-exchange-alt text-primary"></i>
                                             </span>
                                         </div>
-                                        <select class="form-control">
-                                            <option>Entrada</option>
-                                            <option>Salida</option>
-                                            <option>Ajuste</option>
+                                        <select class="form-control" v-model="movimiento.tipo_movimiento">
+                                            <option value="entrada">Entrada</option>
+                                            <option value="salida">Salida</option>
+                                            <option value="ajuste">Ajuste</option>
                                         </select>
                                     </div>
                                 </div>
@@ -448,7 +474,11 @@
                                                 <i class="fas fa-sort-numeric-up text-success"></i>
                                             </span>
                                         </div>
-                                        <input type="number" class="form-control" placeholder="0">
+                                        <input 
+                                            type="number" 
+                                            class="form-control" 
+                                            placeholder="0"
+                                            v-model="movimiento.cantidad">
                                     </div>
                                 </div>
                             </div>
@@ -464,7 +494,10 @@
                                                 <i class="fas fa-calendar-alt text-info"></i>
                                             </span>
                                         </div>
-                                        <input type="datetime-local" class="form-control">
+                                        <input 
+                                            type="datetime-local" 
+                                            class="form-control"
+                                            v-model="movimiento.fecha_movimiento">
                                     </div>
                                 </div>
                             </div>
@@ -480,7 +513,11 @@
                                                 <i class="fas fa-comment-medical text-warning"></i>
                                             </span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Compra, ajuste, devolución, etc.">
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            placeholder="Compra, ajuste, devolución, etc."
+                                            v-model="movimiento.motivo_movimiento">
                                     </div>
                                 </div>
                             </div>
@@ -496,7 +533,11 @@
                                                 <i class="fas fa-file-invoice text-secondary"></i>
                                             </span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Factura / Folio / OC">
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            placeholder="Factura / Folio / OC"
+                                            v-model="movimiento.referencia_documento">
                                     </div>
                                 </div>
                             </div>
@@ -527,7 +568,11 @@
                                                 <i class="fas fa-barcode text-dark"></i>
                                             </span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="LOT-2026-001">
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            placeholder="LOT-2026-001"
+                                            v-model="movimiento.lote">
                                     </div>
                                 </div>
                             </div>
@@ -543,7 +588,10 @@
                                                 <i class="fas fa-calendar-times text-danger"></i>
                                             </span>
                                         </div>
-                                        <input type="date" class="form-control">
+                                        <input 
+                                            type="date" 
+                                            class="form-control"
+                                            v-model="movimiento.fecha_caducidad">
                                     </div>
                                 </div>
                             </div>
@@ -559,7 +607,11 @@
                                                 <i class="fas fa-map-marker-alt text-primary"></i>
                                             </span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Estante A-2">
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            placeholder="Estante A-2"
+                                            v-model="movimiento.ubicacion">
                                     </div>
                                 </div>
                             </div>
@@ -575,7 +627,11 @@
                                                 <i class="fas fa-truck text-success"></i>
                                             </span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Proveedor farmacéutico">
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            placeholder="Proveedor farmacéutico"
+                                            v-model="movimiento.proveedor">
                                     </div>
                                 </div>
                             </div>
@@ -592,7 +648,11 @@
                                                 $
                                             </span>
                                         </div>
-                                        <input type="number" class="form-control" placeholder="0.00">
+                                        <input 
+                                            type="number" 
+                                            class="form-control" 
+                                            placeholder="0.00"
+                                            v-model="movimiento.costo_unitario">
                                     </div>
                                 </div>
                             </div>
@@ -611,7 +671,11 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <textarea rows="4" class="form-control" placeholder="Observaciones farmacéuticas del movimiento..."></textarea>
+                        <textarea 
+                            rows="4" 
+                            class="form-control" 
+                            placeholder="Observaciones farmacéuticas del movimiento..."
+                            v-model="movimiento.observaciones"></textarea>
                     </div>
                 </div>
             </div>
@@ -624,7 +688,7 @@
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
-                <button class="btn btn-success px-4">
+                <button class="btn btn-success px-4" @click="guardarMovimientosInventario">
                     <i class="fas fa-save mr-1"></i>
                     Guardar Movimiento
                 </button>
@@ -633,3 +697,170 @@
     </div>
 </div>
 </template>
+<script>
+    import ApiService from '../../services/ApiService.js'
+    export default{
+        data(){
+            return{
+                medicamentos:[],
+                sctockActual:0,
+                medicamento:{
+                    codigo: '',
+                    nombre: '',
+                    nombre_generico: '',
+                    presentacion: '',
+                    concentracion: '',
+                    via_administracion: '',
+                    descripcion: '',
+                    indicaciones: '',
+                    contraindicaciones: '',
+                    efectos_secundarios: '',
+                    precio:0,
+                    requiere_receta: 1,
+                    activo: 1,
+                },
+                movimiento:{
+                    // Medicamento
+                    medicamento_id:'',
+                    // Movimiento
+                    tipo_movimiento:'entrada',
+                    cantidad:0,
+                    fecha_movimiento:'',
+                    // Inventario
+                    stock_minimo:0,
+                    ubicacion:'',
+                    // Lote
+                    lote:'',
+                    fecha_caducidad:'',
+                    // Compra
+                    proveedor:'',
+                    costo_unitario:0,
+                    // Control
+                    motivo_movimiento:'',
+                    referencia_documento:'',
+                    observaciones:''
+                }
+            }
+        },
+        mounted(){
+            this.obtenerMedicamentos();
+            this.movimiento.fecha_movimiento = this.obtenerFechaActual();
+        },
+        methods:{
+            //Función para obtener fecha del día de hoy junto con el horario actual en la zona de México//
+            obtenerFechaActual(){
+            const fecha = new Date();
+            const year = fecha.getFullYear();
+            const month = String(fecha.getMonth() + 1).padStart(2, '0');
+            const day = String(fecha.getDate()).padStart(2, '0');
+            const hour = String(fecha.getHours()).padStart(2, '0');
+            const minute = String(fecha.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hour}:${minute}`;
+            },
+            //Aqui termina la función para la fecha y hora //
+            //* Metodo para guardar un medicamento a la base de datos *//
+            async guardarMedicamento(){
+                try {
+                    const response = await ApiService.post('/medicamentos',this.medicamento)
+                    console.log(response.data)
+                    $('#modalMedicamento').hide()
+                    $('body').removeClass('modal-open')
+                    $('.modal-backdrop').remove()
+                    $('body').css('padding-right', '')
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Medicamento registrado',
+                        text: 'El medicamento fue guardado correctamente',
+                        confirmButtonText: 'Aceptar'
+                    })
+                    //Sive para enviar los datos otro componente usando la función $emit//
+                    this.$emit('actualizar-inventario')
+                    ////////////////////////////////////////////////////////////////////
+                    this.medicamento = {
+                        codigo: '',
+                        nombre: '',
+                        nombre_generico: '',
+                        presentacion: '',
+                        concentracion: '',
+                        via_administracion: '',
+                        descripcion: '',
+                        indicaciones: '',
+                        contraindicaciones: '',
+                        efectos_secundarios: '',
+                        precio: 0,
+                        requiere_receta: 1,
+                        activo: 1
+                    }
+                }
+                catch(error){
+                    console.error(error)
+                }
+
+            },
+             //* Termina el Metodo para guardar un medicamento a la base de datos *//
+
+            //Función para guardar datos a la tabla de movimientos inventario y para actualizar los datos del inventario//
+            async guardarMovimientosInventario(){
+                try {
+                    const response = await ApiService.post('/movimientos',this.movimiento)
+                    console.log(response.data)
+                    $('#modalEntradaInventario').hide()
+                    $('body').removeClass('modal-open')
+                    $('.modal-backdrop').remove()
+                    $('body').css('padding-right', '')
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Movimiento registrado',
+                        text: 'El movimiento fue guardado correctamente',
+                        confirmButtonText: 'Aceptar'
+                    })
+                    //Sive para enviar los datos otro componente usando la función $emit//
+                    this.$emit('actualizar-inventario')
+                    this.movimiento = {
+                        medicamento_id:'',
+                        tipo_movimiento:'entrada',
+                        cantidad:0,
+                        stock_minimo:0,
+                        ubicacion:'',
+                        lote:'',
+                        fecha_caducidad:'',
+                        proveedor:'',
+                        costo_unitario:0,
+                        motivo_movimiento:'',
+                        referencia_documento:'',
+                        observaciones:''
+                    }
+                }
+                catch(error){
+                    console.error(error)
+                }
+            },
+            //Termina la funcion del metodo para guardar en movmientos inventario y la actualización del inventario//   
+            // Metodo para listar los medicamentos que existen en la tabla de la base de datos //
+            async obtenerMedicamentos(){
+                try {
+                    const response = await ApiService.get('/medicamentos')
+                    this.medicamentos = response.data
+                    console.log('Medicamentos cargados:',this.medicamentos)
+                }
+                catch(error){
+                    console.error("Error al obtner medicamentos:", error)
+                }
+            },
+            //Termina el metodo para traer los medicamentos de la base de datos//
+
+            //Función para hacer la busqueda de un medicamento mediante su ID dentro de la tabla de inventariod//
+            seleccionarMedicamento(){
+                const medicamentoSeleccionado = this.medicamentos.find(
+                    medicamento => medicamento.id == this.movimiento.medicamento_id
+                )
+                console.log('Medicamentos del Inventario',medicamentoSeleccionado)
+                if(medicamentoSeleccionado && medicamentoSeleccionado.inventario){
+                    this.stockActual = medicamentoSeleccionado.inventario.stock_actual
+                    this.movimiento.stock_minimo = medicamentoSeleccionado.inventario.stock_minimo
+                    this.movimiento.ubicacion = medicamentoSeleccionado.inventario.ubicacion
+                }
+            }
+        }
+    }
+</script>

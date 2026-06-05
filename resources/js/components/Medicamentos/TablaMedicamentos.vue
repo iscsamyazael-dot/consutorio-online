@@ -87,11 +87,11 @@
         </thead>
 
         <tbody>
-            <tr>
+            <tr v-for=" medica in medicamentos" :key="medica.id">
                 <!-- CODIGO -->
                 <td>
                     <span class="font-weight-bold text-primary">
-                        MED-001
+                        {{medica.codigo}}
                     </span>
                 </td>
 
@@ -99,52 +99,73 @@
                 <td>
                     <div>
                         <strong>
-                            Paracetamol 500mg
+                             {{medica.nombre}}
                         </strong>
                         <br>
                         <small class="text-muted">
-                            Paracetamol
+                             {{medica.nombre_generico}}
                         </small>
                     </div>
                 </td>
 
                 <!-- PRESENTACION -->
                 <td>
-                    Caja x 20
+                    {{medica.presentacion}}
                 </td>
 
                 <!-- LOTE -->
                 <td>
-                    <span class="badge badge-secondary px-3 py-2">
-                        L-2026-01
+                    <span
+                        v-if="medica.ultimo_movimiento" 
+                        class="badge badge-secondary px-3 py-2">
+                        {{ medica.ultimo_movimiento.lote }}
+                    </span>
+                    <span
+                        v-else
+                        class="badge badge-warning px-3 py-2">
+                        Sin Lote
                     </span>
                 </td>
 
                 <!-- STOCK -->
                 <td>
                     <span class="badge badge-success px-3 py-2">
-                        120
+                        {{ medica.inventario.stock_actual }}
                     </span>
                 </td>
 
                 <!-- STOCK MINIMO -->
                 <td>
                     <span class="badge badge-warning px-3 py-2">
-                        30
+                        {{ medica.inventario.stock_minimo }}
                     </span>
                 </td>
 
                 <!-- CADUCIDAD -->
                 <td>
-                    <span class="text-warning font-weight-bold">
-                        12/10/2026
+                    <span
+                        v-if="medica.ultimo_movimiento" 
+                        class="text-warning font-weight-bold">
+                        {{ medica.ultimo_movimiento.fecha_caducidad }}
+                    </span>
+                    <span 
+                        v-else
+                        class="text-danger font-weight-bold">
+                        Sin fecha de caducidad
                     </span>
                 </td>
 
                 <!-- ESTADO -->
                 <td>
-                    <span class="badge badge-success px-3 py-2">
+                    <span
+                        v-if="medica.activo == 1"
+                        class="badge badge-success px-3 py-2">
                         Activo
+                    </span>
+                    <span
+                        v-else
+                        class="badge badge-danger px-3 py-2">
+                        Inactivo
                     </span>
                 </td>
 
@@ -157,8 +178,8 @@
                             class="btn btn-sm btn-info"
                             data-toggle="modal"
                             data-target="#modalDetalleMedicamento"
-                            title="Ver Detalle">
-
+                            title="Ver Detalle"
+                            @click="verMedicamento(medica.id)">
                             <i class="fas fa-eye"></i>
                         </button>
 
@@ -168,7 +189,6 @@
                             data-toggle="modal"
                             data-target="#modalEditarMedicamento"
                             title="Editar Medicamento">
-
                             <i class="fas fa-edit"></i>
                         </button>
 
@@ -178,7 +198,6 @@
                             data-toggle="modal"
                             data-target="#modalMovimientoInventario"
                             title="Movimiento Inventario">
-
                             <i class="fas fa-exchange-alt"></i>
                         </button>
 
@@ -186,7 +205,6 @@
                         <button
                             class="btn btn-sm btn-danger"
                             title="Eliminar">
-
                             <i class="fas fa-trash"></i>
                         </button>
 
@@ -260,7 +278,7 @@
                                     Código
                                 </label>
                                 <div class="h6">
-                                    MED-001
+                                    {{ medicamentoDetalle.codigo }}
                                 </div>
                             </div>
                             <div class="col-md-5 mb-3">
@@ -268,7 +286,7 @@
                                     Nombre Comercial
                                 </label>
                                 <div class="h5 font-weight-bold">
-                                    Paracetamol 500mg
+                                    {{ medicamentoDetalle.nombre }}
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -276,8 +294,13 @@
                                     Estado
                                 </label>
                                 <div>
-                                    <span class="badge badge-success px-3 py-2">
+                                    <span v-if="medicamentoDetalle.activo == 1" 
+                                        class="badge badge-success px-3 py-2">
                                         Activo
+                                    </span>
+                                    <span v-else
+                                        class="badge badge-danger px-3 py-2">
+                                        Inactivo
                                     </span>
                                 </div>
                             </div>
@@ -286,7 +309,7 @@
                                     Nombre Genérico
                                 </label>
                                 <div>
-                                    Paracetamol
+                                    {{ medicamentoDetalle.nombre_generico }}
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -294,7 +317,7 @@
                                     Concentración
                                 </label>
                                 <div>
-                                    500 mg
+                                    {{ medicamentoDetalle.concentracion }}
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -302,7 +325,7 @@
                                     Vía Administración
                                 </label>
                                 <div>
-                                    Oral
+                                    {{ medicamentoDetalle.via_administracion }}
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
@@ -310,7 +333,7 @@
                                     Presentación
                                 </label>
                                 <div>
-                                    Caja con 20 tabletas
+                                    {{ medicamentoDetalle.presentacion }}
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
@@ -318,8 +341,13 @@
                                     Requiere Receta
                                 </label>
                                 <div>
-                                    <span class="badge badge-danger px-3 py-2">
-                                        Sí
+                                    <span v-if="medicamentoDetalle == 1"
+                                         class="badge badge-danger px-3 py-2">
+                                         Sí
+                                    </span>
+                                    <span v-else
+                                       class="badge badge-succes px-3 py-2">
+                                        No
                                     </span>
                                 </div>
                             </div>
@@ -343,7 +371,7 @@
                                     Stock Actual
                                 </label>
                                 <div class="h4 text-success font-weight-bold">
-                                    120
+                                    {{ medicamentoDetalle.inventario.stock_actual}}
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -351,7 +379,7 @@
                                     Stock Mínimo
                                 </label>
                                 <div class="h4 text-danger font-weight-bold">
-                                    30
+                                    {{ medicamentoDetalle.inventario.stock_minimo}}
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -383,7 +411,7 @@
                                 Descripción Farmacológica
                             </label>
                             <div class="border rounded p-3 bg-light">
-                                Analgésico y antipirético utilizado para el tratamiento del dolor leve a moderado y control de fiebre.
+                                {{ medicamentoDetalle.descripcion}}
                             </div>
                         </div>
                         <div class="mb-4">
@@ -391,7 +419,7 @@
                                 Indicaciones
                             </label>
                             <div class="border rounded p-3 bg-light">
-                                Tomar una tableta cada 8 horas después de los alimentos.
+                                {{ medicamentoDetalle.indicaciones}}
                             </div>
                         </div>
                         <div class="mb-4">
@@ -399,7 +427,7 @@
                                 Contraindicaciones
                             </label>
                             <div class="border rounded p-3 bg-light">
-                                No administrar en pacientes con insuficiencia hepática severa o alergia al paracetamol.
+                                {{ medicamentoDetalle.contraindicaciones}}
                             </div>
                         </div>
                         <div>
@@ -407,7 +435,7 @@
                                 Efectos Secundarios
                             </label>
                             <div class="border rounded p-3 bg-light">
-                                Náuseas, mareo, somnolencia y molestias gastrointestinales.
+                                {{ medicamentoDetalle.efectos_secundarios}}
                             </div>
                         </div>
                     </div>
@@ -429,7 +457,7 @@
                                     Precio
                                 </label>
                                 <div class="h4 text-primary">
-                                    $85.00
+                                    {{ medicamentoDetalle.precio}}
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -437,7 +465,7 @@
                                     Fecha Registro
                                 </label>
                                 <div>
-                                    28/05/2026
+                                    {{ new Date(medicamentoDetalle.created_at).toLocaleDateString() }}
                                 </div>
                             </div>
                         </div>
@@ -938,55 +966,110 @@
 </template>
 
 <script>
+import ApiService from '../../services/ApiService.js'
 export default {
-
     props: {
         medicamento: {
             type: Object,
             default: () => ({})
         }
     },
-
    data(){
         return{
-            movimiento:{
-                medicamento:'',
-                tipo:'entrada',
-                cantidad:'',
-                lote:'',
-                caducidad:'',
-                observaciones:''
+            medicamentos:[],
+            medicamentoDetalle:[],
+            stockActual:0,
+            inventario:{
+                stock_actual:0,
+                stock_minimo:0
             },
-            medicamentoSeleccionado:{}
+            movimiento:{
+                    // Medicamento
+                    medicamento_id:'',
+                    // Movimiento
+                    tipo_movimiento:'entrada',
+                    cantidad:0,
+                    fecha_movimiento:'',
+                    // Inventario
+                    stock_minimo:0,
+                    ubicacion:'',
+                    // Lote
+                    lote:'',
+                    fecha_caducidad:'',
+                    // Compra
+                    proveedor:'',
+                    costo_unitario:0,
+                    // Control
+                    motivo_movimiento:'',
+                    referencia_documento:'',
+                    observaciones:''
+                },
+            medicamentoSeleccionado:{},
+
+            medicamentoDetalle:{
+                inventario:{},
+                ultimo_movimiento:[]
+            }
         }
+    },
+
+    mounted(){
+        this.obtenerMedicamentos();
     },
 
     watch: {
         medicamento: {
             immediate: true,
             handler(nuevo){
-
                 if(nuevo){
-
                     this.movimiento.medicamento = nuevo.nombre || ''
-
                 }
-
             }
         }
     },
 
     methods: {
-
+        /*//Metodo para traer la lista de los medicamentos //*/
+        async obtenerMedicamentos(){
+            try {
+                const response = await ApiService.get('/medicamentos')
+                this.medicamentos = response.data
+                console.log('Medicamentos cargados:',this.medicamentos)
+            }
+            catch(error){
+                console.error("Error al obtner medicamentos:", error)
+            }
+        },
+        /*//Termina el metodo para listar los medicamentos //*/
+        //Metodo para obtner el detalle de un solo medicamento//
+        async verMedicamento(id){
+            console.log('ID del medicamento:',id)
+            try{
+                const response = await ApiService.get('/medicamentos/' + id)
+                this.medicamentoDetalle = response.data
+                console.log('Medicamento Detalle',this.medicamentoDetalle)
+            }catch(error){
+                console.error(error)
+            }
+        },
+        //Aqui termina el metodo para obtner el detalle de un solo medicamento//
         guardarMovimiento(){
-
             console.log(this.movimiento)
-
             $('#modalMovimientoInventario').modal('hide')
-
-        }
-
+        },
+        ///////////////////////////////////////////////////////////////////////
+         //Función para hacer la busqueda de un medicamento mediante su ID dentro de la tabla de inventariod//
+         seleccionarMedicamento(){
+                const medicamentoSeleccionado = this.medicamentos.find(
+                    medicamento => medicamento.id == this.movimiento.medicamento_id
+                )
+                console.log('Medicamentos del Inventario',medicamentoSeleccionado)
+                if(medicamentoSeleccionado && medicamentoSeleccionado.inventario){
+                    this.stockActual = medicamentoSeleccionado.inventario.stock_actual
+                    this.movimiento.stock_minimo = medicamentoSeleccionado.inventario.stock_minimo
+                    this.movimiento.ubicacion = medicamentoSeleccionado.inventario.ubicacion
+                }
+            }
     }
-
 }
 </script>
