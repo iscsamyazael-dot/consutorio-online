@@ -59,7 +59,7 @@
                             <option value="Pendiente">
                                 Pendiente
                             </option>
-                            <option value="Completada">
+                            <option value="Agendado">
                                 Agendado
                             </option>
                             <option value="Cancelada">

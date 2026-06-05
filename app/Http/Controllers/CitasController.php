@@ -4,6 +4,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Models\CitaPrueba;
+use Carbon\Carbon;
 
 class CitasController extends Controller
 {   
@@ -49,6 +50,8 @@ class CitasController extends Controller
         // 1. URL de pruebas (Test URL) que copiaste del nodo Webhook en n8n
         $urlN8n = 'http://localhost:5678/webhook-test/Cita-Creada'; 
 
+        
+
         // 2. Simulamos los datos que eventualmente vendrán de tu formulario en Vue.js
         $citas = CitaPrueba::create([
             'nombre_paciente' => $request->nombre,
@@ -58,8 +61,16 @@ class CitasController extends Controller
             'estado' => $request->estado,
             'observaciones' => $request->observaciones,
         ]);
+        $datosParaN8n8 = [
+            'nombre_paciente'=> $citas->nombre_paciente,
+            'teleono'=> $citas->telefono,
+            'fecha_cita'=> Carbon::parse($citas->fecha_cita)->format('d/m/Y'),
+            'hora_cita'=> $citas->hora,
+            'estado'=> $citas->estado,
+            'observaciones'=> $citas->observaciones
+        ];
         // 3. Enviamos la petición HTTP POST hacia n8n
-        $response = Http::post($urlN8n, $citas);
+        $response = Http::post($urlN8n, $datosParaN8n8);
         // 4. Retornamos la respuesta a la pantalla para saber qué pasó
         return response()->json([
             'status' => 'Petición enviada a n8n desde el método STORE',
