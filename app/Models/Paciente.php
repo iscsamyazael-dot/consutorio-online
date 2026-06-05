@@ -24,6 +24,7 @@ class Paciente extends Model
         'estado',
         'foto',
         'notas_generales'
+        
     ];
 
     public function consultas()

@@ -8,9 +8,10 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
-
+use App\Http\Controllers\TriageController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -24,6 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -33,6 +35,7 @@ Route::resource('recetas', RecetaController::class);
 Route::resource('receta-detalles', RecetaDetalleController::class);
 Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
+Route::resource('triage', TriageController::class);
 
 
 
