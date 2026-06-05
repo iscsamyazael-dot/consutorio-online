@@ -21,6 +21,7 @@ import PacientesIndex from './components/pasientes/pacientesindex.vue'
 import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- Corregida 'C' mayúscula
 import IndexConsultas from './components/consultas/IndexConsultas.vue';
 import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
+import InformacionPaciente    from './components/pasientes/masterregistroN.vue'; // ✅ variable correcta
 
 //Modulo de inventario de medicamentos
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
@@ -64,6 +65,7 @@ app.component(
      TRIAGE
 );
 
+app.component('master-registro-paciente', InformacionPaciente);
 // 2. REGISTRO DE COMPONENTES
 app.component(
     'index-consultas',

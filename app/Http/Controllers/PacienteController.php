@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
+use App\Models\Triage;
+
 
 
 class PacienteController extends Controller
@@ -23,11 +25,52 @@ class PacienteController extends Controller
 
     public function store(Request $request)
     {
-        Paciente::create($request->all());
+        $paciente = Paciente::create([
+        'nombre' => $request->nombre,
+        'apellido_paterno' => $request->apellido_paterno,
+        'apellido_materno' => $request->apellido_materno,
+        'telefono' => $request->telefono,
+        'email' => $request->email,
+        'edad' => $request->edad,
+        'direccion' => $request->descripcion,
+        'tipo_sangre' => $request->indicaciones,
+        'contacto_emergencia' => $request->contraindicaciones,
+        'telefono_emergencia' => $request->efectos_secundarios,
+        'curp' => $request->precio,
+        'estado' => $request->requiere_receta,
+        'foto' => null,
+        'notas_generales' => $request->activo,
+        'fecha_nacimiento' => $request->activo,
+        'whatsapp_id' => null,
+        'consentimiento' => null,
+        'ultima_interaccion' => null,
+         ]);
+        
+         $triage= Triage::create([
+        'consulta_id' => null,
+        'presion' => $request->presion,
+        'saturacion' => $request->saturacion,
+        'temperatura' => $request->temperatura,
+        'sintomas' => $request->sintomas,
+        'estado' => $request->estado,
+        'nivel_urgencia' => $request->nivel_urgencia,
+        'evaluacion_ia' => null,
+        'requiere_medico' => null,
 
-        return redirect()->route('pacientes.index')
-            ->with('success', 'Paciente registrado');
+         ]);
+         
+
+        return response()->json([
+        'success' => true,
+        'message' => 'Paciente y triage creados correctamente',
+        'data' => [
+            'paciente' => $paciente,
+            'Triage' => $triage]
+        ]);
+
     }
+
+
 
     public function show(string $id)
     {
