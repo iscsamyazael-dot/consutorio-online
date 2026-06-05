@@ -99,7 +99,7 @@ require __DIR__.'/auth.php';
 //     return view('consultas.create');
 // });
 
-// //ruta de nuevo paciente //
-// Route::get('/pacientes/create', function () {
-//     return view('pacientes.create');
-// });
+//ruta de nuevo paciente //
+Route::get('/pacientes/create', function () {
+    return view('pacientes.create');
+});
