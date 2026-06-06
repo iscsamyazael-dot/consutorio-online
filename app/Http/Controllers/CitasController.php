@@ -62,10 +62,11 @@ class CitasController extends Controller
             'observaciones' => $request->observaciones,
         ]);
         $datosParaN8n8 = [
+            'id' => $citas->id,
             'nombre_paciente'=> $citas->nombre_paciente,
-            'teleono'=> $citas->telefono,
+            'telefono'=> $citas->telefono,
             'fecha_cita'=> Carbon::parse($citas->fecha_cita)->format('d/m/Y'),
-            'hora_cita'=> $citas->hora,
+            'hora_cita'=> Carbon::parse($citas->hora_cita)->format('H:i'),
             'estado'=> $citas->estado,
             'observaciones'=> $citas->observaciones
         ];
