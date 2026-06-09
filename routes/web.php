@@ -74,3 +74,7 @@ Route::get('/consultas/create', function () {
     return view('consultas.create');
 });
 
+Route::get('/pacientes.index', function () {
+    return view('pacientes.index');
+});
+

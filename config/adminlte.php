@@ -329,7 +329,7 @@ return [
                 [
                 'text' => 'Lista de pacientes',
                 'icon' => 'fas fa-fw fa-list',
-                'url' => 'pacientes',
+                'url' => 'pacientes.index',
                 ],
                 [
                 'text' => 'Registrar paciente',
