@@ -12,7 +12,7 @@ class Paciente extends Model
     protected $table = 'pacientes';
 
     protected $fillable = [
-        'paciente_codigo',
+        'paciente_id',
         'nombre',
         'apellido_paterno',
         'apellido_materno',

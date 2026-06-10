@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
@@ -12,7 +11,7 @@ class PacienteController extends Controller
 {
     public function index()
     {
-        return Paciente::all();
+       return Paciente::with(['triages'])->get();
     }
 
     public function create()
@@ -23,12 +22,9 @@ class PacienteController extends Controller
     public function store(Request $request)
     {
 
-
         $ultimoPaciente = Paciente::latest('id')->first();
-
         // Calculamos el número que servirá para la clave
         $numero = $ultimoPaciente ? $ultimoPaciente->id + 1 : 1;
-
         // Generamos la clave
         $clave = 'PAC-' . date('Y') . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
 
@@ -49,11 +45,12 @@ class PacienteController extends Controller
             'estado' => null,
             'foto' => null,
             'notas_generales' => $request->notas_generales,
+            'alergias' => $request->alergias,
+            'antecedentes_medicos' => $request->antecedentes,
             'fecha_nacimiento' => $request->fecha_nacimiento,
             'whatsapp_id' => null,
             'consentimiento' => null,
             'ultima_interaccion' => null,
-
             ]);
         
 
@@ -62,9 +59,10 @@ class PacienteController extends Controller
         $numero = $ultimoTriage ? $ultimoTriage->id + 1 : 1;
         // Generamos la clave
         $claveTriage = 'TRI-' . date('Y') . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
-         $triage= Triage::create([
+        $triage= Triage::create([
             'triage_codigo' => $claveTriage,
-            'paciente_id' => $paciente->clave,
+            'paciente_id' => $paciente->id,
+            'codigo_paciente' => $paciente -> paciente_id,
             'presion' => $request->presion_arterial,
             'saturacion' => $request->saturacion,
             'temperatura' => $request->temperatura,
@@ -78,9 +76,8 @@ class PacienteController extends Controller
             'peso' => $request->peso,
             'talla' => $request->talla,
             'motivo_consulta' => $request->motivo_consulta,
-         ]);
+        ]);
          
-
         return response()->json([
         'success' => true,
         'message' => 'Paciente y triage creados correctamente',
@@ -95,36 +92,22 @@ class PacienteController extends Controller
 
     public function show(string $id)
     {
-        $paciente = Paciente::findOrFail($id);
-
-        return view('pacientes.show', compact('paciente'));
+        
     }
 
     public function edit(string $id)
     {
-        $paciente = Paciente::findOrFail($id);
-
-        return view('pacientes.edit', compact('paciente'));
+       
     }
 
     public function update(Request $request, string $id)
     {
-        $paciente = Paciente::findOrFail($id);
-
-        $paciente->update($request->all());
-
-        return redirect()->route('pacientes.index')
-            ->with('success', 'Paciente actualizado');
+       
     }
 
     public function destroy(string $id)
     {
-        $paciente = Paciente::findOrFail($id);
-
-        $paciente->delete();
-
-        return redirect()->route('pacientes.index')
-            ->with('success', 'Paciente eliminado');
+        
     }
 
     

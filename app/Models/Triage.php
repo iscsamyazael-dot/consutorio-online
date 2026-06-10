@@ -12,25 +12,20 @@ class Triage extends Model
     protected $table = 'triage';
 
    protected $fillable = [
-    'codigo_triage',
+    'triage_codigo',
     'paciente_id',
+    'codigo_paciente',
     'usuario_triage_id',
-
     'presion',
     'saturacion',
     'temperatura',
-
     'peso',
     'talla',
-
     'frecuencia_cardiaca',
     'frecuencia_respiratoria',
-
     'sintomas',
     'motivo_consulta',
-
     'estado',
-
     'nivel_urgencia',
     'evaluacion_ia',
     'requiere_medico'

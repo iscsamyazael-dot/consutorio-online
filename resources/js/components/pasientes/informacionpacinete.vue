@@ -70,7 +70,10 @@
                     Fecha de Nacimiento
                 </label>
                 <div class="input-box">
-                    <input type="date" v-model="form.fecha_nacimiento" class="premium-input">
+                    <input type="date" 
+                        v-model="form.fecha_nacimiento"
+                        @change="calcularEdad" 
+                        class="premium-input">
                     <span class="input-line"></span>
                 </div>
             </div>
@@ -84,38 +87,15 @@
                         <input
                             type="number"
                             v-model.number="form.edad_anios"
+                            
                             class="premium-input"
                             placeholder="Años"
                             min="0"
                             max="120"
-                            @input="onEdadAniosChange"
-                            style="padding: 0 12px;"
-                        >
-                        <span class="input-line"></span>
-                    </div>
-                    <div class="input-box select-box"
-                         style="flex:1"
-                         :style="{ opacity: (form.edad_anios >= 2 || form.edad_anios === null || form.edad_anios === '') ? 0.4 : 1 }">
-                        <select
-                            v-model.number="form.edad_meses"
-                            class="premium-input"
-                            :disabled="form.edad_anios >= 2 || form.edad_anios === null || form.edad_anios === ''"
-                            style="padding: 0 30px 0 12px; font-size:.85rem;"
-                        >
-                            <option value="" disabled>Meses</option>
-                            <option v-for="m in 12" :key="m-1" :value="m-1">
-                                {{ m-1 === 0 ? '0 m' : m-1 === 1 ? '1 mes' : `${m-1} m` }}
-                            </option>
-                        </select>
-                        <svg class="select-arrow" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
-                        </svg>
+                            style="padding: 0 12px;">
                         <span class="input-line"></span>
                     </div>
                 </div>
-                <p v-if="edadError" style="font-size:.75rem; color:#ef4444; margin:4px 0 0;">{{ edadError }}</p>
-                <p v-else-if="form.edad_anios >= 2" style="font-size:.75rem; color:#9ca3af; margin:4px 0 0;">Solo años</p>
-                <p v-else-if="edadLabel" style="font-size:.75rem; color:#2563eb; margin:4px 0 0;">{{ edadLabel }}</p>
             </div>
             <div class="col-md-3 field-wrap" style="--delay:.3s">
                 <label class="form-label">
@@ -480,8 +460,7 @@ export default {
                 apellido_materno: '',
                 sexo: '',
                 fecha_nacimiento: '',
-                edad_anios: null,
-                edad_meses: '',
+                edad_anios: 0,
                 curp: '',
                 telefono: '',
                 email: '',
@@ -508,30 +487,25 @@ export default {
     },
 
     computed: {
-        edadLabel() {
-            const y = this.form.edad_anios
-            const m = this.form.edad_meses
-            if (y === null || y === '' || this.edadError) return ''
-            if (y === 0 && (m === '' || m === 0)) return 'Recién nacido'
-            if (y === 0) return m === 1 ? '1 mes de vida' : `${m} meses`
-            if (y === 1 && m > 0) return `1 año y ${m} mes${m > 1 ? 'es' : ''}`
-            return `${y} año${y > 1 ? 's' : ''}`
+        //Función para calcular la edad con base a la fecha de nacimiento//
+        calcularEdad() {
+        if (!this.form.fecha_nacimiento) return '';
+            const fechaNacimiento = new Date(this.form.fecha_nacimiento);
+            const hoy = new Date();
+            let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+            const mes = hoy.getMonth() - fechaNacimiento.getMonth();
+        if (
+            mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())
+        ) {
+            edad--;
         }
+          this.form.edad_anios = edad;
+        }
+        ///Termina la función para calcular la edad con la fecha de nacimiento /////
     },
 
     methods: {
-        onEdadAniosChange() {
-            this.edadError = ''
-            const y = this.form.edad_anios
-            if (y === null || y === '') return
-            if (y < 0 || y > 120) {
-                this.edadError = 'Máx. 120 años'
-                return
-            }
-            if (y >= 2) this.form.edad_meses = ''
-            if (y === 120) this.form.edad_meses = ''
-        },
-
+    
         onFotoChange(e) {
             const file = e.target.files[0]
             if (file) this.procesarFoto(file)
@@ -555,29 +529,53 @@ export default {
             this.$refs.fotoInput.value = ''
         },
 
-        resetForm() {
-            Object.keys(this.form).forEach(k => {
-                this.form[k] = typeof this.form[k] === 'number' ? null : ''
-            })
-            this.form.edad_anios = null
-            this.form.saturacion = null
-            this.form.temperatura = null
-            this.form.peso = null
-            this.form.talla = null
-            this.form.frecuencia_cardiaca = null
-            this.form.frecuencia_respiratoria = null
-            this.fotoPreview = null
-            this.edadError = ''
+        limpiarFormulario() {
+            this.form = {
+                nombre: '',
+                apellido_paterno: '',
+                apellido_materno: '',
+                telefono: '',
+                email: '',
+                edad_anios: '',
+                sexo: '',
+                direccion: '',
+                tipo_sangre: '',
+                contacto_emergencia: '',
+                telefono_emergencia: '',
+                curp: '',
+                notas_generales: '',
+                fecha_nacimiento: '',
+                presion_arterial: '',
+                saturacion: '',
+                temperatura: '',
+                frecuencia_cardiaca: '',
+                frecuencia_respiratoria: '',
+                peso: '',
+                talla: '',
+                sintomas: '',
+                motivo_consulta: ''
+            };
         },
 
         async guardarPaciente() {
             try {
                 const response = await ApiService.post('/pacientes',this.form)
                 console.log('Guardado:', response.data)
-                alert('Paciente guardado exitosamente')
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Paciente registrado',
+                    text: 'El paciente fue guardado exitosamente.',
+                    confirmButtonText: 'Aceptar'
+                })
+                this.limpiarFormulario();
             } catch (error) {
                 console.error(error)
-                alert('Error al guardar')
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ocurrió un error al guardar el paciente.',
+                    confirmButtonText: 'Aceptar'
+                })
             }
         }
     }
