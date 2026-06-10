@@ -5,6 +5,7 @@
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center mb-3">
         <input type="hidden" name="route" value="{{ url('/') }}">
+        <meta name="base-url" content="{{ url('/') }}">
 
         <div>
             <h1 class="fw-bold text-dark mb-1">
