@@ -22,12 +22,11 @@ class PacienteController extends Controller
     public function store(Request $request)
     {
 
-        $ultimoPaciente = Paciente::latest('id')->first();
-        // Calculamos el número que servirá para la clave
+        $ultimoPaciente = Paciente::latest('id')->first();// funcion para obtener el codigo del ultimo paciente registrado//
+        // Calculamos el número que servirá para la clave//
         $numero = $ultimoPaciente ? $ultimoPaciente->id + 1 : 1;
-        // Generamos la clave
+        // Generamos la clave//
         $clave = 'PAC-' . date('Y') . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
-
         $paciente = Paciente::create([
             'paciente_id' => $clave,
             'nombre' => $request->nombre,
@@ -42,8 +41,8 @@ class PacienteController extends Controller
             'contacto_emergencia' => $request->contacto_emergencia,
             'telefono_emergencia' => $request->telefono_emergencia,
             'curp' => $request->curp,
-            'estado' => null,
-            'foto' => null,
+            'estado' =>$request->estado,
+            'foto' => "null",// Guardamos la ruta de la foto en la base de datos//
             'notas_generales' => $request->notas_generales,
             'alergias' => $request->alergias,
             'antecedentes_medicos' => $request->antecedentes,
@@ -92,7 +91,7 @@ class PacienteController extends Controller
 
     public function show(string $id)
     {
-        
+        return Paciente::with(['triages'])->find($id);
     }
 
     public function edit(string $id)

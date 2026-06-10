@@ -205,24 +205,27 @@
             <div class="col-md-8 field-wrap" style="--delay:.1s">
                 <label class="form-label">
                     <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
-                    Foto del Paciente
-                </label>
-                <div class="foto-upload-area" @click="$refs.fotoInput.click()" @dragover.prevent @drop.prevent="onFotoDrop">
-                    <img v-if="fotoPreview" :src="fotoPreview" class="foto-preview" alt="Foto paciente">
-                    <div v-else class="foto-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M12 16a4 4 0 100-8 4 4 0 000 8zM3 9a2 2 0 012-2h.5l1.5-2h10l1.5 2H21a2 2 0 012 2v9a2 2 0 01-2 2H3a2 2 0 01-2-2V9z" stroke-linecap="round"/>
-                        </svg>
-                        <p>Clic o arrastra una foto</p>
-                        <span>JPG, PNG — máx. 5MB</span>
-                    </div>
-                    <button v-if="fotoPreview" type="button" class="foto-remove" @click.stop="removeFoto">
-                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                    </button>
-                </div>
-                <input ref="fotoInput" type="file" accept="image/*" style="display:none" @change="onFotoChange">
+                       Foto del Paciente
+        </label>
+        <div class="foto-upload-area" @click="$refs.fotoInput.click()" @dragover.prevent @drop.prevent="onFotoDrop">
+            <img v-if="fotoPreview" :src="fotoPreview" class="foto-preview" alt="Foto paciente">
+            <div v-else class="foto-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 16a4 4 0 100-8 4 4 0 000 8zM3 9a2 2 0 012-2h.5l1.5-2h10l1.5 2H21a2 2 0 012 2v9a2 2 0 01-2 2H3a2 2 0 01-2-2V9z" stroke-linecap="round"/>
+                </svg>
+                <p>Clic o arrastra una foto</p>
+                <span>JPG, PNG — máx. 5MB</span>
             </div>
+            <button v-if="fotoPreview" type="button" class="foto-remove" @click.stop="removeFoto">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+            </button>
         </div>
+        <input ref="fotoInput" type="file" accept="image/*" style="display:none" @change="onFotoChange">
+    </div>
+
+</div>
 
         <!-- ══ DIVIDER ══ -->
         <div class="premium-divider">
