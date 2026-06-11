@@ -13,8 +13,16 @@ import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- C
 import IndexConsultas from './components/consultas/IndexConsultas.vue';
 import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
 import InformacionPaciente    from './components/pasientes/masterregistroN.vue'; // ✅ variable correcta
+import expedientepaciente from './components/pasientes/maesterexpediente.vue';
+
 
 const app = createApp({});
+
+app.component(
+    'expedientepaciente',
+    expedientepaciente
+ 
+)
 
 app.component('master-registro-paciente', InformacionPaciente);
 // 2. REGISTRO DE COMPONENTES
@@ -54,4 +62,5 @@ Alpine.start();
 import axios from 'axios';
 window.axios = axios;
 import Swal from 'sweetalert2';
+import Maesterexpediente from './components/pasientes/maesterexpediente.vue';
 window.Swal = Swal;

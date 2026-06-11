@@ -1,0 +1,292 @@
+<template>
+  <div class="col-lg-9">
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+
+      <!-- HEADER TABS -->
+      <div class="card-header bg-white border-0 pt-3 pb-0">
+        <ul class="nav nav-tabs custom-tabs border-0">
+
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: tabActiva === 'consultas' }"
+              @click="tabActiva = 'consultas'"
+              type="button">
+              <i class="fas fa-stethoscope"></i> Consultas
+            </button>
+          </li>
+
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: tabActiva === 'recetas' }"
+              @click="tabActiva = 'recetas'"
+              type="button">
+              <i class="fas fa-prescription"></i> Recetas
+            </button>
+          </li>
+
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: tabActiva === 'archivos' }"
+              @click="tabActiva = 'archivos'"
+              type="button">
+              <i class="fas fa-file-medical"></i> Archivos
+            </button>
+          </li>
+
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: tabActiva === 'notas' }"
+              @click="tabActiva = 'notas'"
+              type="button">
+              <i class="fas fa-notes-medical"></i> Notas
+            </button>
+          </li>
+
+        </ul>
+      </div>
+
+      <!-- CONTENIDO TABS -->
+      <div class="card-body p-4">
+
+        <!-- CONSULTAS -->
+        <div v-if="tabActiva === 'consultas'">
+          <div class="section-title">
+            <h5>Historial de consultas</h5>
+            <small>Registro cronológico de atención médica</small>
+          </div>
+
+          <div class="timeline-card">
+            <div class="timeline-dot bg-success"></div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between flex-wrap gap-2">
+                <h6 class="fw-bold mb-0">10 Mayo 2026</h6>
+                <span class="badge bg-success rounded-pill px-3 py-2">
+                  Consulta general
+                </span>
+              </div>
+              <p class="mt-2 mb-1"><strong>Motivo:</strong> Dolor de garganta</p>
+              <p class="text-muted small mb-3">Diagnóstico: Faringitis leve.</p>
+              <a href="/HistorialConsulta" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                Ver consulta completa
+              </a>
+            </div>
+          </div>
+
+          <div class="timeline-card">
+            <div class="timeline-dot bg-warning"></div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between flex-wrap gap-2">
+                <h6 class="fw-bold mb-0">02 Abril 2026</h6>
+                <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
+                  Seguimiento
+                </span>
+              </div>
+              <p class="mt-2 mb-0 text-muted">Control general del paciente.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- RECETAS -->
+        <div v-if="tabActiva === 'recetas'">
+          <div class="section-title">
+            <h5>Historial de recetas</h5>
+            <small>Tratamientos indicados al paciente</small>
+          </div>
+
+          <div class="record-card">
+            <div>
+              <h6 class="fw-bold mb-1">10 Mayo 2026</h6>
+              <p class="mb-0 text-muted">Amoxicilina 500mg, cada 8 horas por 7 días.</p>
+            </div>
+            <button class="btn btn-sm btn-outline-primary rounded-pill px-3">
+              Ver receta
+            </button>
+          </div>
+
+          <div class="record-card">
+            <div>
+              <h6 class="fw-bold mb-1">02 Abril 2026</h6>
+              <p class="mb-0 text-muted">Ibuprofeno 400mg, cada 12 horas por 3 días.</p>
+            </div>
+            <button class="btn btn-sm btn-outline-primary rounded-pill px-3">
+              Ver receta
+            </button>
+          </div>
+        </div>
+
+        <!-- ARCHIVOS -->
+        <div v-if="tabActiva === 'archivos'">
+          <div class="section-title">
+            <h5>Archivos clínicos</h5>
+            <small>Estudios, análisis e imágenes médicas</small>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="file-card">
+                <i class="fas fa-file-pdf text-danger"></i>
+                <h6>Laboratorio_sangre.pdf</h6>
+                <small class="text-muted">02 Abril 2026</small>
+                <button class="btn btn-sm btn-outline-primary rounded-pill mt-3">
+                  Ver archivo
+                </button>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="file-card">
+                <i class="fas fa-file-image text-primary"></i>
+                <h6>Radiografia_torax.jpg</h6>
+                <small class="text-muted">18 Marzo 2026</small>
+                <button class="btn btn-sm btn-outline-primary rounded-pill mt-3">
+                  Ver archivo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NOTAS -->
+        <div v-if="tabActiva === 'notas'">
+          <div class="section-title">
+            <h5>Notas médicas</h5>
+            <small>Observaciones generales del paciente</small>
+          </div>
+
+          <div class="note-card">
+            <small class="text-muted">15 Mayo 2026</small>
+            <p class="mb-0 mt-2">
+              Paciente reporta mejoría notable. Continuar tratamiento actual.
+            </p>
+          </div>
+
+          <div class="note-card">
+            <small class="text-muted">03 Abril 2026</small>
+            <p class="mb-0 mt-2">
+              Se recomienda mantener hidratación y vigilancia de síntomas.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'ExpedienteTabs',
+  data() {
+    return {
+      tabActiva: 'consultas'
+    }
+  }
+}
+</script>
+
+<style scoped>
+body {
+  background: #f4f6f9;
+}
+
+.rounded-4 {
+  border-radius: 24px !important;
+}
+
+.custom-tabs .nav-link {
+  border: none;
+  color: #6c757d;
+  font-weight: 700;
+  padding: 14px 18px;
+  border-radius: 16px 16px 0 0;
+  cursor: pointer;
+  background: transparent;
+}
+
+.custom-tabs .nav-link.active {
+  background: #f4f8ff;
+  color: #0d6efd;
+}
+
+.section-title {
+  margin-bottom: 20px;
+}
+
+.section-title h5 {
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.section-title small {
+  color: #6c757d;
+}
+
+.timeline-card,
+.record-card,
+.note-card {
+  background: #fff;
+  border: 1px solid #edf0f4;
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+}
+
+.timeline-card {
+  display: flex;
+  gap: 16px;
+}
+
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.record-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.file-card {
+  border: 1px solid #edf0f4;
+  border-radius: 20px;
+  padding: 22px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.file-card i {
+  font-size: 42px;
+  margin-bottom: 14px;
+}
+
+.file-card h6 {
+  font-weight: 700;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .record-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .custom-tabs .nav-link {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+</style>
