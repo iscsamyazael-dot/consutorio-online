@@ -11,12 +11,33 @@
 
                     <i class="fas fa-search"></i>
 
-                    <input
-                        type="text"
+                    <!-- <input
+                        type="select"
                         class="form-control"
                         placeholder="Buscar paciente..."
-                        
-                    />
+                        v-model="buscar"
+                        @input="buscarPaciente"
+                        @change="seleccionarPaciente"
+                        list = "listaPacientes"
+                    /> -->
+                    
+                    <!-- <v-select
+                        :options="filtrar"
+                        label="label"
+                        v-model="pacienteSeleccionado"
+                        @search="buscarPaciente"
+                        @option:selected="seleccionarPaciente">
+                    </v-select> -->
+                    <!-- <datalist id="listaPacientes">
+                        <option
+                            v-for="paciente in filtrar"
+                            :key="paciente.id"
+                            :value=" paciente.nombre + ' ' + paciente.apellido_paterno + ' ' + paciente.apellido_materno"
+                            @click="buscarPaciente(paciente)"
+                             </option>
+                    </datalist>
+                        > -->
+                       
 
                 </div>
 
@@ -316,8 +337,15 @@ import ApiService from '../../services/ApiService.js'
             return {  
                 pacientes: [],
                 detallePaciente: [],
-                editarPaciente: []
+                editarPaciente: [],
+                filtrar:[],
+                buscar:'',
+                pacienteSeleccionado:'',
+                form: {
+                    paciente_id: '',
+                    codigo_paciente: ''
                 }
+            }
         },
 
         mounted() {
@@ -325,9 +353,7 @@ import ApiService from '../../services/ApiService.js'
         },
 
         methods: {
-        
-        
-    // función para limpiar el formulario de registro de paciente, estableciendo todos los campos a sus valores iniciales.//
+        // función para limpiar el formulario de registro de paciente, estableciendo todos los campos a sus valores iniciales.//
             limpiarFormulario() {
                 this.form = {
                     nombre: '',
@@ -412,29 +438,49 @@ import ApiService from '../../services/ApiService.js'
                         console.error("Error al editar paciente:", error)
                     }
                 },
+               //Para que sirve ??
                 async guardarCambiosPaciente() {
-    try {
-        const response = await ApiService.put('/pacientes/' + this.editarPaciente.id, this.editarPaciente)
-        console.log('Actualizado:', response.data)
-        Swal.fire({
-            icon: 'success',
-            title: 'Paciente actualizado',
-            text: 'Los cambios fueron guardados exitosamente.',
-            confirmButtonText: 'Aceptar'
-        })
-        // Cerrar modal y refrescar lista
-        bootstrap.Modal.getInstance(document.getElementById('editarpacienteModal')).hide()
-        this.obtenerPacientes()
-    } catch (error) {
-        console.error(error)
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Ocurrió un error al actualizar el paciente.',
-            confirmButtonText: 'Aceptar'
-        })
-    }
-},
+                    try {
+                        const response = await ApiService.put('/pacientes/' + this.editarPaciente.id, this.editarPaciente)
+                        console.log('Actualizado:', response.data)
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Paciente actualizado',
+                            text: 'Los cambios fueron guardados exitosamente.',
+                            confirmButtonText: 'Aceptar'
+                        })
+                        // Cerrar modal y refrescar lista
+                        bootstrap.Modal.getInstance(document.getElementById('editarpacienteModal')).hide()
+                        this.obtenerPacientes()
+                    } catch (error) {
+                        console.error(error)
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Ocurrió un error al actualizar el paciente.',
+                            confirmButtonText: 'Aceptar'
+                        })
+                    }
+                },
+                //Función para filtrar un paciente (nombre, apelllidos) mediante un input//
+                // async buscarPaciente(buscar){
+                //     try{
+                //         const response = await ApiService.get('/buscarPaciente?buscar=' + buscar);
+                //         this.filtrar = response.data.map(p => ({...p,label: `${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}`}));
+                //         console.log('filtro pacientes',this.filtrar )
+                //     }catch(error){
+                //         console.error('No se encuentran resultados'.error)
+                //     }
+                // },
+                //Selecciona un paciente que se trae a traves de la input de busqueda///
+                // seleccionarPaciente(paciente){
+                //     if (paciente) {
+                //         this.form.paciente_id = paciente.id;
+                //         this.form.codigo_paciente = paciente.paciente_id;
+                //         console.log('ID:', paciente.id);
+                //         console.log('Código:', paciente.paciente_id);
+                //     }
+                // }
         }
     }
 </script>

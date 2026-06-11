@@ -37,6 +37,8 @@ Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
 Route::resource('triage', TriageController::class);
 
+//Código para hacer el filtro de un paciente mediante un input //
+//Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
 
 
 //Codigo para las vistas y que son usadas en el menú de adminlte"

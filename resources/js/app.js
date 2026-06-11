@@ -6,6 +6,9 @@ import 'admin-lte';
 
 import { createApp } from 'vue';
 
+// import vSelect from 'vue-select';
+// import 'vue-select/dist/vue-select.css';
+
 // 1. IMPORTACIONES (Verifica que las rutas y mayúsculas coincidan con tus archivos reales)
 import ConsultaInteligente from './components/ConsultaInteligente.vue';
 import PacientesIndex from './components/pasientes/pacientesIndex.vue';
@@ -15,6 +18,8 @@ import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación 
 import InformacionPaciente    from './components/pasientes/masterregistroN.vue'; // ✅ variable correcta
 
 const app = createApp({});
+// Registrar Vue Select globalmente
+//app.component('v-select', vSelect);
 
 app.component('master-registro-paciente', InformacionPaciente);
 // 2. REGISTRO DE COMPONENTES

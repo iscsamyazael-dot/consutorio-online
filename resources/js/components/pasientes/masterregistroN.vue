@@ -12,7 +12,6 @@
             <div class="col-12">
                 <div class="glass-card form-card">
                     <informacionpacinete></informacionpacinete>
-                    
                 </div>
             </div>
         </div>
