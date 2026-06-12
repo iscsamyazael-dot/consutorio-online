@@ -17,6 +17,28 @@ class PacienteController extends Controller
        return view('pacientes.index',compact('pacientes'));
     }
 
+    /* FUNCION PARA FILTRAR PACIENTES EN ARCHIVOS CLINICOS*/
+    public function filtrar_paciente(Request $request)
+    {
+        $buscar = $request->buscar;
+        return Paciente::where('nombre','like',"%{$buscar}%")
+               ->orWhere('apellido_paterno','like',"%{$buscar}%")
+               ->orWhere('apellido_materno','like',"%{$buscar}%")
+               ->orWhere('paciente_id','like',"%{$buscar}%")
+               ->select(
+                    'id',
+                    'paciente_id',
+                    'nombre',
+                    'apellido_paterno',
+                    'apellido_materno'
+                )
+                ->limit(10)
+                ->get();
+    }
+
+
+
+
     /**
      * Show the form for creating a new resource.
      */
@@ -50,6 +72,7 @@ class PacienteController extends Controller
     public function edit(string $id)
     {
         return view('pacientes.edit', compact('paciente'));
+
     }
 
     /**

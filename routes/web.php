@@ -8,6 +8,8 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
+use App\Http\Controllers\TriageController;
+use App\Http\Controllers\ArchivosClinicosController;
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -33,15 +35,22 @@ Route::resource('recetas', RecetaController::class);
 Route::resource('receta-detalles', RecetaDetalleController::class);
 Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
+Route::resource('triage', TriageController::class);
+Route::resource('archivoclinico', ArchivosClinicosController::class);
 
 
 
+// Cambias 'SubirArchivosControlador' por el que ya tengas
+Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
+//Código para hacer el filtro de un paciente mediante un input //
+Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
 //Codigo para las vistas y que son usadas en el menú de adminlte"
 Route::view('inicio','dashboard');
 //Código que lleva a la vista para crear un nuevo paciente de forma manual///
 Route::get('PacienteNuevo',function(){
           return view('pacientes.create');
 });
+
 //Código que lleva a la vista del expediente de un paciente//
 Route::get('ExpedientePacientes',function(){
           return view('pacientes.expediente');
@@ -56,6 +65,8 @@ Route::get('HistorialConsulta',function(){
 Route::get('ConsultaInteligente',function(){
           return view('consultas.consulta_inteligente');
 });
+
+
 
 //Codigo que lleva a TRIAGE
 Route::get('TRIAGE',function(){
@@ -75,6 +86,11 @@ Route::get('ArchivosClinicos',function(){
 Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
 });
+
+
+
+
+
 
 
 

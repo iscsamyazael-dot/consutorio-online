@@ -45,4 +45,9 @@ class Paciente extends Model
     {
         return $this->hasMany(ArchivoClinico::class);
     }
+
+    public function triages()
+    {
+        return $this->hasMany(Triage::class, 'paciente_id');
+    }
 }

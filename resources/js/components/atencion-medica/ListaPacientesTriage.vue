@@ -33,250 +33,87 @@
 
                 </tr>
 
-            </thead>
+             </thead>
 
-            <tbody>
+                <tbody>
 
-                <tr>
+                    <tr v-for="paciente in triage" :key="paciente.id">
+                        <td>
+                                <!-- //Mensaje dinamico de prioridad de funcion obtener prioridad -->
+                            <span
+                                class="badge"
+                                :class="obtenerPrioridad(paciente.triages[0]?.estado).clase">
+                                {{ obtenerPrioridad(paciente.triages[0]?.estado).texto }}
+                            </span>
 
-                    <td>
-                        <span class="badge badge-danger p-2">
-                            CRÍTICO
-                        </span>
-                    </td>
+                        </td>
 
-                    <td>
-                        Juan Pérez
-                    </td>
+                        <td>
+                            {{ paciente.nombre }}
+                            {{ paciente.apellido_paterno }}
+                            {{ paciente.apellido_materno }}
+                            
+                        </td>
 
-                    <td>
-                        Dolor torácico
-                    </td>
+                        <td>{{ paciente.triages[0]?.sintomas }}</td>
 
-                    <td>
-                        180/120
-                    </td>
+                        <td>{{ paciente.triages[0]?.presion }}</td>
 
-                    <td>
-                        86%
-                    </td>
+                        <td>{{ paciente.triages[0]?.saturacion }}</td>
 
-                    <td>
-                        39°C
-                    </td>
+                        <td>{{ paciente.triages[0]?.temperatura }}</td>
 
-                    <td>
-                        <span class="badge badge-danger">
-                            Riesgo Alto
-                        </span>
-                    </td>
+                        <td>
+                            <span
+                                class="badge bg-danger"
+                                v-if="paciente.triages[0]?.estado === 'grave'">
+                                GRAVE
+                            </span>
+                            <span
+                                class="badge bg-warning"
+                                v-else-if="paciente.triages[0]?.estado === 'moderado'">
+                                MODERADO
+                            </span>
+                            <span
+                                class="badge bg-success"
+                                v-else>
+                                LEVE
+                            </span>
+                            
+                        </td>
 
-                    <td>
-                        2 min
-                    </td>
+                        <td>
+                            {{ obtenerTiempoEspera(paciente.triages[0]?.created_at) }}
+                        </td>
 
-                    <td>
+                        <td>
 
-                      <button
-    class="btn btn-sm btn-info"
-    @click="verTriage({
-        paciente: 'Juan Pérez',
-        sintomas: 'Dolor torácico',
-        presion: '180/120',
-        saturacion: '86%',
-        temperatura: '39°C',
-        estado: 'Riesgo Alto',
-        prioridad: 'CRÍTICO',
-        tiempo: '2 min'
-    })"
->
-
-    <i class="fas fa-eye"></i>
-
-</button>
-
-                        <button
-    class="btn btn-sm btn-warning"
-    @click="editarTriage({
-        paciente: 'Juan Pérez',
-        sintomas: 'Dolor torácico',
-        presion: '180/120',
-        saturacion: '86%',
-        temperatura: '39°C',
-        estado: 'Riesgo Alto',
-        prioridad: 'CRÍTICO',
-        tiempo: '2 min'
-    })"
->
-
-    <i class="fas fa-edit"></i>
-
-</button>
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <td>
-                        <span class="badge badge-warning p-2">
-                            URGENTE
-                        </span>
-                    </td>
-
-                    <td>
-                        María López
-                    </td>
-
-                    <td>
-                        Fiebre alta
-                    </td>
-
-                    <td>
-                        140/90
-                    </td>
-
-                    <td>
-                        94%
-                    </td>
-
-                    <td>
-                        38°C
-                    </td>
-
-                    <td>
-                        <span class="badge badge-warning">
-                            Observación
-                        </span>
-                    </td>
-
-                    <td>
-                        10 min
-                    </td>
-
-                    <td>
-
-                        <button
-    class="btn btn-sm btn-info"
-    @click="verTriage({
-        paciente: 'Maria Lopez',
-        sintomas: 'Fiebre Alta',
-        presion: '140/90',
-        saturacion: '94%',
-        temperatura: '38°C',
-        estado: 'Observacion',
-        prioridad: 'URGENTE',
-        tiempo: '10 min'
-    })"
->
-
-    <i class="fas fa-eye"></i>
-
-</button>
-
-                        <button class="btn btn-sm btn-warning">
-                            <i class="fas fa-edit"></i>
-                        </button>
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <td>
-                        <span class="badge badge-info p-2">
-                            MODERADO
-                        </span>
-                    </td>
-
-                    <td>
-                        Carlos Méndez
-                    </td>
-
-                    <td>
-                        Dolor abdominal
-                    </td>
-
-                    <td>
-                        120/80
-                    </td>
-
-                    <td>
-                        98%
-                    </td>
-
-                    <td>
-                        37°C
-                    </td>
-
-                    <td>
-                        <span class="badge badge-info">
-                            Estable
-                        </span>
-                    </td>
-
-                    <td>
-                        20 min
-                    </td>
-
-                    <td>
-
-                         <button
-                                class="btn btn-sm btn-info"
-                                @click="verTriage({
-                                    paciente: 'Carlos Mendez',
-                                    sintomas: 'Dolor Abdominal',
-                                    presion: '140/90',
-                                    saturacion: '94%',
-                                    temperatura: '38°C',
-                                    estado: 'Observacion',
-                                    prioridad: 'URGENTE',
-                                    tiempo: '10 min'
-                                })"
-                            >
-
+                            <button
+                                class="btn btn-info btn-sm"
+                                data-toggle="modal"
+                                data-target="#modalVerTriage"
+                                @click="obtenerPacientesIndividual(paciente.id)">
                                 <i class="fas fa-eye"></i>
-
                             </button>
-
-                        <button class="btn btn-sm btn-warning">
-                            <i class="fas fa-edit"></i>
-                        </button>
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
+                        </td>
+                    </tr>
+                </tbody>
         </table>
-
     </div>
-
 </div>
 
 
 <!-- =========================================
 MODAL VER TRIAGE PREMIUM
 ========================================= -->
-
 <div
-    v-if="modalVerTriage"
-    class="modal fade show d-block"
+    class="modal fade"
+    id="modalVerTriage"
     tabindex="-1"
-    style="
-        background: rgba(15,23,42,.75);
-        backdrop-filter: blur(6px);
-    "
->
-
+    aria-labelledby="modalVerTriageLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
-
-        <div
-            class="modal-content border-0 overflow-hidden rounded-5 shadow-lg"
-        >
+        <div class="modal-content border-0 overflow-hidden rounded-5 shadow-lg">
 
             <!-- HEADER -->
 
@@ -289,219 +126,136 @@ MODAL VER TRIAGE PREMIUM
                         #2563eb,
                         #0ea5e9
                     );
-                "
-            >
-
-                <div
-                    class="d-flex justify-content-between align-items-center"
-                >
-
-                    <!-- IZQUIERDA -->
-
+                ">
+                <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
-
-                        <!-- ICONO -->
-
                         <div
                             class="rounded-circle d-flex justify-content-center align-items-center me-4"
                             style="
                                 width:80px;
                                 height:80px;
                                 background:rgba(255,255,255,.2);
-                            "
-                        >
-
+                            ">
                             <i
                                 class="fas fa-notes-medical"
                                 style="font-size:35px;"
                             ></i>
-
                         </div>
-
-                        <!-- TEXTO -->
-
                         <div>
 
-                            <h2 class="fw-bold mb-1">
-
+                            <h2
+                                class="fw-bold mb-1"
+                                id="modalVerTriageLabel">
                                 Información TRIAGE
-
                             </h2>
-
                             <p class="mb-0 opacity-75">
-
                                 Evaluación clínica del paciente
-
                             </p>
-
                         </div>
-
                     </div>
-
-                    <!-- BOTON -->
-
-                    <button
-                        class="btn btn-light rounded-circle shadow-sm"
-                        @click="modalVerTriage = false"
-                    >
-
-                        <i class="fas fa-times"></i>
-
-                    </button>
-
                 </div>
-
             </div>
 
             <!-- BODY -->
 
-            <div class="modal-body p-5"
+            <div
+                class="modal-body p-5"
                 style="background:#f1f5f9;">
-
-                <!-- CARDS -->
 
                 <div class="row">
 
                     <!-- PACIENTE -->
 
                     <div class="col-md-6 mb-4">
-                        
-
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-4 h-100"
-                        >
-
+                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
                             <small class="text-muted">
-                                 <i class="fas fa-user me-2 text-primary"></i>
+                                <i class="fas fa-user me-2 text-primary"></i>
                                 Paciente
-
                             </small>
-                            
-
                             <h5 class="fw-bold text-primary mt-2">
-
-                                {{ triageSeleccionado.paciente }}
-
+                              {{detalletriage.nombre}} {{ detalletriage.apellido_paterno }} {{detalletriage.apellido_materno}}
                             </h5>
-
                         </div>
-
+                
                     </div>
 
                     <!-- PRIORIDAD -->
 
-                    <div class="col-md-6 mb-4">
-
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-4 h-100"
-                        >
-
+                    <div class=" col-md-6 mb-4">
+                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
                             <small class="text-muted">
                                 <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
                                 Prioridad
-
                             </small>
-
                             <h5 class="fw-bold text-danger mt-2">
-
-                                {{ triageSeleccionado.prioridad }}
-
+                               {{ obtenerPrioridad(detalletriage?.triages?.[0]?.estado).texto }}
                             </h5>
-
                         </div>
-
                     </div>
 
                     <!-- ESTADO -->
 
                     <div class="col-md-4 mb-4">
-
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-4 h-100"
-                        >
-
+                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
                             <small class="text-muted">
                                 <i class="fas fa-heartbeat me-2 text-success"></i>
                                 Estado Clínico
-
                             </small>
-
-                            <h6 class="fw-bold text-success mt-2">
-
-                                {{ triageSeleccionado.estado }}
-
+                            <h6 class="fw-bold text-success mt-2"> 
+                                <span class="fw-bold mt-2 badge bg-danger"
+                                    v-if="detalletriage?.triages?.[0]?.estado === 'grave'">
+                                    GRAVE
+                                </span>
+                                <span class="fw-bold mt-2 badge bg-warning"
+                                    v-else-if="detalletriage?.triages?.[0]?.estado === 'moderado'">
+                                    MODERADO
+                                </span>
+                                <span class="fw-bold mt-2 badge bg-success"
+                                    v-else>
+                                    LEVE
+                                </span>               
                             </h6>
-
                         </div>
-
                     </div>
 
-                    <!-- PRESION -->
+                    <!-- PRESIÓN -->
 
                     <div class="col-md-4 mb-4">
-
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-4 h-100"
-                        >
-
+                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
                             <small class="text-muted">
                                 <i class="fas fa-stethoscope me-2 text-dark"></i>
                                 Presión
-
                             </small>
-
                             <h6 class="fw-bold mt-2">
-
-                                {{ triageSeleccionado.presion }}
-
+                               {{ detalletriage?.triages?.[0]?.presion }}
                             </h6>
-
                         </div>
-
                     </div>
 
-                    <!-- SATURACION -->
+                    <!-- SATURACIÓN -->
 
                     <div class="col-md-4 mb-4">
-
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-4 h-100"
-                        >
-
+                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
                             <small class="text-muted">
                                 <i class="fas fa-lungs me-2 text-info"></i>
                                 Saturación
-
                             </small>
-
                             <h6 class="fw-bold mt-2">
-
-                                {{ triageSeleccionado.saturacion }}
-
+                               {{ detalletriage?.triages?.[0]?.saturacion }}
                             </h6>
-
                         </div>
-
                     </div>
 
                     <!-- TEMPERATURA -->
 
                     <div class="col-md-6 mb-4">
-
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-4 h-100"
-                        >
-
+                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
                             <small class="text-muted">
                                 <i class="fas fa-thermometer-half me-2 text-warning"></i>
                                 Temperatura
-
                             </small>
-
                             <h6 class="fw-bold mt-2 text-warning">
-
-                                {{ triageSeleccionado.temperatura }}
-
+                               {{ detalletriage?.triages?.[0]?.temperatura }}
                             </h6>
 
                         </div>
@@ -512,38 +266,30 @@ MODAL VER TRIAGE PREMIUM
 
                     <div class="col-md-6 mb-4">
 
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-4 h-100"
-                        >
+                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
 
                             <small class="text-muted">
                                 <i class="fas fa-clock me-2 text-secondary"></i>
                                 Tiempo de Atención
-
                             </small>
 
                             <h6 class="fw-bold mt-2 text-info">
-
-                                {{ triageSeleccionado.tiempo }}
-
+                                {{ obtenerTiempoEspera(detalletriage?.triages?.[0]?.created_at) }}
                             </h6>
 
                         </div>
 
                     </div>
 
-                    <!-- SINTOMAS -->
+                     <!-- SÍNTOMAS -->
 
                     <div class="col-12">
 
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-4"
-                        >
+                        <div class="bg-white rounded-4 shadow-sm p-4">
 
                             <small class="text-muted">
                                 <i class="fas fa-notes-medical me-2 text-primary"></i>
                                 Síntomas Detectados
-
                             </small>
 
                             <p
@@ -551,321 +297,33 @@ MODAL VER TRIAGE PREMIUM
                                 style="
                                     line-height:1.8;
                                     font-size:16px;
-                                "
-                            >
-
-                                {{ triageSeleccionado.sintomas }}
-
+                                ">
+                                {{ detalletriage?.triages?.[0]?.sintomas }}
                             </p>
-
                         </div>
+                    </div>
+                </div>  <!-- FIN row -->
+            </div>
+     
+
+                    <!-- FOOTER -->
+
+                    <div class="modal-footer bg-white border-0 px-5 pb-4">
+                        <button
+                            type="button"
+                            class="btn btn-secondary rounded-pill px-4"
+                            data-dismiss="modal"> Cerrar
+                        </button>
 
                     </div>
-
-                </div>
-
-            </div>
-
-            <!-- FOOTER -->
-
-            <div
-                class="modal-footer bg-white border-0 px-5 pb-4"
-            >
-
-                <button
-                    class="btn btn-secondary rounded-pill px-4"
-                    @click="modalVerTriage = false"
-                >
-
-                    Cerrar
-
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- MODAL EDITAR -->
-
-<div
-    v-if="modalEditarTriage"
-    class="modal fade show d-block"
-    tabindex="-1"
-    style="background: rgba(0,0,0,.5);"
->
-
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-
-        <div class="modal-content">
-
-            <!-- HEADER -->
-
-            <div class="modal-header bg-warning">
-
-                <h5 class="modal-title text-white">
-
-                    Editar Triage
-
-                </h5>
-
-                <button
-                    type="button"
-                    class="btn-close"
-                    @click="modalEditarTriage = false"
-                ></button>
-
-            </div>
-
-            <!-- BODY -->
-
-            <div class="modal-body">
-
-    <div class="row">
-
-        <!-- PACIENTE -->
-
-        <div class="col-md-6 mb-4">
-
-            <label class="form-label fw-bold">
-
-                <i class="fas fa-user text-primary me-2"></i>
-
-                Paciente
-
-            </label>
-
-            <input
-                type="text"
-                class="form-control"
-                v-model="triageEditar.paciente"
-            >
-
-        </div>
-
-        <!-- ESTADO -->
-
-        <div class="col-md-6 mb-4">
-
-            <label class="form-label fw-bold">
-
-                <i class="fas fa-heartbeat text-success me-2"></i>
-
-                Estado
-
-            </label>
-
-            <select
-                class="form-control"
-                v-model="triageEditar.estado"
-            >
-
-                <option>Riesgo Alto</option>
-
-                <option>Observación</option>
-
-                <option>Estable</option>
-
-            </select>
-
-        </div>
-
-        <!-- PRIORIDAD -->
-
-        <div class="col-md-6 mb-4">
-
-            <label class="form-label fw-bold">
-
-                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
-
-                Prioridad
-
-            </label>
-
-           <select
-    class="form-control"
-    v-model="triageEditar.prioridad"
->
-
-    <option value="Nivel 1">
-
-        🔴 Nivel 1 - Reanimación / Emergencia
-
-    </option>
-
-    <option value="Nivel 2">
-
-        🟠 Nivel 2 - Emergencia
-
-    </option>
-
-    <option value="Nivel 3">
-
-        🟡 Nivel 3 - Urgencia
-
-    </option>
-
-    <option value="Nivel 4">
-
-        🟢 Nivel 4 - Urgencia menor
-
-    </option>
-
-    <option value="Nivel 5">
-
-        🔵 Nivel 5 - No urgente
-
-    </option>
-
-</select>
-
-        </div>
-
-        <!-- PRESION -->
-
-        <div class="col-md-6 mb-4">
-
-            <label class="form-label fw-bold">
-
-                <i class="fas fa-stethoscope text-dark me-2"></i>
-
-                Presión
-
-            </label>
-
-            <input
-                type="text"
-                class="form-control"
-                v-model="triageEditar.presion"
-            >
-
-        </div>
-
-        <!-- SATURACION -->
-
-        <div class="col-md-6 mb-4">
-
-            <label class="form-label fw-bold">
-
-                <i class="fas fa-lungs text-info me-2"></i>
-
-                Saturación
-
-            </label>
-
-            <input
-                type="text"
-                class="form-control"
-                v-model="triageEditar.saturacion"
-            >
-
-        </div>
-
-        <!-- TEMPERATURA -->
-
-        <div class="col-md-6 mb-4">
-
-            <label class="form-label fw-bold">
-
-                <i class="fas fa-thermometer-half text-warning me-2"></i>
-
-                Temperatura
-
-            </label>
-
-            <input
-                type="text"
-                class="form-control"
-                v-model="triageEditar.temperatura"
-            >
-
-        </div>
-
-        <!-- TIEMPO -->
-
-        <div class="col-md-6 mb-4">
-
-            <label class="form-label fw-bold">
-
-                <i class="fas fa-clock text-secondary me-2"></i>
-
-                Tiempo de Atención
-
-            </label>
-
-            <input
-                type="text"
-                class="form-control"
-                v-model="triageEditar.tiempo"
-            >
-
-        </div>
-
-        <!-- SINTOMAS -->
-
-        <div class="col-12">
-
-            <label class="form-label fw-bold">
-
-                <i class="fas fa-notes-medical text-primary me-2"></i>
-
-                Síntomas
-
-            </label>
-
-            <textarea
-                class="form-control"
-                rows="5"
-                v-model="triageEditar.sintomas"
-            ></textarea>
-
-        </div>
-
-    </div>
-
-</div>
-
-            <!-- FOOTER -->
-
-            <div class="modal-footer">
-
-                <button
-                    class="btn btn-secondary"
-                    @click="modalEditarTriage = false"
-                >
-
-                    Cancelar
-
-                </button>
-
-                <button
-                    class="btn btn-warning text-white"
-                    @click="guardarEdicion"
-                >
-
-                    Guardar Cambios
-
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-
+        </div> <!-- FIN modal-content -->
+    </div> 
+</div> 
 </template>
 
 
-
 <script>
+import ApiService from '../../services/ApiService.js'
 
 export default {
 
@@ -873,75 +331,94 @@ export default {
 
         return {
 
-            modalVerTriage: false,
-            modalEditarTriage: false,
-            
-
-            triageSeleccionado: {
-
-                triageEditar: {
-
-                paciente: '',
-
-                sintomas: '',
-
-                presion: '',
-
-                saturacion: '',
-
-                temperatura: '',
-
-                estado: '',
-
-                prioridad: '',
-
-                tiempo: ''
-
-            }
-
-        }
+            triage: [],
+            detalletriage: [],
 
         }
 
     },
 
+    mounted() {
+
+        this.obtenerPacientes()
+        
+
+    },
+
     methods: {
-
-         // VER INFORMACIÓN
-
-        verTriage(data) {
-
-            this.triageSeleccionado = data
-
-            this.modalVerTriage = true
-
-        },
-
-        // EDITAR INFORMACIÓN
-
-        editarTriage(data) {
-
-            // CLONAR DATOS
-
-            this.triageEditar = { ...data }
-
-            // ABRIR MODAL
-
-            this.modalEditarTriage = true
+            //funcion para obtener datos del paciente
+        async obtenerPacientes() {
+            try {
+                const response = await ApiService.get('/triage')
+                this.triage = response.data
+                console.log('triages:', this.triage)
+            } catch (error) {
+                console.error("error al cargar el triage:", error)
+            } 
 
         },
+        //Funcion para obtener prioridades
+        obtenerPrioridad(estado) {
+            switch (estado?.toLowerCase()) {
+                case 'grave':
+                    return {
+                        texto: '🔴 Nivel 1 - Emergencia',
+                        clase: 'bg-danger'
+                    }
+                case 'moderado':
+                    return {
+                        texto: '🟡 Nivel 2 - Urgente',
+                        clase: 'bg-warning text-dark'
+                    }
+                case 'leve':
+                    return {
+                        texto: '🟢 Nivel 3 - No urgente',
+                        clase: 'bg-success'
+                    }
+                default:
+                    return {
+                        texto: 'Sin clasificar',
+                        clase: 'bg-secondary'
+                    }
+            }
+        },
+        //funcion para obtener el tiempo de acuerdo al estado
+        obtenerTiempoEspera(fechaRegistro) {
+            if (!fechaRegistro) return '0 min'
+            const inicio = new Date(fechaRegistro)
+            const ahora = new Date()
+            const diferencia = ahora - inicio
+            const horas = Math.floor(diferencia / 3600000)
+            const minutos = Math.floor((diferencia % 3600000) / 60000)
+            if (horas > 0) {
+                return `${horas}h ${minutos}m`
+            }
+            return `${minutos} min`
+        },
+
+        // VER INFORMACIÓN  DEL PACIENTE
+
+       async obtenerPacientesIndividual(id) {
+            try {
+                const response = await ApiService.get('/triage/' + id)
+                this.detalletriage = response.data
+                console.log('triages:', this.detalletriage)
+            } catch (error) {
+                console.error("error al cargar el triage:", error)
+            }
+
+        },
+       
 
         // GUARDAR CAMBIOS
 
         guardarEdicion() {
-
             console.log(this.triageEditar)
-
-            // CERRAR MODAL
-
             this.modalEditarTriage = false
-
         }
+
+
+        
 
     }
 
