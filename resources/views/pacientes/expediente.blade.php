@@ -15,7 +15,7 @@
             </small>
         </div>
 
-        <a href="{{ url('pacientes') }}" class="btn btn-outline-primary rounded-pill px-4">
+        <a href="{{ url('/pacientes.index') }}" class="btn btn-outline-primary rounded-pill px-4">
             <i class="fas fa-arrow-left"></i>
             Volver
         </a>
