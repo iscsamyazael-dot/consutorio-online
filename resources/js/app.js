@@ -17,11 +17,17 @@ import IndexConsultas from './components/consultas/IndexConsultas.vue';
 import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
 import InformacionPaciente    from './components/pasientes/masterregistroN.vue'; // ✅ variable correcta
 import expedientepaciente from './components/pasientes/maesterexpediente.vue';
+import consultapaciente from './components/consultas/masterindividual.vue';// historial de las consultas del pacinte //
 
 
 const app = createApp({});
 // Registrar Vue Select globalmente
 //app.component('v-select', vSelect);
+
+app.component(
+    'consultapaciente',
+    consultapaciente 
+)
 
 app.component(
     'expedientepaciente',

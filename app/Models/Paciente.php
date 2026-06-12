@@ -54,4 +54,21 @@ class Paciente extends Model
     {
         return $this->hasMany(Consulta::class, 'paciente_id');
     }
+
+    public function expediente()
+    {
+        return $this->hasOne(ExpedienteClinico::class);
+    }
+    
+    public function citas()
+    {
+        return $this->hasMany(Cita::class);
+    }
+    
+     public function archivos()
+    {
+        return $this->hasMany(ArchivoClinico::class);
+    }
+
+
 }
