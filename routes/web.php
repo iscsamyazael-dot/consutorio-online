@@ -48,10 +48,9 @@ Route::get('PacienteNuevo',function(){
           return view('pacientes.create');
 });
 //Código que lleva a la vista del expediente de un paciente//
-Route::get('ExpedientePacientes',function(){
-          return view('pacientes.expediente');
+Route::get('ExpedientePacientes/{id}', function ($id) {
+    return view('pacientes.expediente');
 });
-
 //Código que lleva a la vista de la consulta individual de un paciente//
 Route::get('HistorialConsulta',function(){
           return view('consultas.consultaIndividual');
@@ -61,6 +60,16 @@ Route::get('HistorialConsulta',function(){
 Route::get('ConsultaInteligente',function(){
           return view('consultas.consulta_inteligente');
 });
+
+
+//Rutas parametrizadas (Sirve para hacer consultas entre diferentes 
+// componentes es decir enviar datos entre la URL)//
+
+//Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
+Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
+       ->name('ExpedienteDetalle');
+//Aqui termina la ruta parametrizada //
+
 
 require __DIR__.'/auth.php';
 

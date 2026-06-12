@@ -1,16 +1,20 @@
 <template>  
 <div class="container-fluid"> 
     
-        <Barrasuperior></Barrasuperior>
+        <Barrasuperior
+            :paciente-id="pacienteId">
+        </Barrasuperior>
     
     <div class="row">
         <div class="col-lg-3">
-            <Informacionbasica></Informacionbasica>
-            <Alertasmedicas></Alertasmedicas>
+            <Informacionbasica
+                :paciente-id="pacienteId">
+            </Informacionbasica>
+            <Alertasmedicas
+                :paciente-id="pacienteId">
+            </Alertasmedicas>
           </div>
-        
         <Historialconsulta></Historialconsulta>
-        
     </div>
     
 </div>     
@@ -193,10 +197,21 @@ export default{
         Informacionbasica
     },
     data (){
-        return{}
+        return{
+            pacienteId: ''
+        }
     },
-    methods:{}
-
+    methods:{
+        //Funcion que recibe el ID del paciente a traves de la ruta paramaetrizada //
+        obtenerPacienteId() {
+            this.pacienteId = window.location.pathname.split('/').pop();
+            console.log('Paciente ID:',this.pacienteId
+            );
+        }
+    },
+    mounted() {
+        this.obtenerPacienteId()
+    }
 }
 
 </script>

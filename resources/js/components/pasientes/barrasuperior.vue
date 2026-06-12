@@ -4,7 +4,7 @@
             <i class="fas fa-home me-1"></i>
             Pacientes /
             <strong class="text-dark">
-                Juan Pérez García
+                {{ infoPacientes.nombre }}
             </strong>
         </nav>
 
@@ -19,7 +19,7 @@
                     <div class="col-lg-1 col-md-2 col-12 text-center mb-3 mb-md-0">
 
                         <div class="avatar-xl mx-auto">
-                            JP
+                            {{ infoPacientes.nombre?.charAt(0) }}
                         </div>
 
                     </div>
@@ -28,7 +28,7 @@
                     <div class="col-lg-8 col-md-7 col-12">
 
                         <h3 class="fw-bold mb-3">
-                            Juan Pérez García
+                            {{ infoPacientes.nombre }} {{ infoPacientes.apellido_paterno }} {{ infoPacientes.apellido_materno }}
                         </h3>
 
                         <div class="d-flex flex-wrap gap-2">
@@ -38,15 +38,15 @@
                             </span>
 
                             <span class="badge bg-info rounded-pill px-3 py-2">
-                                35 años
+                                {{ infoPacientes.edad }} Años
                             </span>
 
                             <span class="badge bg-secondary rounded-pill px-3 py-2">
-                                Masculino
+                                {{ infoPacientes.sexo }}
                             </span>
 
                             <span class="badge bg-success rounded-pill px-3 py-2">
-                                Paciente activo
+                               Consulta: {{ infoPacientes.estado }}
                             </span>
 
                         </div>
@@ -74,7 +74,6 @@
 </template>
 
 <style scoped>
-
 .avatar-xl{
     width: 90px;
     height: 90px;
@@ -87,5 +86,46 @@
     font-size: 2rem;
     font-weight: bold;
 }
-
 </style>
+<script>
+    import ApiService from '../../services/ApiService.js'
+    export default {
+        data() {
+            return {  
+                infoPacientes: [],
+            }
+        },
+        mounted() {
+            //this.obtenerPacientes();
+            console.log('PROP PacienteId:', this.pacienteId);
+        },
+        methods: {
+            async obtenerPacientes(){
+                try {
+                    const response = await ApiService.get('/ExpedienteDetalle/' + this.pacienteId)
+                    this.infoPacientes = response.data
+                    console.log('Pacientes cargados:',this.infoPacientes)
+                }catch(error){
+                        console.error("Error al obtener pacientes:", error)
+                }
+            }  
+        },
+        props:{
+            //Esto guarda la el id que se trajo mediante la ruta parametrizada que el master hereda a los componentes hijos
+            pacienteId:{
+                type: [Number, String],
+                required: true
+            }
+        },
+        watch:{
+            pacienteId:{
+                immediate:true,
+                handler(id){
+                    if(id){
+                        this.obtenerPacientes();
+                    }
+                }
+            }
+        }
+    }
+</script>

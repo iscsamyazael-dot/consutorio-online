@@ -110,8 +110,7 @@
                                 <!-- EXPEDIENTE -->
                                 <a
                                     class="btn btn-light btn-sm action-btn me-2"
-                                    href="/ExpedientePacientes"
-                                >
+                                    :href="'ExpedientePacientes/' + paciente.id">
                                     <i class="fas fa-folder-open text-info"></i>
                                 </a>
                                 <!-- EDITAR -->
