@@ -56,7 +56,7 @@
                         {{mostrar.paciente?.apellido_materno}}
                     </td>
                     <td>{{ mostrar.tipo_archivo }}</td>
-                    <td>{{ mostrar.fecha_subida }}</td>
+                    <td>{{ detallearchivo.fecha_subida?.split(' ')[0] }}</td>
                     <td>
                         <span
                                 class="badge bg-danger"
@@ -85,17 +85,15 @@
                             </span>
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-info"
-                            @click="verArchivoClinico({
-                                paciente: 'Juan Pérez',
-                                tipo: 'Radiografía',
-                                fecha: '2026-05-27',
-                                estado: 'Completado',
-                                archivo: 'radiografia_torax.pdf'
-                            })" 
+                            <button
+                                type="button"
+                                class="btn btn-info btn-sm"
+                                 data-toggle="modal"
+                                data-target="#modalVerTriage"
+                                @click="DatosArchivo(mostrar.id)"
                             >
-                            <i class="fas fa-file-medical"></i>
-                        </button>
+                                <i class="fas fa-file-medical"></i>
+                            </button>
                     </td>
                 </tr>
             </tbody>
@@ -468,6 +466,7 @@ MODAL VER ARCHIVO CLINICO
 <div
     v-if="modalArchivoClinico"
     class="modal fade show d-block"
+    id="modalVerTriage"
     tabindex="-1"
     style="
         background: rgba(15,23,42,.75);
@@ -475,24 +474,19 @@ MODAL VER ARCHIVO CLINICO
     "
 >
     <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div
-            class="modal-content border-0 rounded-5 overflow-hidden shadow-lg"
-        >
-            <!-- HEADER -->
+        <div class="modal-content border-0 rounded-5 overflow-hidden shadow-lg">
+            
             <div
-                class="p-4 text-white"
+                class="modal-header p-4 text-white border-0"
                 style="
-                    background:
-                    linear-gradient(
+                    background: linear-gradient(
                         135deg,
                         #7c3aed,
                         #a855f7
                     );
                 "
             >
-                <div
-                    class="d-flex justify-content-between align-items-center"
-                >
+                <div class="d-flex justify-content-between align-items-center w-100">
                     <div class="d-flex align-items-center">
                         <div
                             class="rounded-circle d-flex justify-content-center align-items-center me-4"
@@ -508,164 +502,101 @@ MODAL VER ARCHIVO CLINICO
                             ></i>
                         </div>
                         <div>
-                            <h2 class="fw-bold mb-1">
+                            <h2 class="modal-title fw-bold mb-1">
                                 Archivo Clínico
                             </h2>
-
                             <p class="mb-0 opacity-75">
                                 Información del expediente médico
                             </p>
-
                         </div>
                     </div>
 
                     <button
+                        type="button"
                         class="btn btn-light rounded-circle"
                         @click="modalArchivoClinico = false"
+                        aria-label="Close"
                     >
-
                         <i class="fas fa-times"></i>
-
                     </button>
-
                 </div>
             </div>
-
-            <!-- BODY -->
 
             <div
                 class="modal-body p-5"
                 style="background:#f1f5f9;"
             >
-
                 <div class="row">
-
                     <div class="col-md-6 mb-4">
-
                         <div class="bg-white rounded-4 shadow-sm p-4">
-
                             <small class="text-muted">
-
                                 <i class="fas fa-user me-2 text-primary"></i>
-
                                 Paciente
-
                             </small>
-
                             <h5 class="fw-bold mt-3">
-
-                              
-
+                                {{ detallearchivo?.paciente?.nombre }}
+                                {{ detallearchivo?.paciente?.apellido_paterno }}
+                                {{ detallearchivo?.paciente?.apellido_materno }}
                             </h5>
-
                         </div>
-
                     </div>
 
                     <div class="col-md-6 mb-4">
-
                         <div class="bg-white rounded-4 shadow-sm p-4">
-
                             <small class="text-muted">
-
                                 <i class="fas fa-folder-open me-2 text-warning"></i>
-
                                 Tipo Archivo
-
                             </small>
-
                             <h5 class="fw-bold mt-3">
-
-                              
-
-                            </h5>
-
+                                {{ detallearchivo?.tipo_archivo }}
+                                </h5>
                         </div>
-
                     </div>
 
                     <div class="col-md-6 mb-4">
-
                         <div class="bg-white rounded-4 shadow-sm p-4">
-
                             <small class="text-muted">
-
                                 <i class="fas fa-calendar me-2 text-info"></i>
-
                                 Fecha
-
                             </small>
-
                             <h5 class="fw-bold mt-3">
-
-                             
-
-                            </h5>
-
+                                {{ detallearchivo.fecha_subida?.split(' ')[0] }}
+                                </h5>
                         </div>
-
                     </div>
 
                     <div class="col-md-6 mb-4">
-
                         <div class="bg-white rounded-4 shadow-sm p-4">
-
                             <small class="text-muted">
-
                                 <i class="fas fa-check-circle me-2 text-success"></i>
-
                                 Estado
-
                             </small>
-
                             <h5 class="fw-bold mt-3">
-
-                               
-                            </h5>
-
+                                {{ detallearchivo?.Estado }}
+                                </h5>
                         </div>
-
                     </div>
 
                     <div class="col-12">
-
-                        <div
-                            class="bg-white rounded-4 shadow-sm p-5 text-center"
-                        >
-
+                        <div class="bg-white rounded-4 shadow-sm p-5 text-center">
                             <i
                                 class="fas fa-file-pdf text-danger mb-3"
                                 style="font-size:70px;"
                             ></i>
-
                             <h5 class="fw-bold">
-
-                               
-
-                            </h5>
-
-                            <button
-                                class="btn btn-primary rounded-pill px-4 mt-4"
-                            >
-
+                                {{ detallearchivo?.archivo_url }}
+                                </h5>
+                            <button type="button" class="btn btn-primary rounded-pill px-4 mt-4">
                                 <i class="fas fa-eye me-2"></i>
-
                                 Visualizar Archivo
-
                             </button>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
 
-        </div>
-
+            </div>
     </div>
-
 </div>
 
 
@@ -678,12 +609,13 @@ MODAL VER ARCHIVO CLINICO
 import ApiService from '../../services/ApiService.js'
 export default {
 
-    data() {
+    data() { 
 
         return {
 
             // SIRVE PARA VER MODAL
         modalArchivoClinico: false,
+            detallearchivo: [],
             listaArchivos: [],
             filtrar: [],
             buscar:'', 
@@ -801,6 +733,20 @@ export default {
 
                 },
 
+
+                 async DatosArchivo(id) {
+            try {
+                const response = await ApiService.get('/archivoclinico/' + id)
+                this.detallearchivo = response.data
+                console.log('detallearchivo:', this.detallearchivo)
+            } catch (error) {
+                console.error("error al cargar los datos:", error)
+            }
+
+            this.modalArchivoClinico = true
+
+        },
+
         
 
         // =====================================
@@ -808,7 +754,7 @@ export default {
         // =====================================
         verArchivoClinico(data) {
             this.archivoSeleccionado = data
-            this.modalArchivoClinico = true
+            
         }
 
     },

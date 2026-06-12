@@ -20,7 +20,7 @@ class ArchivoClinico extends Model
         'fecha_subida',
         'procesado_ia',
         'nivel_confianza',
-        'tipo_estudio',
+        'tipo_estudio', 
         'Estado',
     ];
 

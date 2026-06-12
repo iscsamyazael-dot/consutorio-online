@@ -21,7 +21,7 @@ class ArchivosClinicosController extends Controller
                 'fecha_subida',
                 'Estado',
                 'archivo_url'
-                
+                 
             )
             ->with([
                 'paciente'
@@ -66,6 +66,23 @@ public function store(Request $request)
     public function show(string $id)
     {
         //
+
+         return Archivoclinico::select(
+                'id',
+                'paciente_id',
+                'tipo_archivo',
+                'fecha_subida',
+                'Estado',
+                'archivo_url'
+                 
+            )
+            ->with([
+                'paciente'
+            ])
+            ->find($id);
+
+
+
     }
 
     /**

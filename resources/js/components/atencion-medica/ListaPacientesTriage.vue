@@ -392,7 +392,7 @@ export default {
             const minutos = Math.floor((diferencia % 3600000) / 60000)
             if (horas > 0) {
                 return `${horas}h ${minutos}m`
-            }
+            } 
             return `${minutos} min`
         },
 
