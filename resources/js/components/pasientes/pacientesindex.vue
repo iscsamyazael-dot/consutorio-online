@@ -68,7 +68,7 @@
                             <td>
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="avatar-circle">
-                                        {{ paciente.nombre.charAt(0) }}
+                                        {{ paciente.nombre.substring(0, 2) }}
                                     </div>
                                     <div>
                                         <h6 class="fw-bold mb-0">

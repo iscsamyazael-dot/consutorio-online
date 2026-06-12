@@ -14,7 +14,8 @@
                 :paciente-id="pacienteId">
             </Alertasmedicas>
           </div>
-        <Historialconsulta></Historialconsulta>
+        <Historialconsulta :paciente-id="pacienteId">
+        </Historialconsulta>
     </div>
     
 </div>     

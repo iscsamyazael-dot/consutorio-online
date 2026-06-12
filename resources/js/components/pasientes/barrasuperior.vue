@@ -19,7 +19,7 @@
                     <div class="col-lg-1 col-md-2 col-12 text-center mb-3 mb-md-0">
 
                         <div class="avatar-xl mx-auto">
-                            {{ infoPacientes.nombre?.charAt(0) }}
+                           {{ infoPacientes.nombre?.substring(0, 2) }}
                         </div>
 
                     </div>
@@ -27,12 +27,12 @@
                     <!-- INFO -->
                     <div class="col-lg-8 col-md-7 col-12">
 
-                        <h3 class="fw-bold mb-3">
+                        <h3 class="fw-bold mb-3 nombre-paciente">
                             {{ infoPacientes.nombre }} {{ infoPacientes.apellido_paterno }} {{ infoPacientes.apellido_materno }}
                         </h3>
 
                         <div class="d-flex flex-wrap gap-2">
-
+                             
                             <span class="badge bg-primary rounded-pill px-3 py-2">
                                 Expediente #0001
                             </span>
@@ -74,6 +74,13 @@
 </template>
 
 <style scoped>
+
+.nombre-paciente{
+    font-size: 1.6rem;   /* más pequeño */
+    margin-left: 5px; /* mueve a la derecha */
+    position: relative;/* baja el nombre*/
+    top: 12px;
+}
 .avatar-xl{
     width: 90px;
     height: 90px;

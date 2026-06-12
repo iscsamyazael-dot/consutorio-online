@@ -126,23 +126,15 @@
           </div>
 
           <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-4" v-for="documentos in infoArchivos" :key="documentos?.id">
               <div class="file-card">
                 <i class="fas fa-file-pdf text-danger"></i>
-                <h6>Laboratorio_sangre.pdf</h6>
-                <small class="text-muted">02 Abril 2026</small>
-                <button class="btn btn-sm btn-outline-primary rounded-pill mt-3">
-                  Ver archivo
-                </button>
-              </div>
-            </div>
-
-            <div class="col-md-4">
-              <div class="file-card">
-                <i class="fas fa-file-image text-primary"></i>
-                <h6>Radiografia_torax.jpg</h6>
-                <small class="text-muted">18 Marzo 2026</small>
-                <button class="btn btn-sm btn-outline-primary rounded-pill mt-3">
+                  <h6>{{ documentos.tipo_archivo }}</h6>
+                  <small class="text-muted">{{ documentos.fecha_subida }}</small>
+                <button 
+                    class="btn btn-sm btn-outline-primary rounded-pill mt-3"
+                    :href="'/' + documentos.archivo_url"
+                     target="_blank">
                   Ver archivo
                 </button>
               </div>
@@ -176,17 +168,6 @@
     </div>
   </div>
 </template>
-
-<script>
-export default {
-  name: 'ExpedienteTabs',
-  data() {
-    return {
-      tabActiva: 'consultas'
-    }
-  }
-}
-</script>
 
 <style scoped>
 body {
@@ -290,3 +271,47 @@ body {
   }
 }
 </style>
+<script>
+    import ApiService from '../../services/ApiService.js'
+    export default {
+        name: 'ExpedienteTabs',
+        data() {
+            return {  
+              tabActiva: 'consultas',
+              infoArchivos: []
+            }
+        },
+        mounted() {
+            //this.obtenerPacientes();
+            console.log('PROP PacienteId:', this.pacienteId);
+        },
+        methods: {
+            async obtenerArchivos(){
+                try {
+                    const response = await ApiService.get('/ExpedienteDetalle/' + this.pacienteId)
+                    this.infoArchivos = response.data.archivos || []
+                    console.log('Archivos cargados:',this.infoArchivos)
+                }catch(error){
+                        console.error("Error al obtener Archivos:", error)
+                }
+            }  
+        },
+        props:{
+            //Esto guarda la el id que se trajo mediante la ruta parametrizada que el master hereda a los componentes hijos
+            pacienteId:{
+                type: [Number, String],
+                required: true
+            }
+        },
+        watch:{
+            pacienteId:{
+                immediate:true,
+                handler(id){
+                    if(id){
+                        this.obtenerArchivos();
+                    }
+                }
+            }
+        }
+    }
+</script>

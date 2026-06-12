@@ -106,7 +106,7 @@ class PacienteController extends Controller
 
     public function show(string $id)
     {
-        return Paciente::with(['triages'])->find($id);
+        return Paciente::with(['triages','archivos'])->find($id);
     }
 
     public function edit(string $id)
