@@ -72,7 +72,7 @@
                                     </div>
                                     <div>
                                         <h6 class="fw-bold mb-0">
-                                            {{ paciente.nombre }}
+                                            {{ paciente.nombre }} {{ paciente.apellido_paterno }} {{ paciente.apellido_materno }}
                                         </h6>
                                         <small class="text-muted">
                                             FOLIO: {{ paciente.paciente_id }}

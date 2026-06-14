@@ -126,16 +126,32 @@
           </div>
 
           <div class="row">
-            <div class="col-md-4" v-for="documentos in infoArchivos" :key="documentos?.id">
+            <div v-if="infoArchivos.length === 0" class="col-12">
+              <div class="alert alert-info text-center">
+                  <i class="fas fa-folder-open mr-2"></i>
+                   No se encuentran archivos clínicos para este paciente.
+              </div>            
+            </div>
+            <div 
+              class="col-md-4" 
+              v-else 
+              v-for="documentos in infoArchivos" 
+              :key="documentos?.id">
               <div class="file-card">
-                <i class="fas fa-file-pdf text-danger"></i>
+                <i :class="obtenerIcono(documentos?.archivo_url)"></i>
                   <h6>{{ documentos.tipo_archivo }}</h6>
                   <small class="text-muted">{{ documentos.fecha_subida }}</small>
                 <button 
                     class="btn btn-sm btn-outline-primary rounded-pill mt-3"
-                    :href="'/' + documentos.archivo_url"
-                     target="_blank">
+                    v-if="documentos.archivo_url"
+                    @click="verArchivo(documentos)">
                   Ver archivo
+                </button>
+                <button 
+                    v-else
+                    class="btn btn-sm btn-outline-primary rounded-pill mt-3"
+                    disabled>
+                  Sin Archivo
                 </button>
               </div>
             </div>
@@ -167,6 +183,33 @@
       </div>
     </div>
   </div>
+  
+  <!--Modal para mostrar los archivos a traves de un modal-->
+  <div class="modal fade" id="modalArchivo">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vista De Los Arcchivos Clínicos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                </button>
+            </div>
+            <div class="modal-body">
+                <img
+                    v-if="archivoSeleccionado && esImagen(archivoSeleccionado)"
+                    :src="archivoSeleccionado"
+                    class="img-fluid">
+                <iframe
+                    v-else
+                    :src="archivoSeleccionado"
+                    width="100%"
+                    height="700"
+                    frameborder="0"
+                ></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Aqui termina el modal para ver los archivos-->
 </template>
 
 <style scoped>
@@ -278,7 +321,8 @@ body {
         data() {
             return {  
               tabActiva: 'consultas',
-              infoArchivos: []
+              infoArchivos: [],
+              archivoSeleccionado:''
             }
         },
         mounted() {
@@ -286,6 +330,7 @@ body {
             console.log('PROP PacienteId:', this.pacienteId);
         },
         methods: {
+          //Función para obtener los archivos de un paciente mediante su ID//
             async obtenerArchivos(){
                 try {
                     const response = await ApiService.get('/ExpedienteDetalle/' + this.pacienteId)
@@ -294,7 +339,46 @@ body {
                 }catch(error){
                         console.error("Error al obtener Archivos:", error)
                 }
-            }  
+            },
+          //Función para determinar que tipo de archivo se mostrara mediante un modal//
+            verArchivo(documentos){
+              this.archivoSeleccionado = '/' + documentos.archivo_url
+              $('#modalArchivo').modal('show')
+            },
+            esImagen(ruta){
+                return /\.(jpg|jpeg|png|gif|webp)$/i.test(ruta)
+            },
+          //Aquítermina la función para determinar que tipo de archivo se mostrara mediante un modal//
+          //Función para determinar la extención de archvo por ejemplo (pdf,docx,jpg etc)
+             obtenerIcono(ruta){
+              console.log('Ruta recibida:', ruta);
+              if(!ruta){
+                  return 'fas fa-file-alt text-secondary';
+              }
+              const extension = ruta.split('.').pop().toLowerCase();
+              switch(extension){
+                  case 'pdf':
+                      return 'fas fa-file-pdf text-danger';
+                  case 'doc':
+                  case 'docx':
+                      return 'fas fa-file-word text-primary';
+                  case 'xls':
+                  case 'xlsx':
+                      return 'fas fa-file-excel text-success';
+                  case 'ppt':
+                  case 'pptx':
+                      return 'fas fa-file-powerpoint text-warning';
+                  case 'jpg':
+                  case 'jpeg':
+                  case 'png':
+                  case 'gif':
+                  case 'webp':
+                      return 'fas fa-file-image text-info';
+                  default:
+                      return 'fas fa-file-alt text-secondary';
+                }
+             }
+          //Aquí termina la función para determinar la extención del archivo ///
         },
         props:{
             //Esto guarda la el id que se trajo mediante la ruta parametrizada que el master hereda a los componentes hijos
