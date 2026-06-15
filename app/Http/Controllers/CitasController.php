@@ -48,7 +48,7 @@ class CitasController extends Controller
                 $telefonoFinal = '521' . $telefonoLimpio;
             }
         // 1. URL de pruebas (Test URL) que copiaste del nodo Webhook en n8n
-        $urlN8n = 'http://localhost:5678/webhook-test/Cita-Creada'; 
+        $urlN8n = 'http://18.221.42.185:5678/webhook-test/Cita-Creada'; 
 
         
 
