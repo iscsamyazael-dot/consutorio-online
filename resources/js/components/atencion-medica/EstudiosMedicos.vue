@@ -579,25 +579,57 @@ MODAL VER ARCHIVO CLINICO
 
                     <div class="col-12">
                         <div class="bg-white rounded-4 shadow-sm p-5 text-center">
+                            //funcion que trae el logo de acuerdo al tipo de documento 
                             <i
-                                class="fas fa-file-pdf text-danger mb-3"
+                                :class="obtenerIcono(detallearchivo?.archivo_url)"
                                 style="font-size:70px;"
                             ></i>
                             <h5 class="fw-bold">
                                 {{ detallearchivo?.archivo_url }}
                                 </h5>
-                            <button type="button" class="btn btn-primary rounded-pill px-4 mt-4">
-                                <i class="fas fa-eye me-2"></i>
-                                Visualizar Archivo
-                            </button>
+                            <button
+                            type="button"
+                            class="btn btn-primary rounded-pill px-4 mt-4"
+                            @click="verArchivo(detallearchivo)"
+                        >
+                            <i class="fas fa-eye me-2"></i>
+                            Visualizar Archivo
+                        </button>
+
                         </div>
                     </div>
                 </div>
             </div>
-
-            </div>
+        </div>
     </div>
 </div>
+
+<!--Modal para mostrar los archivos a traves de un modal-->
+  <div class="modal fade" id="modalArchivo">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vista De Los Arcchivos Clínicos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                </button>
+            </div>
+            <div class="modal-body">
+                <img
+                    v-if="archivoSeleccionado && esImagen(archivoSeleccionado)"
+                    :src="archivoSeleccionado"
+                    class="img-fluid">
+                <iframe
+                    v-else
+                    :src="archivoSeleccionado"
+                    width="100%"
+                    height="700"
+                    frameborder="0"
+                ></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Aqui termina el modal para ver los archivos-->
 
 
 
@@ -746,6 +778,53 @@ export default {
             this.modalArchivoClinico = true
 
         },
+
+            obtenerIcono(ruta){
+                console.log('Ruta recibida:', ruta);
+                if(!ruta){
+                    return 'fas fa-file-alt text-secondary';
+                }
+                const extension = ruta.split('.').pop().toLowerCase();
+                switch(extension){
+                    case 'pdf':
+                        return 'fas fa-file-pdf text-danger';
+                    case 'doc':
+                    case 'docx':
+                        return 'fas fa-file-word text-primary';
+                    case 'xls':
+                    case 'xlsx':
+                        return 'fas fa-file-excel text-success';
+                    case 'ppt':
+                    case 'pptx':
+                        return 'fas fa-file-powerpoint text-warning';
+                    case 'jpg':
+                    case 'jpeg':
+                    case 'png':
+                    case 'gif':
+                    case 'webp':
+                        return 'fas fa-file-image text-info';
+                    default:
+                        return 'fas fa-file-alt text-secondary';
+                }
+            },
+
+            //Función para determinar que tipo de archivo se mostrara mediante un modal//
+            verArchivo(documentos){
+              this.archivoSeleccionado = '/' + documentos.archivo_url
+              $('#modalArchivo').modal('show')
+            },
+            esImagen(ruta){
+                return /\.(jpg|jpeg|png|gif|webp)$/i.test(ruta)
+            },
+
+
+        
+
+
+
+
+
+
 
         
 
