@@ -8,7 +8,6 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
-
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +23,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    //ruta para obtener los datos del controlador
+    Route::get('perfil-usuario',[ProfileController::class, 'obtenerPerfil'])->middleware('auth');
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -35,7 +36,7 @@ Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
 
 
-
+Route::post('/cambiar-password',[ProfileController::class, 'updatePassword'])->middleware('auth');
 //Codigo para las vistas y que son usadas en el menú de adminlte"
 Route::view('inicio','dashboard');
 //Código que lleva a la vista para crear un nuevo paciente de forma manual///

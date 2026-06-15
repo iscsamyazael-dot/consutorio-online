@@ -38,10 +38,14 @@
                         Contraseña Segura
                     </p>
 
-                    <p class="mb-0">
+                   <p class="mb-0">
                         <i class="fas fa-calendar text-warning me-2"></i>
                         Último cambio:
-                        29/05/2026
+                          <!-- Formatea la fecha a dd/mm/yyyy -->
+                        {{ perfil?.password_changed_at
+                            ? perfil.password_changed_at.split(' ')[0].split('-').reverse().join('/')
+                            :'No hay cambios'
+                        }}
                     </p>
 
                 </div>
@@ -53,3 +57,37 @@
     </div>
 
 </template>
+
+<script>
+// Importa Axios para realizar peticiones HTTP
+import axios from 'axios'
+
+export default {
+
+    data() {
+        return {
+            perfil: {}
+        }
+    },
+
+    async mounted() {
+
+        try {
+            
+            // Obtiene los datos del usuario autenticado
+            const response = await axios.get('/perfil-usuario')
+
+            console.log(response.data)
+
+            this.perfil = response.data
+
+        } catch (error) {
+
+            console.error(error)
+        }
+    }
+}
+
+
+
+</script>

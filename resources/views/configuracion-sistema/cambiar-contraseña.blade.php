@@ -3,6 +3,7 @@
 @section('title', 'Cambiar Contraseña')
 
 @section('content_header')
+<meta name="base-url" content="{{ url('/') }}">
 <input type="hidden" name="route" value="{{ url('/') }}">
 
 @stop

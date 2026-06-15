@@ -21,7 +21,7 @@
     <!-- Contraseña Actual -->
     <div class="mb-4">
 
-        <label class="form-label fw-semibold">
+        <label class="form-label fw-semibold"> 
             Contraseña Actual
         </label>
 
@@ -35,7 +35,9 @@
                 id="passwordActual"
                 type="password"
                 class="form-control"
-                placeholder="Ingrese su contraseña actual">
+                v-model="passwordActual"
+                placeholder="Ingrese su contraseña actual"
+            >
 
             <button
                 type="button"
@@ -67,40 +69,36 @@
                 id="nuevaPassword"
                 type="password"
                 class="form-control"
+                v-model="nuevaPassword"
                 placeholder="Ingrese la nueva contraseña"
-                @keyup="evaluarPassword">
-
+                @keyup="evaluarPassword"
+            >
                 <button
                     type="button"
                     class="btn btn-outline-secondary"
                     @click="togglePassword('nuevaPassword', $event.currentTarget)">
-
-                <i class="fas fa-eye"></i>
-
-            </button>
-
+                    <i class="fas fa-eye"></i>
+                </button>
         </div>
-
     </div>
 
     <!-- Confirmar Contraseña -->
     <div class="mb-4">
-
         <label class="form-label fw-semibold">
             Confirmar Contraseña
         </label>
 
         <div class="input-group">
-
             <span class="input-group-text">
                 <i class="fas fa-check-circle"></i>
             </span>
-
             <input
                 id="confirmarPassword"
                 type="password"
                 class="form-control"
-                placeholder="Confirme la nueva contraseña">
+                v-model="confirmarPassword"
+                placeholder="Confirme la nueva contraseña"
+            >
 
             <button
                 type="button"
@@ -108,11 +106,8 @@
                 @click="togglePassword('confirmarPassword', $event.currentTarget)">
 
                 <i class="fas fa-eye"></i>
-
             </button>
-
         </div>
-
     </div>
 
     <!-- Fortaleza -->
@@ -192,8 +187,9 @@
         </button>
 
         <button
-            type="submit"
-            class="btn btn-primary btn-lg rounded-pill px-5">
+            type="button"
+            class="btn btn-primary btn-lg rounded-pill px-5"
+            @click="actualizarPassword">
 
             <i class="fas fa-save me-2"></i>
             Actualizar Contraseña
@@ -207,123 +203,163 @@
 </template>
 
 
-<script setup>
+<script>
+import axios from 'axios'
 
-function togglePassword(inputId, button) {
 
-    const input = document.getElementById(inputId);
+export default {
 
-    const icon = button.querySelector('i');
+    data() {
+        return {
+            passwordActual: '',
+            nuevaPassword: '',
+            confirmarPassword: '',
+            
+            
+        }
+    },
 
-    if (input.type === 'password') {
+    methods: {
+            //fUNCION PARA ACTUALIZAR LA CONTRASEÑA
+        async actualizarPassword() {
 
-        input.type = 'text';
+            try {
+                
+                console.log({
+                    current_password: this.passwordActual,
+                    password: this.nuevaPassword,
+                    password_confirmation: this.confirmarPassword
+                });
 
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
+                const response = await axios.post(
+                    '/cambiar-password',
+                    {
+                        current_password: this.passwordActual,
+                        password: this.nuevaPassword,
+                        password_confirmation: this.confirmarPassword
+                    }
+                )
 
-    } else {
+                alert(response.data.message)
 
-        input.type = 'password';
+                this.passwordActual = ''
+                this.nuevaPassword = ''
+                this.confirmarPassword = ''
 
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
+            } catch (error) {
 
+                alert(
+                    error.response?.data?.message ||
+                    'Ocurrió un error al actualizar la contraseña'
+                )
+            }
+        },
+        //FUNCION VER CONTRASEÑA
+        togglePassword(inputId, button) {
+
+            const input = document.getElementById(inputId);
+
+            const icon = button.querySelector('i');
+
+            if (input.type === 'password') {
+
+                input.type = 'text';
+
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+
+            } else {
+
+                input.type = 'password';
+
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+
+            }
+        },
+        //funcion de requisitos
+        actualizarRequisito(id, cumple) {
+
+            const elemento = document.getElementById(id);
+
+            if (cumple) {
+
+                elemento.innerHTML =
+                    elemento.innerHTML.replace(
+                        'fa-times text-danger',
+                        'fa-check text-success'
+                    );
+
+            } else {
+
+                elemento.innerHTML =
+                    elemento.innerHTML.replace(
+                        'fa-check text-success',
+                        'fa-times text-danger'
+                    );
+
+            }
+        },
+        //FUNCION PARA VERIFICAR QUE CUMPLA CON LOS REQUISITOS 
+        evaluarPassword() {
+
+            const password = this.nuevaPassword;
+
+            let score = 0;
+
+            const tieneLongitud = password.length >= 8;
+            const tieneMayuscula = /[A-Z]/.test(password);
+            const tieneNumero = /\d/.test(password);
+            const tieneEspecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+            this.actualizarRequisito('reqLength', tieneLongitud);
+            this.actualizarRequisito('reqUpper', tieneMayuscula);
+            this.actualizarRequisito('reqNumber', tieneNumero);
+            this.actualizarRequisito('reqSpecial', tieneEspecial);
+
+            if (tieneLongitud) score++;
+            if (tieneMayuscula) score++;
+            if (tieneNumero) score++;
+            if (tieneEspecial) score++;
+
+            const barra =
+                document.getElementById('passwordStrength');
+
+            const texto =
+                document.getElementById('passwordStrengthText');
+
+            switch(score) {
+
+                case 1:
+                    barra.style.width = '25%';
+                    barra.className = 'progress-bar bg-danger';
+                    texto.textContent = 'Contraseña débil';
+                    break;
+
+                case 2:
+                    barra.style.width = '50%';
+                    barra.className = 'progress-bar bg-warning';
+                    texto.textContent = 'Contraseña regular';
+                    break;
+
+                case 3:
+                    barra.style.width = '75%';
+                    barra.className = 'progress-bar bg-info';
+                    texto.textContent = 'Contraseña buena';
+                    break;
+
+                case 4:
+                    barra.style.width = '100%';
+                    barra.className = 'progress-bar bg-success';
+                    texto.textContent = 'Contraseña muy segura';
+                    break;
+
+                default:
+                    barra.style.width = '0%';
+                    barra.className = 'progress-bar';
+                    texto.textContent = 'Ingrese una contraseña';
+            }
+        }
     }
 }
-
-function actualizarRequisito(id, cumple) {
-
-    const elemento = document.getElementById(id);
-
-    if (cumple) {
-
-        elemento.innerHTML =
-            elemento.innerHTML.replace(
-                'fa-times text-danger',
-                'fa-check text-success'
-            );
-
-    } else {
-
-        elemento.innerHTML =
-            elemento.innerHTML.replace(
-                'fa-check text-success',
-                'fa-times text-danger'
-            );
-
-    }
-}
-
-function evaluarPassword() {
-
-    const password =
-        document.getElementById('nuevaPassword').value;
-
-    let score = 0;
-
-    const tieneLongitud = password.length >= 8;
-    const tieneMayuscula = /[A-Z]/.test(password);
-    const tieneNumero = /\d/.test(password);
-    const tieneEspecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    actualizarRequisito('reqLength', tieneLongitud);
-    actualizarRequisito('reqUpper', tieneMayuscula);
-    actualizarRequisito('reqNumber', tieneNumero);
-    actualizarRequisito('reqSpecial', tieneEspecial);
-
-    if (tieneLongitud) score++;
-    if (tieneMayuscula) score++;
-    if (tieneNumero) score++;
-    if (tieneEspecial) score++;
-
-    const barra =
-        document.getElementById('passwordStrength');
-
-    const texto =
-        document.getElementById('passwordStrengthText');
-
-    switch(score) {
-
-        case 1:
-
-            barra.style.width = '25%';
-            barra.className = 'progress-bar bg-danger';
-            texto.textContent = 'Contraseña débil';
-
-            break;
-
-        case 2:
-
-            barra.style.width = '50%';
-            barra.className = 'progress-bar bg-warning';
-            texto.textContent = 'Contraseña regular';
-
-            break;
-
-        case 3:
-
-            barra.style.width = '75%';
-            barra.className = 'progress-bar bg-info';
-            texto.textContent = 'Contraseña buena';
-
-            break;
-
-        case 4:
-
-            barra.style.width = '100%';
-            barra.className = 'progress-bar bg-success';
-            texto.textContent = 'Contraseña muy segura';
-
-            break;
-
-        default:
-
-            barra.style.width = '0%';
-            barra.className = 'progress-bar';
-            texto.textContent = 'Ingrese una contraseña';
-
-    }
-}
-
 </script>
