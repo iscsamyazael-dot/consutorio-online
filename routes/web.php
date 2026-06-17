@@ -10,6 +10,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PerfilController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -24,8 +25,14 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     //ruta para obtener los datos del controlador
-    Route::get('perfil-usuario',[ProfileController::class, 'obtenerPerfil'])->middleware('auth');
+    Route::get('/perfil-usuario',[ProfileController::class, 'obtenerPerfil']);
+    // Actualiza los datos del perfil
+    Route::put('/perfil-usuario',[ProfileController::class, 'actualizarPerfil']);
+    
+    
 });
+   
+
 
 Route::resource('pacientes', PacienteController::class);
 Route::resource('consultas', ConsultaController::class);
@@ -34,6 +41,7 @@ Route::resource('recetas', RecetaController::class);
 Route::resource('receta-detalles', RecetaDetalleController::class);
 Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
+
 
 
 Route::post('/cambiar-password',[ProfileController::class, 'updatePassword'])->middleware('auth');
@@ -96,6 +104,9 @@ Route::get('cambiar-contraseña', function () {
 });
 
 
+Route::get('/prueba', function () {
+    dd('FUNCIONA');
+});
 
 
 

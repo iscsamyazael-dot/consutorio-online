@@ -11,6 +11,7 @@
                     <i class="fas fa-id-card me-2"></i>
                     Información Personal
                 </h5>
+                
 
                 <div class="row g-4">
                     <div class="col-md-6">
@@ -18,7 +19,7 @@
                             Nombre Completo
                         </label>
                         <div class="fs-5">
-                            Dr. Gael
+                            {{ perfil.nombre }}
                         </div>
                     </div>
 
@@ -27,7 +28,7 @@
                             Correo Electrónico
                         </label>
                         <div class="fs-5">
-                            doctor@consultorio.com
+                            {{perfil.correo }}
                         </div>
                     </div>
                 </div>
@@ -57,27 +58,27 @@
                         </label>
                         <div class="fs-5">
                             <i class="fas fa-stethoscope text-primary me-2"></i>
-                            Medicina General
+                            {{ perfil.especialidad }}
                         </div>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-6 mt-2">
                         <label class="text-muted fw-semibold">
                             Cédula Profesional
                         </label>
                         <div class="fs-5">
                             <i class="fas fa-id-badge text-primary me-2"></i>
-                            12345678
+                            {{ perfil.cedula }}
                         </div>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-6 mt-2">
                         <label class="text-muted fw-semibold">
                             Fecha de Registro
                         </label>
                         <div class="fs-5">
                             <i class="fas fa-calendar text-primary me-2"></i>
-                            29/05/2026
+                            {{ perfil.fechaRegistro }}
                         </div>
                     </div>
                 </div>
@@ -145,10 +146,11 @@
                             <label class="form-label fw-semibold">
                                 Nombre Completo
                             </label>
+                            <!-- v-model enlaza el input con perfil.nombre -->
                             <input
                                 type="text"
                                 class="form-control"
-                                value="Dr. Samuel"
+                                v-model="perfil.nombre"
                             >
                         </div>
 
@@ -156,10 +158,10 @@
                             <label class="form-label fw-semibold">
                                 Correo Electrónico
                             </label>
-                            <input
+                           <input
                                 type="email"
                                 class="form-control"
-                                value="doctor@consultorio.com"
+                                v-model="perfil.correo"
                             >
                         </div>
                     </div>
@@ -176,7 +178,7 @@
                             <input
                                 type="text"
                                 class="form-control"
-                                value="Medicina General"
+                                v-model="perfil.especialidad"
                             >
                         </div>
 
@@ -187,7 +189,7 @@
                             <input
                                 type="text"
                                 class="form-control"
-                                value="12345678"
+                                v-model="perfil.cedula"
                             >
                         </div>
                     </div>
@@ -203,9 +205,10 @@
                     >
                         Cancelar
                     </button>
-
+                        <!-- Ejecuta el método para guardar -->
                     <button
-                        type="submit"
+                        type="button"
+                        @click="guardarPerfil"
                         class="btn btn-primary rounded-pill px-4"
                     >
                         <i class="fas fa-save me-2"></i>
@@ -220,3 +223,99 @@
 
 
 </template>
+
+
+<script>
+import ApiService from '../../services/ApiService.js'
+
+
+export default {
+
+    data() {
+
+        return {
+
+            // Datos del perfil
+            perfil: {
+
+                nombre: '',
+                correo: '',
+                especialidad: '',
+                cedula: '',
+                rol: '',
+                fechaRegistro: ''
+            }
+        }
+    },
+
+    async mounted() {
+
+        // Carga la información del usuario al abrir la página
+        await this.obtenerPerfil()
+
+    
+
+    console.log('MOUNTED EJECUTADO')
+
+    },
+
+    methods: {
+
+        async obtenerPerfil() {
+
+            try {
+
+                // Obtiene los datos desde Laravel
+                const response = await axios.get('perfil-usuario')
+                console.log(response.data)
+
+                // Llena el objeto perfil
+                this.perfil = {
+
+                    nombre: response.data.name,
+
+                    correo: response.data.email,
+
+                    especialidad: response.data.especialidad,
+
+                    cedula: response.data.cedula_profesional,
+
+                    rol: response.data.rol,
+
+                    // Formatea la fecha de registro
+                    fechaRegistro: new Date(
+                        response.data.created_at
+                    ).toLocaleDateString('es-MX')
+                }
+
+            } catch (error) {
+
+                console.error(error)
+            }
+        },
+
+        async guardarPerfil() {
+
+        try {
+
+        // Envía los cambios al servidor
+            await axios.put(
+                '/perfil-usuario',
+                this.perfil
+                )
+
+            // Recarga los datos desde la BD
+            await this.obtenerPerfil()
+
+                alert(
+                    'Perfil actualizado correctamente'
+                )
+
+                } catch (error) {
+
+                console.error(error)
+            }
+        }
+    }
+}
+</script>

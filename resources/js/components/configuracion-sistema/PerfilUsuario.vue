@@ -48,7 +48,7 @@
                 <div class="text-start">
                     <p class="mb-3">
                         <i class="fas fa-envelope text-primary me-2"></i>
-                        doctor@consultorio.com
+                        {{ perfil.correo }}
                     </p>
 
                     <p class="mb-3">
@@ -58,7 +58,8 @@
 
                     <p class="mb-0">
                         <i class="fas fa-calendar text-primary me-2"></i>
-                        Registrado: 29/05/2026
+                        
+                        Registrado el: {{ perfil.fechaRegistro }}
                     </p>
                 </div>
 
@@ -72,25 +73,100 @@
 </template>
 
 
-<script setup>
+<script>
+import ApiService from '../../services/ApiService.js'
 
-import {ref} from 'vue'
 
-const inputFoto = ref(null)
 
-const abrirSelectorImagen = () => {
-    inputFoto.value.click()
+export default {
+
+    data() {
+
+        return {
+
+            // Datos del perfil
+            perfil: {
+
+                nombre: '',
+                correo: '',
+                especialidad: '',
+                cedula: '',
+                rol: '',
+                fechaRegistro: ''
+            }
+        }
+    },
+
+    async mounted() {
+
+        // Carga la información del usuario al abrir la página
+        await this.obtenerPerfil()
+
+    
+
+    console.log('MOUNTED EJECUTADO')
+
+    
+
+    },
+
+    methods: {
+
+        async obtenerPerfil() {
+
+            try {
+
+                // Obtiene los datos desde Laravel
+                const response = await axios.get('perfil-usuario')
+                console.log(response.data)
+
+                // Llena el objeto perfil
+                this.perfil = {
+
+                    nombre: response.data.name,
+
+                    correo: response.data.email,
+
+                    especialidad: response.data.especialidad,
+
+                    cedula: response.data.cedula_profesional,
+
+                    rol: response.data.rol,
+
+                    // Formatea la fecha de registro
+                    fechaRegistro: new Date(
+                        response.data.created_at
+                    ).toLocaleDateString('es-MX')
+                }
+
+            } catch (error) {
+
+                console.error(error)
+            }
+        },
+
+        async guardarPerfil() {
+
+        try {
+
+        // Envía los cambios al servidor
+            await axios.put(
+                '/perfil-usuario',
+                this.perfil
+                )
+
+            // Recarga los datos desde la BD
+            await this.obtenerPerfil()
+
+                alert(
+                    'Perfil actualizado correctamente'
+                )
+
+                } catch (error) {
+
+                console.error(error)
+            }
+        }
+    }
 }
-
-const seleccionarFoto = (event) => {
-    const archivo = event.target.files[0]
-
-    if (!archivo) return
-
-    console.log('Archivo seleccionado:', archivo)
-
-    // Aquí posteriormente enviarás la imagen a Laravel
-}
-
-
 </script>

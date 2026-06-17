@@ -49,45 +49,102 @@
                     </p>
 
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
 </template>
 
 <script>
-// Importa Axios para realizar peticiones HTTP
+
 import axios from 'axios'
 
 export default {
 
     data() {
+
         return {
-            perfil: {}
+
+            // Datos del perfil
+            perfil: {
+
+                nombre: '',
+                correo: '',
+                especialidad: '',
+                cedula: '',
+                rol: '',
+                fechaRegistro: ''
+            }
         }
     },
 
     async mounted() {
 
-        try {
-            
-            // Obtiene los datos del usuario autenticado
-            const response = await axios.get('/perfil-usuario')
+        // Carga la información del usuario
+        await this.obtenerPerfil()
+    },
 
-            console.log(response.data)
+    methods: {
 
-            this.perfil = response.data
+        async obtenerPerfil() {
 
-        } catch (error) {
+            try {
 
-            console.error(error)
+                // Obtiene los datos del usuario autenticado
+                const response = await axios.get(
+                    '/perfil-usuario'
+                )
+
+                // Asigna los datos recibidos
+                this.perfil = {
+
+                    nombre: response.data.name,
+
+                    correo: response.data.email,
+
+                    especialidad:
+                        response.data.especialidad,
+
+                    cedula:
+                        response.data.cedula_profesional,
+
+                    rol:
+                        response.data.rol,
+
+                    fechaRegistro:
+                        response.data.created_at
+                }
+
+            } catch (error) {
+
+                console.error(error)
+            }
+        },
+
+        async guardarPerfil() {
+
+            try {
+
+                // Envía los cambios al servidor
+                await axios.put(
+                    '/perfil-usuario',
+                    this.perfil
+                )
+
+                // Recarga los datos desde la BD
+                await this.obtenerPerfil()
+
+                alert(
+                    'Perfil actualizado correctamente'
+                )
+
+            } catch (error) {
+
+                console.error(error)
+            }
         }
     }
 }
-
-
-
 </script>
+
+

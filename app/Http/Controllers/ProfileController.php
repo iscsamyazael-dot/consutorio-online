@@ -73,10 +73,7 @@ class ProfileController extends Controller
             'message' => 'Contraseña actualizada correctamente.'
         ]);
     }
-
-
     
-
     /**
      * Delete the user's account.
      */
@@ -98,9 +95,32 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
-        public function obtenerPerfil()
+    public function obtenerPerfil()
     {
         // Obtiene los datos del usuario autenticado
-       return response()->json(Auth::user());
+    
+        return response()->json(Auth::user());
+
     }
+
+    public function actualizarPerfil(Request $request)
+    {
+        $user = Auth::user();
+
+        $user->name = $request->nombre;
+
+        $user->email = $request->correo;
+
+        $user->especialidad = $request->especialidad;
+
+        $user->cedula_profesional = $request->cedula;
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Perfil actualizado'
+        ]);
+    }
+
+
 }

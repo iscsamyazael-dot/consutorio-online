@@ -447,7 +447,7 @@ return [
             'icon' => 'fas fa-fw fa-lock',
         ],
         [
-             'text' => 'Cerrar sesión',
+            'text' => 'Cerrar sesión',
             'url'  => 'logout',
             'icon' => 'fas fa-sign-out-alt',
         ],
