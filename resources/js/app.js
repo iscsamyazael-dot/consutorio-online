@@ -20,13 +20,18 @@ import PacientesIndex from './components/pasientes/pacientesindex.vue'
 import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- Corregida 'C' mayúscula
 import IndexConsultas from './components/consultas/IndexConsultas.vue';
 import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
-
+import Especialidades from './components/Especialidades/Especialidades.vue';// importa especialidades 
 //Modulo de inventario de medicamentos
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 
 
 
 const app = createApp({})
+
+app.component(
+    'Especialidades',
+    Especialidades
+)
 
 app.component(
      'consulta-inteligente',

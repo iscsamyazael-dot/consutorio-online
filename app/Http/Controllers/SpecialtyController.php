@@ -4,17 +4,29 @@ namespace App\Http\Controllers;
 
 use App\Models\Specialty;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class SpecialtyController extends Controller
 {
+    // Vista principal
     public function index(Request $request)
     {
         $specialties = Specialty::query()
-            ->when($request->search, fn($q, $s) => $q->where('nombre', 'like', "%$s%"))
+            ->when($request->search, function ($query, $search) {
+                $query->where('nombre', 'like', "%{$search}%");
+            })
             ->paginate(12);
 
         return view('specialties.index', compact('specialties'));
+    }
+
+    // API para Vue (devuelve JSON)
+    public function list(Request $request)
+    {
+        return Specialty::query()
+            ->when($request->search, function ($query, $search) {
+                $query->where('nombre', 'like', "%{$search}%");
+            })
+            ->get();
     }
 
     public function create()
@@ -25,65 +37,61 @@ class SpecialtyController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nombre'      => 'required|string|max:255',
+            'nombre'      => 'required|string|max:100',
+            'doctor'      => 'required|string|max:100',
             'descripcion' => 'nullable|string',
-            'imagen'      => 'nullable|image|max:2048',
+            'estado'      => 'required|in:Activo,Inactivo',
         ]);
 
-        $data = $request->only('nombre', 'descripcion');
+        Specialty::create([
+            'nombre'      => $request->nombre,
+            'doctor'      => $request->doctor,
+            'descripcion' => $request->descripcion,
+            'estado'      => $request->estado,
+        ]);
 
-        if ($request->hasFile('imagen')) {
-            $data['imagen'] = $request->file('imagen')->store('especialidades', 'public');
-        }
-
-        Specialty::create($data);
-
-        return redirect()->route('specialties.index')
-            ->with('success', 'Especialidad creada correctamente.');
+        return response()->json([
+            'message' => 'Especialidad creada correctamente.'
+        ]);
     }
 
     public function show(Specialty $specialty)
     {
-        return view('specialties.show', compact('specialty'));
+        return response()->json($specialty);
     }
 
     public function edit(Specialty $specialty)
     {
-        return view('specialties.edit', compact('specialty'));
+        return response()->json($specialty);
     }
 
     public function update(Request $request, Specialty $specialty)
     {
         $request->validate([
-            'nombre'      => 'required|string|max:255',
+            'nombre'      => 'required|string|max:100',
+            'doctor'      => 'required|string|max:100',
             'descripcion' => 'nullable|string',
-            'imagen'      => 'nullable|image|max:2048',
+            'estado'      => 'required|in:Activo,Inactivo',
         ]);
 
-        $data = $request->only('nombre', 'descripcion');
+        $specialty->update([
+            'nombre'      => $request->nombre,
+            'doctor'      => $request->doctor,
+            'descripcion' => $request->descripcion,
+            'estado'      => $request->estado,
+        ]);
 
-        if ($request->hasFile('imagen')) {
-            if ($specialty->imagen) {
-                Storage::disk('public')->delete($specialty->imagen);
-            }
-            $data['imagen'] = $request->file('imagen')->store('especialidades', 'public');
-        }
-
-        $specialty->update($data);
-
-        return redirect()->route('specialties.index')
-            ->with('success', 'Especialidad actualizada correctamente.');
+        return response()->json([
+            'message' => 'Especialidad actualizada correctamente.'
+        ]);
     }
 
     public function destroy(Specialty $specialty)
     {
-        if ($specialty->imagen) {
-            Storage::disk('public')->delete($specialty->imagen);
-        }
-
         $specialty->delete();
 
-        return redirect()->route('specialties.index')
-            ->with('success', 'Especialidad eliminada.');
+        return response()->json([
+            'message' => 'Especialidad eliminada correctamente.'
+        ]);
     }
 }

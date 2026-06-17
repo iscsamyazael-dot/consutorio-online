@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/api/specialties', [SpecialtyController::class, 'list']);
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -73,10 +74,7 @@ Route::get('Medicamentos',function(){
           return view('medicamentos.index');
 });
 
-//Código que lleva a la vita de medicamentos e inventario//
-Route::get('especialidades',function(){
-          return view('specialties.index');
-});
+
 
 //Codigo que lleva a TRIAGE
 Route::get('TRIAGE',function(){
