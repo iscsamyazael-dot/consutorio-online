@@ -18,11 +18,21 @@ import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación 
 import InformacionPaciente    from './components/pasientes/masterregistroN.vue'; // ✅ variable correcta
 import expedientepaciente from './components/pasientes/maesterexpediente.vue';
 import consultapaciente from './components/consultas/masterindividual.vue';// historial de las consultas del pacinte //
-
+import nuevaconsultamedica from'./components/consultas/maesternuevaconsulta.vue';
+import centroconsultas from './components/consultas/mastercentro.vue';
 
 const app = createApp({});
 // Registrar Vue Select globalmente
 //app.component('v-select', vSelect);
+app.component(
+    'centroconsultas',
+    centroconsultas
+
+)
+app.component(
+    'nuevaconsultamedica',
+    nuevaconsultamedica
+)
 
 app.component(
     'consultapaciente',

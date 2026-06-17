@@ -7,56 +7,43 @@
                 {{ infoPacientes.nombre }}
             </strong>
         </nav>
-
         <!-- HERO PACIENTE -->
         <div class="card border-0 shadow-sm rounded-4 mb-4">
-
             <div class="card-body">
-
                 <div class="row align-items-center">
-
                     <!-- AVATAR -->
                     <div class="col-lg-1 col-md-2 col-12 text-center mb-3 mb-md-0">
-
                         <div class="avatar-xl mx-auto">
                            {{ infoPacientes.nombre?.substring(0, 2) }}
                         </div>
-
                     </div>
-
                     <!-- INFO -->
                     <div class="col-lg-8 col-md-7 col-12">
 
                         <h3 class="fw-bold mb-3 nombre-paciente">
                             {{ infoPacientes.nombre }} {{ infoPacientes.apellido_paterno }} {{ infoPacientes.apellido_materno }}
                         </h3>
-
-                        <div class="d-flex flex-wrap gap-2">
-                             
+                        <div class="d-flex flex-wrap gap-2">  
                             <span class="badge bg-primary rounded-pill px-3 py-2">
                                 Expediente #0001
                             </span>
-
                             <span class="badge bg-info rounded-pill px-3 py-2">
                                 {{ infoPacientes.edad }} Años
                             </span>
-
                             <span class="badge bg-secondary rounded-pill px-3 py-2">
                                 {{ infoPacientes.sexo }}
                             </span>
-
                             <span class="badge bg-success rounded-pill px-3 py-2">
                                Consulta: {{ infoPacientes.estado }}
                             </span>
-
                         </div>
-
                     </div>
 
                     <!-- BOTÓN -->
                     <div class="col-lg-3 col-md-3 col-12 text-md-end text-center mt-3 mt-md-0">
 
-                        <a href="/consultas/create"
+                        <a 
+                           :href="'/consultaNormal/' + infoPacientes.id"
                            class="btn btn-success rounded-pill px-4 shadow-sm">
 
                             <i class="fas fa-stethoscope me-2"></i>
@@ -100,10 +87,11 @@
         data() {
             return {  
                 infoPacientes: [],
+                id:''
             }
         },
         mounted() {
-            //this.obtenerPacientes();
+            // this.obtenerPacientes();
             console.log('PROP PacienteId:', this.pacienteId);
         },
         methods: {
@@ -111,7 +99,7 @@
                 try {
                     const response = await ApiService.get('/ExpedienteDetalle/' + this.pacienteId)
                     this.infoPacientes = response.data
-                    console.log('Pacientes cargados:',this.infoPacientes)
+                    console.log('Expediente cargados:',this.infoPacientes)
                 }catch(error){
                         console.error("Error al obtener pacientes:", error)
                 }

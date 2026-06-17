@@ -51,6 +51,12 @@ Route::get('PacienteNuevo',function(){
 Route::get('ExpedientePacientes/{id}', function ($id) {
     return view('pacientes.expediente');
 });
+
+//codigo para ruta parametrisada para consultanormal//
+Route::get('consultaNormal/{id}', function ($id) {
+    return view('consultas.create');
+});
+
 //Código que lleva a la vista de la consulta individual de un paciente//
 Route::get('HistorialConsulta',function(){
           return view('consultas.consultaIndividual');
@@ -72,10 +78,6 @@ Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
 
 
 require __DIR__.'/auth.php';
-
-Route::get('/consultas', function () {
-    return view('consultas.index');
-});
 
 Route::get('/consultas', function () {
     return view('consultas.index');

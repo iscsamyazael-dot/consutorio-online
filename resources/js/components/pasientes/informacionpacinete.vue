@@ -559,7 +559,7 @@ export default {
                 motivo_consulta: ''
             };
         },
-
+        // guarda paciente sin no hay errores 
         async guardarPaciente() {
             try {
                 const response = await ApiService.post('/pacientes',this.form)
@@ -570,6 +570,7 @@ export default {
                     text: 'El paciente fue guardado exitosamente.',
                     confirmButtonText: 'Aceptar'
                 })
+                // limpia el  formulario la momento de guardar 
                 this.limpiarFormulario();
             } catch (error) {
                 console.error(error)

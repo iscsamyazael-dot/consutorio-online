@@ -391,8 +391,10 @@ import ApiService from '../../services/ApiService.js'
                         text: 'El paciente fue guardado exitosamente.',
                         confirmButtonText: 'Aceptar'
                     })
+                    // limpia el formulario la momento de guardar y no hay errores 
                     this.limpiarFormulario();
                 } catch (error) {
+                    // muestra en la consola si hay errores es importante 
                     console.error(error)
                     Swal.fire({
                         icon: 'error',
@@ -406,6 +408,7 @@ import ApiService from '../../services/ApiService.js'
             //Termina la funcion del metodo para guardar en movmientos inventario y la actualización del inventario//   
                 // funcion para obtener los datos  de los pacintes//
                 async obtenerPacientes(){
+                    // llama los pacientes desde la api y verifica si estan o no estan 
                     try {
                         const response = await ApiService.get('/pacientes')
                         this.pacientes = response.data
@@ -437,7 +440,7 @@ import ApiService from '../../services/ApiService.js'
                         console.error("Error al editar paciente:", error)
                     }
                 },
-               //Para que sirve ??
+               //accion para guardar  y berifica que no aya errores //
                 async guardarCambiosPaciente() {
                     try {
                         const response = await ApiService.put('/pacientes/' + this.editarPaciente.id, this.editarPaciente)
