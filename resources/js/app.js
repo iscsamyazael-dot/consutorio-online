@@ -33,6 +33,17 @@ import Maesterexpediente from './components/pasientes/maesterexpediente.vue';
 //Modulo de Historial de recetas 
 import Historialreceta from './components/recetass/PanelRecetas.vue'
 
+//Modulo de inventario de medicamentos
+import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
+
+
+//Modulo de Perfil
+import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
+import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
+
+
+
+
 const app = createApp({})
 
 app.component(
@@ -49,10 +60,11 @@ app.component(
     'atencion-medica-evaluacionia',
     EvaluacionIA
 );
-// app.component(
-//     'alerta-farmacia',
-//     AlertaFarmacia
-// );
+
+app.component(
+    'alerta-farmacia',
+    AlertaFarmacia
+);
 
 app.component(
     'atencion-medica-archivosclinicos',
@@ -117,6 +129,18 @@ app.component(
     'recetass-historial',
     Historialreceta
 );
+app.component(
+    'configuracion-sistema',
+    ConfiSistema
+);
+
+app.component(
+    'configuracion-sistema-panelcontrasena',
+    PanelContraseña
+);
+
+
+
     
 // 3. MONTAJE DE LA APP
 app.mount('#app');
