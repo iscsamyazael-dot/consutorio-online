@@ -10,6 +10,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
 use App\Http\Controllers\MovimientoInventarioController;
 use App\Http\Controllers\TriageController;
+use App\Http\Controllers\ArchivosClinicosController;
+
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,17 +40,23 @@ Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
 Route::resource('movimientos',MovimientoInventarioController::class);
 Route::resource('triage', TriageController::class);
+Route::resource('archivoclinico', ArchivosClinicosController::class);
 
 //Código para hacer el filtro de un paciente mediante un input //
 //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
 
 
+// Cambias 'SubirArchivosControlador' por el que ya tengas
+Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
+//Código para hacer el filtro de un paciente mediante un input //
+Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
 //Codigo para las vistas y que son usadas en el menú de adminlte"
 Route::view('inicio','dashboard');
 //Código que lleva a la vista para crear un nuevo paciente de forma manual///
 Route::get('PacienteNuevo',function(){
           return view('pacientes.create');
 });
+
 //Código que lleva a la vista del expediente de un paciente//
 Route::get('ExpedientePacientes/{id}', function ($id) {
     return view('pacientes.expediente');
@@ -77,6 +85,8 @@ Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEvento
 Route::get('Medicamentos',function(){
           return view('medicamentos.index');
 });
+
+
 
 //Codigo que lleva a TRIAGE
 Route::get('TRIAGE',function(){
