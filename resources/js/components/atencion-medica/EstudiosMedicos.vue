@@ -52,8 +52,7 @@
                     
                     <td>
                         {{mostrar.paciente?.nombre}}
-                        {{mostrar.paciente?.apellido_paterno}}
-                        {{mostrar.paciente?.apellido_materno}}
+                        
                     </td>
                     <td>{{ mostrar.tipo_archivo }}</td>
                     <td>{{ detallearchivo.fecha_subida?.split(' ')[0] }}</td>
