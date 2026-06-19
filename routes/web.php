@@ -8,9 +8,10 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
-
+use App\Http\Controllers\TriageController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -24,6 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -33,7 +35,10 @@ Route::resource('recetas', RecetaController::class);
 Route::resource('receta-detalles', RecetaDetalleController::class);
 Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
+Route::resource('triage', TriageController::class);
 
+//Código para hacer el filtro de un paciente mediante un input //
+//Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
 
 
 //Codigo para las vistas y que son usadas en el menú de adminlte"
@@ -43,8 +48,13 @@ Route::get('PacienteNuevo',function(){
           return view('pacientes.create');
 });
 //Código que lleva a la vista del expediente de un paciente//
-Route::get('ExpedientePacientes',function(){
-          return view('pacientes.expediente');
+Route::get('ExpedientePacientes/{id}', function ($id) {
+    return view('pacientes.expediente');
+});
+
+//codigo para ruta parametrisada para consultanormal//
+Route::get('consultaNormal/{id}', function ($id) {
+    return view('consultas.create');
 });
 
 //Código que lleva a la vista de la consulta individual de un paciente//
@@ -57,7 +67,7 @@ Route::get('ConsultaInteligente',function(){
           return view('consultas.consulta_inteligente');
 });
 
-//Código que lleva a la vita de medicamentos e inventario//
+
 Route::get('Medicamentos',function(){
           return view('medicamentos.index');
 });
@@ -81,25 +91,34 @@ Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
 });
 
+//Rutas parametrizadas (Sirve para hacer consultas entre diferentes 
+// componentes es decir enviar datos entre la URL)//
 
+//Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
+Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
+       ->name('ExpedienteDetalle');
+//Aqui termina la ruta parametrizada //
 
 
 require __DIR__.'/auth.php';
 
+Route::get('/consultas', function () {
+   return view('consultas.index');
+ });
 
 // Route::get('/consultas', function () {
 //     return view('consultas.index');
 // });
 
-// Route::get('/consultas', function () {
-//     return view('consultas.index');
-// });
-
-// Route::get('/consultas/create', function () {
-//     return view('consultas.create');
-// });
+ Route::get('/consultas/create', function () {
+    return view('consultas.create');
+});
 
 //ruta de nuevo paciente //
 Route::get('/pacientes/create', function () {
     return view('pacientes.create');
+});
+
+Route::get('/pacientes.index', function () {
+    return view('pacientes.index');
 });
