@@ -45,8 +45,6 @@ class PacienteController extends Controller
         $paciente = Paciente::create([
             'paciente_id' => $clave,
             'nombre' => $request->nombre,
-            'apellido_paterno' => $request->apellido_paterno,
-            'apellido_materno' => $request->apellido_materno,
             'telefono' => $request->telefono,
             'email' => $request->email,
             'edad' => $request->edad_anios, // Guardamos la edad en años

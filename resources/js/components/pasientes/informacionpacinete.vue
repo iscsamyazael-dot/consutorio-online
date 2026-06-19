@@ -15,33 +15,13 @@
         </div>
 
         <div class="form-row row g-4 mt-2">
-            <div class="col-md-4 field-wrap" style="--delay:.05s">
+            <div class="col-md-12 field-wrap" style="--delay:.05s">
                 <label class="form-label">
                     <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
-                    Nombre(s)
+                    Nombre Completo
                 </label>
                 <div class="input-box">
-                    <input type="text" v-model="form.nombre" class="premium-input" placeholder="Nombre del paciente">
-                    <span class="input-line"></span>
-                </div>
-            </div>
-            <div class="col-md-4 field-wrap" style="--delay:.1s">
-                <label class="form-label">
-                    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
-                    Apellido Paterno
-                </label>
-                <div class="input-box">
-                    <input type="text" v-model="form.apellido_paterno" class="premium-input" placeholder="Apellido paterno">
-                    <span class="input-line"></span>
-                </div>
-            </div>
-            <div class="col-md-4 field-wrap" style="--delay:.15s">
-                <label class="form-label">
-                    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
-                    Apellido Materno
-                </label>
-                <div class="input-box">
-                    <input type="text" v-model="form.apellido_materno" class="premium-input" placeholder="Apellido materno">
+                    <input type="text" v-model="form.nombre" class="premium-input" placeholder="Nombre completo del paciente">
                     <span class="input-line"></span>
                 </div>
             </div>
@@ -459,8 +439,6 @@ export default {
             edadError: '',
             form: {
                 nombre: '',
-                apellido_paterno: '',
-                apellido_materno: '',
                 sexo: '',
                 fecha_nacimiento: '',
                 edad_anios: 0,
@@ -535,8 +513,6 @@ export default {
         limpiarFormulario() {
             this.form = {
                 nombre: '',
-                apellido_paterno: '',
-                apellido_materno: '',
                 telefono: '',
                 email: '',
                 edad_anios: '',
