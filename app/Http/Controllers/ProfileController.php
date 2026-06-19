@@ -5,11 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
-
 
 class ProfileController extends Controller
 {
@@ -20,7 +18,7 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
-        ]); 
+        ]);
     }
 
     /**
@@ -39,41 +37,6 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
-
-    public function updatePassword(Request $request)
-    {
-        $request->validate([
-            'current_password' => 'required',
-            'password' => 'required|min:8|confirmed'
-        ]);
-
-        $user = Auth::user();
-            // Verifica que la contraseña actual sea correcta
-        if (!Hash::check(
-            $request->current_password,
-            $user->password
-        )) {
-
-            return response()->json([
-                'message' => 'La contraseña actual es incorrecta.'
-            ], 422);
-        }
-
-            // Actualiza la contraseña del usuario
-        $user->password = Hash::make(
-            $request->password
-        );
-            // Guarda la fecha del último cambio de contraseña
-        $user->password_changed_at = now();
-
-            // Guarda los cambios en la base de datos
-        $user->save();
-
-        return response()->json([
-            'message' => 'Contraseña actualizada correctamente.'
-        ]);
-    }
-    
     /**
      * Delete the user's account.
      */
@@ -94,33 +57,4 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
-
-    public function obtenerPerfil()
-    {
-        // Obtiene los datos del usuario autenticado
-    
-        return response()->json(Auth::user());
-
-    }
-
-    public function actualizarPerfil(Request $request)
-    {
-        $user = Auth::user();
-
-        $user->name = $request->nombre;
-
-        $user->email = $request->correo;
-
-        $user->especialidad = $request->especialidad;
-
-        $user->cedula_profesional = $request->cedula;
-
-        $user->save();
-
-        return response()->json([
-            'message' => 'Perfil actualizado'
-        ]);
-    }
-
-
 }

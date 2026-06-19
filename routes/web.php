@@ -14,7 +14,6 @@ use App\Http\Controllers\ArchivosClinicosController;
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PerfilController;
 
 
 Route::get('/', function () {
@@ -30,94 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
-    //ruta para obtener los datos del controlador
-    Route::get('/perfil-usuario',[ProfileController::class, 'obtenerPerfil']);
-    // Actualiza los datos del perfil
-    Route::put('/perfil-usuario',[ProfileController::class, 'actualizarPerfil']);
-    Route::post('/cambiar-password',[ProfileController::class, 'updatePassword'])->middleware('auth');
 });
-   
-// ==========================================
-// 🛡️ SECCIÓN / PREFIJO PARA ADMINISTRADOR
-// ==========================================
-Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function() {
-    
-    // Vista principal del Admin
-    Route::get('/', function() {
-        return view('dashboard'); // Tu vista principal actual
-    })->name('dashboard');
-
-    // El Administrador gestiona los usuarios del sistema
-    Route::resource('usuarios', UserController::class);
-    
-    // Si el admin también puede ver inventarios o catálogos:
-    Route::resource('medicamentos', MedicamentoController::class);
-    Route::get('Medicamentos', function() { return view('medicamentos.index'); });
-});
-
-
-// ==========================================
-// 🩺 SECCIÓN / PREFIJO PARA MÉDICO
-// ==========================================
-Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function() {
-    
-    // Vista principal del Médico (puedes apuntarla a una vista de inicio médica)
-    Route::get('/', function() {
-        return view('dashboard'); 
-    });
-
-    // Recursos compartidos pero con su flujo de médico
-    Route::resource('pacientes', PacienteController::class);
-    Route::resource('citas', CitaController::class);
-    Route::get('/api/citas', [CitaController::class, 'getEventos']);
-
-    // Módulo Consultas Completo (Los 2 submódulos + IA)
-    Route::resource('consultas', ConsultaController::class);
-    Route::resource('consultaIA', ConsultaIAController::class);
-    Route::get('ListaConsultas', function () { return view('consultas.index'); }); // Submódulo 1
-    Route::get('NuevaConsulta', function () { return view('consultas.create'); });   // Submódulo 2
-    Route::get('HistorialConsulta', function() { return view('consultas.consultaIndividual'); });
-    Route::get('ConsultaInteligente', function() { return view('consultas.consulta_inteligente'); });
-
-    // Recetas y Medicamentos
-    Route::resource('medicamentos', MedicamentoController::class);
-    Route::resource('recetas', RecetaController::class);
-    Route::resource('receta-detalles', RecetaDetalleController::class);
-    Route::get('Medicamentos', function() { return view('medicamentos.index'); });
-
-    // Atención Médica (Triage, Eval IA, Archivos, Derivaciones)
-    Route::get('TRIAGE', function() { return view('atencion-medica.triage'); });
-    Route::get('EvaluacionIa', function() { return view('atencion-medica.evaluacion-ia'); });
-    Route::get('ArchivosClinicos', function() { return view('atencion-medica.archivos-clinicos'); });
-    Route::get('Derivaciones', function() { return view('atencion-medica.derivaciones'); });
-    
-    // (Si tienes un controlador de especialidades, lo agregarías aquí)
-});
-
-// ==========================================
-// 📋 SECCIÓN / PREFIJO PARA ASISTENTE
-// ==========================================
-Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(function() {
-    
-    // Vista principal del Asistente
-    Route::get('/', function() {
-        return view('dashboard'); 
-    });
-
-    // Pacientes y Citas (Agenda)
-    Route::resource('pacientes', PacienteController::class);
-    Route::resource('citas', CitaController::class);
-    Route::get('/api/citas', [CitaController::class, 'getEventos']);
-
-    // 👁️ ÚNICO submódulo de consultas permitido: Lista de Consultas
-    Route::get('ListaConsultas', function () { return view('consultas.index'); });
-    
-    // Soporte e historial básico
-    Route::get('PacienteNuevo', function() { return view('pacientes.create'); });
-    Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
-    
-});
-
 
 Route::resource('pacientes', PacienteController::class);
 Route::resource('consultas', ConsultaController::class);
@@ -138,18 +50,6 @@ Route::resource('archivoclinico', ArchivosClinicosController::class);
 Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
 //Código para hacer el filtro de un paciente mediante un input //
 Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
-// Ruta inteligente para el listado de Citas
-Route::get('dashboard/citas', function () {
-    $rol = auth()->user()->rol;
-    return redirect()->to($rol . '/citas');
-})->middleware('auth');
-
-// Ruta inteligente para Crear Cita
-Route::get('dashboard/citas/create', function () {
-    $rol = auth()->user()->rol;
-    return redirect()->to($rol . '/citas/create');
-})->middleware('auth');
-
 //Codigo para las vistas y que son usadas en el menú de adminlte"
 Route::view('inicio','dashboard');
 //Código que lleva a la vista para crear un nuevo paciente de forma manual///
@@ -205,20 +105,6 @@ Route::get('ArchivosClinicos',function(){
 
 Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
-});
-
-Route::get('perfil',function(){
-          return view('configuracion-sistema.perfil');
-});
-
-
-Route::get('cambiar-contraseña', function () {
-    return view('configuracion-sistema.cambiar-contraseña');
-});
-
-
-Route::get('/prueba', function () {
-    dd('FUNCIONA');
 });
 
 
