@@ -68,9 +68,8 @@ app.component(
     'atencion-medica',
      TRIAGE
 );
-const app = createApp({});
-// Registrar Vue Select globalmente
-//app.component('v-select', vSelect);
+
+
 app.component(
     'centroconsultas',
     centroconsultas
