@@ -49,10 +49,10 @@ app.component(
     'atencion-medica-evaluacionia',
     EvaluacionIA
 );
-app.component(
-    'alerta-farmacia',
-    AlertaFarmacia
-);
+// app.component(
+//     'alerta-farmacia',
+//     AlertaFarmacia
+// );
 
 app.component(
     'atencion-medica-archivosclinicos',
