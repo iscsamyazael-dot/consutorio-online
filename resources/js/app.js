@@ -17,15 +17,19 @@ import ArchivosClinico from './components/atencion-medica/ArchivosClinicos.vue'
 import Derivacion from './components/atencion-medica/Derivaciones.vue'
 import PacientesIndex from './components/pasientes/pacientesindex.vue'
 
+// import vSelect from 'vue-select';
+// import 'vue-select/dist/vue-select.css';
+
 // 1. IMPORTACIONES (Verifica que las rutas y mayúsculas coincidan con tus archivos reales)
 import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- Corregida 'C' mayúscula
 import IndexConsultas from './components/consultas/IndexConsultas.vue';
 import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
 import InformacionPaciente    from './components/pasientes/masterregistroN.vue'; // ✅ variable correcta
-
-//Modulo de inventario de medicamentos
-import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
-
+import expedientepaciente from './components/pasientes/maesterexpediente.vue';
+import consultapaciente from './components/consultas/masterindividual.vue';// historial de las consultas del pacinte //
+import nuevaconsultamedica from'./components/consultas/maesternuevaconsulta.vue';
+import centroconsultas from './components/consultas/mastercentro.vue';
+import Maesterexpediente from './components/pasientes/maesterexpediente.vue';
 //Modulo de Historial de recetas 
 import Historialreceta from './components/recetass/PanelRecetas.vue'
 
@@ -64,6 +68,29 @@ app.component(
     'atencion-medica',
      TRIAGE
 );
+const app = createApp({});
+// Registrar Vue Select globalmente
+//app.component('v-select', vSelect);
+app.component(
+    'centroconsultas',
+    centroconsultas
+
+)
+app.component(
+    'nuevaconsultamedica',
+    nuevaconsultamedica
+)
+
+app.component(
+    'consultapaciente',
+    consultapaciente 
+)
+
+app.component(
+    'expedientepaciente',
+    expedientepaciente
+ 
+)
 
 app.component('master-registro-paciente', InformacionPaciente);
 // 2. REGISTRO DE COMPONENTES
@@ -103,3 +130,4 @@ import axios from 'axios';
 window.axios = axios;
 import Swal from 'sweetalert2';
 window.Swal = Swal;
+

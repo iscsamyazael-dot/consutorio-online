@@ -39,6 +39,8 @@ Route::resource('consultaIA', ConsultaIAController::class);
 Route::resource('movimientos',MovimientoInventarioController::class);
 Route::resource('triage', TriageController::class);
 
+//Código para hacer el filtro de un paciente mediante un input //
+//Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
 
 
 //Codigo para las vistas y que son usadas en el menú de adminlte"
@@ -48,8 +50,13 @@ Route::get('PacienteNuevo',function(){
           return view('pacientes.create');
 });
 //Código que lleva a la vista del expediente de un paciente//
-Route::get('ExpedientePacientes',function(){
-          return view('pacientes.expediente');
+Route::get('ExpedientePacientes/{id}', function ($id) {
+    return view('pacientes.expediente');
+});
+
+//codigo para ruta parametrisada para consultanormal//
+Route::get('consultaNormal/{id}', function ($id) {
+    return view('consultas.create');
 });
 
 //Código que lleva a la vista de la consulta individual de un paciente//
@@ -96,19 +103,19 @@ Route::get('HistorialRecetas',function(){
 });
 
 
-
-
-
-require __DIR__.'/auth.php';
-
-
-// Route::get('/consultas', function () {
-//     return view('consultas.index');
-// });
-
 Route::get('ListaConsultas', function () {
     return view('consultas.index');
 });
+//Rutas parametrizadas (Sirve para hacer consultas entre diferentes 
+// componentes es decir enviar datos entre la URL)//
+
+//Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
+Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
+       ->name('ExpedienteDetalle');
+//Aqui termina la ruta parametrizada //
+
+
+require __DIR__.'/auth.php';
 
 Route::get('NuevaConsulta', function () {
     return view('consultas.create');
@@ -118,3 +125,8 @@ Route::get('NuevaConsulta', function () {
 Route::get('/pacientes/create', function () {
     return view('pacientes.create');
 });
+
+Route::get('/pacientes.index', function () {
+    return view('pacientes.index');
+});
+
