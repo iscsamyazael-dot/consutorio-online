@@ -19,7 +19,9 @@ class TriageController extends Controller
             return Paciente::select(
                 'id',
                 'paciente_id',
-                'nombre'
+                'nombre',
+                'apellido_paterno',
+                'apellido_materno'
             )
             ->with([
                 'triages:id,paciente_id,triage_codigo,estado,sintomas,presion,saturacion,temperatura,created_at'
