@@ -17,9 +17,6 @@ import ArchivosClinico from './components/atencion-medica/ArchivosClinicos.vue'
 import Derivacion from './components/atencion-medica/Derivaciones.vue'
 import PacientesIndex from './components/pasientes/pacientesindex.vue'
 
-// import vSelect from 'vue-select';
-// import 'vue-select/dist/vue-select.css';
-
 // 1. IMPORTACIONES (Verifica que las rutas y mayúsculas coincidan con tus archivos reales)
 import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- Corregida 'C' mayúscula
 import IndexConsultas from './components/consultas/IndexConsultas.vue';
@@ -32,8 +29,16 @@ import centroconsultas from './components/consultas/mastercentro.vue';
 import Maesterexpediente from './components/pasientes/maesterexpediente.vue';
 //Modulo de Historial de recetas 
 import Historialreceta from './components/recetass/PanelRecetas.vue'
+import Especialidades from './components/Especialidades/Especialidades.vue';// importa especialidades 
+//Modulo de inventario de medicamentos
+import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 
 const app = createApp({})
+
+app.component(
+    'Especialidades',
+    Especialidades
+)
 
 app.component(
      'consulta-inteligente',
@@ -49,10 +54,10 @@ app.component(
     'atencion-medica-evaluacionia',
     EvaluacionIA
 );
-// app.component(
-//     'alerta-farmacia',
-//     AlertaFarmacia
-// );
+app.component(
+    'alerta-farmacia',
+    AlertaFarmacia
+);
 
 app.component(
     'atencion-medica-archivosclinicos',

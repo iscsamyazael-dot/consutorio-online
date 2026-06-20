@@ -11,10 +11,12 @@ use App\Http\Controllers\ConsultaIAController;
 use App\Http\Controllers\MovimientoInventarioController;
 use App\Http\Controllers\TriageController;
 use App\Http\Controllers\ArchivosClinicosController;
+use App\Http\Controllers\SpecialtyController; // <--- AGREGA ESTA LÍNEA
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
+Route::resource('especialidades', SpecialtyController::class);
 
 Route::get('/', function () {
     return view('dashboard');
@@ -29,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
+    Route::get('/api/specialties', [SpecialtyController::class, 'list']);
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -80,6 +83,9 @@ Route::get('ConsultaInteligente',function(){
 Route::resource('citas', App\Http\Controllers\CitaController::class);
 // api de calendario//
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
+
+//  especialidades //
+Route::resource('specialties', SpecialtyController::class);
 
 //Código que lleva a la vita de medicamentos e inventario//
 Route::get('Medicamentos',function(){
