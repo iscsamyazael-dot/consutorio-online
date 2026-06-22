@@ -50,9 +50,6 @@
 
                         <td>
                             {{ paciente.nombre }}
-                            {{ paciente.apellido_paterno }}
-                            {{ paciente.apellido_materno }}
-                            
                         </td>
 
                         <td>{{ paciente.triages[0]?.sintomas }}</td>
@@ -173,7 +170,7 @@ MODAL VER TRIAGE PREMIUM
                                 Paciente
                             </small>
                             <h5 class="fw-bold text-primary mt-2">
-                              {{detalletriage.nombre}} {{ detalletriage.apellido_paterno }} {{detalletriage.apellido_materno}}
+                              {{detalletriage.nombre}}
                             </h5>
                         </div>
                 
