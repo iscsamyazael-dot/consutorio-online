@@ -114,9 +114,11 @@ Route::get('HistorialRecetas',function(){
           return view('recetas.historial-recetas');
 });
 
+//ruta que te dirige a  lista de consutas //
 Route::get('consultas', function () {
     return view('consultas.index');
 });
+
 //Rutas parametrizadas (Sirve para hacer consultas entre diferentes 
 // componentes es decir enviar datos entre la URL)//
 
@@ -137,6 +139,13 @@ Route::get('/pacientes/create', function () {
     return view('pacientes.create');
 });
 
+
+
+//ruta que te dirije a nueva consulta //
+Route::get('/consultas/create', function () {
+    return view('consultas.create');
+});
+//ruta que te dirije a lista de pacientes//
 Route::get('/pacientes.index', function () {
     return view('pacientes.index');
 });
