@@ -7,6 +7,7 @@ import './bootstrap';
 import 'bootstrap';
 import 'admin-lte';
 
+
 import { createApp } from 'vue';
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
 import ConsultaInteligente from './components/ConsultaInteligente.vue'
@@ -20,16 +21,15 @@ import PacientesIndex from './components/pasientes/pacientesindex.vue'
 import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- Corregida 'C' mayúscula
 import IndexConsultas from './components/consultas/IndexConsultas.vue';
 import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
-
+import InformacionPaciente    from './components/pasientes/masterregistroN.vue'; // ✅ variable correcta
 //Modulo de inventario de medicamentos
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
-
-
 //Modulo de Perfil
 import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
 import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
 
-
+//Modulo de Historial de recetas 
+import Historialreceta from './components/recetass/PanelRecetas.vue'
 
 
 const app = createApp({})
@@ -68,6 +68,7 @@ app.component(
      TRIAGE
 );
 
+app.component('master-registro-paciente', InformacionPaciente);
 // 2. REGISTRO DE COMPONENTES
 app.component(
     'index-consultas',
@@ -100,6 +101,10 @@ app.component(
 );
 
 
+app.component(
+    'recetass-historial',
+    Historialreceta
+);
 
     
 // 3. MONTAJE DE LA APP
@@ -111,4 +116,5 @@ window.Alpine = Alpine;
 Alpine.start();
 import axios from 'axios';
 window.axios = axios;
-
+import Swal from 'sweetalert2';
+window.Swal = Swal;

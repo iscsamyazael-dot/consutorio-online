@@ -8,12 +8,17 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
+use App\Http\Controllers\MovimientoInventarioController;
+use App\Http\Controllers\TriageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CitaController;
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PerfilController;
 
+
 Route::get('/', function () {
-    return view('welcome');
+    return view('dashboard');
 });
 
 Route::get('/dashboard', function () {
@@ -21,32 +26,44 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    //ruta para obtener los datos del controlador
-    Route::get('/perfil-usuario',[ProfileController::class, 'obtenerPerfil']);
-    // Actualiza los datos del perfil
-    Route::put('/perfil-usuario',[ProfileController::class, 'actualizarPerfil']);
-    Route::post('/cambiar-password',[ProfileController::class, 'updatePassword'])->middleware('auth');
+    Route::get('/perfil-usuario', [ProfileController::class, 'obtenerPerfil']);
+    //ACTUALIZA DATOS DEL PERFIL
+    Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
+    Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
+
+    Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
 });
+
+
+Route::resource('pacientes', PacienteController::class);
+Route::resource('consultas', ConsultaController::class);
+Route::resource('medicamentos', MedicamentoController::class);
+Route::resource('recetas', RecetaController::class);
+Route::resource('receta-detalles', RecetaDetalleController::class);
+Route::resource('usuarios', UserController::class);
+Route::resource('consultaIA', ConsultaIAController::class);
+Route::resource('movimientos',MovimientoInventarioController::class);
+Route::resource('triage', TriageController::class);
+
+
    
 // ==========================================
 // 🛡️ SECCIÓN / PREFIJO PARA ADMINISTRADOR
 // ==========================================
-Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function() {
-    
-    // Vista principal del Admin
-    Route::get('/', function() {
-        return view('dashboard'); // Tu vista principal actual
-    })->name('dashboard');
+Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function () {
+
+    Route::get('/', fn() => view('dashboard'))->name('admin.dashboard');
+
+    Route::view('Medicamentos', 'medicamentos.index');
 
     // El Administrador gestiona los usuarios del sistema
     Route::resource('usuarios', UserController::class);
     
-    // Si el admin también puede ver inventarios o catálogos:
-    Route::resource('medicamentos', MedicamentoController::class);
-    Route::get('Medicamentos', function() { return view('medicamentos.index'); });
+  
 });
 
 
@@ -98,28 +115,18 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
         return view('dashboard'); 
     });
 
-    // Pacientes y Citas (Agenda)
-    Route::resource('pacientes', PacienteController::class);
-    Route::resource('citas', CitaController::class);
-    Route::get('/api/citas', [CitaController::class, 'getEventos']);
-
     // 👁️ ÚNICO submódulo de consultas permitido: Lista de Consultas
     Route::get('ListaConsultas', function () { return view('consultas.index'); });
     
     // Soporte e historial básico
     Route::get('PacienteNuevo', function() { return view('pacientes.create'); });
+    Route::get('PacienteNuevo', function() { return view('pacientes.index'); });
     Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
     
 });
 
 
-Route::resource('pacientes', PacienteController::class);
-Route::resource('consultas', ConsultaController::class);
-Route::resource('medicamentos', MedicamentoController::class);
-Route::resource('recetas', RecetaController::class);
-Route::resource('receta-detalles', RecetaDetalleController::class);
-Route::resource('usuarios', UserController::class);
-Route::resource('consultaIA', ConsultaIAController::class);
+
 
 
 // Ruta inteligente para el listado de Citas
@@ -168,26 +175,26 @@ Route::get('Medicamentos',function(){
 Route::get('TRIAGE',function(){
           return view('atencion-medica.triage');
 });
-
+//Codigo que lleva a EVALUACION IA
 Route::get('EvaluacionIa',function(){
           return view('atencion-medica.evaluacion-ia');
 });
 
-
+//Codigo que lleva a ARCHIVOS CLINICOS
 Route::get('ArchivosClinicos',function(){
           return view('atencion-medica.archivos-clinicos');
 });
 
-
+//Codigo que lleva a DERIVACIONES
 Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
 });
-
+//Codigo que lleva a PERFIL
 Route::get('perfil',function(){
           return view('configuracion-sistema.perfil');
 });
 
-
+//Codigo que lleva a CAMBIAR CONTRASEÑA
 Route::get('cambiar-contraseña', function () {
     return view('configuracion-sistema.cambiar-contraseña');
 });
@@ -197,15 +204,10 @@ Route::get('/prueba', function () {
     dd('FUNCIONA');
 });
 
-
-
-
-require __DIR__.'/auth.php';
-
-
-// Route::get('/consultas', function () {
-//     return view('consultas.index');
-// });
+//Codigo que lleva a HISTORIAL DE RECETAS
+Route::get('HistorialRecetas',function(){
+          return view('recetas.historial-recetas');
+});
 
 Route::get('ListaConsultas', function () {
     return view('consultas.index');
@@ -219,3 +221,13 @@ Route::get('NuevaConsulta', function () {
 Route::get('/pacientes/create', function () {
     return view('pacientes.create');
 });
+
+
+require __DIR__.'/auth.php';
+
+
+// Route::get('/consultas', function () {
+//     return view('consultas.index');
+// });
+
+

@@ -9,7 +9,7 @@ const token = document
     .getAttribute('content')
 
 const apiClient = axios.create({
-    baseURL: `${baseURL}/api`,
+    baseURL: `${baseURL}`,
     headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',

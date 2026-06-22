@@ -312,7 +312,7 @@
     </div>
 </div>
 
-{{-- MODAL 2: NUEVO MODAL DE EXPEDIENTE (DATOS BÁSICOS + RADIOGRAFÍAS) --}}
+{{-- MODAL 2: EXPEDIENTE --}}
 <div class="modal fade" id="expedientePacienteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -378,14 +378,9 @@
                         </div>
                     </div>
                     <div id="preview-files-box" class="d-flex flex-wrap gap-2 mt-2"></div>
-
                 </div>
                 <div class="modal-footer bg-light border-top-0 d-flex justify-content-end p-3 px-4 gap-2">
-                    <button type="button"
-class="btn btn-light border px-4 rounded-3 fw-bold"
-data-close-modal="expedientePacienteModal">
-    Cancelar
-</button>
+                    <button type="button" class="btn btn-light border px-4 rounded-3 fw-bold" data-close-modal="expedientePacienteModal">Cancelar</button>
                     <button type="submit" class="btn btn-success px-4 rounded-3 fw-bold d-flex align-items-center gap-2 btn-hover-transform">
                         <i class="fas fa-save"></i> Guardar e Inicializar Expediente
                     </button>
@@ -395,10 +390,72 @@ data-close-modal="expedientePacienteModal">
     </div>
 </div>
 @stop
-@section('css')
 
+@section('css')
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* =========================
+   FIX BUSCADOR SIDEBAR
+========================= */
+
+.main-sidebar form.form-inline,
+.main-sidebar .sidebar-search {
+    width: 74% !important;
+    margin: 0 0 0 8px !important;
+}
+
+.main-sidebar .input-group {
+    background: transparent !important;
+    border-radius: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+}
+
+.main-sidebar .input-group .form-control {
+    background: transparent !important;
+    border-color: rgba(255,255,255,0.2) !important;
+    box-shadow: none !important;
+    color: #fff !important;
+    font-size: 12px !important;
+    height: 37px !important;
+    padding: 4px 8px !important;
+    border-radius: 0 !important;
+    outline: none !important;
+    min-height: unset !important;
+}
+
+.main-sidebar .input-group .form-control::placeholder {
+    color: rgba(255,255,255,0.45) !important;
+}
+
+.main-sidebar .input-group-append {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.main-sidebar .input-group-append .btn,
+.main-sidebar .input-group .btn {
+    background: transparent !important;
+    border-color: rgba(255,255,255,0.2) !important;
+    box-shadow: none !important;
+    color: rgba(255,255,255,0.60) !important;
+    height: 37px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: unset !important;
+    transition: color .2s !important;
+}
+
+.main-sidebar .input-group .btn:hover {
+    color: #fff !important;
+    background: transparent !important;
+}
 
 /* =========================
    FONDO GENERAL
@@ -416,377 +473,172 @@ body,
    TITULOS
 ========================= */
 
-.fw-black{
-    font-weight:800 !important;
-}
-
-.tracking-tight{
-    letter-spacing:-0.03em;
-}
-
-.tracking-wider{
-    letter-spacing:.08em;
-}
+.fw-black { font-weight: 800 !important; }
+.tracking-tight { letter-spacing: -0.03em; }
+.tracking-wider { letter-spacing: .08em; }
 
 /* =========================
    CARDS PREMIUM
 ========================= */
 
-.card{
-    border:none !important;
-    border-radius:24px !important;
-    overflow:hidden;
-    background:rgba(255,255,255,.92)!important;
-    backdrop-filter:blur(18px);
-    box-shadow:
-        0 10px 30px rgba(15,23,42,.05),
-        inset 0 1px 0 rgba(255,255,255,.6)!important;
+.card {
+    border: none !important;
+    border-radius: 24px !important;
+    overflow: hidden;
+    background: rgba(255,255,255,.92) !important;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 10px 30px rgba(15,23,42,.05), inset 0 1px 0 rgba(255,255,255,.6) !important;
 }
 
-.card-header{
-    background:transparent !important;
-    border:none !important;
-}
+.card-header { background: transparent !important; border: none !important; }
 
 /* =========================
    STATS
 ========================= */
 
-.modern-stat-card{
-    background:rgba(255,255,255,.95);
-    border-radius:24px;
-    overflow:hidden;
-    position:relative;
-    transition:.35s ease;
-    border:none !important;
-    box-shadow:
-        0 12px 24px rgba(0,0,0,.04);
+.modern-stat-card {
+    background: rgba(255,255,255,.95);
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    transition: .35s ease;
+    border: none !important;
+    box-shadow: 0 12px 24px rgba(0,0,0,.04);
 }
 
-.modern-stat-card:hover{
-    transform:translateY(-6px);
-    box-shadow:
-        0 20px 35px rgba(0,0,0,.08);
-}
+.modern-stat-card:hover { transform: translateY(-6px); box-shadow: 0 20px 35px rgba(0,0,0,.08); }
 
-.card-body-custom{
-    padding:1.5rem;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-}
+.card-body-custom { padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
 
-.border-start-blue{
-    border-left:5px solid #3b82f6 !important;
-}
+.border-start-blue  { border-left: 5px solid #3b82f6 !important; }
+.border-start-green { border-left: 5px solid #22c55e !important; }
+.border-start-orange{ border-left: 5px solid #f59e0b !important; }
+.border-start-red   { border-left: 5px solid #ef4444 !important; }
 
-.border-start-green{
-    border-left:5px solid #22c55e !important;
-}
-
-.border-start-orange{
-    border-left:5px solid #f59e0b !important;
-}
-
-.border-start-red{
-    border-left:5px solid #ef4444 !important;
-}
-
-/* =========================
-   ICONOS
-========================= */
-
-.stat-icon-box{
-    width:58px;
-    height:58px;
-    border-radius:18px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1.3rem;
-}
-
-.bg-blue-soft{
-    background:rgba(59,130,246,.12)!important;
-}
-
-.bg-green-soft{
-    background:rgba(34,197,94,.12)!important;
-}
-
-.bg-orange-soft{
-    background:rgba(245,158,11,.12)!important;
-}
-
-.bg-red-soft{
-    background:rgba(239,68,68,.12)!important;
-}
-
-.text-blue{
-    color:#2563eb!important;
-}
-
-.text-green{
-    color:#16a34a!important;
-}
-
-.text-orange{
-    color:#d97706!important;
-}
-
-.text-red{
-    color:#dc2626!important;
-}
+.stat-icon-box { width: 58px; height: 58px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+.bg-blue-soft   { background: rgba(59,130,246,.12) !important; }
+.bg-green-soft  { background: rgba(34,197,94,.12) !important; }
+.bg-orange-soft { background: rgba(245,158,11,.12) !important; }
+.bg-red-soft    { background: rgba(239,68,68,.12) !important; }
+.text-blue   { color: #2563eb !important; }
+.text-green  { color: #16a34a !important; }
+.text-orange { color: #d97706 !important; }
+.text-red    { color: #dc2626 !important; }
 
 /* =========================
    AVATARS
 ========================= */
 
-.avatar-premium{
-    width:55px!important;
-    height:55px!important;
-    border-radius:18px;
-    display:flex!important;
-    align-items:center!important;
-    justify-content:center!important;
-    box-shadow:0 10px 20px rgba(59,130,246,.25);
-}
-
-.avatar-premium i{
-    font-size:1.2rem!important;
-}
-
-.mini-avatar-premium{
-    width:42px!important;
-    height:42px!important;
-    border-radius:14px;
-    display:flex!important;
-    align-items:center!important;
-    justify-content:center!important;
-}
-
-.mini-avatar-premium i{
-    font-size:1rem!important;
-}
+.avatar-premium { width:55px!important; height:55px!important; border-radius:18px; display:flex!important; align-items:center!important; justify-content:center!important; box-shadow:0 10px 20px rgba(59,130,246,.25); }
+.avatar-premium i { font-size: 1.2rem !important; }
+.mini-avatar-premium { width:42px!important; height:42px!important; border-radius:14px; display:flex!important; align-items:center!important; justify-content:center!important; }
+.mini-avatar-premium i { font-size: 1rem !important; }
 
 /* =========================
    PANEL PACIENTE
 ========================= */
 
-.patient-hero-card{
-    background:
-    linear-gradient(
-        135deg,
-        rgba(59,130,246,.08),
-        rgba(255,255,255,.9)
-    );
-    border:1px solid #e2e8f0;
-    border-radius:22px!important;
-}
-
-.panel-details-table td{
-    border-bottom:1px dashed #e5e7eb;
-    padding:.9rem 0!important;
-}
+.patient-hero-card { background: linear-gradient(135deg, rgba(59,130,246,.08), rgba(255,255,255,.9)); border: 1px solid #e2e8f0; border-radius: 22px !important; }
+.panel-details-table td { border-bottom: 1px dashed #e5e7eb; padding: .9rem 0 !important; }
+.symptoms-alert { background: rgba(239,68,68,.05); border: 1px solid rgba(239,68,68,.12); }
 
 /* =========================
    BADGES
 ========================= */
 
-.badge-premium{
-    padding:.6rem .9rem;
-    border-radius:12px;
-    font-weight:700;
-    letter-spacing:.03em;
-}
+.badge-premium { padding: .6rem .9rem; border-radius: 12px; font-weight: 700; letter-spacing: .03em; }
+.badge-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
 /* =========================
    TABLA
 ========================= */
 
-.premium-table{
-    border-collapse:separate;
-    border-spacing:0 12px;
-}
-
-.premium-table thead th{
-    border:none!important;
-    font-size:.72rem!important;
-}
-
-.premium-row{
-    transition:.25s ease;
-}
-
-.premium-row td{
-    background:#fff!important;
-    border-top:1px solid #eef2f7!important;
-    border-bottom:1px solid #eef2f7!important;
-}
-
-.premium-row td:first-child{
-    border-left:1px solid #eef2f7!important;
-    border-top-left-radius:18px;
-    border-bottom-left-radius:18px;
-}
-
-.premium-row td:last-child{
-    border-right:1px solid #eef2f7!important;
-    border-top-right-radius:18px;
-    border-bottom-right-radius:18px;
-}
-
-.premium-row:hover{
-    transform:translateY(-2px);
-    box-shadow:0 10px 24px rgba(0,0,0,.06);
-}
+.premium-table { border-collapse: separate; border-spacing: 0 12px; }
+.premium-table thead th { border: none !important; font-size: .72rem !important; }
+.premium-row { transition: .25s ease; }
+.premium-row td { background: #fff !important; border-top: 1px solid #eef2f7 !important; border-bottom: 1px solid #eef2f7 !important; }
+.premium-row td:first-child { border-left: 1px solid #eef2f7 !important; border-top-left-radius: 18px; border-bottom-left-radius: 18px; }
+.premium-row td:last-child  { border-right: 1px solid #eef2f7 !important; border-top-right-radius: 18px; border-bottom-right-radius: 18px; }
+.premium-row:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.06); }
 
 /* =========================
    BOTONES
 ========================= */
 
-.btn{
-    border-radius:14px!important;
-    font-weight:700!important;
-}
-
-.btn-primary{
-    border:none!important;
-    background:linear-gradient(
-        135deg,
-        #2563eb,
-        #3b82f6
-    )!important;
-
-    box-shadow:
-    0 10px 20px rgba(37,99,235,.25);
-}
-
-.btn-primary:hover{
-    transform:translateY(-2px);
-}
-
-.btn-icon-premium{
-    width:38px;
-    height:38px;
-    border:none;
-    border-radius:12px;
-    background:#f8fafc;
-    transition:.2s;
-}
-
-.btn-icon-premium:hover{
-    transform:scale(1.1);
-    background:#eef2ff;
-}
+.btn { border-radius: 14px !important; font-weight: 700 !important; }
+.btn-primary { border: none !important; background: linear-gradient(135deg, #2563eb, #3b82f6) !important; box-shadow: 0 10px 20px rgba(37,99,235,.25); }
+.btn-primary:hover { transform: translateY(-2px); }
+.btn-icon-premium { width: 38px; height: 38px; border: none; border-radius: 12px; background: #f8fafc; transition: .2s; }
+.btn-icon-premium:hover { transform: scale(1.1); background: #eef2ff; }
 
 /* =========================
    MODALES
 ========================= */
 
-.modal-content{
-    border:none!important;
-    border-radius:28px!important;
-    overflow:hidden;
-    background:rgba(255,255,255,.96)!important;
-    backdrop-filter:blur(20px);
-}
-
-.modal-header.bg-dark{
-    background:linear-gradient(
-        135deg,
-        #0f172a,
-        #1e293b
-    )!important;
-}
-
-.modal-header.bg-primary{
-    background:linear-gradient(
-        135deg,
-        #2563eb,
-        #3b82f6
-    )!important;
-}
+.modal-content { border: none !important; border-radius: 28px !important; overflow: hidden; background: rgba(255,255,255,.96) !important; backdrop-filter: blur(20px); }
+.modal-header.bg-dark    { background: linear-gradient(135deg, #0f172a, #1e293b) !important; }
+.modal-header.bg-primary { background: linear-gradient(135deg, #2563eb, #3b82f6) !important; }
 
 /* =========================
    INPUTS
 ========================= */
 
 .form-control,
-.input-group-text{
-    border-radius:14px!important;
-    border-color:#e2e8f0!important;
-    min-height:48px;
+.input-group-text {
+    border-radius: 14px !important;
+    border-color: #e2e8f0 !important;
+    min-height: 48px;
 }
 
-.form-control:focus{
-    border-color:#3b82f6!important;
-    box-shadow:
-    0 0 0 .2rem rgba(37,99,235,.12)!important;
-}
+.form-control:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 .2rem rgba(37,99,235,.12) !important; }
 
 /* =========================
    DRAG ZONE
 ========================= */
 
-.upload-drag-zone{
-    border:2px dashed #cbd5e1;
-    background:#f8fafc;
-    border-radius:22px;
-    transition:.25s ease;
-}
-
-.upload-drag-zone:hover{
-    border-color:#3b82f6;
-    background:#eff6ff;
-}
+.upload-drag-zone { border: 2px dashed #cbd5e1; background: #f8fafc; border-radius: 22px; transition: .25s ease; }
+.upload-drag-zone:hover { border-color: #3b82f6; background: #eff6ff; }
 
 /* =========================
    LIVE DOT
 ========================= */
 
-.live-dot{
-    width:10px;
-    height:10px;
-    background:#22c55e;
-    border-radius:999px;
-    animation:pulseDot 2s infinite;
+.live-dot { width: 10px; height: 10px; background: #22c55e; border-radius: 999px; animation: pulseDot 2s infinite; }
+
+@keyframes pulseDot {
+    0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
 }
 
-@keyframes pulseDot{
-    0%{
-        box-shadow:0 0 0 0 rgba(34,197,94,.5);
-    }
-    70%{
-        box-shadow:0 0 0 10px rgba(34,197,94,0);
-    }
-    100%{
-        box-shadow:0 0 0 0 rgba(34,197,94,0);
-    }
-}
+/* =========================
+   LAYOUT ESTABLE
+========================= */
+
+.main-sidebar { position: fixed !important; top: 0; left: 0; height: 100vh; overflow-y: auto; overflow-x: hidden; z-index: 1035; }
+.main-header  { position: sticky; top: 0; z-index: 1030; background: rgba(255,255,255,.92) !important; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(226,232,240,.7); }
+.content-wrapper { margin-left: 250px !important; min-height: 100vh; overflow-x: hidden; background: #f3f7fb !important; padding-bottom: 30px; }
+.content { padding-top: 1rem; padding-bottom: 2rem; }
+.table-responsive { overflow-x: auto; }
+.modal { z-index: 9999 !important; }
+.row { --bs-gutter-x: 1.5rem; }
 
 /* =========================
    RESPONSIVE
 ========================= */
 
-@media(max-width:768px){
-
-    .card{
-        border-radius:20px!important;
-    }
-
-    .modern-stat-card{
-        border-radius:20px;
-    }
-
-    .patient-hero-card{
-        flex-direction:column;
-        align-items:flex-start!important;
-        gap:1rem;
-    }
+@media (max-width: 991px) {
+    .content-wrapper { margin-left: 0 !important; }
+    .main-sidebar { position: fixed !important; transform: translateX(-100%); transition: .3s ease; }
+    .sidebar-open .main-sidebar { transform: translateX(0); }
+    .modern-stat-card { margin-bottom: 1rem; }
+    .card-body-custom { padding: 1.2rem; }
+    .patient-hero-card { flex-direction: column; align-items: flex-start !important; gap: 1rem; }
+    .table-responsive { border-radius: 18px; }
 }
+
 /* =========================
-   LAYOUT ESTABLE Y RESPONSIVE
+   SCROLLBAR
 ========================= */
 
 /* SIDEBAR */
@@ -916,637 +768,188 @@ body,
 
 
 
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(5,6,8,0.35); border-radius: 20px; }
+::-webkit-scrollbar-track { background: transparent; }
 </style>
 
-
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 @stop
-@section('js')
 
+@section('js')
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-    // =========================================
-    // ELEMENTOS
-    // =========================================
+    const modalDetalles   = document.getElementById('verPacienteModal');
+    const modalExpediente = document.getElementById('expedientePacienteModal');
 
-    const modalDetalles =
-        document.getElementById('verPacienteModal');
-
-    const modalExpediente =
-        document.getElementById('expedientePacienteModal');
-
-    // =========================================
-    // FUNCIONES MODAL PREMIUM
-    // =========================================
-
-    function abrirModal(modal){
-
+    function abrirModal(modal) {
         modal.style.display = 'block';
-
-        setTimeout(() => {
-
-            modal.classList.add('show');
-
-        }, 10);
-
+        setTimeout(() => modal.classList.add('show'), 10);
         modal.setAttribute('aria-modal', 'true');
-
         modal.removeAttribute('aria-hidden');
-
         document.body.classList.add('modal-open');
-
         document.body.style.overflow = 'hidden';
-
-        // BACKDROP
-
         const backdrop = document.createElement('div');
-
-        backdrop.className =
-            'modal-backdrop fade show';
-
+        backdrop.className = 'modal-backdrop fade show';
         backdrop.id = 'custom-backdrop';
-
         document.body.appendChild(backdrop);
     }
 
-    function cerrarModal(modal){
-
+    function cerrarModal(modal) {
         modal.classList.remove('show');
-
-        setTimeout(() => {
-
-            modal.style.display = 'none';
-
-        }, 200);
-
+        setTimeout(() => modal.style.display = 'none', 200);
         modal.setAttribute('aria-hidden', 'true');
-
         modal.removeAttribute('aria-modal');
-
         document.body.classList.remove('modal-open');
-
         document.body.style.overflow = '';
-
-        // ELIMINAR BACKDROP
-
-        document.querySelectorAll('.modal-backdrop')
-        .forEach(backdrop => {
-
-            backdrop.remove();
-
-        });
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
     }
 
-    // =========================================
-    // BOTONES CERRAR
-    // =========================================
-
-    document.querySelectorAll('[data-close-modal]')
-    .forEach(btn => {
-
-        btn.addEventListener('click', function(){
-
-            const target =
-                this.dataset.closeModal;
-
-            cerrarModal(
-                document.getElementById(target)
-            );
-
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            cerrarModal(document.getElementById(this.dataset.closeModal));
         });
-
     });
 
-    // =========================================
-    // BOTÓN X
-    // =========================================
-
-    document.querySelectorAll('.btn-close')
-    .forEach(btn => {
-
-        btn.addEventListener('click', function(){
-
-            const modal =
-                this.closest('.modal');
-
-            cerrarModal(modal);
-
+    document.querySelectorAll('.btn-close').forEach(btn => {
+        btn.addEventListener('click', function () {
+            cerrarModal(this.closest('.modal'));
         });
-
     });
 
-    // =========================================
-    // CLICK FUERA DEL MODAL
-    // =========================================
-
-    document.querySelectorAll('.modal')
-    .forEach(modal => {
-
-        modal.addEventListener('click', function(e){
-
-            if(e.target === modal){
-
-                cerrarModal(modal);
-
-            }
-
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) cerrarModal(modal);
         });
-
     });
 
-    // =========================================
-    // CAMBIAR PACIENTE ACTIVO
-    // =========================================
+    document.querySelectorAll('.btn-select-active').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const f = this.closest('tr');
+            document.getElementById('side-nombre').innerText      = f.dataset.nombre;
+            document.getElementById('side-diagnostico').innerText = f.dataset.diagnostico;
+            document.getElementById('side-folio-code').innerText  = f.dataset.folio;
+            document.getElementById('side-fecha').innerText       = f.dataset.fecha;
+            document.getElementById('side-sintomas').innerText    = f.dataset.sintomas;
 
-    document.querySelectorAll('.btn-select-active')
-    .forEach(btn => {
+            const ep = document.getElementById('side-estado');
+            ep.innerText  = f.dataset.estado;
+            ep.className  = f.dataset.estado.toLowerCase() === 'en consulta'
+                ? 'badge badge-premium bg-success-soft text-success border border-success-subtle'
+                : 'badge badge-premium bg-primary-soft text-primary border border-primary-subtle';
 
-        btn.addEventListener('click', function(){
+            const tp = document.getElementById('side-triage');
+            tp.innerText = f.dataset.triage;
+            tp.className = f.dataset.triage.toLowerCase() === 'grave'
+                ? 'badge badge-premium bg-danger text-white'
+                : 'badge badge-premium bg-light text-secondary border';
 
-            const fila =
-                this.closest('tr');
-
-            const nombre =
-                fila.dataset.nombre;
-
-            const diagnostico =
-                fila.dataset.diagnostico;
-
-            const folio =
-                fila.dataset.folio;
-
-            const estado =
-                fila.dataset.estado;
-
-            const triage =
-                fila.dataset.triage;
-
-            const fecha =
-                fila.dataset.fecha;
-
-            const sintomas =
-                fila.dataset.sintomas;
-
-            // PANEL
-
-            document.getElementById('side-nombre')
-            .innerText = nombre;
-
-            document.getElementById('side-diagnostico')
-            .innerText = diagnostico;
-
-            document.getElementById('side-folio-code')
-            .innerText = folio;
-
-            document.getElementById('side-fecha')
-            .innerText = fecha;
-
-            document.getElementById('side-sintomas')
-            .innerText = sintomas;
-
-            // ESTADO
-
-            const estadoPanel =
-                document.getElementById('side-estado');
-
-            estadoPanel.innerText = estado;
-
-            if(estado.toLowerCase() === 'en consulta'){
-
-                estadoPanel.className =
-                    'badge badge-premium bg-success-soft text-success border border-success-subtle';
-
-            }else{
-
-                estadoPanel.className =
-                    'badge badge-premium bg-primary-soft text-primary border border-primary-subtle';
-            }
-
-            // TRIAGE
-
-            const triagePanel =
-                document.getElementById('side-triage');
-
-            triagePanel.innerText = triage;
-
-            if(triage.toLowerCase() === 'grave'){
-
-                triagePanel.className =
-                    'badge badge-premium bg-danger text-white';
-
-            }else{
-
-                triagePanel.className =
-                    'badge badge-premium bg-light text-secondary border';
-            }
-
-            // ANIMACIÓN PANEL
-
-            const panel =
-                document.getElementById('active-panel');
-
-            panel.classList.add(
-                'animate__animated',
-                'animate__pulse'
-            );
-
-            setTimeout(() => {
-
-                panel.classList.remove(
-                    'animate__animated',
-                    'animate__pulse'
-                );
-
-            }, 800);
-
+            const panel = document.getElementById('active-panel');
+            panel.classList.add('animate__animated','animate__pulse');
+            setTimeout(() => panel.classList.remove('animate__animated','animate__pulse'), 800);
         });
-
     });
 
-    // =========================================
-    // MODAL DETALLES
-    // =========================================
-
-    document.querySelectorAll('.btn-modal-trigger')
-    .forEach(btn => {
-
-        btn.addEventListener('click', function(){
-
-            const fila =
-                this.closest('tr');
-
-            cargarModal(fila);
-
+    document.querySelectorAll('.btn-modal-trigger').forEach(btn => {
+        btn.addEventListener('click', function () {
+            cargarModal(this.closest('tr'));
             abrirModal(modalDetalles);
-
         });
-
     });
 
-    function cargarModal(fila){
+    function cargarModal(fila) {
+        document.getElementById('modal-nombre').innerText  = fila.dataset.nombre;
+        document.getElementById('modal-folio').innerText   = 'ID REGISTRO: ' + fila.dataset.folio;
+        document.getElementById('modal-fecha').innerText   = fila.dataset.fecha;
+        document.getElementById('modal-sintomas').innerText = fila.dataset.sintomas;
 
-        const nombre =
-            fila.dataset.nombre;
+        document.getElementById('modal-estado-container').innerHTML =
+            fila.dataset.estado.toLowerCase() === 'en consulta'
+            ? `<span class="badge badge-premium bg-success-soft text-success border border-success-subtle w-100">En consulta</span>`
+            : `<span class="badge badge-premium bg-primary-soft text-primary border border-primary-subtle w-100">Esperando</span>`;
 
-        const folio =
-            fila.dataset.folio;
-
-        const estado =
-            fila.dataset.estado;
-
-        const triage =
-            fila.dataset.triage;
-
-        const fecha =
-            fila.dataset.fecha;
-
-        const sintomas =
-            fila.dataset.sintomas;
-
-        document.getElementById('modal-nombre')
-        .innerText = nombre;
-
-        document.getElementById('modal-folio')
-        .innerText = 'ID REGISTRO: ' + folio;
-
-        document.getElementById('modal-fecha')
-        .innerText = fecha;
-
-        document.getElementById('modal-sintomas')
-        .innerText = sintomas;
-
-        // ESTADO
-
-        const estadoContainer =
-            document.getElementById(
-                'modal-estado-container'
-            );
-
-        estadoContainer.innerHTML =
-            estado.toLowerCase() === 'en consulta'
-            ?
-            `<span class="badge badge-premium bg-success-soft text-success border border-success-subtle w-100">
-                En consulta
-            </span>`
-            :
-            `<span class="badge badge-premium bg-primary-soft text-primary border border-primary-subtle w-100">
-                Esperando
-            </span>`;
-
-        // TRIAGE
-
-        const triageContainer =
-            document.getElementById(
-                'modal-triage-container'
-            );
-
-        triageContainer.innerHTML =
-            triage.toLowerCase() === 'grave'
-            ?
-            `<span class="badge badge-premium bg-danger text-white w-100">
-                Grave
-            </span>`
-            :
-            `<span class="badge badge-premium bg-light text-secondary border w-100">
-                Normal
-            </span>`;
+        document.getElementById('modal-triage-container').innerHTML =
+            fila.dataset.triage.toLowerCase() === 'grave'
+            ? `<span class="badge badge-premium bg-danger text-white w-100">Grave</span>`
+            : `<span class="badge badge-premium bg-light text-secondary border w-100">Normal</span>`;
     }
 
-    // =========================================
-    // VER DETALLE PANEL
-    // =========================================
-
-    document.querySelector('.btn-view-active')
-    .addEventListener('click', function(){
-
-        document.getElementById('modal-nombre')
-        .innerText =
-            document.getElementById('side-nombre')
-            .innerText;
-
-        document.getElementById('modal-folio')
-        .innerText =
-            'ID REGISTRO: ' +
-            document.getElementById('side-folio-code')
-            .innerText;
-
-        document.getElementById('modal-fecha')
-        .innerText =
-            document.getElementById('side-fecha')
-            .innerText;
-
-        document.getElementById('modal-sintomas')
-        .innerText =
-            document.getElementById('side-sintomas')
-            .innerText;
-
+    document.querySelector('.btn-view-active').addEventListener('click', function () {
+        document.getElementById('modal-nombre').innerText   = document.getElementById('side-nombre').innerText;
+        document.getElementById('modal-folio').innerText    = 'ID REGISTRO: ' + document.getElementById('side-folio-code').innerText;
+        document.getElementById('modal-fecha').innerText    = document.getElementById('side-fecha').innerText;
+        document.getElementById('modal-sintomas').innerText = document.getElementById('side-sintomas').innerText;
         abrirModal(modalDetalles);
-
     });
 
-    // =========================================
-    // EXPEDIENTE
-    // =========================================
-
-    document.querySelector('.btn-expediente')
-    .addEventListener('click', function(){
-
-        const nombre =
-            document.getElementById('side-nombre')
-            .innerText;
-
-        const folio =
-            document.getElementById('side-folio-code')
-            .innerText;
-
-        abrirExpediente(nombre, folio);
-
+    document.querySelector('.btn-expediente').addEventListener('click', function () {
+        abrirExpediente(
+            document.getElementById('side-nombre').innerText,
+            document.getElementById('side-folio-code').innerText
+        );
     });
 
-    document.getElementById('modal-btn-action')
-    .addEventListener('click', function(){
-
-        const nombre =
-            document.getElementById('modal-nombre')
-            .innerText;
-
-        const folio =
-            document.getElementById('modal-folio')
-            .innerText
-            .replace('ID REGISTRO: ', '');
-
+    document.getElementById('modal-btn-action').addEventListener('click', function () {
+        const nombre = document.getElementById('modal-nombre').innerText;
+        const folio  = document.getElementById('modal-folio').innerText.replace('ID REGISTRO: ', '');
         cerrarModal(modalDetalles);
-
         abrirExpediente(nombre, folio);
-
     });
 
-    function abrirExpediente(nombre, folio){
-
-        document.getElementById('exp-modal-nombre')
-        .innerText = nombre;
-
-        document.getElementById('exp-modal-folio')
-        .innerText = folio;
-
-        document.getElementById('form-expediente-rapido')
-        .reset();
-
-        document.getElementById('preview-files-box')
-        .innerHTML = '';
-
+    function abrirExpediente(nombre, folio) {
+        document.getElementById('exp-modal-nombre').innerText = nombre;
+        document.getElementById('exp-modal-folio').innerText  = folio;
+        document.getElementById('form-expediente-rapido').reset();
+        document.getElementById('preview-files-box').innerHTML = '';
         abrirModal(modalExpediente);
-
     }
 
-    // =========================================
-    // PREVIEW IMÁGENES
-    // =========================================
-
-    document.getElementById('input-radiografias')
-    .addEventListener('change', function(){
-
-        const preview =
-            document.getElementById(
-                'preview-files-box'
-            );
-
+    document.getElementById('input-radiografias').addEventListener('change', function () {
+        const preview = document.getElementById('preview-files-box');
         preview.innerHTML = '';
-
         Array.from(this.files).forEach(file => {
-
-            if(file.type.startsWith('image/')){
-
-                const reader =
-                    new FileReader();
-
-                reader.onload = function(e){
-
-                    const div =
-                        document.createElement('div');
-
-                    div.className =
-                        'preview-image';
-
-                    div.innerHTML = `
-                        <img src="${e.target.result}"
-                             style="
-                                width:90px;
-                                height:90px;
-                                object-fit:cover;
-                                border-radius:14px;
-                                border:2px solid #e2e8f0;
-                             ">
-
-                        <button type="button"
-                                class="remove-preview btn btn-sm btn-danger"
-                                style="
-                                    position:absolute;
-                                    top:-8px;
-                                    right:-8px;
-                                    border-radius:50%;
-                                    width:24px;
-                                    height:24px;
-                                    padding:0;
-                                ">
-                            ×
-                        </button>
-                    `;
-
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const div = document.createElement('div');
                     div.style.position = 'relative';
-
-                    div.querySelector('button')
-                    .addEventListener('click', function(){
-
-                        div.remove();
-
-                    });
-
+                    div.className = 'preview-image';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" style="width:90px;height:90px;object-fit:cover;border-radius:14px;border:2px solid #e2e8f0;">
+                        <button type="button" class="remove-preview btn btn-sm btn-danger"
+                            style="position:absolute;top:-8px;right:-8px;border-radius:50%;width:24px;height:24px;padding:0;">×</button>`;
+                    div.querySelector('button').addEventListener('click', () => div.remove());
                     preview.appendChild(div);
-
-                }
-
+                };
                 reader.readAsDataURL(file);
-
             }
-
         });
-
     });
 
-    // =========================================
-    // ELIMINAR FILA
-    // =========================================
-
-    document.querySelectorAll('.btn-delete-row')
-    .forEach(btn => {
-
-        btn.addEventListener('click', function(){
-
-            const fila =
-                this.closest('tr');
-
-            const triage =
-                fila.dataset.triage.toLowerCase();
-
-            const estado =
-                fila.dataset.estado.toLowerCase();
-
-            if(confirm('¿Deseas eliminar este paciente?')){
-
-                fila.style.transition =
-                    '.3s ease';
-
-                fila.style.opacity = '0';
-
-                fila.style.transform =
-                    'translateX(120px)';
-
-                setTimeout(() => {
-
-                    fila.remove();
-
-                    actualizarContadores(
-                        triage,
-                        estado
-                    );
-
-                }, 300);
-
+    document.querySelectorAll('.btn-delete-row').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const fila   = this.closest('tr');
+            const triage = fila.dataset.triage.toLowerCase();
+            const estado = fila.dataset.estado.toLowerCase();
+            if (confirm('¿Deseas eliminar este paciente?')) {
+                fila.style.transition = '.3s ease';
+                fila.style.opacity    = '0';
+                fila.style.transform  = 'translateX(120px)';
+                setTimeout(() => { fila.remove(); actualizarContadores(triage, estado); }, 300);
             }
-
         });
-
     });
 
-    // =========================================
-    // CONTADORES
-    // =========================================
-
-    function actualizarContadores(
-        triage,
-        estado
-    ){
-
-        let hoy =
-            parseInt(
-                document.getElementById(
-                    'stat-hoy'
-                ).innerText
-            );
-
-        if(hoy > 0){
-
-            document.getElementById(
-                'stat-hoy'
-            ).innerText = hoy - 1;
-        }
-
-        if(estado === 'en consulta'){
-
-            let activos =
-                parseInt(
-                    document.getElementById(
-                        'stat-activos'
-                    ).innerText
-                );
-
-            if(activos > 0){
-
-                document.getElementById(
-                    'stat-activos'
-                ).innerText = activos - 1;
-            }
-
-        }else{
-
-            let pendientes =
-                parseInt(
-                    document.getElementById(
-                        'stat-pendientes'
-                    ).innerText
-                );
-
-            if(pendientes > 0){
-
-                document.getElementById(
-                    'stat-pendientes'
-                ).innerText = pendientes - 1;
-            }
-        }
-
-        if(triage === 'grave'){
-
-            let urgencias =
-                parseInt(
-                    document.getElementById(
-                        'stat-urgencias'
-                    ).innerText
-                );
-
-            if(urgencias > 0){
-
-                document.getElementById(
-                    'stat-urgencias'
-                ).innerText = urgencias - 1;
-            }
-        }
-
-        const total =
-            document.querySelectorAll(
-                '#tabla-consultas tbody tr'
-            ).length;
-
-        document.getElementById(
-            'total-badge'
-        ).innerText =
-            total + ' Pacientes';
+    function actualizarContadores(triage, estado) {
+        const dec = id => { const el = document.getElementById(id); const v = parseInt(el.innerText); if (v > 0) el.innerText = v - 1; };
+        dec('stat-hoy');
+        if (estado === 'en consulta') dec('stat-activos');
+        else dec('stat-pendientes');
+        if (triage === 'grave') dec('stat-urgencias');
+        document.getElementById('total-badge').innerText =
+            document.querySelectorAll('#tabla-consultas tbody tr').length + ' Pacientes';
     }
-
 });
 </script>
-
 @stop
