@@ -16,7 +16,7 @@ use App\Http\Controllers\SpecialtyController; // <--- AGREGA ESTA LÍNEA
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::resource('especialidades', SpecialtyController::class);
+
 
 Route::get('/', function () {
     return view('dashboard');
@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/specialties', [SpecialtyController::class, 'list']);
 });
 
+Route::resource('especialidades', SpecialtyController::class);
 Route::resource('pacientes', PacienteController::class);
 Route::resource('consultas', ConsultaController::class);
 Route::resource('medicamentos', MedicamentoController::class);
@@ -92,8 +93,6 @@ Route::get('Medicamentos',function(){
           return view('medicamentos.index');
 });
 
-
-
 //Codigo que lleva a TRIAGE
 Route::get('TRIAGE',function(){
           return view('atencion-medica.triage');
@@ -103,23 +102,19 @@ Route::get('EvaluacionIa',function(){
           return view('atencion-medica.evaluacion-ia');
 });
 
-
 Route::get('ArchivosClinicos',function(){
           return view('atencion-medica.archivos-clinicos');
 });
-
 
 Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
 });
 
-
 Route::get('HistorialRecetas',function(){
           return view('recetas.historial-recetas');
 });
 
-
-Route::get('ListaConsultas', function () {
+Route::get('consultas', function () {
     return view('consultas.index');
 });
 //Rutas parametrizadas (Sirve para hacer consultas entre diferentes 

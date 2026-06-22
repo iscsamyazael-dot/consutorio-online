@@ -19,7 +19,7 @@
 <input type="hidden" name="route" value="{{ url('/') }}">
 
 <div id="app">
-    <master-registro-paciente></master-registro-paciente>
+    <centroconsultas></centroconsultas>
 </div>
 @stop
 
