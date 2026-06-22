@@ -78,15 +78,15 @@ Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
 
 
 require __DIR__.'/auth.php';
-
+//ruta que te dirige a  lista de consutas //
 Route::get('/consultas', function () {
     return view('consultas.index');
 });
-
+//ruta que te dirije a nueva consulta //
 Route::get('/consultas/create', function () {
     return view('consultas.create');
 });
-
+//ruta que te dirije a lista de pacientes//
 Route::get('/pacientes.index', function () {
     return view('pacientes.index');
 });
