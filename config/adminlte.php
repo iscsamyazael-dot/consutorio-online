@@ -329,7 +329,7 @@ return [
                 [
                 'text' => 'Lista de pacientes',
                 'icon' => 'fas fa-fw fa-list',
-                'url' => 'pacientes.index',
+                'url' => 'asistente/pacientes.index', // Apunta al grupo del rol
                 ],
                 [
                 'text' => 'Registrar paciente',
@@ -344,15 +344,16 @@ return [
             'icon' => 'fas fa-fw fa-stethoscope',
              'submenu' =>[
                 [
-    'text' => 'Lista de consulta',
-    'url'  => 'consultas',
-    'icon' => 'fas fa-fw fa-notes-medical',
-],
+                'text' => 'Lista de consulta',
+                'url'  => 'consultas',
+                'icon' => 'fas fa-fw fa-notes-medical',
+                ],
+
                 [
-    'text' => 'Nueva consulta',
-    'url'  => 'NuevaConsulta',
-    'icon' => 'fas fa-plus-circle',
-],
+                'text' => 'Nueva consulta',
+                'url'  => 'NuevaConsulta',
+                'icon' => 'fas fa-plus-circle',
+                ],
                 [
                 'text' => 'Consulta Inteligente',
                 'icon' => 'fas fa-network-wired',
@@ -407,9 +408,9 @@ return [
             'icon' => 'fas fa-fw fa-prescription',
              'submenu' =>[
                 [
-                'text' => 'Historialde recetas',
+                'text' => 'Historial de recetas',
                 'icon' => 'fas fa-fw fa-book-medical',
-                'url' => 'HistorialRecetas',
+                'url' => 'medico/HistorialRecetas',
                 ],
             ],
         ],

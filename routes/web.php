@@ -12,8 +12,8 @@ use App\Http\Controllers\MovimientoInventarioController;
 use App\Http\Controllers\TriageController;
 use App\Http\Controllers\ArchivosClinicosController;
 use App\Http\Controllers\SpecialtyController; // <--- AGREGA ESTA LÍNEA
-
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CitaController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -27,11 +27,18 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
     Route::get('/api/specialties', [SpecialtyController::class, 'list']);
+    //Código para hacer el filtro de un paciente mediante un input //
+    //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
+    Route::get('/perfil-usuario', [ProfileController::class, 'obtenerPerfil']);
+    //ACTUALIZA DATOS DEL PERFIL
+    Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
+    Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
 });
 
 Route::resource('especialidades', SpecialtyController::class);
@@ -46,8 +53,83 @@ Route::resource('movimientos',MovimientoInventarioController::class);
 Route::resource('triage', TriageController::class);
 Route::resource('archivoclinico', ArchivosClinicosController::class);
 
-//Código para hacer el filtro de un paciente mediante un input //
-//Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
+   
+// ==========================================
+// 🛡️ SECCIÓN / PREFIJO PARA ADMINISTRADOR
+// ==========================================
+Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function () {
+
+    Route::get('/', fn() => view('dashboard'))->name('admin.dashboard');
+
+    Route::view('Medicamentos', 'medicamentos.index');
+
+    // El Administrador gestiona los usuarios del sistema
+    Route::resource('usuarios', UserController::class);
+    
+  
+});
+
+
+// ==========================================
+// 🩺 SECCIÓN / PREFIJO PARA MÉDICO
+// ==========================================
+Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function() {
+    
+    // Vista principal del Médico (puedes apuntarla a una vista de inicio médica)
+    Route::get('/', function() {
+        return view('dashboard'); 
+    });
+
+    // Recursos compartidos pero con su flujo de médico
+    Route::resource('pacientes', PacienteController::class);
+    Route::resource('citas', CitaController::class);
+    Route::get('/api/citas', [CitaController::class, 'getEventos']);
+
+    // Módulo Consultas Completo (Los 2 submódulos + IA)
+    Route::resource('consultas', ConsultaController::class);
+    Route::resource('consultaIA', ConsultaIAController::class);
+    Route::get('ListaConsultas', function () { return view('consultas.index'); }); // Submódulo 1
+    Route::get('NuevaConsulta', function () { return view('consultas.create'); });   // Submódulo 2
+    Route::get('HistorialConsulta', function() { return view('consultas.consultaIndividual'); });
+    Route::get('ConsultaInteligente', function() { return view('consultas.consulta_inteligente'); });
+
+    // Recetas y Medicamentos
+    Route::resource('medicamentos', MedicamentoController::class);
+    Route::resource('recetas', RecetaController::class);
+    Route::resource('receta-detalles', RecetaDetalleController::class);
+    Route::get('Medicamentos', function() { return view('medicamentos.index'); });
+
+    // Atención Médica (Triage, Eval IA, Archivos, Derivaciones)
+    Route::get('TRIAGE', function() { return view('atencion-medica.triage'); });
+    Route::get('EvaluacionIa', function() { return view('atencion-medica.evaluacion-ia'); });
+    Route::get('ArchivosClinicos', function() { return view('atencion-medica.archivos-clinicos'); });
+    Route::get('Derivaciones', function() { return view('atencion-medica.derivaciones'); });
+    
+    // (Si tienes un controlador de especialidades, lo agregarías aquí)
+});
+
+// ==========================================
+// 📋 SECCIÓN / PREFIJO PARA ASISTENTE
+// ==========================================
+Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(function() {
+    
+    // Vista principal del Asistente
+    Route::get('/', function() {
+        return view('dashboard'); 
+    });
+
+    // 👁️ ÚNICO submódulo de consultas permitido: Lista de Consultas
+    Route::get('ListaConsultas', function () { return view('consultas.index'); });
+    
+    // Soporte e historial básico
+    Route::get('PacienteNuevo', function() { return view('pacientes.create'); });
+    Route::get('PacienteNuevo', function() { return view('pacientes.index'); });
+    Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
+    
+});
+
+
+
 
 
 // Cambias 'SubirArchivosControlador' por el que ya tengas
@@ -97,11 +179,12 @@ Route::get('Medicamentos',function(){
 Route::get('TRIAGE',function(){
           return view('atencion-medica.triage');
 });
-
+//Codigo que lleva a EVALUACION IA
 Route::get('EvaluacionIa',function(){
           return view('atencion-medica.evaluacion-ia');
 });
 
+//Codigo que lleva a ARCHIVOS CLINICOS
 Route::get('ArchivosClinicos',function(){
           return view('atencion-medica.archivos-clinicos');
 });
@@ -110,6 +193,26 @@ Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
 });
 
+//Codigo que lleva a DERIVACIONES
+Route::get('Derivaciones',function(){
+          return view('atencion-medica.derivaciones');
+});
+//Codigo que lleva a PERFIL
+Route::get('perfil',function(){
+          return view('configuracion-sistema.perfil');
+});
+
+//Codigo que lleva a CAMBIAR CONTRASEÑA
+Route::get('cambiar-contraseña', function () {
+    return view('configuracion-sistema.cambiar-contraseña');
+});
+
+
+Route::get('/prueba', function () {
+    dd('FUNCIONA');
+});
+
+//Codigo que lleva a HISTORIAL DE RECETAS
 Route::get('HistorialRecetas',function(){
           return view('recetas.historial-recetas');
 });
@@ -125,14 +228,19 @@ Route::get('consultas', function () {
 //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
 Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
        ->name('ExpedienteDetalle');
+       
 //Aqui termina la ruta parametrizada //
 
 
 require __DIR__.'/auth.php';
 
-Route::get('NuevaConsulta', function () {
-    return view('consultas.create');
+Route::get('ListaConsultas', function () {
+    return view('consultas.index');
 });
+
+// Route::get('NuevaConsulta', function () {
+//     return view('consultas.create');
+// });
 
 //ruta de nuevo paciente //
 Route::get('/pacientes/create', function () {
@@ -149,4 +257,11 @@ Route::get('/consultas/create', function () {
 Route::get('/pacientes.index', function () {
     return view('pacientes.index');
 });
+require __DIR__.'/auth.php';
+
+
+// Route::get('/consultas', function () {
+//     return view('consultas.index');
+// });
+
 
