@@ -18,26 +18,25 @@ import Derivacion from './components/atencion-medica/Derivaciones.vue'
 import PacientesIndex from './components/pasientes/pacientesindex.vue'
 
 // 1. IMPORTACIONES (Verifica que las rutas y mayúsculas coincidan con tus archivos reales)
-import CreateConsulta from './components/consultas/CreateConsulta.vue'; // <-- Corregida 'C' mayúscula
-import IndexConsultas from './components/consultas/IndexConsultas.vue';
-import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
-import InformacionPaciente    from './components/pasientes/masterregistroN.vue'; // ✅ variable correcta
-import expedientepaciente from './components/pasientes/maesterexpediente.vue';
-import consultapaciente from './components/consultas/masterindividual.vue';// historial de las consultas del pacinte //
-import nuevaconsultamedica from'./components/consultas/maesternuevaconsulta.vue';
-import centroconsultas from './components/consultas/mastercentro.vue';
-import Maesterexpediente from './components/pasientes/maesterexpediente.vue';
+import CreateConsulta from './components/consultas/CreateConsulta.vue' // <-- Corregida 'C' mayúscula
+import IndexConsultas from './components/consultas/IndexConsultas.vue'
+import NuevaConsulta from './components/NuevaConsulta.vue' // <-- Importación agregada (ajusta la ruta si está en otra carpeta)
+import InformacionPaciente    from './components/pasientes/masterregistroN.vue' // ✅ variable correcta
+import expedientepaciente from './components/pasientes/maesterexpediente.vue'
+import consultapaciente from './components/consultas/masterindividual.vue'// historial de las consultas del pacinte //
+import nuevaconsultamedica from'./components/consultas/maesternuevaconsulta.vue'
+import centroconsultas from './components/consultas/mastercentro.vue'
+import Maesterexpediente from './components/pasientes/maesterexpediente.vue'
 //Modulo de Historial de recetas 
 import Historialreceta from './components/recetass/PanelRecetas.vue'
-import Especialidades from './components/Especialidades/Especialidades.vue';// importa especialidades 
+import Especialidades from './components/Especialidades/Especialidades.vue'// importa especialidades 
 //Modulo de inventario de medicamentos
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 //Modulo de Perfil
 import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
 import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
 
-//Modulo de Historial de recetas 
-import Historialreceta from './components/recetass/PanelRecetas.vue'
+
 
 
 const app = createApp({})
@@ -103,7 +102,10 @@ app.component(
  
 )
 
-app.component('master-registro-paciente', InformacionPaciente);
+app.component(
+    'master-registro-paciente', 
+    InformacionPaciente
+);
 // 2. REGISTRO DE COMPONENTES
 app.component(
     'index-consultas',
@@ -139,10 +141,6 @@ app.component(
     PanelContraseña
 );
 
-
-
-
-    
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 
