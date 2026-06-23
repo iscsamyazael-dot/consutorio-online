@@ -67,8 +67,11 @@
                             <!-- PACIENTE -->
                             <td>
                                 <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-circle">
-                                        {{ paciente.nombre.substring(0, 2) }}
+                                    <div
+                                        class="avatar-circle"
+                                        :style="{ background: obtenerColor(paciente.nombre) }"
+                                    >
+                                        {{ paciente.nombre.substring(0,2).toUpperCase() }}
                                     </div>
                                     <div>
                                         <h6 class="fw-bold mb-0">
@@ -381,6 +384,28 @@ import ApiService from '../../services/ApiService.js'
                 };
             },// a qui termina la funcion para limpiar el formulario de registro de paciente//
             //  espera respuesta del servidor para guardar el paciente y mostrar una alerta de éxito o error, y luego limpiar el formulario para nuevos registros.//
+
+            obtenerColor(nombre) {
+        const colores = [
+            "#1976d2", // azul
+            "#43a047", // verde
+            "#7b1fa2", // morado
+            "#ef6c00", // naranja
+            "#00897b", // turquesa
+            "#c2185b", // rosa
+            "#5d4037", // café
+            "#546e7a"  // gris
+        ];
+
+        let suma = 0;
+
+        for (let i = 0; i < nombre.length; i++) {
+            suma += nombre.charCodeAt(i);
+        }
+
+        return colores[suma % colores.length];
+    },
+
             async guardarPaciente() {
                 try {
                     const response = await ApiService.post('/pacientes',this.form)
@@ -525,7 +550,6 @@ import ApiService from '../../services/ApiService.js'
     width:50px !important;
     height:50px !important;
     border-radius:50% !important;
-    background:linear-gradient(135deg,#0d6efd,#00c6ff) !important;
     display:flex !important;
     align-items:center !important;
     justify-content:center !important;
