@@ -1,6 +1,6 @@
 @extends('adminlte::page')
 
-@section('title', 'Registrar Paciente - Sistema de Triage')
+@section('title', 'Lista de Consultas - Sistema de Triage')
 
 @section('content_header')
     {{-- Encabezado estilizado fuera de la tarjeta principal --}}

@@ -129,6 +129,8 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
     Route::get('ListaConsultas', function () { return view('consultas.index'); });
     
     // Soporte e historial básico
+    //ruta que te dirije a lista de pacientes//
+    Route::get('pacientes.index', function () {return view('pacientes.index');});
     Route::get('PacienteNuevo', function() { return view('pacientes.create'); });
     Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
     
@@ -259,10 +261,7 @@ Route::get('/pacientes/create', function () {
 Route::get('/consultas/create', function () {
     return view('consultas.create');
 });
-//ruta que te dirije a lista de pacientes//
-Route::get('/pacientes.index', function () {
-    return view('pacientes.index');
-});
+
 require __DIR__.'/auth.php';
 
 
