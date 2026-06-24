@@ -144,13 +144,16 @@
     <!-- ===== MODAL NUEVA ===== -->
     <!-- Modal con el formulario para crear una especialidad nueva.
          Los campos están enlazados a "form" mediante v-model y se guardan 
-         llamando al método guardar() -->
-    <div v-if="modales.nueva" class="modal-overlay" @click.self="modales.nueva = false">
+         llamando al método guardar().
+         Al cerrar con ✕ o Cancelar se llama cerrarNueva() para limpiar los campos -->
+    <div v-if="modales.nueva" class="modal-overlay" @click.self="cerrarNueva()">
       <div class="modal-box">
 
         <div class="modal-header">
           <h2><i class="fas fa-plus-circle"></i> Nueva especialidad</h2>
-          <button class="btn-close" @click="modales.nueva = false" aria-label="Cerrar">
+          <!-- Se usa cerrarNueva() en lugar de modales.nueva = false 
+               para que también se limpien los campos al cerrar -->
+          <button class="btn-close" @click="cerrarNueva()" aria-label="Cerrar">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -170,9 +173,10 @@
           <option value="Inactivo">Inactivo</option>
         </select>
 
-        <!-- Botones para cancelar (cierra el modal sin guardar) o confirmar el guardado -->
+        <!-- Botones para cancelar (cierra el modal y limpia campos) o confirmar el guardado -->
         <div class="modal-actions">
-          <button class="btn-cancel" @click="modales.nueva = false">Cancelar</button>
+          <!-- cerrarNueva() cierra el modal Y limpia el formulario -->
+          <button class="btn-cancel" @click="cerrarNueva()">Cancelar</button>
           <button class="btn-save" @click="guardar">
             <i class="fas fa-save"></i> Guardar
           </button>
@@ -277,12 +281,14 @@ export default {
     // y abre el modal de edición
     editar(item) { this.form = { ...item }; this.modales.editar = true; },
 
-    // Envía el formulario como una especialidad nueva (POST), recarga la lista
-    // y cierra el modal de creación
+    // Envía el formulario como una especialidad nueva (POST), recarga la lista,
+    // cierra el modal, limpia los campos y muestra el toast de confirmación
     guardar() {
       axios.post("/specialties", this.form).then(() => {
         this.cargar();
         this.modales.nueva = false;
+        this.resetForm();                                          // ← limpia los campos del formulario
+        this.mostrarToast("✓ Especialidad guardada correctamente"); // ← aviso de éxito
       });
     },
 
@@ -303,6 +309,20 @@ export default {
       if (confirm("¿Eliminar especialidad?")) {
         axios.delete(`/specialties/${item.id}`).then(() => this.cargar());
       }
+    },
+
+    // Cierra el modal "Nueva" y limpia todos los campos del formulario.
+    // Se usa en el botón ✕, en "Cancelar" y al hacer click fuera del modal,
+    // para que la próxima vez que se abra aparezca vacío
+    cerrarNueva() {
+      this.modales.nueva = false;
+      this.resetForm();
+    },
+
+    // Restablece el formulario a sus valores iniciales vacíos.
+    // Se llama después de guardar y también al cerrar/cancelar el modal "Nueva"
+    resetForm() {
+      this.form = { id: null, nombre: "", doctor: "", descripcion: "", estado: "Activo" };
     },
 
     // ── Muestra el toast y lo oculta tras 2.5 s ─────────────
