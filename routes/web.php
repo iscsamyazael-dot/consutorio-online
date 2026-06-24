@@ -30,7 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
+    Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
     Route::get('/api/specialties', [SpecialtyController::class, 'list']);
     //Código para hacer el filtro de un paciente mediante un input //
     //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     //ACTUALIZA DATOS DEL PERFIL
     Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
     Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
+    Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
 });
 
 Route::resource('especialidades', SpecialtyController::class);

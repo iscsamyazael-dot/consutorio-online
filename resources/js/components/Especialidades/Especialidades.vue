@@ -220,10 +220,39 @@
             <i class="fas fa-save"></i> Actualizar
           </button>
         </div>
-
       </div>
     </div>
+    
+        <!-- ===== MODAL ELIMINAR ===== -->
+<div v-if="modales.eliminar" class="modal-overlay" @click.self="modales.eliminar = false">
+  <div class="modal-box modal-box--danger">
 
+    <div class="modal-header">
+      <h2><i class="fas fa-exclamation-triangle" style="color:#b91c1c;"></i> Eliminar especialidad</h2>
+      <button class="btn-close" @click="modales.eliminar = false" aria-label="Cerrar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="delete-warning">
+      <div class="delete-icon-wrap">
+        <i class="fas fa-trash-alt"></i>
+      </div>
+      <p class="delete-question">
+        ¿Estás seguro de que deseas eliminar<br>
+        <strong>{{ specialtyToDelete?.nombre }}</strong>?
+      </p>
+      <p class="delete-sub">Esta acción no se puede deshacer.</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" @click="modales.eliminar = false">Cancelar</button>
+      <button class="btn-delete" @click="confirmarEliminar">
+        <i class="fas fa-trash"></i> Sí, eliminar
+      </button>
+    </div>
+  </div>
+</div>
   </div>
 </template>
 
@@ -236,9 +265,14 @@ export default {
       specialties: [],      // Lista completa de especialidades traída del backend
       search: "",            // Texto escrito en el buscador (filtra por nombre)
       status: "",            // Filtro de estado activo: "", "Activo" o "Inactivo"
-      selected: {},           // Especialidad actualmente mostrada en el modal "Ver"
+      selected: {},     
+      specialtyToDelete: null,   // Guarda el item que se quiere eliminar
+            // Especialidad actualmente mostrada en el modal "Ver"
       form: { id: null, nombre: "", doctor: "", descripcion: "", estado: "Activo" }, // Datos del formulario (se reutiliza para crear y editar)
       modales: { ver: false, nueva: false, editar: false }, // Controla qué modal está visible
+// modales ya existe, solo agrega "eliminar: false":
+     modales: { ver: false, nueva: false, editar: false, eliminar: false },
+
 
       // ── Toast 
       toast: { visible: false, mensaje: "" }, // Estado del aviso flotante (visible + texto)
@@ -305,12 +339,22 @@ export default {
 
     // Pide confirmación con un diálogo nativo y, si se acepta, elimina (DELETE)
     // la especialidad y recarga la lista
-    eliminar(item) {
-      if (confirm("¿Eliminar especialidad?")) {
-        axios.delete(`/specialties/${item.id}`).then(() => this.cargar());
-      }
-    },
+    // Abre el modal de confirmación guardando el item a eliminar
+eliminar(item) {
+  this.specialtyToDelete = item;
+  this.modales.eliminar = true;
+},
 
+// Ejecuta el DELETE tras confirmar en el modal
+confirmarEliminar() {
+  axios.delete(`/specialties/${this.specialtyToDelete.id}`).then(() => {
+    this.cargar();
+    this.modales.eliminar = false;
+    this.mostrarToast(`✓ "${this.specialtyToDelete.nombre}" eliminada`);
+    this.specialtyToDelete = null;
+  });
+},
+    
     // Cierra el modal "Nueva" y limpia todos los campos del formulario.
     // Se usa en el botón ✕, en "Cancelar" y al hacer click fuera del modal,
     // para que la próxima vez que se abra aparezca vacío
@@ -401,6 +445,7 @@ export default {
         radial-gradient(900px 500px at 100% 0%, rgba(13,148,136,.05), transparent 55%),
         var(--bg);
 }
+
 
 /* ===== TOAST ===== */
 /* Caja flotante fija en la esquina inferior derecha, con fondo verde de éxito */
@@ -522,6 +567,56 @@ export default {
 .modal-header h2 i{ color:var(--primary); font-size:16px; }
 .btn-close{ width:32px; height:32px; border-radius:50%; border:none; background:var(--bg); color:var(--body-text); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.2s; } /* Botón circular "x" para cerrar el modal */
 .btn-close:hover{ background:var(--primary-soft); color:var(--primary); }
+
+/* Modal eliminar */
+.modal-box--danger .modal-header h2 i { color: var(--danger-text); }
+
+.delete-warning {
+  text-align: center;
+  padding: 18px 0 10px;
+}
+.delete-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 18px;
+}
+.delete-question {
+  font-size: 16px;
+  color: var(--ink);
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+.delete-question strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+.delete-sub {
+  font-size: 13.5px;
+  color: var(--body-text);
+  margin: 0 0 6px;
+}
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: .2s;
+  background: #b91c1c;
+  color: #fff;
+}
+.btn-delete:hover { background: #991b1b; }
 
 /* Estilos compartidos para todos los campos del formulario dentro de los modales */
 .modal-box label{ display:block; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--body-text); margin-bottom:6px; }
