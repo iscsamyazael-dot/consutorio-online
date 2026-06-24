@@ -18,17 +18,35 @@ class AuthenticatedSessionController extends Controller
     {
         return view('auth.login');
     }
-
     /**
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        // 1. Intenta autenticar al usuario (Valida credenciales, email y password)
         $request->authenticate();
 
+        // 2. Regenera la sesión por seguridad
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // 3. Obtenemos el usuario que acaba de logearse
+        $user = $request->user();
+
+        // 4. Redirección según el rol guardado en la base de datos
+        switch ($user->rol) {
+            case 'admin':
+                return redirect()->to('/admin');
+                
+            case 'medico':
+                return redirect()->to('/medico');
+                
+            case 'asistente':
+                return redirect()->to('/asistente');
+
+            default:
+                // Ruta por defecto por si acaso (ej. un usuario común o el dashboard estándar)
+                return redirect()->intended(route('dashboard', absolute: false));
+        }
     }
 
     /**
