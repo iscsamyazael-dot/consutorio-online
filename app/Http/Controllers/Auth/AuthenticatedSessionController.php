@@ -33,7 +33,7 @@ class AuthenticatedSessionController extends Controller
         $user = $request->user();
 
         // 4. Redirección según el rol guardado en la base de datos
-        switch ($user->rol) {
+        switch ($user->rol) { 
             case 'admin':
                 return redirect()->to('/admin');
                 
