@@ -27,7 +27,6 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -57,16 +56,19 @@ Route::resource('archivoclinico', ArchivosClinicosController::class);
 // ==========================================
 // 🛡️ SECCIÓN / PREFIJO PARA ADMINISTRADOR
 // ==========================================
-Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function () {
-
-    Route::get('/', fn() => view('dashboard'))->name('admin.dashboard');
-
-    Route::view('Medicamentos', 'medicamentos.index');
+Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function() {
+    
+    // Vista principal del Admin
+    Route::get('/', function() {
+        return view('dashboard'); // Tu vista principal actual
+    })->name('dashboard');
 
     // El Administrador gestiona los usuarios del sistema
     Route::resource('usuarios', UserController::class);
     
-  
+    // Si el admin también puede ver inventarios o catálogos:
+    Route::resource('medicamentos', MedicamentoController::class);
+    Route::get('Medicamentos', function() { return view('medicamentos.index'); });
 });
 
 
@@ -118,12 +120,16 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
         return view('dashboard'); 
     });
 
+    // Pacientes y Citas (Agenda)
+    Route::resource('pacientes', PacienteController::class);
+    Route::resource('citas', CitaController::class);
+    Route::get('/api/citas', [CitaController::class, 'getEventos']);
+
     // 👁️ ÚNICO submódulo de consultas permitido: Lista de Consultas
     Route::get('ListaConsultas', function () { return view('consultas.index'); });
     
     // Soporte e historial básico
     Route::get('PacienteNuevo', function() { return view('pacientes.create'); });
-    Route::get('PacienteNuevo', function() { return view('pacientes.index'); });
     Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
     
 });
