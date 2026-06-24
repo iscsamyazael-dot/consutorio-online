@@ -418,7 +418,7 @@ return [
                 [
                     'text' => 'Historial de recetas',
                     'icon' => 'fas fa-fw fa-book-medical',
-                    'url' => 'medico/recetass-Historial',
+                    'url' => 'medico/HistorialRecetas',
                 ],
             ],
         ],
