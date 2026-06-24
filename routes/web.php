@@ -57,83 +57,61 @@ Route::resource('archivoclinico', ArchivosClinicosController::class);
 // 🛡️ SECCIÓN / PREFIJO PARA ADMINISTRADOR
 // ==========================================
 Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function() {
-    
-    // Vista principal del Admin
-    Route::get('/', function() {
-        return view('dashboard'); // Tu vista principal actual
-    })->name('dashboard');
-
-    // El Administrador gestiona los usuarios del sistema
+    Route::get('/', function() { return view('dashboard'); })->name('dashboard');
     Route::resource('usuarios', UserController::class);
-    
-    // Si el admin también puede ver inventarios o catálogos:
     Route::resource('medicamentos', MedicamentoController::class);
     Route::get('Medicamentos', function() { return view('medicamentos.index'); });
 });
 
 
 // ==========================================
-// 🩺 SECCIÓN / PREFIJO PARA MÉDICO
+// 📋 🩺 SECCIÓN COMPARTIDA (MÉDICO Y ASISTENTE)
+// ==========================================
+// 💡 Usamos 'can:rol-asistente-medico' para dar acceso a ambos roles sin romper tu middleware actual
+Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function() {
+    
+    Route::get('/dashboard', function() { return view('dashboard'); });
+
+    // 👥 PACIENTES (Compartido)
+    Route::resource('asistente/pacientes', PacienteController::class);
+    Route::get('asistente/pacientes.index', function () {return view('pacientes.index');});
+    Route::get('asistente/PacienteNuevo', function() { return view('pacientes.create'); });
+    Route::get('asistente/ExpedientePacientes', function() { return view('pacientes.expediente'); });
+
+    // 📅 CITAS / AGENDA (Compartido)
+    Route::resource('dashboard/citas', CitaController::class);
+    Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);
+
+    // 👁️ CONSULTAS: Lista de Consultas (Compartido)
+    Route::get('asistente/ListaConsultas', function () { return view('consultas.index'); });
+    Route::get('medico/HistorialConsulta', function() { return view('consultas.consultaIndividual'); });
+});
+
+
+// ==========================================
+// 🔒 SECCIÓN EXCLUSIVA PARA MÉDICO
 // ==========================================
 Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function() {
     
-    // Vista principal del Médico (puedes apuntarla a una vista de inicio médica)
-    Route::get('/', function() {
-        return view('dashboard'); 
-    });
-
-    // Recursos compartidos pero con su flujo de médico
-    Route::resource('pacientes', PacienteController::class);
-    Route::resource('citas', CitaController::class);
-    Route::get('/api/citas', [CitaController::class, 'getEventos']);
-
-    // Módulo Consultas Completo (Los 2 submódulos + IA)
-    Route::resource('consultas', ConsultaController::class);
+    Route::resource('consultas', ConsultaController::class)->except(['index']);
     Route::resource('consultaIA', ConsultaIAController::class);
-    Route::get('ListaConsultas', function () { return view('consultas.index'); }); // Submódulo 1
-    Route::get('NuevaConsulta', function () { return view('consultas.create'); });   // Submódulo 2
-    Route::get('HistorialConsulta', function() { return view('consultas.consultaIndividual'); });
+    
+    Route::get('NuevaConsulta', function () { return view('consultas.create'); });
     Route::get('ConsultaInteligente', function() { return view('consultas.consulta_inteligente'); });
 
-    // Recetas y Medicamentos
     Route::resource('medicamentos', MedicamentoController::class);
     Route::resource('recetas', RecetaController::class);
     Route::resource('receta-detalles', RecetaDetalleController::class);
     Route::get('Medicamentos', function() { return view('medicamentos.index'); });
-
-    // Atención Médica (Triage, Eval IA, Archivos, Derivaciones)
+    Route::resource('especialidades', SpecialtyController::class);
+    
+    //Codigo que lleva a HISTORIAL DE RECETAS
+    Route::get('HistorialRecetas',function(){return view('recetas.historial-recetas');});
     Route::get('TRIAGE', function() { return view('atencion-medica.triage'); });
     Route::get('EvaluacionIa', function() { return view('atencion-medica.evaluacion-ia'); });
     Route::get('ArchivosClinicos', function() { return view('atencion-medica.archivos-clinicos'); });
     Route::get('Derivaciones', function() { return view('atencion-medica.derivaciones'); });
-    
-    // (Si tienes un controlador de especialidades, lo agregarías aquí)
 });
-
-// ==========================================
-// 📋 SECCIÓN / PREFIJO PARA ASISTENTE
-// ==========================================
-Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(function() {
-    
-    // Vista principal del Asistente
-    Route::get('/', function() {
-        return view('dashboard'); 
-    });
-
-    // Pacientes y Citas (Agenda)
-    Route::resource('pacientes', PacienteController::class);
-    Route::resource('citas', CitaController::class);
-    Route::get('/api/citas', [CitaController::class, 'getEventos']);
-
-    // 👁️ ÚNICO submódulo de consultas permitido: Lista de Consultas
-    Route::get('ListaConsultas', function () { return view('consultas.index'); });
-    
-    // Soporte e historial básico
-    Route::get('PacienteNuevo', function() { return view('pacientes.create'); });
-    Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
-    
-});
-
 
 
 
@@ -193,10 +171,6 @@ Route::get('EvaluacionIa',function(){
 //Codigo que lleva a ARCHIVOS CLINICOS
 Route::get('ArchivosClinicos',function(){
           return view('atencion-medica.archivos-clinicos');
-});
-
-Route::get('Derivaciones',function(){
-          return view('atencion-medica.derivaciones');
 });
 
 //Codigo que lleva a DERIVACIONES

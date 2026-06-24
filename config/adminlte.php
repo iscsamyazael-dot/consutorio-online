@@ -333,7 +333,7 @@ return [
                 [
                     'text' => 'Lista de pacientes',
                     'icon' => 'fas fa-fw fa-list',
-                    'url' => 'asistente/pacientes', // Apunta al grupo del rol
+                    'url' => 'asistente/pacientes.index', // Apunta al grupo del rol
                 ],
                 [
                     'text' => 'Registrar paciente',
@@ -418,7 +418,7 @@ return [
                 [
                     'text' => 'Historial de recetas',
                     'icon' => 'fas fa-fw fa-book-medical',
-                    'url' => 'medico/recetas',
+                    'url' => 'medico/recetass-Historial',
                 ],
             ],
         ],
