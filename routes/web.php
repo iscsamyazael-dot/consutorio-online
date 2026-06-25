@@ -9,6 +9,7 @@ use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
 use App\Http\Controllers\SpecialtyController; // <--- AGREGA ESTA LÍNEA
+use App\Http\Controllers\MedicoController;
 
 
 use App\Http\Controllers\ProfileController;
@@ -29,6 +30,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
+    // Ruta para procesar el formulario y guardar el registro en las tablas
+    Route::post('medicos/store', [MedicoController::class, 'store'])->name('medicos.store');
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -94,6 +97,15 @@ Route::get('ArchivosClinicos',function(){
 Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
 });
+//RUTA QUE LLEVA A MEDICOS
+Route::get('MedicosAlta',function(){
+          return view('medicos.altamedicos');
+});
+
+// RUTA QUE LLEVA A LA VISTA DE REGISTRAR UN MEDICO
+Route::get('medicos/medicocreate', function () {
+    return view('medicos.medicocreate');
+})->name('medicocreate');
 
 
 

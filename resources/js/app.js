@@ -23,6 +23,10 @@ import NuevaConsulta from './components/NuevaConsulta.vue'; // <-- Importación 
 import Especialidades from './components/Especialidades/Especialidades.vue';// importa especialidades 
 //Modulo de inventario de medicamentos
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
+//MODULO DE ALTA MEDICOS
+import AltaMedicos from './components/medicos-alta/PanelMedicos.vue'
+
+
 
 
 
@@ -32,6 +36,12 @@ app.component(
     'Especialidades',
     Especialidades
 )
+
+app.component(
+     'alta-medicos',
+     AltaMedicos
+ );
+
 
 app.component(
      'consulta-inteligente',

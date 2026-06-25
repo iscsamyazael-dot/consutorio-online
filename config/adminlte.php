@@ -431,10 +431,16 @@ return [
         ],
         ['header'=> 'CONFIGURACIÓN MÉDICA'],
         [
-    'text' => 'Especialidades',
-    'url'  => 'especialidades', // O 'admin/specialties' si tu ruta tiene prefijo
-    'icon' => 'fas fa-fw fa-user',
-],
+            'text' => 'Especialidades',
+            'url'  => 'especialidades', // O 'admin/specialties' si tu ruta tiene prefijo
+            'icon' => 'fas fa-fw fa-user',
+        ],
+        [
+            'text' => 'Médicos',
+            'url'  => 'MedicosAlta', 
+            'icon' => 'fas fa-fw fa-user-md',
+        ],
+        
         ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
         [
             'text' => 'Perfil',
