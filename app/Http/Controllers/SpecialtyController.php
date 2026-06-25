@@ -23,6 +23,7 @@ class SpecialtyController extends Controller
     public function list(Request $request)
     {
         return Specialty::query()
+            ->with('medicos') // ✅ Carga los médicos relacionados
             ->when($request->search, function ($query, $search) {
                 $query->where('nombre', 'like', "%{$search}%");
             })
@@ -38,16 +39,19 @@ class SpecialtyController extends Controller
     {
         $request->validate([
             'nombre'      => 'required|string|max:100',
-            'doctor'      => 'required|string|max:100',
             'descripcion' => 'nullable|string',
             'estado'      => 'required|in:Activo,Inactivo',
         ]);
 
+        // ✅ Generar folio automático con año
+        $ultimoId = Specialty::max('id') ?? 0;
+        $folio = 'ESP-' . date('Y') . '-' . str_pad($ultimoId + 1, 4, '0', STR_PAD_LEFT);
+
         Specialty::create([
             'nombre'      => $request->nombre,
-            'doctor'      => $request->doctor,
             'descripcion' => $request->descripcion,
             'estado'      => $request->estado,
+            'folio'       => $folio,
         ]);
 
         return response()->json([
@@ -57,28 +61,27 @@ class SpecialtyController extends Controller
 
     public function show(Specialty $specialty)
     {
-        return response()->json($specialty);
+        return response()->json($specialty->load('medicos'));
     }
 
     public function edit(Specialty $specialty)
     {
-        return response()->json($specialty);
+        return response()->json($specialty->load('medicos'));
     }
 
     public function update(Request $request, Specialty $specialty)
     {
         $request->validate([
             'nombre'      => 'required|string|max:100',
-            'doctor'      => 'required|string|max:100',
             'descripcion' => 'nullable|string',
             'estado'      => 'required|in:Activo,Inactivo',
         ]);
 
         $specialty->update([
             'nombre'      => $request->nombre,
-            'doctor'      => $request->doctor,
             'descripcion' => $request->descripcion,
             'estado'      => $request->estado,
+            // ✅ El folio NO se actualiza, permanece igual
         ]);
 
         return response()->json([
