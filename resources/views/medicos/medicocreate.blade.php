@@ -163,7 +163,6 @@
         </div>
     </form>
 </div>
-//toast de confirmacion
 <div class="position-fixed p-3" style="z-index: 9999; right: 20px; top: 20px; min-width: 300px;">
     
     @if(session('success'))
