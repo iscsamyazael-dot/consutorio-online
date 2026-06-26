@@ -460,6 +460,18 @@ return [
             'can'    => 'ver-admin', // 🔒 Oculta el encabezado para Asistente y Médico
         ],
         [
+            'text' => 'Especialidades',
+            'url'  => 'especialidades', // O 'admin/specialties' si tu ruta tiene prefijo
+            'icon' => 'fas fa-fw fa-user',
+        ],
+        [
+            'text' => 'Médicos',
+            'url'  => 'MedicosAlta', 
+            'icon' => 'fas fa-fw fa-user-md',
+        ],
+        
+        ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
+        [
             'text' => 'Perfil',
             'url'  => 'perfil',
             'icon' => 'fas fa-fw fa-user',
@@ -476,7 +488,7 @@ return [
             'url'  => 'logout',
             'icon' => 'fas fa-sign-out-alt',
             'can'  => 'ver-admin', // 🔒 Oculta el botón
-        ],
+        ]
     ],
 
     /*

@@ -12,6 +12,7 @@ use App\Http\Controllers\MovimientoInventarioController;
 use App\Http\Controllers\TriageController;
 use App\Http\Controllers\ArchivosClinicosController;
 use App\Http\Controllers\SpecialtyController; // <--- AGREGA ESTA LÍNEA
+use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CitaController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
     Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
     Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
+    // Ruta para procesar el formulario y guardar el registro en las tablas
+    Route::post('medicos/store', [MedicoController::class, 'store'])->name('medicos.store');
 });
 
 Route::resource('especialidades', SpecialtyController::class);
@@ -205,6 +208,7 @@ Route::get('ArchivosClinicos',function(){
 Route::get('Derivaciones',function(){
           return view('atencion-medica.derivaciones');
 });
+
 //Codigo que lleva a PERFIL
 Route::get('perfil',function(){
           return view('configuracion-sistema.perfil');
@@ -254,6 +258,15 @@ Route::get('ListaConsultas', function () {
 Route::get('/pacientes/create', function () {
     return view('pacientes.create');
 });
+//RUTA QUE LLEVA A MEDICOS
+Route::get('MedicosAlta',function(){
+          return view('medicos.altamedicos');
+});
+
+// RUTA QUE LLEVA A LA VISTA DE REGISTRAR UN MEDICO
+Route::get('medicos/medicocreate', function () {
+    return view('medicos.medicocreate');
+})->name('medicocreate');
 
 
 

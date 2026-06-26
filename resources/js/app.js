@@ -35,6 +35,9 @@ import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 //Modulo de Perfil
 import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
 import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
+//MODULO DE ALTA MEDICOS
+import AltaMedicos from './components/medicos-alta/PanelMedicos.vue'
+
 
 
 
@@ -45,6 +48,12 @@ app.component(
     'Especialidades',
     Especialidades
 )
+
+app.component(
+     'alta-medicos',
+     AltaMedicos
+ );
+
 
 app.component(
      'consulta-inteligente',
