@@ -66,14 +66,12 @@
                             <!-- ACCIONES -->
                             <td class="text-end">
 
-                                <!-- ALERTA DATOS FALTANTES -->
+                                <!-- ✅ ALERTA DATOS FALTANTES — ya NO abre modal, redirige al registro -->
                                 <span
                                     v-if="tieneDatosFaltantes(paciente)"
                                     class="alert-indicator me-2"
                                     :title="'Faltan: ' + datosFaltantes(paciente).join(', ')"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#datosFaltantesModal"
-                                    @click="abrirModalFaltantes(paciente)"
+                                    @click="irARegistroConDatos(paciente)"
                                     style="cursor:pointer"
                                 >
                                     <i class="fas fa-exclamation-triangle alert-icon"></i>
@@ -123,129 +121,6 @@
                 </table>
             </div>
 
-        </div>
-    </div>
-
-    <!-- ===== MODAL DATOS FALTANTES ===== -->
-    <div class="modal fade" id="datosFaltantesModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 rounded-4 overflow-hidden">
-                <div class="modal-header bg-danger text-white border-0">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Completar datos del paciente
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-
-                    <!-- Nombre del paciente -->
-                    <div class="d-flex align-items-center gap-3 mb-4">
-                        <div
-                            class="avatar-circle"
-                            :style="{ background: pacienteFaltante.nombre ? obtenerColor(pacienteFaltante.nombre) : '#999' }"
-                        >
-                            {{ pacienteFaltante.nombre ? pacienteFaltante.nombre.substring(0,2).toUpperCase() : '?' }}
-                        </div>
-                        <div>
-                            <h5 class="fw-bold mb-0">
-                                {{ pacienteFaltante.nombre }} {{ pacienteFaltante.apellido_paterno }} {{ pacienteFaltante.apellido_materno }}
-                            </h5>
-                            <small class="text-muted">FOLIO: {{ pacienteFaltante.paciente_id }}</small>
-                        </div>
-                    </div>
-
-                    <!-- Alerta con campos faltantes -->
-                    <div class="alert alert-danger d-flex align-items-center gap-2 mb-4">
-                        <i class="fas fa-info-circle flex-shrink-0"></i>
-                        <span>
-                            Faltan los siguientes datos:
-                            <strong>{{ datosFaltantes(pacienteFaltante).join(', ') }}</strong>
-                        </span>
-                    </div>
-
-                    <!-- Campos faltantes (solo muestra los que faltan) -->
-                    <div class="row g-3">
-
-                        <div class="col-md-6" v-show="camposInicialmenteFaltantes.includes('email')">
-                            <label class="form-label">
-                                <i class="fas fa-envelope text-danger me-1"></i>Email
-                            </label>
-                            <input
-                                type="email"
-                                class="form-control"
-                                placeholder="correo@ejemplo.com"
-                                v-model="pacienteFaltante.email"
-                            >
-                        </div>
-
-                        <div class="col-md-6" v-show="camposInicialmenteFaltantes.includes('sexo')">
-                            <label class="form-label">
-                                <i class="fas fa-venus-mars text-danger me-1"></i>Sexo
-                            </label>
-                            <select class="form-control" v-model="pacienteFaltante.sexo">
-                                <option value="">-- Seleccionar --</option>
-                                <option>Masculino</option>
-                                <option>Femenino</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6" v-show="camposInicialmenteFaltantes.includes('tipo_sangre')">
-                            <label class="form-label">
-                                <i class="fas fa-tint text-danger me-1"></i>Tipo de Sangre
-                            </label>
-                            <select class="form-control" v-model="pacienteFaltante.tipo_sangre">
-                                <option value="">-- Seleccionar --</option>
-                                <option>A+</option>
-                                <option>A-</option>
-                                <option>B+</option>
-                                <option>B-</option>
-                                <option>AB+</option>
-                                <option>AB-</option>
-                                <option>O+</option>
-                                <option>O-</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6" v-show="camposInicialmenteFaltantes.includes('curp')">
-                            <label class="form-label">
-                                <i class="fas fa-id-card text-danger me-1"></i>CURP
-                            </label>
-                            <input
-                                type="text"
-                                class="form-control"
-                                placeholder="XXXX000000XXXXXX00"
-                                v-model="pacienteFaltante.curp"
-                                maxlength="18"
-                                style="text-transform: uppercase"
-                            >
-                        </div>
-
-                        <div class="col-md-6" v-show="camposInicialmenteFaltantes.includes('edad')">
-                            <label class="form-label">
-                                <i class="fas fa-birthday-cake text-danger me-1"></i>Edad
-                            </label>
-                            <input
-                                type="number"
-                                class="form-control"
-                                placeholder="Ej. 30"
-                                v-model="pacienteFaltante.edad"
-                                min="0"
-                                max="120"
-                            >
-                        </div>
-
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pb-4">
-                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-danger rounded-pill px-4" @click="guardarDatosFaltantes()">
-                        <i class="fas fa-save me-1"></i> Guardar datos
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -446,8 +321,6 @@ export default {
             pacientes: [],
             detallePaciente: [],
             editarPaciente: {},
-            pacienteFaltante: {},
-            camposInicialmenteFaltantes: [],
             buscar: '',
             pacienteSeleccionado: '',
             form: {
@@ -458,7 +331,6 @@ export default {
     },
 
     computed: {
-        // Filtra la lista según el texto del buscador
         pacientesFiltrados() {
             if (!this.buscar.trim()) return this.pacientes;
             const q = this.buscar.toLowerCase();
@@ -498,51 +370,12 @@ export default {
             return this.datosFaltantes(paciente).length > 0;
         },
 
-        // ─── MODAL DATOS FALTANTES ────────────────────────────────────────────────
+        // ─── ✅ NUEVO: Redirige al registro precargando datos del paciente ─────────
 
-        abrirModalFaltantes(paciente) {
-            // Copia el objeto para no mutar la lista directamente
-            this.pacienteFaltante = { ...paciente };
-            // Guarda qué campos faltan AL ABRIR — no se recalcula mientras se escribe,
-            // así los inputs con v-show no se desmontan y el foco no se pierde
-            const campos = ['email', 'sexo', 'tipo_sangre', 'curp', 'edad'];
-            this.camposInicialmenteFaltantes = campos.filter(
-                c => !paciente[c] || String(paciente[c]).trim() === ''
-            );
-        },
-
-        async guardarDatosFaltantes() {
-            try {
-                await ApiService.put('/pacientes/' + this.pacienteFaltante.id, this.pacienteFaltante);
-
-                // Actualiza el paciente en la lista local sin recargar todo
-                const index = this.pacientes.findIndex(p => p.id === this.pacienteFaltante.id);
-                if (index !== -1) {
-                    this.pacientes[index] = { ...this.pacientes[index], ...this.pacienteFaltante };
-                    this.pacientes = [...this.pacientes]; // fuerza reactividad Vue 2
-                }
-
-                // Cierra el modal
-                document.getElementById('datosFaltantesModal')
-                    .querySelector('[data-bs-dismiss="modal"]').click();
-
-                await Swal.fire({
-                    icon: 'success',
-                    title: '¡Datos completados!',
-                    text: 'El paciente fue actualizado correctamente.',
-                    confirmButtonText: 'Aceptar'
-                });
-
-            } catch (error) {
-                console.error(error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudieron guardar los datos.',
-                    confirmButtonText: 'Aceptar'
-                });
-            }
-        },
+        irARegistroConDatos(paciente) {
+                localStorage.setItem('pacientePrecargar', JSON.stringify(paciente));
+                window.location.href = '/PacienteNuevo';
+            },
 
         // ─── COLORES AVATAR ───────────────────────────────────────────────────────
 
@@ -623,12 +456,10 @@ export default {
                 const response = await ApiService.get('/pacientes');
                 const lista = response.data;
 
-                // Carga el detalle completo de cada paciente en paralelo
                 const detalles = await Promise.all(
                     lista.map(p => ApiService.get('/pacientes/' + p.id).then(r => r.data))
                 );
 
-                // Mezcla los datos de lista + detalle en un solo objeto por paciente
                 this.pacientes = lista.map((p, i) => ({ ...p, ...detalles[i] }));
 
                 console.log('Pacientes cargados:', this.pacientes);
@@ -707,7 +538,6 @@ export default {
             try {
                 await ApiService.delete('/pacientes/' + this.pacienteSeleccionado);
 
-                // Elimina de la lista local
                 this.pacientes = this.pacientes.filter(p => p.id !== this.pacienteSeleccionado);
 
                 document.getElementById('eliminarpacienteModal')

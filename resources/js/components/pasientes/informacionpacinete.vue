@@ -484,6 +484,24 @@ export default {
         }
         ///Termina la función para calcular la edad con la fecha de nacimiento /////
     },
+     mounted() {
+            const raw = localStorage.getItem('pacientePrecargar');
+            if (!raw) return;
+
+            const p = JSON.parse(raw);
+            localStorage.removeItem('pacientePrecargar');
+
+            // Mapea los campos del paciente al formulario
+            this.form.nombre        = [p.nombre, p.apellido_paterno, p.apellido_materno].filter(Boolean).join(' ');
+            this.form.sexo          = p.sexo          || '';
+            this.form.curp          = p.curp          || '';
+            this.form.telefono      = p.telefono      || '';
+            this.form.email         = p.email         || '';
+            this.form.direccion     = p.direccion     || '';
+            this.form.tipo_sangre   = p.tipo_sangre   || '';
+            this.form.edad_anios    = p.edad          || 0;
+            this.form.estado        = p.estado        || '';
+        },
 
     methods: {
     
@@ -535,6 +553,7 @@ export default {
                 motivo_consulta: ''
             };
         },
+       
         // guarda paciente sin no hay errores 
         async guardarPaciente() {
             try {
