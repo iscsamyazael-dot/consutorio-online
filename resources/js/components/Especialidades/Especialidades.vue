@@ -270,7 +270,7 @@ export default {
       status: "",
       selected: {},
       specialtyToDelete: null,
-      // folio agregado al modelo del formulario
+            // folio agregado al modelo del formulario
       form: { id: null, nombre: "", doctor: "", folio: "", descripcion: "", estado: "Activo" },
       modales: { ver: false, nueva: false, editar: false, eliminar: false },
       toast: { visible: false, mensaje: "" },
