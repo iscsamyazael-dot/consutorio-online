@@ -61,7 +61,7 @@ Route::get('ConsultaInteligente',function(){
 //codigo  de las citas //
 Route::resource('citas', App\Http\Controllers\CitaController::class);
 // api de calendario//
-Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
+Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
 
 require __DIR__.'/auth.php';
 

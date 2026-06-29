@@ -2,10 +2,15 @@
 <template>
     <agenda-medica></agenda-medica>
     <dradmin></dradmin>
-    <calendario></calendario>
-    <resumen-medico></resumen-medico>
 
-
+    <div style="display: flex; gap: 16px; align-items: flex-start;">
+        <div style="flex: 2;">
+            <calendario></calendario>
+        </div>
+        <div style="flex: 1;">
+            <resumen-medico></resumen-medico>
+        </div>
+    </div>
 </template>
 <script> 
 import AgendaMedica from './agendamedica.vue';

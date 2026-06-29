@@ -4,44 +4,111 @@ namespace App\Http\Controllers;
 
 use App\Models\Cita;
 use App\Models\Paciente;
+use App\Models\Medico;
+use App\Models\Especialidad;
 use Illuminate\Http\Request;
 
 class CitaController extends Controller
 {
-    public function index() {
-        // CORRECCIÓN: Obtenemos todas las citas con los datos del paciente relacionados
-        $citas = Cita::with('paciente')->get();
-        
-        // CORRECCIÓN: Enviamos $citas a la vista para que el @forelse y los contadores funcionen
+    public function index()
+    {
+        $citas = Cita::with(['paciente', 'medico', 'especialidad'])->get();
         return view('citas.index', compact('citas'));
     }
 
-    public function getEventos() {
-        $citas = Cita::with('paciente')->get();
-        $eventos = [];
-        foreach ($citas as $cita) {
-            $eventos[] = [
-                'title' => $cita->paciente ? $cita->paciente->nombre : 'Sin nombre',
-                'start' => $cita->fecha_cita . 'T' . $cita->hora_cita,
-            ];
-        }
-        return response()->json($eventos);
+    public function getCitas()
+    {
+        $citas = Cita::with(['paciente', 'medico', 'especialidad'])->get();
+
+        return response()->json(
+            $citas->map(function ($cita) {
+                return [
+                    'id'    => $cita->id,
+                    'title' => 'Cita: ' . ($cita->paciente->nombre ?? 'Sin paciente'),
+                    'start' => $cita->fecha . 'T' . $cita->hora,
+                    'folio'  => $cita->folio,
+                    'fecha'  => $cita->fecha,
+                    'hora'   => $cita->hora,
+                    'estado' => $cita->estado,
+                    'tipo'   => $cita->tipo,
+                    'paciente' => $cita->paciente ? [
+                        'id'     => $cita->paciente->id,
+                        'nombre' => $cita->paciente->nombre,
+                    ] : null,
+                    'medico' => $cita->medico ? [
+                        'id'     => $cita->medico->id,
+                        'nombre' => $cita->medico->nombre,
+                    ] : null,
+                    'especialidad' => $cita->especialidad ? [
+                        'id'     => $cita->especialidad->id,
+                        'nombre' => $cita->especialidad->nombre,
+                    ] : null,
+                ];
+            })
+        );
     }
 
-    public function create() {
-        $pacientes = Paciente::all();
-        return view('citas.create', compact('pacientes'));
+    public function create()
+    {
+        $pacientes      = Paciente::select('id', 'nombre')->where('estado', 'activo')->get();
+        $medicos        = Medico::select('id', 'nombre', 'especialidad_id')->where('activo', 1)->get();
+        $especialidades = Especialidad::select('id', 'nombre')->where('estado', 'Activo')->get();
+
+        return view('citas.create', compact('pacientes', 'medicos', 'especialidades'));
     }
 
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         $request->validate([
-            'paciente_id' => 'required', 
-            'fecha_cita' => 'required', 
-            'hora_cita' => 'required',
-            'estado' => 'required' // Asegúrate de incluir el campo estado si lo usas en tu tabla
+            'paciente_id'     => 'required|exists:pacientes,id',
+            'medico_id'       => 'required|exists:medicos,id',
+            'especialidad_id' => 'required|exists:especialidades,id',
+            'fecha'           => 'required|date',
+            'hora'            => 'required',
+            'estado'          => 'required',
         ]);
-        
-        Cita::create($request->all());
-        return redirect()->route('citas.index')->with('success', 'Cita creada.');
+
+        Cita::create([
+            'folio'           => 'CIT-' . time(),
+            'paciente_id'     => $request->paciente_id,
+            'medico_id'       => $request->medico_id,
+            'especialidad_id' => $request->especialidad_id,
+            'fecha'           => $request->fecha,
+            'hora'            => $request->hora,
+            'estado'          => $request->estado,
+            'tipo'            => $request->tipo,
+            'observaciones'   => $request->observaciones,
+        ]);
+
+        return redirect()->route('citas.index')->with('success', 'Cita registrada correctamente.');
+    }
+
+    public function show($id)
+    {
+        return Cita::with(['paciente', 'medico', 'especialidad'])->findOrFail($id);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $cita = Cita::findOrFail($id);
+
+        $cita->update([
+            'paciente_id'     => $request->paciente_id,
+            'medico_id'       => $request->medico_id,
+            'especialidad_id' => $request->especialidad_id,
+            'fecha'           => $request->fecha,
+            'hora'            => $request->hora,
+            'estado'          => $request->estado,
+            'tipo'            => $request->tipo,
+            'observaciones'   => $request->observaciones,
+        ]);
+
+        return response()->json($cita);
+    }
+
+    public function destroy($id)
+    {
+        Cita::destroy($id);
+        return response()->json(['message' => 'Cita eliminada correctamente']);
     }
 }

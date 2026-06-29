@@ -44,10 +44,26 @@
 <script>
 export default {
   name: 'ResumenMedico',
+
   props: {
-    totalCitas:       { type: Number, default: 0 },
-    citasCompletadas: { type: Number, default: 0 },
-    citasPendientes:  { type: Number, default: 0 },
+    citas: {
+      type: Array,
+      default: () => []
+    }
+  },
+
+  computed: {
+    totalCitas() {
+      return this.citas.length;
+    },
+
+    citasCompletadas() {
+      return this.citas.filter(c => c.estado === 'completada').length;
+    },
+
+    citasPendientes() {
+      return this.citas.filter(c => c.estado === 'programada').length;
+    }
   }
 }
 </script>
