@@ -24,7 +24,7 @@ class Medico extends Model
     // Relación opcional por si después necesitas traer el nombre de la especialidad
     public function especialidad()
     {
-        return $this->belongsTo(Especialidad::class, 'especialidad_id');
+        return $this->belongsTo(Specialty::class, 'especialidad_id');
     }
 
     public function horarios()

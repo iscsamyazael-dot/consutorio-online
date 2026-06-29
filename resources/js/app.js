@@ -25,9 +25,7 @@ import Especialidades from './components/Especialidades/Especialidades.vue';// i
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 //MODULO DE ALTA MEDICOS
 import AltaMedicos from './components/medicos-alta/PanelMedicos.vue'
-
-
-
+import RegistroMedico from './components/medicos-alta/PanelRegistro.vue'
 
 
 const app = createApp({})
@@ -40,8 +38,12 @@ app.component(
 app.component(
      'alta-medicos',
      AltaMedicos
- );
+);
 
+app.component(
+     'registro-medicos',
+     RegistroMedico
+);
 
 app.component(
      'consulta-inteligente',
