@@ -69,9 +69,19 @@
             <td>{{ cita.medico?.nombre ?? '—' }}</td>
             <td>{{ cita.especialidad?.nombre ?? '—' }}</td>
             <td>
-              <span class="estado-badge" :style="{ background: colorPorEstado(cita.estado) + '22', color: colorPorEstado(cita.estado) }">
-                {{ cita.estado }}
-              </span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="estado-badge" :style="{ background: colorPorEstado(cita.estado) + '22', color: colorPorEstado(cita.estado) }">
+                  {{ cita.estado }}
+                </span>
+                <button
+                  v-if="datosPacienteIncompletos(cita)"
+                  class="alerta-incompleto"
+                  title="Datos del paciente incompletos. Clic para completar."
+                  @click="irACompletarPaciente(cita)"
+                >
+                  <i class="fas fa-exclamation-triangle"></i>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -192,6 +202,20 @@ export default {
         const coincide = event.title.toLowerCase().includes(termino)
         event.setProp('display', coincide || termino === '' ? 'auto' : 'none')
       })
+    },
+
+    datosPacienteIncompletos(cita) {
+      const p = cita.paciente
+      if (!p) return true
+      const camposRequeridos = ['nombre', 'sexo', 'telefono', 'email', 'direccion', 'curp', 'tipo_sangre']
+      return camposRequeridos.some(campo => !p[campo] || p[campo].toString().trim() === '')
+    },
+
+    irACompletarPaciente(cita) {
+      const p = cita.paciente
+      if (!p) return
+      localStorage.setItem('pacientePrecargar', JSON.stringify(p))
+      window.location.href = '/PacienteNuevo'
     },
   },
 }
@@ -337,6 +361,29 @@ export default {
   padding: 4px 10px;
   font-size: .75rem;
   font-weight: 700;
+}
+
+/* ── ALERTA INCOMPLETO ── */
+.alerta-incompleto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: .78rem;
+  cursor: pointer;
+  transition: background .2s, transform .15s, box-shadow .2s;
+}
+.alerta-incompleto:hover {
+  background: #ffedd5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, .2);
+}
+.alerta-incompleto i {
+  font-size: .78rem;
 }
 
 .sin-citas {
