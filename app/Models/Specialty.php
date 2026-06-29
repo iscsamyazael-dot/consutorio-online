@@ -13,8 +13,13 @@ class Specialty extends Model
 
     protected $fillable = [
         'nombre',
-        'doctor',
         'descripcion',
         'estado',
+        'folio',
     ];
+
+    public function medicos()
+    {
+        return $this->hasMany(Medico::class, 'especialidad_id');
+    }
 }
