@@ -9,6 +9,59 @@ use Illuminate\Support\Facades\DB;
 
 class MedicoController extends Controller
 {
+
+    public function index()
+    {
+        // Trae los médicos activos con sus relaciones completas
+        $medicos = Medico::with(['especialidad', 'horarios'])
+        ->where('activo', 1)
+        ->get();
+
+        // Retorna la respuesta de golpe a Vue
+        return response()->json($medicos);
+    
+  
+        return $medico = Medico::all();
+
+        // Construimos la subconsulta exactamente como la definiste
+        $resultado = DB::table('medicos as m')
+    ->join('especialidades as e', 'm.especialidad_id', '=', 'e.id')
+    ->join('horarios_medicos as h', 'm.id', '=', 'h.medico_id')
+    ->where('m.activo', 1)
+    ->where('e.estado', 'Activo')
+    ->where('e.id', 2)
+    ->select(
+        'm.id as medico_id',
+        'm.folio as medico_folio',
+        'm.nombre as medico',
+        'e.nombre as especialidad',
+        DB::raw("GROUP_CONCAT(
+            CASE h.dia_semana
+                WHEN 1 THEN 'Lunes'
+                WHEN 2 THEN 'Martes'
+                WHEN 3 THEN 'Miércoles'
+                WHEN 4 THEN 'Jueves'
+                WHEN 5 THEN 'Viernes'
+                WHEN 6 THEN 'Sábado'
+                WHEN 0 THEN 'Domingo'
+            END
+            ORDER BY h.dia_semana ASC
+            SEPARATOR ', '
+        ) as dias_disponibles"),
+        DB::raw("TIME_FORMAT(MIN(h.hora_inicio), '%H:%i') as hora_inicio"),
+        DB::raw("TIME_FORMAT(MAX(h.hora_fin), '%H:%i') as hora_fin"),
+        DB::raw("MAX(h.duracion_consulta) as duracion_minutos")
+    )
+    ->groupBy('m.id', 'm.folio', 'm.nombre', 'e.nombre')
+    ->get();
+
+            // Retornamos los datos al componente Vue
+            return response()->json($resultado);
+
+
+
+    }
+
     public function store(Request $request)
     {
         // A. VALIDACIÓN DE LOS DATOS
@@ -66,15 +119,35 @@ class MedicoController extends Controller
             // C. CONFIRMAR CAMBIOS: Si todo se ejecutó sin errores, se guardan los datos en la BD permanentemente
             DB::commit();
 
-            return redirect()->back()->with('success', '¡Médico y horarios registrados con éxito! Folio: ' . $folioMedico);
+            return response()->json([
+                'success' => true,
+                'message' => '¡Médico y horarios registrados con éxito!',
+                'folio' => $folioMedico,
+                'medico_id' => $medico->id
+            ], 201);
 
         } catch (\Exception $e) {
             // D. REVERTIR CAMBIOS: Si algo falla (ej. error de sintaxis), se deshace todo en ambas tablas
             DB::rollBack();
 
-            return redirect()->back()
-                ->withInput() // Mantiene lo que el usuario escribió para que no lo vuelva a digitar
-                ->with('error', 'Error al guardar el registro: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al guardar el registro',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
+    public function show($id)
+    {
+    }
+
+    public function update(Request $request, $id)
+    {
+    }
+
+    public function destroy($id)
+    {
+    }
+
 }
