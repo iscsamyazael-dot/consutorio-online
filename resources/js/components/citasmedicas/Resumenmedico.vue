@@ -2,7 +2,7 @@
   <div class="sidebar-card">
 
     <div class="sidebar-title">
-      Resumen Médico
+      Resumen de citas
     </div>
 
     <div class="stats-box">
@@ -32,7 +32,7 @@
           <i class="fas fa-clock"></i>
         </div>
         <div class="stat-info">
-          <h5>{{ citasPendientes }}</h5>
+          <h5>{{ citasPendientesCount }}</h5>
           <span>Pendientes</span>
         </div>
       </div>
@@ -61,10 +61,12 @@ export default {
       return this.citas.filter(c => c.estado === 'completada').length;
     },
 
-    citasPendientes() {
-      return this.citas.filter(c => c.estado === 'programada').length;
-    }
+  citasPendientesCount() {
+    return this.citas.filter(c =>
+      (c.estado || '').toLowerCase().trim() === 'agendado'
+    ).length
   }
+}
 }
 </script>
 

@@ -70,9 +70,17 @@
             <td>{{ cita.especialidad?.nombre ?? '—' }}</td>
             <td>
               <div style="display:flex; align-items:center; gap:8px;">
-                <span class="estado-badge" :style="{ background: colorPorEstado(cita.estado) + '22', color: colorPorEstado(cita.estado) }">
+                <span
+                  class="estado-badge"
+                  :style="{ background: colorPorEstado(cita.estado) + '22', color: colorPorEstado(cita.estado) }"
+                  @click="abrirModalEstado(cita)"
+                  style="cursor:pointer"
+                  title="Clic para cambiar estado"
+                >
                   {{ cita.estado }}
+                  <i class="fas fa-chevron-down" style="font-size:.6rem; margin-left:4px;"></i>
                 </span>
+
                 <button
                   v-if="datosPacienteIncompletos(cita)"
                   class="alerta-incompleto"
@@ -86,8 +94,75 @@
           </tr>
         </tbody>
       </table>
-
     </div>
+
+    <!-- ── MODAL CAMBIAR ESTADO ── -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="mostrarModalEstado" class="modal-overlay" @click.self="cerrarModal">
+          <div class="modal-card">
+
+            <!-- Cabecera -->
+            <div class="modal-header">
+              <div class="modal-icon">
+                <i class="fas fa-stethoscope"></i>
+              </div>
+              <div>
+                <h4>Cambiar estado de la cita</h4>
+                <p class="modal-subtitulo">{{ citaSeleccionada?.paciente?.nombre ?? 'Paciente' }}</p>
+              </div>
+              <button class="modal-close" @click="cerrarModal">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- Opciones de estado -->
+            <div class="modal-body">
+              <p class="modal-label">Selecciona el nuevo estado:</p>
+
+              <div class="estado-opciones">
+                <button
+                  v-for="opcion in estadosDisponibles"
+                  :key="opcion.valor"
+                  class="estado-opcion"
+                  :class="{ activo: nuevoEstado === opcion.valor }"
+                  :style="nuevoEstado === opcion.valor
+                    ? { background: opcion.color + '18', borderColor: opcion.color, color: opcion.color }
+                    : {}"
+                  @click="nuevoEstado = opcion.valor"
+                >
+                  <span class="opcion-dot" :style="{ background: opcion.color }"></span>
+                  <span class="opcion-label">{{ opcion.valor }}</span>
+                  <i
+                    v-if="nuevoEstado === opcion.valor"
+                    class="fas fa-check opcion-check"
+                    :style="{ color: opcion.color }"
+                  ></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Pie del modal -->
+            <div class="modal-footer">
+              <button class="btn-cancelar" @click="cerrarModal">
+                Cancelar
+              </button>
+              <button
+                class="btn-confirmar"
+                :disabled="nuevoEstado === citaSeleccionada?.estado || guardando"
+                :style="{ background: colorPorEstado(nuevoEstado) }"
+                @click="confirmarCambioEstado"
+              >
+                <i v-if="guardando" class="fas fa-spinner fa-spin"></i>
+                <i v-else class="fas fa-check"></i>
+                {{ guardando ? 'Guardando…' : 'Confirmar cambio' }}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
   </div>
 </template>
@@ -105,10 +180,23 @@ export default {
 
   data() {
     return {
-      busqueda:          '',
-      vistaDetalle:      false,
-      fechaSeleccionada: null,
-      citas:             [],
+      busqueda:           '',
+      vistaDetalle:       false,
+      fechaSeleccionada:  null,
+      citas:              [],
+
+      // Modal
+      mostrarModalEstado: false,
+      citaSeleccionada:   null,
+      nuevoEstado:        '',
+      guardando:          false,
+
+      estadosDisponibles: [
+        { valor: 'Agendado',    color: '#3b82f6' },
+        { valor: 'Finalizada',  color: '#10b981' },
+        { valor: 'Cancelada',   color: '#ef4444' },
+        { valor: 'Inasistencia',color: '#f59e0b' },
+      ],
     }
   },
 
@@ -173,9 +261,12 @@ export default {
   methods: {
     colorPorEstado(estado) {
       const colores = {
+        Agendado:    '#3b82f6',
+        Finalizada:  '#10b981',
+        Cancelada:   '#ef4444',
+        Inasistencia:'#f59e0b',
         programada:  '#3b82f6',
         Completada:  '#10b981',
-        Cancelada:   '#ef4444',
       }
       return colores[estado] ?? '#94a3b8'
     },
@@ -216,6 +307,44 @@ export default {
       if (!p) return
       localStorage.setItem('pacientePrecargar', JSON.stringify(p))
       window.location.href = '/PacienteNuevo'
+    },
+
+    // ── MODAL ──
+    abrirModalEstado(cita) {
+      this.citaSeleccionada   = cita
+      this.nuevoEstado        = cita.estado
+      this.mostrarModalEstado = true
+    },
+
+    cerrarModal() {
+      if (this.guardando) return
+      this.mostrarModalEstado = false
+      this.citaSeleccionada   = null
+      this.nuevoEstado        = ''
+    },
+
+    async confirmarCambioEstado() {
+      if (!this.citaSeleccionada || this.nuevoEstado === this.citaSeleccionada.estado) return
+
+      this.guardando = true
+      try {
+        await axios.patch(`/api/citas/${this.citaSeleccionada.id}/estado`, {
+          estado: this.nuevoEstado,
+        })
+
+        // Actualizar localmente sin recargar
+        const idx = this.citas.findIndex(c => c.id === this.citaSeleccionada.id)
+        if (idx !== -1) {
+          this.citas[idx] = { ...this.citas[idx], estado: this.nuevoEstado }
+        }
+
+        this.cerrarModal()
+      } catch (err) {
+        console.error('Error actualizando estado:', err)
+        alert('No se pudo actualizar el estado. Intenta nuevamente.')
+      } finally {
+        this.guardando = false
+      }
     },
   },
 }
@@ -297,9 +426,7 @@ export default {
   width: 100%;
   border-collapse: collapse;
 }
-.tabla-citas thead tr {
-  background: #f8fafc;
-}
+.tabla-citas thead tr { background: #f8fafc; }
 .tabla-citas th {
   padding: 12px 16px;
   text-align: left;
@@ -356,14 +483,20 @@ export default {
 }
 
 .estado-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   border-radius: 8px;
   padding: 4px 10px;
   font-size: .75rem;
   font-weight: 700;
+  transition: opacity .15s, transform .15s;
+  user-select: none;
+}
+.estado-badge:hover {
+  opacity: .85;
+  transform: translateY(-1px);
 }
 
-/* ── ALERTA INCOMPLETO ── */
 .alerta-incompleto {
   display: inline-flex;
   align-items: center;
@@ -382,9 +515,7 @@ export default {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(234, 88, 12, .2);
 }
-.alerta-incompleto i {
-  font-size: .78rem;
-}
+.alerta-incompleto i { font-size: .78rem; }
 
 .sin-citas {
   display: flex;
@@ -398,6 +529,207 @@ export default {
 .sin-citas i { font-size: 2.5rem; }
 .sin-citas p { font-size: .9rem; margin: 0; }
 
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-card {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .18);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+}
+
+.modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.modal-header h4 {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.modal-subtitulo {
+  margin: 3px 0 0;
+  font-size: .78rem;
+  color: #64748b;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .8rem;
+  transition: background .2s;
+}
+.modal-close:hover { background: #e2e8f0; color: #0f172a; }
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin: 0 0 12px;
+}
+
+.estado-opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.estado-opcion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 600;
+  color: #334155;
+  transition: border-color .2s, background .2s, color .2s, transform .15s;
+  text-align: left;
+}
+.estado-opcion:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  transform: translateX(3px);
+}
+.estado-opcion.activo {
+  font-weight: 800;
+}
+
+.opcion-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.opcion-label { flex: 1; }
+
+.opcion-check {
+  font-size: .8rem;
+  flex-shrink: 0;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-cancelar {
+  flex: 1;
+  height: 42px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  font-size: .84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-cancelar:hover { background: #f1f5f9; }
+
+.btn-confirmar {
+  flex: 2;
+  height: 42px;
+  border-radius: 12px;
+  border: none;
+  color: white;
+  font-size: .84rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity .2s, transform .15s;
+}
+.btn-confirmar:hover:not(:disabled) {
+  opacity: .88;
+  transform: translateY(-1px);
+}
+.btn-confirmar:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+/* ── TRANSICIÓN MODAL ── */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity .22s ease;
+}
+.modal-fade-enter-active .modal-card,
+.modal-fade-leave-active .modal-card {
+  transition: transform .22s ease, opacity .22s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+.modal-fade-enter-from .modal-card {
+  transform: translateY(16px) scale(.97);
+  opacity: 0;
+}
+.modal-fade-leave-to .modal-card {
+  transform: translateY(8px) scale(.98);
+  opacity: 0;
+}
+
+/* ── FULLCALENDAR ── */
 :deep(.fc) { font-family: inherit; }
 :deep(.fc-toolbar) { margin-bottom: 14px; }
 :deep(.fc-toolbar-title) { font-size: 1.1rem; font-weight: 800; }

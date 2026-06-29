@@ -16,6 +16,7 @@
 
       <input type="hidden" name="_token" :value="csrfToken">
       <input type="hidden" name="paciente_id" :value="pacienteEncontrado ? pacienteEncontrado.id : ''">
+      <input type="hidden" name="estado" value="Agendado">
 
       <div class="form-grid">
 
@@ -107,19 +108,6 @@
           </div>
         </div>
 
-        <!-- Estado -->
-        <div class="form-group">
-          <label>Estado</label>
-          <div class="input-modern">
-            <i class="fas fa-check-circle"></i>
-            <select name="estado">
-              <option value="programada">Programada</option>
-              <option value="Completada">Completada</option>
-              <option value="Cancelada">Cancelada</option>
-            </select>
-          </div>
-        </div>
-
         <!-- Observaciones -->
         <div class="form-group full">
           <label>Observaciones</label>
@@ -158,12 +146,12 @@ export default {
 
   data() {
     return {
-      nombrePaciente:          '',
-      observaciones:           '',
-      pacienteEncontrado:      null,
-      sugerenciasPacientes:    [],
+      nombrePaciente:           '',
+      observaciones:            '',
+      pacienteEncontrado:       null,
+      sugerenciasPacientes:     [],
       especialidadSeleccionada: '',
-      medicosFiltrados:        [],
+      medicosFiltrados:         [],
     }
   },
 
@@ -187,10 +175,10 @@ export default {
     },
 
     filtrarMedicos() {
-  this.medicosFiltrados = this.medicos.filter(m =>
-    Number(m.especialidad_id) === Number(this.especialidadSeleccionada)
-  )
-},
+      this.medicosFiltrados = this.medicos.filter(m =>
+        Number(m.especialidad_id) === Number(this.especialidadSeleccionada)
+      )
+    },
   }
 }
 </script>
@@ -293,7 +281,6 @@ export default {
   cursor: not-allowed;
 }
 
-/* Autocomplete */
 .autocomplete-list {
   position: absolute;
   top: calc(100% + 6px);

@@ -8,7 +8,7 @@
             <calendario></calendario>
         </div>
         <div style="flex: 1;">
-            <resumen-medico></resumen-medico>
+            <resumen-medico :citas="citas" :pendientes="citasPendientes"></resumen-medico>
         </div>
     </div>
 </template>
@@ -17,6 +17,7 @@ import AgendaMedica from './agendamedica.vue';
 import DrAdmin from './dradmin.vue';
 import Calendario from './calendario.vue';  
 import ResumenMedico from './Resumenmedico.vue';
+import axios from 'axios';
 
     export default {
         components: {
@@ -27,10 +28,33 @@ import ResumenMedico from './Resumenmedico.vue';
         },
         data() {
             return {
+                citas:[]
                 // Aquí puedes agregar datos específicos para MasterCitas si es necesario
             }
         },
+        watch: {
+            citas(nuevo) {
+                nuevo.forEach(c => {
+                console.log('ESTADO:', c.estado)
+                })
+            }
+        },
+
+        mounted() {
+            axios.get('/api/citas')
+            .then(res => {
+                this.citas = res.data
+            })
+            .catch(err => console.error(err))
+        },
         methods: {
+            obtenerCitas (){
+                axios.get ('/api/citas')
+                        .then(res =>{
+                            this.citas = res.data
+                        })
+                        .catch(err => console.error(err))
+            }
             // Aquí puedes agregar métodos específicos para MasterCitas si es necesario
         }
     }
