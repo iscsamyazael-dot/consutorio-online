@@ -41,7 +41,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
     Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
     // Ruta para procesar el formulario y guardar el registro en las tablas
-    Route::post('medicos/store', [MedicoController::class, 'store'])->name('medicos.store');
+    Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
+    Route::get('/medicos-horarios', [MedicoController::class, 'index']);
 });
 
 Route::resource('especialidades', SpecialtyController::class);
@@ -142,6 +143,9 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
     Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
     
 });
+Route::resource('medicos', MedicoController::class);
+Route::resource('especialidades', SpecialtyController::class);
+
 
 
 
@@ -264,9 +268,9 @@ Route::get('MedicosAlta',function(){
 });
 
 // RUTA QUE LLEVA A LA VISTA DE REGISTRAR UN MEDICO
-Route::get('medicos/medicocreate', function () {
+Route::get('RegistroMedico', function () {
     return view('medicos.medicocreate');
-})->name('medicocreate');
+});
 
 
 

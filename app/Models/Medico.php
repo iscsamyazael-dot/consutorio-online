@@ -1,10 +1,8 @@
 <?php
 
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 
 class Medico extends Model
 {
@@ -21,7 +19,7 @@ class Medico extends Model
         'activo'
     ];
 
-    // Relación opcional por si después necesitas traer el nombre de la especialidad
+    // Un médico pertenece a una especialidad
     public function especialidad()
     {
         return $this->belongsTo(Specialty::class, 'especialidad_id');
@@ -31,5 +29,6 @@ class Medico extends Model
     {
         return $this->hasMany(HorarioMedico::class, 'medico_id');
     }
+
 
 }

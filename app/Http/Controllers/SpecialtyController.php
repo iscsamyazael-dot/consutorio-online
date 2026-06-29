@@ -10,6 +10,9 @@ class SpecialtyController extends Controller
     // Vista principal
     public function index(Request $request)
     {
+
+        return $specialties = Specialty::all();
+
         $specialties = Specialty::query()
             ->when($request->search, function ($query, $search) {
                 $query->where('nombre', 'like', "%{$search}%");
