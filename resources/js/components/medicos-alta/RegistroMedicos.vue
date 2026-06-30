@@ -293,7 +293,7 @@ import ApiService from '../../services/ApiService.js'
 export default {
 
         
-    // 1. AGREGA ESTA LÍNEA PARA AVISARLE A VUE QUE ESTE EVENTO ES MÍO
+    // ESTA LÍNEA SIRVE PARA AVISARLE A VUE QUE ESTE EVENTO ES MÍO
     emits: ['volver'],
 
     data() {
@@ -334,7 +334,7 @@ export default {
         }
 
     },
-
+ 
     mounted() {
 
         this.obtenerEspecialidades();

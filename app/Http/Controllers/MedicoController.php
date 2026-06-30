@@ -150,4 +150,20 @@ class MedicoController extends Controller
     {
     }
 
+    public function filtrar_medico(Request $request)
+    {
+        $buscar = $request->buscar;
+    
+        return Medico::where('nombre', 'like', "%{$buscar}%")
+            ->orWhere('especialidad', 'like', "%{$buscar}%")
+            ->orWhere('folio', 'like', "%{$buscar}%")
+            ->select(
+                'folio',
+                'nombre', 
+                'cedula_profesional', 
+                'especialidad_id', 
+            )
+            ->get();
+    }
+
 }

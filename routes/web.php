@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     // Ruta para procesar el formulario y guardar el registro en las tablas
     Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
     Route::get('/medicos-horarios', [MedicoController::class, 'index']);
+    Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);
 });
 
 Route::resource('pacientes', PacienteController::class);

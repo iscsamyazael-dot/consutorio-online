@@ -68,11 +68,12 @@
                 </div>
                 <div class="col-md-6">
                     <div class="input-group">
-                        <input
-                            type="text"
-                            class="form-control"
-                            placeholder="Buscar doctor..."
-                        >
+                        <input 
+                            v-model="buscar"
+                            type="text" 
+                            class="form-control" 
+                            placeholder="Buscar doctor..." 
+                        />
                         <div class="input-group-append">
                             <button class="btn btn-outline-secondary">
                                 <i class="fas fa-search"></i>
@@ -83,7 +84,7 @@
             </div>
         </div>
 
-        <div class="card-body p-0">
+        <div class="table-responsive card-body p-0">
             <table class="table table-hover text-nowrap">
                 <thead class="thead-light">
                     <tr>
@@ -98,15 +99,12 @@
                 </thead>
                 <tbody>
                     
-                    <tr v-for="medico in medicos" :key="medico.medico_id">
-                        
-                        
+                    <tr v-for="medico in medicosFiltrados" :key="medico.id">
+                    
                         <td>{{ medico.folio }}</td>
-
-                        <!-- Nombre del Médico -->
+                        
                         <td>{{ medico.nombre }}</td>
 
-                        <!-- Especialidad -->
                         <td>{{ medico.especialidad ? medico.especialidad.nombre : 'Sin especialidad' }}</td>
 
                         <!-- Horario Concatenado (Tomando la hora del primer y último horario como referencia) -->
@@ -117,33 +115,53 @@
                         }}
                         </td>
 
-                        <!-- Días Laborales (Mapeando el arreglo de horarios) -->
-                        <td>
-                        {{ medico.horarios && medico.horarios.length 
-                            ? medico.horarios.map(h => {
-                                const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                                return dias[h.dia_semana] || 'Desconocido';
-                            }).join(', ')
-                            : 'Sin días de atención' 
-                        }}
-                        </td>
+                             <!-- Días Laborales (Mapeando el arreglo de horarios) -->
+                            <td class="align-middle">
+                                <!-- El secreto: un contenedor con ancho máximo que obliga al contenido a saltar de línea -->
+                                <div style="max-width: 180px; width: 100%;">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <!-- Convertimos el string largo en elementos individuales usando .split() -->
+                                        <span 
+                                            v-for="(dia, index) in medico.dias_laborales?.split(', ')" 
+                                            :key="index" 
+                                            class="badge bg-light text-dark border fw-normal"
+                                            style="font-size: 0.85rem;"
+                                            >
+                                            {{ dia }}
+                                        </span>
+                                    </div>
+                                </div>
+                                {{ medico.horarios && medico.horarios.length 
+                                    ? medico.horarios.map(h => {
+                                        const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                                        return dias[h.dia_semana] || 'Desconocido';
+                                    }).join(', ')
+                                    : 'Sin días de atención' 
+                                }}
+                            </td>
 
-
-                        <td>
-                            
+                        <td>                            
                             <span class="badge badge-success">
                                 Activo
                             </span>
                         </td>
 
                         <td>
-                            <button class="btn btn-sm btn-info text-white" title="Ver">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-warning text-white" title="Editar">
+                            
+                            <button  
+                                class="btn btn-sm btn-warning text-white" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalEditarMedico"
+                                @click="prepararEditar(medico)"
+                            >
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger" title="Eliminar">
+                            <button 
+                                class="btn btn-sm btn-danger" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalEliminarMedico"
+                                @click=""
+                            >
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
@@ -153,6 +171,36 @@
         </div>
     </div>
 </div>
+
+
+
+
+
+
+<!--MODAL ELIMINAR MEDICO-->
+
+<div class="modal fade" id="modalEliminarMedico" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalEliminarLabel">Confirmar Eliminación</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center p-4">
+        <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 2.5rem;"></i>
+        <p class="fs-5 mb-1">¿Realmente quieres eliminar a este médico?</p>
+        <p class="text-muted fw-bold">{{ medicoSeleccionado.nombre }}</p>
+      </div>
+      <div class="modal-footer d-flex justify-content-center">
+        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger px-4" @click="confirmarEliminar">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
 </template>
 
 <script>
@@ -164,9 +212,17 @@ export default {
     data() {
 
         return {
-
+                
+            medicoSeleccionado: {
+                folio: '',
+                nombre: '',
+                especialidad: '',
+                horario: '',
+                dias_laborales: '',
+                estado: ''
+            },
+            buscar: '',    // Vinculado al input de texto
             medicos: [],
-
             especialidades: [],
 
             dias: [
@@ -188,10 +244,29 @@ export default {
 
     },
 
+
+    computed: {
+        // Esta función filtra localmente los médicos de la tabla en tiempo real
+        medicosFiltrados() {
+            // Si el input está vacío, muestra la lista completa de la tabla
+            if (!this.buscar.trim()) {
+                return this.medicos;
+            }
+            const query = this.buscar.toLowerCase();
+            // Filtra sobre el array de la memoria local
+            return this.medicos.filter(medico => {
+                return medico.nombre && medico.nombre.toLowerCase().includes(query);
+            });
+        }
+    },
+                
+
+
     mounted() {
 
         this.obtenerEspecialidades();
         this.obtenerMedicos();
+        this.buscarMedico();
 
     },
 
@@ -237,6 +312,21 @@ export default {
 
             }
 
+        },
+
+        async buscarMedico() {
+            // Si borran el buscador, puedes traer todos los médicos de nuevo o vaciar
+            if (!this.buscar.trim()) {
+                // Opcional: puedes llamar a tu método inicial para listar todo
+                 this.getMedicos(); 
+            }
+            
+            try {
+                const response = await ApiService.get('/buscarMedico?buscar=' + this.buscar);
+                this.medicos = response.data;
+            } catch (error) {
+                console.error('No se encuentran resultados', error);
+            }
         },
 
 
