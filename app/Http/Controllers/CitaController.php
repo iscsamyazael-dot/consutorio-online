@@ -123,16 +123,7 @@ class CitaController extends Controller
         );
     }
 
-    /**
-     * ============================================
-     * Guarda una nueva cita.
-     *
-     * Responde en JSON porque el formulario de Vue
-     * lo envía por AJAX (fetch), para poder mostrar
-     * el mensaje de "Cita agendada correctamente"
-     * sin recargar la página.
-     * ============================================
-     */
+
     public function store(Request $request)
     {
         // Validación de datos.
