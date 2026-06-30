@@ -9,14 +9,14 @@
 
 @section('content')
 <div id="app">
-    <!-- <masterprocita
+    <masterprocita
         store-url="{{ route('citas.store') }}"
         index-url="{{ route('citas.index') }}"
         csrf-token="{{ csrf_token() }}"
         :pacientes="{{ json_encode($pacientes) }}"
         :medicos="{{ json_encode($medicos) }}"
         :especialidades="{{ json_encode($especialidades) }}"
-    ></masterprocita> -->
+    ></masterprocita>
 </div>
 @stop
 @section('js')
