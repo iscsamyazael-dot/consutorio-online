@@ -1,6 +1,5 @@
-
 <template>
-    <agenda-medica></agenda-medica>
+    <agenda-medica :create-url="createUrl"></agenda-medica>
     <dradmin></dradmin>
 
     <div style="display: flex; gap: 16px; align-items: flex-start;">
@@ -13,6 +12,7 @@
     </div>
 </template>
 <script> 
+//importa los componenetes hijos que se usan en este template
 import AgendaMedica from './agendamedica.vue';
 import DrAdmin from './dradmin.vue';
 import Calendario from './calendario.vue';  
@@ -28,8 +28,9 @@ import axios from 'axios';
         },
         data() {
             return {
-                citas:[]
-                // Aquí puedes agregar datos específicos para MasterCitas si es necesario
+                citas: [],
+                createUrl: '/citas/create',//Url a la que debe apuntar el voton Nueva cita  dentro de agenda medica 
+                citasPendientes: [] // antes no existía y se usaba en el template, ver nota abajo
             }
         },
         watch: {
@@ -55,7 +56,6 @@ import axios from 'axios';
                         })
                         .catch(err => console.error(err))
             }
-            // Aquí puedes agregar métodos específicos para MasterCitas si es necesario
         }
     }
 </script>

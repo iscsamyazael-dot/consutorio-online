@@ -60,6 +60,8 @@ Route::get('ConsultaInteligente',function(){
 });
 //codigo  de las citas //
 Route::resource('citas', App\Http\Controllers\CitaController::class);
+//actualiza el estado 
+Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class, 'actualizarEstado'])->name('citas.estado');
 // api de calendario//
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
 

@@ -126,11 +126,19 @@ class CitaController extends Controller
     /**
      * ============================================
      * Guarda una nueva cita.
+     *
+     * Responde en JSON porque el formulario de Vue
+     * lo envía por AJAX (fetch), para poder mostrar
+     * el mensaje de "Cita agendada correctamente"
+     * sin recargar la página.
      * ============================================
      */
     public function store(Request $request)
     {
-        // Validación de datos
+        // Validación de datos.
+        // Si algo falla, Laravel responde con un
+        // error 422 en JSON (porque el fetch manda
+        // el header "Accept: application/json").
         $request->validate([
 
             'paciente_id'     => 'required|exists:pacientes,id',
@@ -142,8 +150,10 @@ class CitaController extends Controller
 
         ]);
 
-        // Guarda la cita
-        Cita::create([
+        // Guarda la cita.
+        // IMPORTANTE: se guarda en la variable $cita
+        // para poder devolverla en la respuesta de abajo.
+        $cita = Cita::create([
 
             'folio' => 'CIT-' . time(),
 
@@ -162,10 +172,14 @@ class CitaController extends Controller
 
         ]);
 
-        return redirect()
-            ->route('citas.index')
-            ->with('success', 'Cita registrada correctamente.');
-    }
+        // Responde en JSON con el mensaje de éxito.
+        return response()->json([
+
+            'message' => 'Cita agendada correctamente',
+            'cita'    => $cita,
+
+        ]);
+    } // ← cierre del método store()
 
     /**
      * ============================================
@@ -188,8 +202,10 @@ class CitaController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Busca la cita por su id, o falla si no existe.
         $cita = Cita::findOrFail($id);
 
+        // Actualiza todos los campos con los nuevos datos.
         $cita->update([
 
             'paciente_id'     => $request->paciente_id,
@@ -206,6 +222,7 @@ class CitaController extends Controller
 
         ]);
 
+        // Devuelve la cita ya actualizada.
         return response()->json($cita);
     }
 
@@ -252,6 +269,7 @@ class CitaController extends Controller
      */
     public function destroy($id)
     {
+        // Borra la cita usando su id.
         Cita::destroy($id);
 
         return response()->json([

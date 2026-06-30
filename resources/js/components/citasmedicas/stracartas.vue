@@ -6,7 +6,7 @@
                 <i class="fas fa-calendar-day"></i>
             </div>
             <div>
-                <h2>12</h2>
+                <h2>{{ totalCitas }}</h2>
                 <p>Citas registradas hoy</p>
             </div>
         </div>
@@ -16,7 +16,7 @@
                 <i class="fas fa-check-circle"></i>
             </div>
             <div>
-                <h2>8</h2>
+                <h2>{{ confirmadas }}</h2>
                 <p>Confirmadas</p>
             </div>
         </div>
@@ -26,7 +26,7 @@
                 <i class="fas fa-clock"></i>
             </div>
             <div>
-                <h2>4</h2>
+                <h2>{{ canceladas }}</h2>
                 <p>Canceladas</p>
             </div>
         </div>
@@ -36,7 +36,55 @@
 
 <script>
 export default {
-    name: 'Stracartas'
+    name: 'Stracartas',
+    props: {
+        citas: {
+            type: Array,
+            default: () => []
+        }
+    },
+    data() {
+        return {
+            totalCitas: 0,
+            confirmadas: 0,
+            canceladas: 0
+        }
+    },
+    watch: {
+        citas: {
+            immediate: true,
+            handler(nuevasCitas) {
+                this.calcularEstadisticas(nuevasCitas)
+            }
+        }
+    },
+    methods: {
+        calcularEstadisticas(citas) {
+            // Filtra solo las citas cuya 'fecha' sea hoy.
+            // Asume formato 'YYYY-MM-DD' (el típico de Laravel/MySQL para columnas date).
+            const hoy = new Date().toISOString().split('T')[0]
+
+            const citasHoy = citas.filter(c => {
+                if (!c.fecha) return false
+                // por si la fecha viene con hora incluida (datetime), recorta a los primeros 10 caracteres
+                return c.fecha.substring(0, 10) === hoy
+            })
+
+            this.totalCitas = citasHoy.length
+
+            this.confirmadas = citasHoy.filter(c =>
+                this.normalizar(c.estado) === 'confirmada'
+            ).length
+
+            this.canceladas = citasHoy.filter(c =>
+                this.normalizar(c.estado) === 'cancelada'
+            ).length
+        },
+        normalizar(valor) {
+            // Compara sin importar mayúsculas/minúsculas ni espacios extra
+            return (valor || '').toString().trim().toLowerCase()
+        }
+    }
 }
 </script>
 
@@ -83,15 +131,12 @@ export default {
     flex-shrink: 0;
 }
 
-/* Azul */
 .stat-card.blue .stat-icon { background: #E6F1FB; color: #185FA5; }
 .stat-card.blue h2         { color: #185FA5; }
 
-/* Verde */
 .stat-card.green .stat-icon { background: #EAF3DE; color: #3B6D11; }
 .stat-card.green h2         { color: #3B6D11; }
 
-/* Naranja */
 .stat-card.orange .stat-icon { background: #FAEEDA; color: #854F0B; }
 .stat-card.orange h2         { color: #854F0B; }
 </style>

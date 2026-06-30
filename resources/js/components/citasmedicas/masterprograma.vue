@@ -1,13 +1,14 @@
 <template>
     <nuevaconsulta></nuevaconsulta>
-    <stracartas></stracartas>
+    <stracartas :citas="citas"></stracartas>
     <registrarconsulta
         :store-url="storeUrl"
-        :index-url="indexUrl"
+        :index-url="paginaCitasUrl"
         :csrf-token="csrfToken"
         :pacientes="pacientes"
         :medicos="medicos"
-        :especialidades="especialidades">
+        :especialidades="especialidades"
+        @cita-creada="cargarCitas">
     </registrarconsulta>
 </template>
 
@@ -29,9 +30,33 @@ export default {
     },
     data() {
         return {
-            storeUrl:  '/citas',
-            indexUrl:  '/citas',
-            csrfToken: document.querySelector('meta[name="csrf-token"]').content
+            storeUrl:      '/citas',        // para guardar la cita (POST)
+            apiCitasUrl:   '/api/citas',     // para TRAER datos en JSON (cargarCitas)
+            paginaCitasUrl:'/citas',         // para "Cancelar" y redirigir tras guardar (página normal)
+            csrfToken:     document.querySelector('meta[name="csrf-token"]').content,
+            citas: []
+        }
+    },
+    mounted() {
+        this.cargarCitas();
+    },
+    methods: {
+        async cargarCitas() {
+            try {
+                const res = await fetch(this.apiCitasUrl, {
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+                this.citas = Array.isArray(data) ? data : (data.data || []);
+            } catch (e) {
+                console.error('Error al cargar citas:', e);
+                this.citas = [];
+            }
         }
     }
 }

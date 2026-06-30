@@ -164,6 +164,16 @@
       </Transition>
     </Teleport>
 
+    <!-- ── TOAST DE CONFIRMACIÓN ── -->
+    <Teleport to="body">
+      <Transition name="toast-slide">
+        <div v-if="toast" class="toast-notificacion" :class="toast.tipo">
+          <i :class="toast.icono"></i>
+          <span>{{ toast.mensaje }}</span>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
 
@@ -191,18 +201,23 @@ export default {
       nuevoEstado:        '',
       guardando:          false,
 
+      // Toast
+      toast:              null,
+      toastTimer:         null,
+
       estadosDisponibles: [
-        { valor: 'Agendado',    color: '#3b82f6' },
-        { valor: 'Finalizada',  color: '#10b981' },
-        { valor: 'Cancelada',   color: '#ef4444' },
-        { valor: 'Inasistencia',color: '#f59e0b' },
+        { valor: 'Agendado',     color: '#3b82f6' },
+        { valor: 'Finalizada',   color: '#10b981' },
+        { valor: 'Cancelada',    color: '#ef4444' },
+        { valor: 'Inasistencia', color: '#f59e0b' },
       ],
     }
   },
 
   mounted() {
-    axios.get('/api/citas')
-      .then(res => { this.citas = res.data })
+    fetch('/api/citas')
+      .then(res => res.json())
+      .then(data => { this.citas = data })
       .catch(err => console.error('Error cargando citas:', err))
   },
 
@@ -309,6 +324,22 @@ export default {
       window.location.href = '/PacienteNuevo'
     },
 
+    // ── TOAST ──
+    mostrarToast(mensaje, tipo = 'exito') {
+      // Cancela el timer anterior si hay uno activo
+      if (this.toastTimer) clearTimeout(this.toastTimer)
+
+      this.toast = {
+        mensaje,
+        tipo,
+        icono: tipo === 'exito' ? 'fas fa-check-circle' : 'fas fa-times-circle',
+      }
+
+      this.toastTimer = setTimeout(() => {
+        this.toast = null
+      }, 3000)
+    },
+
     // ── MODAL ──
     abrirModalEstado(cita) {
       this.citaSeleccionada   = cita
@@ -328,9 +359,16 @@ export default {
 
       this.guardando = true
       try {
-        await axios.patch(`/api/citas/${this.citaSeleccionada.id}/estado`, {
-          estado: this.nuevoEstado,
+        const res = await fetch(`/citas/${this.citaSeleccionada.id}/estado`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+          },
+          body: JSON.stringify({ estado: this.nuevoEstado }),
         })
+
+        if (!res.ok) throw new Error('Error al actualizar')
 
         // Actualizar localmente sin recargar
         const idx = this.citas.findIndex(c => c.id === this.citaSeleccionada.id)
@@ -339,9 +377,11 @@ export default {
         }
 
         this.cerrarModal()
+        this.mostrarToast(`Estado actualizado a "${this.nuevoEstado}" correctamente.`, 'exito')
+
       } catch (err) {
         console.error('Error actualizando estado:', err)
-        alert('No se pudo actualizar el estado. Intenta nuevamente.')
+        this.mostrarToast('No se pudo actualizar el estado. Intenta nuevamente.', 'error')
       } finally {
         this.guardando = false
       }
@@ -707,6 +747,33 @@ export default {
   cursor: not-allowed;
 }
 
+/* ── TOAST ── */
+.toast-notificacion {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: .85rem;
+  font-weight: 700;
+  color: white;
+  z-index: 99999;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .15);
+  pointer-events: none;
+}
+.toast-notificacion.exito {
+  background: #10b981;
+  box-shadow: 0 8px 28px rgba(16, 185, 129, .35);
+}
+.toast-notificacion.error {
+  background: #ef4444;
+  box-shadow: 0 8px 28px rgba(239, 68, 68, .35);
+}
+.toast-notificacion i { font-size: 1rem; }
+
 /* ── TRANSICIÓN MODAL ── */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
@@ -727,6 +794,20 @@ export default {
 .modal-fade-leave-to .modal-card {
   transform: translateY(8px) scale(.98);
   opacity: 0;
+}
+
+/* ── TRANSICIÓN TOAST ── */
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: opacity .3s ease, transform .3s ease;
+}
+.toast-slide-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translateY(16px);
 }
 
 /* ── FULLCALENDAR ── */

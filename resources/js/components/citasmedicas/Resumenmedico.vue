@@ -54,19 +54,19 @@ export default {
 
   computed: {
     totalCitas() {
-      return this.citas.length;
+      return this.citas.length
     },
 
     citasCompletadas() {
-      return this.citas.filter(c => c.estado === 'completada').length;
+      return this.citas.filter(c => c.estado === 'Finalizada').length
     },
 
-  citasPendientesCount() {
-    return this.citas.filter(c =>
-      (c.estado || '').toLowerCase().trim() === 'agendado'
-    ).length
+    citasPendientesCount() {
+      return this.citas.filter(c =>
+        (c.estado || '').toLowerCase().trim() === 'agendado'
+      ).length
+    }
   }
-}
 }
 </script>
 
