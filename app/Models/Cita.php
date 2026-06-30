@@ -6,10 +6,30 @@ use Illuminate\Database\Eloquent\Model;
 
 class Cita extends Model
 {
-    protected $fillable = ['paciente_id', 'fecha_cita', 'hora_cita', 'estado', 'motivo'];
+    protected $fillable = [
+        'folio',
+        'paciente_id',
+        'especialidad_id',
+        'medico_id',
+        'fecha',
+        'hora',
+        'tipo',
+        'estado',
+        'observaciones',
+    ];
 
     public function paciente()
     {
         return $this->belongsTo(Paciente::class);
+    }
+
+    public function medico()
+    {
+        return $this->belongsTo(Medico::class);
+    }
+
+    public function especialidad()
+    {
+        return $this->belongsTo(Especialidad::class);
     }
 }

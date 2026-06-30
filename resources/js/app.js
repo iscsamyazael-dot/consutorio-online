@@ -38,14 +38,27 @@ import PanelContraseña from './components/configuracion-sistema/PanelContraseñ
 //MODULO DE ALTA MEDICOS
 import AltaMedicos from './components/medicos-alta/PanelMedicos.vue'
 import RegistroMedico from './components/medicos-alta/PanelRegistro.vue'
-
+ 
+//MODULO AGENDA 
+import masteragenda from './components/citasmedicas/mastercitas.vue'
+import masterprocita from './components/citasmedicas/masterprograma.vue'
 
 const app = createApp({})
 
 app.component(
     'Especialidades',
     Especialidades
-)
+);
+
+app.component(
+    'masterprocita',
+    masterprocita
+);
+
+app.component(
+    'masteragenda',
+    masteragenda
+);
 
 app.component(
      'alta-medicos',
@@ -95,23 +108,22 @@ app.component(
 app.component(
     'centroconsultas',
     centroconsultas
+);
 
-)
 app.component(
     'nuevaconsultamedica',
     nuevaconsultamedica
-)
+);
 
 app.component(
     'consultapaciente',
     consultapaciente 
-)
+);
 
 app.component(
     'expedientepaciente',
     expedientepaciente
- 
-)
+);
 
 app.component(
     'master-registro-paciente', 

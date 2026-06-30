@@ -1,0 +1,29 @@
+services:
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    container_name: evolution-api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8
+    container_name: evolution-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: evolution
+    ports:
+      - "3307:3306"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: evolution-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped

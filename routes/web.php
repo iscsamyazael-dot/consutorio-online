@@ -16,6 +16,8 @@ use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CitaController;
 use Illuminate\Support\Facades\Route;
+use App\Services\WhatsAppService;
+use Illuminate\Support\Facades\Http;
 
 
 
@@ -183,8 +185,10 @@ Route::get('ConsultaInteligente',function(){
 });
 //codigo  de las citas //
 Route::resource('citas', App\Http\Controllers\CitaController::class);
+//actualiza el estado 
+Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class, 'actualizarEstado'])->name('citas.estado');
 // api de calendario//
-Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
+Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
 
 //  especialidades //
 Route::resource('specialties', SpecialtyController::class);
@@ -247,13 +251,6 @@ Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
        
 //Aqui termina la ruta parametrizada //
 
-
-require __DIR__.'/auth.php';
-
-Route::get('ListaConsultas', function () {
-    return view('consultas.index');
-});
-
 // Route::get('NuevaConsulta', function () {
 //     return view('consultas.create');
 // });
@@ -287,3 +284,25 @@ require __DIR__.'/auth.php';
 // });
 
 
+Route::get('/test-whatsapp', function () {
+
+    WhatsAppService::enviar(
+        '529991234567',
+        'Hola, prueba de WhatsApp desde Laravel'
+    );
+
+    return 'Mensaje enviado';
+});
+Route::get('/probar-n8n', function () {
+
+    $response = Http::withoutVerifying()->post(
+        'https://luna110604.app.n8n.cloud/webhook-test/d5aca0e1-0db0-4105-9712-cafc5e5d947c',
+        [
+            'mensaje' => 'Hola desde Laravel',
+            'modulo' => 'agendas',
+            'estado' => 'funcionando'
+        ]
+    );
+
+    return $response->json();
+});
