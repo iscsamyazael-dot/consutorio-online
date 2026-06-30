@@ -50,9 +50,9 @@
                     Fecha de Nacimiento
                 </label>
                 <div class="input-box">
-                    <input type="date" 
+                    <input type="date"
                         v-model="form.fecha_nacimiento"
-                        @change="calcularEdad" 
+                        @change="calcularEdad"
                         class="premium-input">
                     <span class="input-line"></span>
                 </div>
@@ -67,7 +67,6 @@
                         <input
                             type="number"
                             v-model.number="form.edad_anios"
-                            
                             class="premium-input"
                             placeholder="Años"
                             min="0"
@@ -185,27 +184,26 @@
             <div class="col-md-8 field-wrap" style="--delay:.1s">
                 <label class="form-label">
                     <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
-                       Foto del Paciente
-        </label>
-        <div class="foto-upload-area" @click="$refs.fotoInput.click()" @dragover.prevent @drop.prevent="onFotoDrop">
-            <img v-if="fotoPreview" :src="fotoPreview" class="foto-preview" alt="Foto paciente">
-            <div v-else class="foto-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M12 16a4 4 0 100-8 4 4 0 000 8zM3 9a2 2 0 012-2h.5l1.5-2h10l1.5 2H21a2 2 0 012 2v9a2 2 0 01-2 2H3a2 2 0 01-2-2V9z" stroke-linecap="round"/>
-                </svg>
-                <p>Clic o arrastra una foto</p>
-                <span>JPG, PNG — máx. 5MB</span>
+                    Foto del Paciente
+                </label>
+                <div class="foto-upload-area" @click="$refs.fotoInput.click()" @dragover.prevent @drop.prevent="onFotoDrop">
+                    <img v-if="fotoPreview" :src="fotoPreview" class="foto-preview" alt="Foto paciente">
+                    <div v-else class="foto-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 16a4 4 0 100-8 4 4 0 000 8zM3 9a2 2 0 012-2h.5l1.5-2h10l1.5 2H21a2 2 0 012 2v9a2 2 0 01-2 2H3a2 2 0 01-2-2V9z" stroke-linecap="round"/>
+                        </svg>
+                        <p>Clic o arrastra una foto</p>
+                        <span>JPG, PNG — máx. 5MB</span>
+                    </div>
+                    <button v-if="fotoPreview" type="button" class="foto-remove" @click.stop="removeFoto">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+                <input ref="fotoInput" type="file" accept="image/*" style="display:none" @change="onFotoChange">
             </div>
-            <button v-if="fotoPreview" type="button" class="foto-remove" @click.stop="removeFoto">
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                </svg>
-            </button>
         </div>
-        <input ref="fotoInput" type="file" accept="image/*" style="display:none" @change="onFotoChange">
-    </div>
-
-</div>
 
         <!-- ══ DIVIDER ══ -->
         <div class="premium-divider">
@@ -453,7 +451,6 @@ export default {
                 alergia_medicamentos: '',
                 antecedentes: '',
                 nivel_urgencia: 'null',
-                // Triaje
                 presion_arterial: '',
                 saturacion: null,
                 temperatura: null,
@@ -467,26 +464,43 @@ export default {
         }
     },
 
+    // ✅ mounted va aquí, al mismo nivel que data, computed y methods
+    mounted() {
+        const raw = localStorage.getItem('pacientePrecargar')
+        if (!raw) return
+
+        const p = JSON.parse(raw)
+        localStorage.removeItem('pacientePrecargar')
+
+        this.form.nombre      = [p.nombre, p.apellido_paterno, p.apellido_materno].filter(Boolean).join(' ')
+        this.form.sexo        = p.sexo        || ''
+        this.form.curp        = p.curp        || ''
+        this.form.telefono    = p.telefono    || ''
+        this.form.email       = p.email       || ''
+        this.form.direccion   = p.direccion   || ''
+        this.form.tipo_sangre = p.tipo_sangre || ''
+        this.form.edad_anios  = p.edad        || 0
+        this.form.estado      = p.estado      || ''
+    },
+
     computed: {
-        //Función para calcular la edad con base a la fecha de nacimiento//
-        calcularEdad() {
-        if (!this.form.fecha_nacimiento) return '';
-            const fechaNacimiento = new Date(this.form.fecha_nacimiento);
-            const hoy = new Date();
-            let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-            const mes = hoy.getMonth() - fechaNacimiento.getMonth();
-        if (
-            mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())
-        ) {
-            edad--;
-        }
-          this.form.edad_anios = edad;
-        }
-        ///Termina la función para calcular la edad con la fecha de nacimiento /////
+        // ✅ calcularEdad como método, no como computed (se llama con @change)
     },
 
     methods: {
-    
+
+        calcularEdad() {
+            if (!this.form.fecha_nacimiento) return
+            const fechaNacimiento = new Date(this.form.fecha_nacimiento)
+            const hoy = new Date()
+            let edad = hoy.getFullYear() - fechaNacimiento.getFullYear()
+            const mes = hoy.getMonth() - fechaNacimiento.getMonth()
+            if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+                edad--
+            }
+            this.form.edad_anios = edad
+        },
+
         onFotoChange(e) {
             const file = e.target.files[0]
             if (file) this.procesarFoto(file)
@@ -533,12 +547,12 @@ export default {
                 talla: '',
                 sintomas: '',
                 motivo_consulta: ''
-            };
+            }
         },
-        // guarda paciente sin no hay errores 
+
         async guardarPaciente() {
             try {
-                const response = await ApiService.post('/pacientes',this.form)
+                const response = await ApiService.post('/pacientes', this.form)
                 console.log('Guardado:', response.data)
                 Swal.fire({
                     icon: 'success',
@@ -546,8 +560,7 @@ export default {
                     text: 'El paciente fue guardado exitosamente.',
                     confirmButtonText: 'Aceptar'
                 })
-                // limpia el  formulario la momento de guardar 
-                this.limpiarFormulario();
+                this.limpiarFormulario()
             } catch (error) {
                 console.error(error)
                 Swal.fire({
