@@ -140,14 +140,98 @@ class MedicoController extends Controller
 
     public function show($id)
     {
+        $medico = Medico::with([
+            'especialidad',
+            'horarios'
+        ])->findOrFail($id);
+
+        return response()->json($medico);
     }
 
     public function update(Request $request, $id)
     {
+        $request->validate([
+            'nombre'          => 'required|string|max:255',
+            'especialidad_id' => 'required|exists:especialidades,id',
+            'estado'          => 'required|in:Activo,Inactivo',
+            'hora_inicio'     => 'required',
+            'hora_fin'        => 'required',
+            'dias'            => 'required|array|min:1',
+        ]);
+
+        $mapeoDias = [
+            'Lunes'     => 1,
+            'Martes'    => 2,
+            'Miércoles' => 3,
+            'Jueves'    => 4,
+            'Viernes'   => 5,
+            'Sábado'    => 6,
+            'Domingo'   => 7,
+        ];
+
+        DB::beginTransaction();
+
+        try {
+            $medico = Medico::findOrFail($id);
+
+            $medico->nombre          = $request->nombre;
+            $medico->especialidad_id = $request->especialidad_id;
+            $medico->activo          = $request->estado === 'Activo' ? 1 : 0;
+            $medico->save();
+
+            // Borra los horarios anteriores y los recrea desde cero
+            HorarioMedico::where('medico_id', $medico->id)->delete();
+
+            foreach ($request->dias as $diaNombre) {
+                HorarioMedico::create([
+                    'medico_id'         => $medico->id,
+                    'dia_semana'        => $mapeoDias[$diaNombre] ?? 1,
+                    'hora_inicio'       => $request->hora_inicio,
+                    'hora_fin'          => $request->hora_fin,
+                    'duracion_consulta' => 30,
+                ]);
+            }
+
+            DB::commit();
+
+            // Devuelve el médico actualizado con sus relaciones para que Vue lo use
+            $medico->load(['especialidad', 'horarios']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Médico actualizado correctamente',
+                'medico'  => $medico,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el médico',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function destroy($id)
     {
+        $medico = Medico::find($id);
+
+        if (!$medico) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Médico no encontrado'
+            ], 404);   
+        }
+
+        $medico->activo = 0;
+        $medico->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Médico eliminado correctamente'
+        ]);
     }
 
     public function filtrar_medico(Request $request)

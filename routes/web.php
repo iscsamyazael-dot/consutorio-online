@@ -33,7 +33,12 @@ Route::middleware('auth')->group(function () {
     // Ruta para procesar el formulario y guardar el registro en las tablas
     Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
     Route::get('/medicos-horarios', [MedicoController::class, 'index']);
+    //ruta que filtra los medicos locales de la tabla 
     Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);
+    //para traer actualizar y eliminar medicos
+    // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
+    // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
+    // Route::delete('eliminarMedico/{id}', [MedicoController::class, 'destroy']);
 });
 
 Route::resource('pacientes', PacienteController::class);
