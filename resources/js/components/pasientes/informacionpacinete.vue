@@ -479,9 +479,10 @@ export default {
         this.form.email       = p.email       || ''
         this.form.direccion   = p.direccion   || ''
         this.form.tipo_sangre = p.tipo_sangre || ''
-        this.form.edad_anios  = p.edad        || 0
+        this.form.edad_anios  = p.edad        || ''
         this.form.estado      = p.estado      || ''
         this.form.alergias    = p.alergias    || ''
+        this.form.fecha_nacimiento = p.fecha_nacimiento || ''
     },
 
     computed: {
