@@ -63,10 +63,19 @@ class CitaController extends Controller
                     'tipo'   => $cita->tipo,
 
                     // Información del paciente
+                    // NOTA: se agregan todos los campos que necesita
+                    // el formulario de "Registrar Paciente" para poder
+                    // precargar los datos cuando están incompletos.
                     'paciente' => $cita->paciente ? [
 
-                        'id'     => $cita->paciente->id,
-                        'nombre' => $cita->paciente->nombre,
+                        'id'          => $cita->paciente->id,
+                        'nombre'      => $cita->paciente->nombre,
+                        'sexo'        => $cita->paciente->sexo,
+                        'telefono'    => $cita->paciente->telefono,
+                        'email'       => $cita->paciente->email,
+                        'direccion'   => $cita->paciente->direccion,
+                        'curp'        => $cita->paciente->curp,
+                        'tipo_sangre' => $cita->paciente->tipo_sangre,
 
                     ] : null,
 
