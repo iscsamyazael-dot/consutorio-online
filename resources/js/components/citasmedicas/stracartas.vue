@@ -73,16 +73,23 @@ export default {
             this.totalCitas = citasHoy.length
 
             this.confirmadas = citasHoy.filter(c =>
-                this.normalizar(c.estado) === 'confirmada'
+                this.normalizar(c.estado).includes('confirmad') ||
+                this.normalizar(c.estado).includes('agendad') ||
+                this.normalizar(c.estado).includes('programad')
             ).length
 
             this.canceladas = citasHoy.filter(c =>
-                this.normalizar(c.estado) === 'cancelada'
+                this.normalizar(c.estado).includes('cancelad')
             ).length
         },
         normalizar(valor) {
-            // Compara sin importar mayúsculas/minúsculas ni espacios extra
-            return (valor || '').toString().trim().toLowerCase()
+            // Compara sin importar mayúsculas/minúsculas, acentos ni espacios extra
+            return (valor || '')
+                .toString()
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
         }
     }
 }

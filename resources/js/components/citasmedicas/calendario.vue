@@ -131,7 +131,9 @@
                     : {}"
                   @click="nuevoEstado = opcion.valor"
                 >
-                  <span class="opcion-dot" :style="{ background: opcion.color }"></span>
+                  <span class="opcion-dot" :style="{ background: opcion.color }">
+                    <i :class="opcion.icono"></i>
+                  </span>
                   <span class="opcion-label">{{ opcion.valor }}</span>
                   <i
                     v-if="nuevoEstado === opcion.valor"
@@ -206,10 +208,10 @@ export default {
       toastTimer:         null,
 
       estadosDisponibles: [
-        { valor: 'Agendado',     color: '#3b82f6' },
-        { valor: 'Finalizada',   color: '#10b981' },
-        { valor: 'Cancelada',    color: '#ef4444' },
-        { valor: 'Inasistencia', color: '#f59e0b' },
+        { valor: 'Agendado',     color: '#3b82f6', icono: 'fas fa-calendar-alt' },
+        { valor: 'Finalizada',   color: '#10b981', icono: 'fas fa-check' },
+        { valor: 'Cancelada',    color: '#ef4444', icono: 'fas fa-times' },
+        { valor: 'Inasistencia', color: '#f59e0b', icono: 'fas fa-user-slash' },
       ],
     }
   },
@@ -260,6 +262,36 @@ export default {
         buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' },
         events: this.eventos,
 
+        eventContent: (arg) => {
+          const estado = arg.event.extendedProps.estado
+          const color  = this.colorPorEstado(estado)
+          const icono  = this.iconoPorEstado(estado)
+          const hora   = arg.timeText ? `${arg.timeText} ` : ''
+
+          const wrapper = document.createElement('div')
+          wrapper.style.display = 'flex'
+          wrapper.style.alignItems = 'center'
+          wrapper.style.gap = '4px'
+          wrapper.style.overflow = 'hidden'
+
+          const iconEl = document.createElement('i')
+          iconEl.className = `fas ${icono}`
+          iconEl.style.color = color
+          iconEl.style.fontSize = '.62rem'
+          iconEl.style.flexShrink = '0'
+
+          const textEl = document.createElement('span')
+          textEl.style.overflow = 'hidden'
+          textEl.style.textOverflow = 'ellipsis'
+          textEl.style.whiteSpace = 'nowrap'
+          textEl.textContent = `${hora}${arg.event.title}`
+
+          wrapper.appendChild(iconEl)
+          wrapper.appendChild(textEl)
+
+          return { domNodes: [wrapper] }
+        },
+
         dateClick: (info) => {
           this.fechaSeleccionada = info.dateStr
           this.vistaDetalle      = true
@@ -275,15 +307,55 @@ export default {
 
   methods: {
     colorPorEstado(estado) {
+      const clave = this.normalizarEstado(estado)
       const colores = {
-        Agendado:    '#3b82f6',
-        Finalizada:  '#10b981',
-        Cancelada:   '#ef4444',
-        Inasistencia:'#f59e0b',
-        programada:  '#3b82f6',
-        Completada:  '#10b981',
+        agendado:     '#3b82f6',
+        programada:   '#3b82f6',
+        programado:   '#3b82f6',
+        finalizada:   '#10b981',
+        finalizado:   '#10b981',
+        completada:   '#10b981',
+        completado:   '#10b981',
+        atendida:     '#10b981',
+        atendido:     '#10b981',
+        cancelada:    '#ef4444',
+        cancelado:    '#ef4444',
+        inasistencia: '#f59e0b',
+        ausente:      '#f59e0b',
+        'no asistio': '#f59e0b',
       }
-      return colores[estado] ?? '#94a3b8'
+      return colores[clave] ?? '#94a3b8'
+    },
+
+    iconoPorEstado(estado) {
+      const clave = this.normalizarEstado(estado)
+      const iconos = {
+        agendado:     'fa-calendar-alt',
+        programada:   'fa-calendar-alt',
+        programado:   'fa-calendar-alt',
+        finalizada:   'fa-check',
+        finalizado:   'fa-check',
+        completada:   'fa-check',
+        completado:   'fa-check',
+        atendida:     'fa-check',
+        atendido:     'fa-check',
+        cancelada:    'fa-times',
+        cancelado:    'fa-times',
+        inasistencia: 'fa-user-slash',
+        ausente:      'fa-user-slash',
+        'no asistio': 'fa-user-slash',
+      }
+      return iconos[clave] ?? 'fa-calendar-alt'
+    },
+
+    normalizarEstado(estado) {
+      if (!estado) return ''
+      return estado
+        .toString()
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // quita acentos para comparar mejor
     },
 
     formatearHora(hora) {
@@ -689,10 +761,15 @@ export default {
 }
 
 .opcion-dot {
-  width: 10px;
-  height: 10px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: .68rem;
 }
 
 .opcion-label { flex: 1; }
