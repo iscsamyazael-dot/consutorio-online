@@ -11,7 +11,7 @@
         </div>
 
         <!-- Emitimos el evento al hacer clic -->
-        <button @click="$emit('ir-a-registro')" class="btn btn-primary shadow-sm">
+        <button @click="$emit('ir-a-registro')" class="btn btn-primary shadow-sm btn-lg">
             <i class="fas fa-plus-circle mr-1"></i>
             Registrar Médico
         </button>
