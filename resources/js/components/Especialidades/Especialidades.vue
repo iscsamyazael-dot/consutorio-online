@@ -260,7 +260,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import ApiService from '../../services/ApiService.js';
 
 export default {
   data() {
@@ -270,14 +270,14 @@ export default {
       status: "",
       selected: {},
       specialtyToDelete: null,
-            // folio agregado al modelo del formulario
+      // folio agregado al modelo del formulario
       form: { id: null, nombre: "", doctor: "", folio: "", descripcion: "", estado: "Activo" },
       modales: { ver: false, nueva: false, editar: false, eliminar: false },
       toast: { visible: false, mensaje: "" },
       _toastTimer: null,
     };
   },
-// Filtra automáticamente las especialidades según el texto de búsqueda y el estado seleccionado.
+  // Filtra automáticamente las especialidades según el texto de búsqueda y el estado seleccionado.
   computed: {
     filteredSpecialties() {
       return this.specialties.filter((s) => {
@@ -293,8 +293,9 @@ export default {
   },
 
   methods: {
+    // ✅ CORREGIDO: sin "/api" al inicio, porque ApiService ya lo agrega automáticamente
     cargar() {
-      axios.get("/api/specialties").then((res) => {
+      ApiService.get("/specialties").then((res) => {
         this.specialties = res.data;
       });
     },
@@ -304,38 +305,43 @@ export default {
     ver(item) { this.selected = item; this.modales.ver = true; },
 
     editar(item) { this.form = { ...item }; this.modales.editar = true; },
-// Guarda una nueva especialidad, actualiza la lista, cierra el formulario y muestra un mensaje de éxito.
+
+    // Guarda una nueva especialidad, actualiza la lista, cierra el formulario y muestra un mensaje de éxito.
     guardar() {
-      axios.post("/specialties", this.form).then(() => {
+      ApiService.post("/specialties", this.form).then(() => {
         this.cargar();
         this.modales.nueva = false;
         this.resetForm();
         this.mostrarToast("✓ Especialidad guardada correctamente");
       });
     },
-// Actualiza los datos de una especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
+
+    // Actualiza los datos de una especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
     actualizar() {
-      axios.put(`/specialties/${this.form.id}`, this.form).then(() => {
+      ApiService.put(`/specialties/${this.form.id}`, this.form).then(() => {
         this.cargar();
         this.modales.editar = false;
         this.mostrarToast("✓ Actualización guardada");
       });
     },
-// Guarda la especialidad seleccionada y abre el cuadro de confirmación para eliminarla.
+
+    // Guarda la especialidad seleccionada y abre el cuadro de confirmación para eliminarla.
     eliminar(item) {
       this.specialtyToDelete = item;
       this.modales.eliminar = true;
     },
-// Elimina la especialidad seleccionada, actualiza la lista y muestra un mensaje de confirmación.
+
+    // Elimina la especialidad seleccionada, actualiza la lista y muestra un mensaje de confirmación.
     confirmarEliminar() {
-      axios.delete(`/specialties/${this.specialtyToDelete.id}`).then(() => {
+      ApiService.delete(`/specialties/${this.specialtyToDelete.id}`).then(() => {
         this.cargar();
         this.modales.eliminar = false;
         this.mostrarToast(`✓ "${this.specialtyToDelete.nombre}" eliminada`);
         this.specialtyToDelete = null;
       });
     },
-// Cierra el formulario de nueva especialidad y limpia los datos ingresados.
+
+    // Cierra el formulario de nueva especialidad y limpia los datos ingresados.
     cerrarNueva() {
       this.modales.nueva = false;
       this.resetForm();
@@ -345,26 +351,30 @@ export default {
     resetForm() {
       this.form = { id: null, nombre: "", doctor: "", folio: "", descripcion: "", estado: "Activo" };
     },
-// Muestra un mensaje tipo toast temporal y lo oculta automáticamente después de unos segundos.
+
+    // Muestra un mensaje tipo toast temporal y lo oculta automáticamente después de unos segundos.
     mostrarToast(mensaje) {
       clearTimeout(this._toastTimer);
       this.toast.mensaje = mensaje;
       this.toast.visible = true;
       this._toastTimer = setTimeout(() => { this.toast.visible = false; }, 2500);
     },
-// Limita la longitud de un texto y agrega puntos suspensivos si excede el tamaño permitido.
+
+    // Limita la longitud de un texto y agrega puntos suspensivos si excede el tamaño permitido.
     limit(text, n) {
       if (!text) return "";
       return text.length > n ? text.substring(0, n) + "..." : text;
     },
-// Genera iniciales a partir de un nombre (2 letras si es una palabra o primeras letras de nombre y apellido).
+
+    // Genera iniciales a partir de un nombre (2 letras si es una palabra o primeras letras de nombre y apellido).
     initials(name) {
       if (!name) return "";
       const parts = name.trim().split(/\s+/);
       if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
       return (parts[0][0] + parts[1][0]).toUpperCase();
     },
-// Genera un color de avatar basado en el nombre para asignar colores consistentes
+
+    // Genera un color de avatar basado en el nombre para asignar colores consistentes
     avatarColor(name) {
       const palette = ["#2563eb", "#0d9488", "#7c3aed", "#0891b2", "#4f46e5", "#0e7490"];
       if (!name) return palette[0];

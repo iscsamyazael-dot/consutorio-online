@@ -47,7 +47,7 @@ class SpecialtyController extends Controller
         $ultimoId = Specialty::max('id') ?? 0;
         $folio = 'ESP-' . date('Y') . '-' . str_pad($ultimoId + 1, 4, '0', STR_PAD_LEFT);
 
-        Specialty::create([
+        $specialty = Specialty::create([
             'nombre'      => $request->nombre,
             'descripcion' => $request->descripcion,
             'estado'      => $request->estado,
@@ -55,8 +55,9 @@ class SpecialtyController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Especialidad creada correctamente.'
-        ]);
+            'message' => 'Especialidad creada correctamente.',
+            'data'    => $specialty,
+        ], 201);
     }
 
     public function show(Specialty $specialty)
@@ -85,7 +86,8 @@ class SpecialtyController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Especialidad actualizada correctamente.'
+            'message' => 'Especialidad actualizada correctamente.',
+            'data'    => $specialty,
         ]);
     }
 

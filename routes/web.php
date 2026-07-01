@@ -8,8 +8,7 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
-use App\Http\Controllers\SpecialtyController; // <--- AGREGA ESTA LÍNEA
-
+use App\Http\Controllers\SpecialtyController;
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -28,7 +27,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
+    Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -52,6 +51,7 @@ Route::get('ExpedientePacientes',function(){
           return view('pacientes.expediente');
 });
 
+
 //Código que lleva a la vista de la consulta individual de un paciente//
 Route::get('HistorialConsulta',function(){
           return view('consultas.consultaIndividual');
@@ -66,8 +66,13 @@ Route::resource('citas', App\Http\Controllers\CitaController::class);
 // api de calendario//
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
 
-//  especialidades //
-Route::resource('specialties', SpecialtyController::class);
+//  especialidades — CRUD vía JSON, todo bajo /api //
+Route::prefix('api')->group(function () {
+    Route::get('/specialties', [SpecialtyController::class, 'list']);
+    Route::post('/specialties', [SpecialtyController::class, 'store']);
+    Route::put('/specialties/{specialty}', [SpecialtyController::class, 'update']);
+    Route::delete('/specialties/{specialty}', [SpecialtyController::class, 'destroy']);
+});
 
 //Código que lleva a la vita de medicamentos e inventario//
 Route::get('Medicamentos',function(){
