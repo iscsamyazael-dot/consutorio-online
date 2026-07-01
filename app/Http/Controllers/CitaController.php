@@ -63,10 +63,33 @@ class CitaController extends Controller
                     'tipo'   => $cita->tipo,
 
                     // Información del paciente
+                    // NOTA: se agregan todos los campos que necesita
+                    // el formulario de "Registrar Paciente" para poder
+                    // precargar los datos cuando están incompletos.
                     'paciente' => $cita->paciente ? [
 
-                        'id'     => $cita->paciente->id,
-                        'nombre' => $cita->paciente->nombre,
+                        'id'          => $cita->paciente->id,
+                        'nombre'      => $cita->paciente->nombre,
+                        'sexo'        => $cita->paciente->sexo,
+                        'telefono'    => $cita->paciente->telefono,
+                        'email'       => $cita->paciente->email,
+                        'direccion'   => $cita->paciente->direccion,
+                        'curp'        => $cita->paciente->curp,
+                        'tipo_sangre' => $cita->paciente->tipo_sangre,
+                        'contacto_emergencia' => $cita->paciente->contacto_emergencia,
+                        'alergias' => $cita->paciente->alergias,
+                        'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
+                        'edad'        => $cita->paciente->edad,
+                        'estado'      => $cita->paciente->estado,
+                        'presion_arterial' => $cita->paciente->presion_arterial,
+                        'saturacion_oxigeno' => $cita->paciente->saturacion_oxigeno,
+                        'frecuencia_cardiaca' => $cita->paciente->frecuencia_cardiaca,
+                        'frecuencia_respiratoria' => $cita->paciente->frecuencia_respiratoria,
+                        'peso' => $cita->paciente->peso,
+                        'talla' => $cita->paciente->talla,
+                        'temperatura' => $cita->paciente->temperatura,
+                        'sintomas' => $cita->paciente->sintomas,
+                        'motivo_consulta' => $cita->paciente->motivo_consulta,
 
                     ] : null,
 
@@ -123,16 +146,7 @@ class CitaController extends Controller
         );
     }
 
-    /**
-     * ============================================
-     * Guarda una nueva cita.
-     *
-     * Responde en JSON porque el formulario de Vue
-     * lo envía por AJAX (fetch), para poder mostrar
-     * el mensaje de "Cita agendada correctamente"
-     * sin recargar la página.
-     * ============================================
-     */
+
     public function store(Request $request)
     {
         // Validación de datos.

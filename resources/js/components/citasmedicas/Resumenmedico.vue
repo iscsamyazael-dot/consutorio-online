@@ -37,6 +37,16 @@
         </div>
       </div>
 
+      <div class="stat-item stat-red">
+        <div class="stat-icon">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="stat-info">
+          <h5>{{ citasCanceladas }}</h5>
+          <span>Canceladas</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -58,13 +68,30 @@ export default {
     },
 
     citasCompletadas() {
-      return this.citas.filter(c => c.estado === 'Finalizada').length
+      return this.citas.filter(c => this.normalizarEstado(c.estado).includes('final')
+        || this.normalizarEstado(c.estado).includes('completad')
+        || this.normalizarEstado(c.estado).includes('atendid')).length
     },
 
     citasPendientesCount() {
-      return this.citas.filter(c =>
-        (c.estado || '').toLowerCase().trim() === 'agendado'
-      ).length
+      return this.citas.filter(c => this.normalizarEstado(c.estado).includes('agendad')
+        || this.normalizarEstado(c.estado).includes('programad')).length
+    },
+
+    citasCanceladas() {
+      return this.citas.filter(c => this.normalizarEstado(c.estado).includes('cancelad')).length
+    }
+  },
+
+  methods: {
+    normalizarEstado(estado) {
+      if (!estado) return ''
+      return estado
+        .toString()
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
     }
   }
 }
@@ -156,4 +183,15 @@ export default {
 }
 .stat-orange .stat-info h5  { color: #c2410c; }
 .stat-orange .stat-info span { color: #f97316; }
+
+/* Rojo */
+.stat-red {
+  background: #fef2f2;
+}
+.stat-red .stat-icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.stat-red .stat-info h5  { color: #b91c1c; }
+.stat-red .stat-info span { color: #ef4444; }
 </style>
