@@ -483,6 +483,18 @@ export default {
         this.form.estado      = p.estado      || ''
         this.form.alergias    = p.alergias    || ''
         this.form.fecha_nacimiento = p.fecha_nacimiento || ''
+        this.form.alergia_medicamentos = p.alergia_medicamentos || ''
+        this.form.antecedentes = p.antecedentes || ''
+        this.form.presion_arterial = p.presion_arterial || ''
+        this.form.saturacion = p.saturacion || ''
+        this.form.temperatura = p.temperatura || ''
+        this.form.frecuencia_cardiaca = p.frecuencia_cardiaca || ''
+        this.form.frecuencia_respiratoria = p.frecuencia_respiratoria || ''
+        this.form.peso = p.peso || ''
+        this.form.talla = p.talla || ''
+        this.form.sintomas = p.sintomas || ''
+        this.form.motivo_consulta = p.motivo_consulta || ''
+
     },
 
     computed: {
