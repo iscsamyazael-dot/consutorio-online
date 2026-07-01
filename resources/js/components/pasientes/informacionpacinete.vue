@@ -464,7 +464,7 @@ export default {
         }
     },
 
-    // ✅ mounted va aquí, al mismo nivel que data, computed y methods
+    //  mounted va aquí, al mismo nivel que data, computed y methods
     mounted() {
         const raw = localStorage.getItem('pacientePrecargar')
         if (!raw) return
@@ -481,10 +481,11 @@ export default {
         this.form.tipo_sangre = p.tipo_sangre || ''
         this.form.edad_anios  = p.edad        || 0
         this.form.estado      = p.estado      || ''
+        this.form.alergias    = p.alergias    || ''
     },
 
     computed: {
-        // ✅ calcularEdad como método, no como computed (se llama con @change)
+        //  calcularEdad como método, no como computed (se llama con @change)
     },
 
     methods: {
