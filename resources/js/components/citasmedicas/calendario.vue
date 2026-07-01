@@ -385,7 +385,7 @@ export default {
     datosPacienteIncompletos(cita) {
       const p = cita.paciente
       if (!p) return true
-      const camposRequeridos = ['nombre', 'sexo', 'telefono', 'email', 'direccion', 'curp', 'tipo_sangre', 'contacto_emergencia', 'alergias']
+      const camposRequeridos = ['nombre', 'sexo', 'telefono', 'email', 'direccion', 'curp', 'tipo_sangre', 'alergias']
       return camposRequeridos.some(campo => !p[campo] || p[campo].toString().trim() === '')
     },
 // redirige a la página de completar datos del paciente

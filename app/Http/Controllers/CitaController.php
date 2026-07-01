@@ -80,6 +80,16 @@ class CitaController extends Controller
                         'alergias' => $cita->paciente->alergias,
                         'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
                         'edad'        => $cita->paciente->edad,
+                        'estado'      => $cita->paciente->estado,
+                        'presion_arterial' => $cita->paciente->presion_arterial,
+                        'saturacion_oxigeno' => $cita->paciente->saturacion_oxigeno,
+                        'frecuencia_cardiaca' => $cita->paciente->frecuencia_cardiaca,
+                        'frecuencia_respiratoria' => $cita->paciente->frecuencia_respiratoria,
+                        'peso' => $cita->paciente->peso,
+                        'talla' => $cita->paciente->talla,
+                        'temperatura' => $cita->paciente->temperatura,
+                        'sintomas' => $cita->paciente->sintomas,
+                        'motivo_consulta' => $cita->paciente->motivo_consulta,
 
                     ] : null,
 
