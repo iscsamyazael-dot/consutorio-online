@@ -206,7 +206,7 @@ export default {
       // Toast
       toast:              null,
       toastTimer:         null,
-
+// Estados disponibles para cambiar
       estadosDisponibles: [
         { valor: 'Agendado',     color: '#3b82f6', icono: 'fas fa-calendar-alt' },
         { valor: 'Finalizada',   color: '#10b981', icono: 'fas fa-check' },
@@ -222,7 +222,7 @@ export default {
       .then(data => { this.citas = data })
       .catch(err => console.error('Error cargando citas:', err))
   },
-
+//colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
   computed: {
     eventos() {
       return this.citas.map(cita => ({
@@ -233,21 +233,21 @@ export default {
         extendedProps: { estado: cita.estado, hora: cita.hora },
       }))
     },
-
+// obtiene las citas del día seleccionado, ordenadas por hora
     citasDelDia() {
       if (!this.fechaSeleccionada) return []
       return this.citas
         .filter(c => c.fecha === this.fechaSeleccionada)
         .sort((a, b) => a.hora.localeCompare(b.hora))
     },
-
+// formatea la fecha seleccionada a un formato legible
     fechaSeleccionadaFormateada() {
       if (!this.fechaSeleccionada) return ''
       const [y, m, d] = this.fechaSeleccionada.split('-')
       const fecha = new Date(y, m - 1, d)
       return fecha.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     },
-
+//opcionesCalendario, colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
     opcionesCalendario() {
       return {
         plugins:     [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -261,7 +261,7 @@ export default {
         },
         buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' },
         events: this.eventos,
-
+//eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
         eventContent: (arg) => {
           const estado = arg.event.extendedProps.estado
           const color  = this.colorPorEstado(estado)
@@ -291,12 +291,12 @@ export default {
 
           return { domNodes: [wrapper] }
         },
-
+//eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
         dateClick: (info) => {
           this.fechaSeleccionada = info.dateStr
           this.vistaDetalle      = true
         },
-
+//fechaClick, eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
         eventClick: (info) => {
           this.fechaSeleccionada = info.event.startStr.split('T')[0]
           this.vistaDetalle      = true
@@ -304,7 +304,7 @@ export default {
       }
     },
   },
-
+//colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
   methods: {
     colorPorEstado(estado) {
       const clave = this.normalizarEstado(estado)
@@ -326,7 +326,7 @@ export default {
       }
       return colores[clave] ?? '#94a3b8'
     },
-
+// obtiene el icono correspondiente al estado
     iconoPorEstado(estado) {
       const clave = this.normalizarEstado(estado)
       const iconos = {
@@ -347,7 +347,7 @@ export default {
       }
       return iconos[clave] ?? 'fa-calendar-alt'
     },
-
+// normaliza el estado para comparación
     normalizarEstado(estado) {
       if (!estado) return ''
       return estado
@@ -357,7 +357,7 @@ export default {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '') // quita acentos para comparar mejor
     },
-
+// formatea la hora de 24h a 12h con AM/PM
     formatearHora(hora) {
       if (!hora) return ''
       const [h, m] = hora.split(':')
@@ -366,12 +366,12 @@ export default {
       const h12  = hr % 12 || 12
       return `${h12}:${m} ${ampm}`
     },
-
+// obtiene las iniciales del paciente
     inicialesPaciente(cita) {
       const nombre = cita.paciente?.nombre ?? 'P'
       return nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
     },
-
+// filtra los eventos según el término de búsqueda
     filtrarEventos() {
       const api = this.$refs.calendarRef?.getApi()
       if (!api) return
@@ -381,14 +381,14 @@ export default {
         event.setProp('display', coincide || termino === '' ? 'auto' : 'none')
       })
     },
-
+// verifica si los datos del paciente están incompletos
     datosPacienteIncompletos(cita) {
       const p = cita.paciente
       if (!p) return true
-      const camposRequeridos = ['nombre', 'sexo', 'telefono', 'email', 'direccion', 'curp', 'tipo_sangre']
+      const camposRequeridos = ['nombre', 'sexo', 'telefono', 'email', 'direccion', 'curp', 'tipo_sangre', 'contacto_emergencia', 'alergias']
       return camposRequeridos.some(campo => !p[campo] || p[campo].toString().trim() === '')
     },
-
+// redirige a la página de completar datos del paciente
     irACompletarPaciente(cita) {
       const p = cita.paciente
       if (!p) return
@@ -425,7 +425,7 @@ export default {
       this.citaSeleccionada   = null
       this.nuevoEstado        = ''
     },
-
+// confirma el cambio de estado y actualiza la cita
     async confirmarCambioEstado() {
       if (!this.citaSeleccionada || this.nuevoEstado === this.citaSeleccionada.estado) return
 

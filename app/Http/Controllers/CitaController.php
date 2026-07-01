@@ -76,6 +76,8 @@ class CitaController extends Controller
                         'direccion'   => $cita->paciente->direccion,
                         'curp'        => $cita->paciente->curp,
                         'tipo_sangre' => $cita->paciente->tipo_sangre,
+                        'contacto_emergencia' => $cita->paciente->contacto_emergencia,
+                        'alergias' => $cita->paciente->alergias,
 
                     ] : null,
 
