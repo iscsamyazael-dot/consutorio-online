@@ -65,6 +65,11 @@ Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class
 // api de calendario//
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
 
+//codigo de ubicaciones (sucursales)//
+Route::get('/ubicaciones', [App\Http\Controllers\UbicacionController::class, 'index'])->name('ubicaciones.index');
+Route::get('/ubicaciones/listar', [App\Http\Controllers\UbicacionController::class, 'listar'])->name('ubicaciones.listar');
+Route::post('/ubicaciones', [App\Http\Controllers\UbicacionController::class, 'store'])->name('ubicaciones.store');
+
 require __DIR__.'/auth.php';
 
 Route::get('/test-whatsapp', function () {

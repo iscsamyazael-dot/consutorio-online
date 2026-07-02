@@ -1,3 +1,4 @@
+
 @extends('adminlte::page')
 
 @section('title', 'Agenda Médica')
@@ -9,10 +10,9 @@
 @stop
 @section('content')
 <div id="app">
-    <masteragenda></masteragenda>
+    <Ubicacionesmaster></Ubicacionesmaster>
 </div>
 @stop
 @section('js')
 @vite('resources/js/app.js')
 @stop
-    

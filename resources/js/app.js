@@ -9,7 +9,13 @@ import { createApp } from 'vue';
 import ConsultaInteligente from './components/ConsultaInteligente.vue'
 import masteragenda from './components/citasmedicas/mastercitas.vue'
 import masterprocita from './components/citasmedicas/masterprograma.vue'
+import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
 const app = createApp({})
+
+app.component(
+    'Ubicacionesmaster',
+     Ubicacionesmaster
+    );
 
 app.component(
     'masterprocita',

@@ -429,11 +429,17 @@ return [
                 ],
             ],
         ],
+        
         ['header'=> 'CONFIGURACIÓN MÉDICA'],
         [
             'text' => 'Especialidades',
             'url' => '#',
             'icon' => 'fas fa-fw fa-user',
+        ],
+        [
+    'text' => 'Ubicaciones',
+    'icon' => 'fas fa-fw fa-map-marker-alt',
+    'url' => 'ubicaciones',
         ],
         ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
         [
