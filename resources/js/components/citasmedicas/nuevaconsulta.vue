@@ -2,12 +2,12 @@
     <div class="modern-wrapper">
         <div class="page-header">
             <div>
-                <h1>Nueva Consulta Médica</h1>
-                <p>Registra y organiza una nueva consulta para el paciente.</p>
+                <h1>Nueva cita médica</h1>
+                <p>Registra y organiza una nueva cita para el paciente.</p>
             </div>
             <div class="header-badge">
                 <i class="fas fa-stethoscope"></i>
-                Consultorio Médico
+                Agenda médica 
             </div>
         </div>
     </div>

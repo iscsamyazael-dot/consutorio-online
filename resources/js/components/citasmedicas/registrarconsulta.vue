@@ -18,7 +18,7 @@
             <i class="fas fa-calendar-plus"></i>
           </div>
           <div class="hero-text">
-            <h2>Registrar consulta</h2>
+            <h2>Registrar cita en línea</h2>
             <p>Completa la información médica del paciente</p>
           </div>
           <div class="badge-activa">
