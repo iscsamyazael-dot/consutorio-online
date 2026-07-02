@@ -10,8 +10,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController; 
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\SpecialtyController;
-
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UbicacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::resource('especialidades', SpecialtyController::class);
@@ -24,7 +24,7 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+    Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
     // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
     // Route::delete('eliminarMedico/{id}', [MedicoController::class, 'destroy']);
     Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
+    Route::get('ubicaciones/list', [UbicacionController::class, 'listar'])->name('ubicaciones.listar');
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -50,6 +51,7 @@ Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
 Route::resource('medicos', MedicoController::class);
 Route::resource('especialidades', SpecialtyController::class);
+Route::resource('ubicaciones', UbicacionController::class);
 
 
 
