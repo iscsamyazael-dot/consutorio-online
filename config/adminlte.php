@@ -447,6 +447,7 @@ return [
         [
             'text' => 'Especialidades',
             'url' => 'ConsultarEspecialidades',
+            'url' => 'medico/ConsultarEspecialidades',
             'icon' => 'fas fa-fw fa-user',
             'can' => 'rol-medico', // 🔒 Oculto para asistente
         ],

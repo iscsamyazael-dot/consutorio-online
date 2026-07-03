@@ -16,7 +16,7 @@
         <h1 class="page-title">Especialidades Médicas</h1>
         <p class="text-muted">Administra las especialidades disponibles en el consultorio</p>
       </div>
-      <button class="btn-primary" @click="abrirModal('nueva')">
+      <button class="btn-primary" @click="abrirNueva()">
         <i class="fas fa-plus"></i> Nueva especialidad
       </button>
     </div>
@@ -61,7 +61,10 @@
               <!-- Doctor responsable: solo se muestra si existe en el array medicos -->
               <span v-if="item.medicos && item.medicos.length > 0" class="card-meta">
                 <i class="fas fa-user-md"></i> {{ item.medicos[0].nombre }}
-              </span>    
+                <template v-if="item.medicos.length > 1">
+                  (+{{ item.medicos.length - 1 }})
+                </template>
+              </span>
               <!-- muestra cuando no hay doctor asignado             -->
               <span v-else class="card-meta card-meta--empty">
                 <i class="fas fa-user-md"></i> Sin médico asignado
@@ -97,12 +100,12 @@
     </div>
 
     <!-- ===== MODAL VER ===== -->
-    <div v-if="modales.ver" class="modal-overlay" @click.self="modales.ver = false">
+    <div v-if="modales.ver" class="modal-overlay" @click.self="cerrarVer()">
       <div class="modal-box">
 
         <div class="modal-header">
           <h2><i class="fas fa-stethoscope"></i> Detalle de la especialidad</h2>
-          <button class="btn-close" @click="modales.ver = false" aria-label="Cerrar">
+          <button class="btn-close" @click="cerrarVer()" aria-label="Cerrar">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -113,10 +116,13 @@
           <p>{{ selected.nombre }}</p>
         </div>
 
-        <!-- Doctor responsable -->
+        <!-- Doctor(es) responsable(s) -->
         <div class="detail-item">
-          <label><i class="fas fa-user-md detail-icon"></i> Doctor responsable</label>
-          <p>{{ selected.medicos && selected.medicos.length > 0 ? selected.medicos[0].nombre : '—' }}</p>
+          <label><i class="fas fa-user-md detail-icon"></i> Doctor(es) responsable(s)</label>
+          <p v-if="selected.medicos && selected.medicos.length > 0">
+            {{ selected.medicos.map(m => m.nombre).join(', ') }}
+          </p>
+          <p v-else>—</p>
         </div>
 
         <!-- ★ Folio — campo nuevo -->
@@ -159,11 +165,18 @@
         <input v-model="form.nombre" type="text" placeholder="Ej. Cardiología" />
 
         <label><i class="fas fa-user-md field-icon"></i> Doctor responsable</label>
-        <input v-model="form.doctor" type="text" placeholder="Nombre del doctor responsable" />
+        <select v-model="form.doctorId">
+          <option :value="null" disabled>{{ loadingDoctores ? 'Cargando doctores...' : 'Selecciona un doctor' }}</option>
+          <option v-for="doc in doctoresDisponibles" :key="doc.id" :value="doc.id">
+            {{ doc.nombre }}
+          </option>
+        </select>
+        <p class="field-hint">Si el doctor ya pertenece a otra especialidad, será reasignado a esta.</p>
 
-        <!-- ★ Folio — campo nuevo -->
+        <!-- ★ Folio — se genera automáticamente, no editable -->
         <label><i class="fas fa-hashtag field-icon"></i> Folio</label>
-        <input v-model="form.folio" type="text" placeholder="Ej. ESP-001" />
+        <input v-model="form.folio" type="text" readonly disabled class="input-readonly" />
+        <p class="field-hint">El folio se genera automáticamente.</p>
 
         <label><i class="fas fa-align-left field-icon"></i> Descripción</label>
         <textarea v-model="form.descripcion" placeholder="Describe brevemente esta especialidad"></textarea>
@@ -185,12 +198,12 @@
     </div>
 
     <!-- ===== MODAL EDITAR ===== -->
-    <div v-if="modales.editar" class="modal-overlay" @click.self="modales.editar = false">
+    <div v-if="modales.editar" class="modal-overlay" @click.self="cerrarEditar()">
       <div class="modal-box">
 
         <div class="modal-header">
           <h2><i class="fas fa-edit"></i> Editar especialidad</h2>
-          <button class="btn-close" @click="modales.editar = false" aria-label="Cerrar">
+          <button class="btn-close" @click="cerrarEditar()" aria-label="Cerrar">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -199,11 +212,23 @@
         <input v-model="form.nombre" type="text" />
 
         <label><i class="fas fa-user-md field-icon"></i> Doctor responsable</label>
-        <input v-model="form.doctor" type="text" />
+        <select v-model="form.doctorId">
+          <option :value="null" disabled>{{ loadingDoctores ? 'Cargando doctores...' : 'Selecciona un doctor' }}</option>
+          <!-- Respaldo: si el doctor actual de la especialidad no aparece en la
+               lista cargada (caso raro de inconsistencia de datos), lo mostramos igual. -->
+          <option v-if="form.doctorId && !doctorActualEnLista" :value="form.doctorId">
+            {{ form.doctorNombreActual || 'Doctor actual' }} (no está en la lista)
+          </option>
+          <option v-for="doc in doctoresDisponibles" :key="doc.id" :value="doc.id">
+            {{ doc.nombre }}
+          </option>
+        </select>
+        <p class="field-hint">Si eliges un doctor de otra especialidad, será reasignado a esta.</p>
 
-        <!-- ★ Folio — campo nuevo -->
+        <!-- ★ Folio — no editable, se generó al crear la especialidad -->
         <label><i class="fas fa-hashtag field-icon"></i> Folio</label>
-        <input v-model="form.folio" type="text" placeholder="Ej. ESP-001" />
+        <input v-model="form.folio" type="text" readonly disabled class="input-readonly" />
+        <p class="field-hint">El folio no se puede modificar.</p>
 
         <label><i class="fas fa-align-left field-icon"></i> Descripción</label>
         <textarea v-model="form.descripcion"></textarea>
@@ -215,7 +240,7 @@
         </select>
 
         <div class="modal-actions">
-          <button class="btn-cancel" @click="modales.editar = false">Cancelar</button>
+          <button class="btn-cancel" @click="cerrarEditar()">Cancelar</button>
           <button class="btn-save" @click="actualizar">
             <i class="fas fa-save"></i> Actualizar
           </button>
@@ -225,12 +250,12 @@
     </div>
 
     <!-- ===== MODAL ELIMINAR ===== -->
-    <div v-if="modales.eliminar" class="modal-overlay" @click.self="modales.eliminar = false">
+    <div v-if="modales.eliminar" class="modal-overlay" @click.self="cerrarEliminar()">
       <div class="modal-box modal-box--danger">
 
         <div class="modal-header">
           <h2><i class="fas fa-exclamation-triangle" style="color:#b91c1c;"></i> Eliminar especialidad</h2>
-          <button class="btn-close" @click="modales.eliminar = false" aria-label="Cerrar">
+          <button class="btn-close" @click="cerrarEliminar()" aria-label="Cerrar">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -247,7 +272,7 @@
         </div>
 
         <div class="modal-actions">
-          <button class="btn-cancel" @click="modales.eliminar = false">Cancelar</button>
+          <button class="btn-cancel" @click="cerrarEliminar()">Cancelar</button>
           <button class="btn-delete" @click="confirmarEliminar">
             <i class="fas fa-trash"></i> Sí, eliminar
           </button>
@@ -263,7 +288,12 @@
 import ApiService from '../../services/ApiService.js';
 
 const ESTADOS = ["Activo", "Inactivo"];
-const FORM_VACIO = { id: null, nombre: "", doctor: "", folio: "", descripcion: "", estado: "Activo" };
+const FORM_VACIO = { id: null, nombre: "", doctorId: null, folio: "", descripcion: "", estado: "Activo" };
+
+// ⚠️ AJUSTA ESTAS DOS RUTAS a las reales de tu backend.
+// GET  MEDICOS_ENDPOINT           -> lista de TODOS los médicos del sistema
+// PUT  `${MEDICOS_ENDPOINT}/{id}` -> actualiza un médico (para reasignar especialidad_id)
+const MEDICOS_ENDPOINT = "/medicos";
 
 export default {
   data() {
@@ -287,18 +317,36 @@ export default {
       },
       loadError: null,
       estadosDisponibles: ESTADOS,
+      // Lista de doctores para el <select> de "Doctor responsable"
+      doctoresDisponibles: [],
+      loadingDoctores: false,
     };
   },
 
   // Filtra automáticamente las especialidades según el texto de búsqueda y el estado seleccionado.
   computed: {
+    // ★ NUEVO: cruza cada especialidad con los médicos que le pertenecen.
+    // El backend NO devuelve especialidad.medicos (esa relación no existe en /especialidades),
+    // pero SÍ devuelve medico.especialidad (anidado) en GET /medicos.
+    // Como cada médico solo tiene UNA especialidad (medicos.especialidad_id),
+    // aquí armamos, del lado del cliente, la lista de médicos de cada especialidad
+    // filtrando doctoresDisponibles por especialidad.id.
+    specialtiesWithMedicos() {
+      return this.specialties.map((esp) => ({
+        ...esp,
+        medicos: this.doctoresDisponibles.filter(
+          (doc) => doc.especialidad && doc.especialidad.id === esp.id
+        ),
+      }));
+    },
+
     filteredSpecialties() {
       const term = this.search.trim().toLowerCase();
-      return this.specialties.filter((s) => {
+      return this.specialtiesWithMedicos.filter((s) => {
         const matchSearch =
           term === "" ||
           (s.nombre || "").toLowerCase().includes(term) ||
-          (s.doctor || "").toLowerCase().includes(term) ||
+          ((s.medicos && s.medicos[0] && s.medicos[0].nombre) || "").toLowerCase().includes(term) ||
           (s.folio || "").toLowerCase().includes(term);
         const matchStatus = this.status === "" ? true : s.estado === this.status;
         return matchSearch && matchStatus;
@@ -317,10 +365,17 @@ export default {
     isSaving() {
       return this.loading.guardar || this.loading.actualizar;
     },
+
+    // True si form.doctorId corresponde a algún médico de la lista cargada.
+    doctorActualEnLista() {
+      if (!this.form.doctorId) return true;
+      return this.doctoresDisponibles.some((doc) => doc.id === this.form.doctorId);
+    },
   },
 
   mounted() {
     this.cargar();
+    this.cargarDoctores();
   },
 
   beforeUnmount() {
@@ -351,28 +406,65 @@ export default {
       this.modales[name] = true;
     },
 
+    // Carga la lista de doctores para el <select> de "Doctor responsable".
+    // Ajusta el endpoint "/medicos" si en tu backend se llama distinto (p. ej. "/doctores").
+    cargarDoctores() {
+      this.loadingDoctores = true;
+      ApiService.get(MEDICOS_ENDPOINT)
+        .then((res) => {
+          this.doctoresDisponibles = res.data;
+        })
+        .catch((err) => {
+          this.mostrarToast("⚠ No se pudo cargar la lista de doctores", "error");
+          console.error("Error cargando doctores:", err);
+        })
+        .finally(() => {
+          this.loadingDoctores = false;
+        });
+    },
+
     // Abre el modal de "nueva" garantizando que el formulario empiece limpio
+    // y con un folio autogenerado (no lo escribe el usuario).
     abrirNueva() {
       this.resetForm();
+      this.form.folio = this.generarFolio();
       this.modales.nueva = true;
     },
-// Abre el modal de ver y carga los datos del item seleccionado
+
+    // Genera el siguiente folio disponible con formato ESP-001, ESP-002, ...
+    // tomando como base el folio numérico más alto ya existente en la lista.
+    generarFolio() {
+      const numeros = this.specialties
+        .map((s) => (s.folio || "").match(/(\d+)\s*$/))
+        .filter(Boolean)
+        .map((m) => parseInt(m[1], 10));
+      const siguiente = (numeros.length ? Math.max(...numeros) : 0) + 1;
+      return "ESP-" + String(siguiente).padStart(3, "0");
+    },
+    // Abre el modal de ver y carga los datos del item seleccionado
     ver(item) {
       this.selected = item;
       this.modales.ver = true;
     },
-// Cierra el modal de ver y limpia la selección
+    // Cierra el modal de ver y limpia la selección
     cerrarVer() {
       this.modales.ver = false;
       this.selected = {};
     },
     // Abre el modal de edición y carga los datos del item seleccionado en el formulario
     editar(item) {
-      this.form = { ...item };
+      const medicoActual = item.medicos && item.medicos.length > 0 ? item.medicos[0] : null;
+      this.form = {
+        ...FORM_VACIO,
+        ...item,
+        doctorId: medicoActual ? medicoActual.id : null,
+        // Solo se usa como respaldo visual si ese médico ya no aparece en doctoresDisponibles.
+        doctorNombreActual: medicoActual ? medicoActual.nombre : "",
+      };
       this.formErrors = {};
       this.modales.editar = true;
     },
-// Cierra el modal de edición y reinicia el formulario
+    // Cierra el modal de edición y reinicia el formulario
     cerrarEditar() {
       this.modales.editar = false;
       this.resetForm();
@@ -384,8 +476,8 @@ export default {
       if (!this.form.nombre || !this.form.nombre.trim()) {
         errores.nombre = "El nombre es obligatorio";
       }
-      if (!this.form.doctor || !this.form.doctor.trim()) {
-        errores.doctor = "El doctor es obligatorio";
+      if (!this.form.doctorId) {
+        errores.doctor = "Debes seleccionar un doctor responsable";
       }
       if (!this.form.folio || !this.form.folio.trim()) {
         errores.folio = "El folio es obligatorio";
@@ -397,7 +489,8 @@ export default {
       return Object.keys(errores).length === 0;
     },
 
-    // Guarda una nueva especialidad, actualiza la lista, cierra el formulario y muestra un mensaje de éxito.
+    // Guarda una nueva especialidad, reasigna el doctor elegido a esa especialidad,
+    // actualiza la lista, cierra el formulario y muestra un mensaje de éxito.
     guardar() {
       if (!this.validarForm()) {
         this.mostrarToast("⚠ Revisa los campos marcados", "error");
@@ -405,9 +498,25 @@ export default {
       }
       // Bloquea el botón de guardar mientras se realiza la petición
       this.loading.guardar = true;
-      ApiService.post("/especialidades", this.form)
+      //ApiService.post("/especialidades", this.form)
+      // doctorId es un campo de UI para el <select>; no forma parte del payload
+      // que espera el endpoint de especialidades.
+      const { doctorId, doctorNombreActual, ...datosEspecialidad } = this.form;
+
+      ApiService.post("/especialidades", datosEspecialidad)
+        .then((res) => {
+          const nuevaEspecialidadId = res.data && res.data.id;
+          if (doctorId && nuevaEspecialidadId) {
+            // ⚠️ Ajusta el método/ruta si tu backend espera algo distinto
+            // a PUT `${MEDICOS_ENDPOINT}/{id}` con { especialidad_id }.
+            return ApiService.put(`${MEDICOS_ENDPOINT}/${doctorId}`, {
+              especialidad_id: nuevaEspecialidadId,
+            });
+          }
+        })
         .then(() => {
           this.cargar();
+          this.cargarDoctores();
           this.modales.nueva = false;
           this.resetForm();
           this.mostrarToast("✓ Especialidad guardada correctamente");
@@ -422,7 +531,8 @@ export default {
         });
     },
 
-    // Actualiza los datos de una especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
+    // Actualiza los datos de una especialidad, reasigna el doctor elegido a esa
+    // especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
     actualizar() {
       if (!this.validarForm()) {
         this.mostrarToast("⚠ Revisa los campos marcados", "error");
@@ -430,9 +540,22 @@ export default {
       }
       // Bloquea el botón de actualizar mientras se realiza la petición
       this.loading.actualizar = true;
-      ApiService.put(`/especialidades/${this.form.id}`, this.form)
+      ///ApiService.put(`/especialidades/${this.form.id}`, this.form)
+      const { doctorId, doctorNombreActual, ...datosEspecialidad } = this.form;
+
+      ApiService.put(`/especialidades/${this.form.id}`, datosEspecialidad)
+        .then(() => {
+          if (doctorId) {
+            // ⚠️ Ajusta el método/ruta si tu backend espera algo distinto
+            // a PUT `${MEDICOS_ENDPOINT}/{id}` con { especialidad_id }.
+            return ApiService.put(`${MEDICOS_ENDPOINT}/${doctorId}`, {
+              especialidad_id: this.form.id,
+            });
+          }
+        })
         .then(() => {
           this.cargar();
+          this.cargarDoctores();
           this.modales.editar = false;
           this.resetForm();
           this.mostrarToast("✓ Actualización guardada");
@@ -453,7 +576,7 @@ export default {
       this.specialtyToDelete = item;
       this.modales.eliminar = true;
     },
-// Cierra el cuadro de confirmación de eliminación y limpia la especialidad seleccionada.
+    // Cierra el cuadro de confirmación de eliminación y limpia la especialidad seleccionada.
     cerrarEliminar() {
       this.modales.eliminar = false;
       this.specialtyToDelete = null;
@@ -485,7 +608,7 @@ export default {
       this.modales.nueva = false;
       this.resetForm();
     },
-// Reinicia el formulario a su estado inicial y limpia los errores.
+    // Reinicia el formulario a su estado inicial y limpia los errores.
     resetForm() {
       this.form = { ...FORM_VACIO };
       this.formErrors = {};
@@ -668,6 +791,8 @@ export default {
 .modal-box input, .modal-box textarea, .modal-box select{ width:100%; padding:12px 14px; margin-bottom:16px; border:1.5px solid var(--border); border-radius:10px; outline:none; font-family:'Inter',sans-serif; font-size:14.5px; color:var(--ink); background:var(--surface); transition:.2s; box-sizing:border-box; }
 .modal-box input:focus, .modal-box textarea:focus, .modal-box select:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(37,99,235,.12); }
 .modal-box textarea{ resize:vertical; min-height:110px; }
+.input-readonly{ background:var(--bg); color:var(--body-text); cursor:not-allowed; }
+.field-hint{ margin:-10px 0 16px; font-size:12px; color:var(--muted); }
 .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:6px; }
 .btn-save, .btn-cancel{ display:inline-flex; align-items:center; gap:8px; border:none; border-radius:10px; padding:12px 20px; font-weight:600; font-size:14px; cursor:pointer; transition:.2s; }
 .btn-save{ background:var(--primary); color:#fff; }
