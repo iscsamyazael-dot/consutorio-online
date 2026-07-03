@@ -84,7 +84,7 @@
             </div>
         </div>
 
-        <div class="table-responsive-sm card-body p-0">
+        <div class="table-responsive card-body p-0">
             <table class="table table-hover text-nowrap">
                 <thead class="thead-light">
                     <tr>
@@ -96,7 +96,7 @@
                         <th>Estado</th>
                         <th>Dur. consulta</th>
                         <th>Sucursal</th>
-                        <th width="180">Acciones</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -118,7 +118,7 @@
                         </td>
 
                              <!-- Días Laborales (Mapeando el arreglo de horarios) -->
-                            <td class="align-middle">
+                            <td class="text-wrap" style="max-width: 220px; font-size: 13px;">
                                 <!-- El secreto: un contenedor con ancho máximo que obliga al contenido a saltar de línea -->
                                 <div style="max-width: 180px; width: 100%;">
                                     <div class="d-flex flex-wrap gap-1">
@@ -161,7 +161,7 @@
                             </span>
                         </td>
 
-                        <td>
+                        <td class="text-wrap" style="max-width: 220px; font-size: 13px;">
                             <span v-if="medico.configuraciones && medico.configuraciones.length > 0 && medico.configuraciones[0].ubicacion">
                                 <i class="fas fa-map-marker-alt text-muted me-1" style="font-size: 12px;"></i>
                                 {{ medico.configuraciones[0].ubicacion.nombre }}
