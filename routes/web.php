@@ -25,7 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
+    Route::get('/api/especialidades', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
 });
 
 Route::resource('pacientes', PacienteController::class);
