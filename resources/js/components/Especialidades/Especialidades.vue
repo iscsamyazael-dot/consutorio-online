@@ -61,7 +61,10 @@
               <!-- Doctor responsable: solo se muestra si existe en el array medicos -->
               <span v-if="item.medicos && item.medicos.length > 0" class="card-meta">
                 <i class="fas fa-user-md"></i> {{ item.medicos[0].nombre }}
-              </span>    
+                <template v-if="item.medicos.length > 1">
+                  (+{{ item.medicos.length - 1 }})
+                </template>
+              </span>
               <!-- muestra cuando no hay doctor asignado             -->
               <span v-else class="card-meta card-meta--empty">
                 <i class="fas fa-user-md"></i> Sin médico asignado
@@ -113,10 +116,13 @@
           <p>{{ selected.nombre }}</p>
         </div>
 
-        <!-- Doctor responsable -->
+        <!-- Doctor(es) responsable(s) -->
         <div class="detail-item">
-          <label><i class="fas fa-user-md detail-icon"></i> Doctor responsable</label>
-          <p>{{ selected.medicos && selected.medicos.length > 0 ? selected.medicos[0].nombre : '—' }}</p>
+          <label><i class="fas fa-user-md detail-icon"></i> Doctor(es) responsable(s)</label>
+          <p v-if="selected.medicos && selected.medicos.length > 0">
+            {{ selected.medicos.map(m => m.nombre).join(', ') }}
+          </p>
+          <p v-else>—</p>
         </div>
 
         <!-- ★ Folio — campo nuevo -->
@@ -159,7 +165,13 @@
         <input v-model="form.nombre" type="text" placeholder="Ej. Cardiología" />
 
         <label><i class="fas fa-user-md field-icon"></i> Doctor responsable</label>
-        <input v-model="form.doctor" type="text" placeholder="Nombre del doctor responsable" />
+        <select v-model="form.doctorId">
+          <option :value="null" disabled>{{ loadingDoctores ? 'Cargando doctores...' : 'Selecciona un doctor' }}</option>
+          <option v-for="doc in doctoresDisponibles" :key="doc.id" :value="doc.id">
+            {{ doc.nombre }}
+          </option>
+        </select>
+        <p class="field-hint">Si el doctor ya pertenece a otra especialidad, será reasignado a esta.</p>
 
         <!-- ★ Folio — se genera automáticamente, no editable -->
         <label><i class="fas fa-hashtag field-icon"></i> Folio</label>
@@ -200,7 +212,18 @@
         <input v-model="form.nombre" type="text" />
 
         <label><i class="fas fa-user-md field-icon"></i> Doctor responsable</label>
-        <input v-model="form.doctor" type="text" />
+        <select v-model="form.doctorId">
+          <option :value="null" disabled>{{ loadingDoctores ? 'Cargando doctores...' : 'Selecciona un doctor' }}</option>
+          <!-- Respaldo: si el doctor actual de la especialidad no aparece en la
+               lista cargada (caso raro de inconsistencia de datos), lo mostramos igual. -->
+          <option v-if="form.doctorId && !doctorActualEnLista" :value="form.doctorId">
+            {{ form.doctorNombreActual || 'Doctor actual' }} (no está en la lista)
+          </option>
+          <option v-for="doc in doctoresDisponibles" :key="doc.id" :value="doc.id">
+            {{ doc.nombre }}
+          </option>
+        </select>
+        <p class="field-hint">Si eliges un doctor de otra especialidad, será reasignado a esta.</p>
 
         <!-- ★ Folio — no editable, se generó al crear la especialidad -->
         <label><i class="fas fa-hashtag field-icon"></i> Folio</label>
@@ -265,7 +288,12 @@
 import ApiService from '../../services/ApiService.js';
 
 const ESTADOS = ["Activo", "Inactivo"];
-const FORM_VACIO = { id: null, nombre: "", doctor: "", folio: "", descripcion: "", estado: "Activo" };
+const FORM_VACIO = { id: null, nombre: "", doctorId: null, folio: "", descripcion: "", estado: "Activo" };
+
+// ⚠️ AJUSTA ESTAS DOS RUTAS a las reales de tu backend.
+// GET  MEDICOS_ENDPOINT           -> lista de TODOS los médicos del sistema
+// PUT  `${MEDICOS_ENDPOINT}/{id}` -> actualiza un médico (para reasignar especialidad_id)
+const MEDICOS_ENDPOINT = "/medicos";
 
 export default {
   data() {
@@ -289,18 +317,36 @@ export default {
       },
       loadError: null,
       estadosDisponibles: ESTADOS,
+      // Lista de doctores para el <select> de "Doctor responsable"
+      doctoresDisponibles: [],
+      loadingDoctores: false,
     };
   },
 
   // Filtra automáticamente las especialidades según el texto de búsqueda y el estado seleccionado.
   computed: {
+    // ★ NUEVO: cruza cada especialidad con los médicos que le pertenecen.
+    // El backend NO devuelve especialidad.medicos (esa relación no existe en /especialidades),
+    // pero SÍ devuelve medico.especialidad (anidado) en GET /medicos.
+    // Como cada médico solo tiene UNA especialidad (medicos.especialidad_id),
+    // aquí armamos, del lado del cliente, la lista de médicos de cada especialidad
+    // filtrando doctoresDisponibles por especialidad.id.
+    specialtiesWithMedicos() {
+      return this.specialties.map((esp) => ({
+        ...esp,
+        medicos: this.doctoresDisponibles.filter(
+          (doc) => doc.especialidad && doc.especialidad.id === esp.id
+        ),
+      }));
+    },
+
     filteredSpecialties() {
       const term = this.search.trim().toLowerCase();
-      return this.specialties.filter((s) => {
+      return this.specialtiesWithMedicos.filter((s) => {
         const matchSearch =
           term === "" ||
           (s.nombre || "").toLowerCase().includes(term) ||
-          (s.doctor || "").toLowerCase().includes(term) ||
+          ((s.medicos && s.medicos[0] && s.medicos[0].nombre) || "").toLowerCase().includes(term) ||
           (s.folio || "").toLowerCase().includes(term);
         const matchStatus = this.status === "" ? true : s.estado === this.status;
         return matchSearch && matchStatus;
@@ -319,10 +365,17 @@ export default {
     isSaving() {
       return this.loading.guardar || this.loading.actualizar;
     },
+
+    // True si form.doctorId corresponde a algún médico de la lista cargada.
+    doctorActualEnLista() {
+      if (!this.form.doctorId) return true;
+      return this.doctoresDisponibles.some((doc) => doc.id === this.form.doctorId);
+    },
   },
 
   mounted() {
     this.cargar();
+    this.cargarDoctores();
   },
 
   beforeUnmount() {
@@ -351,6 +404,23 @@ export default {
 
     abrirModal(name) {
       this.modales[name] = true;
+    },
+
+    // Carga la lista de doctores para el <select> de "Doctor responsable".
+    // Ajusta el endpoint "/medicos" si en tu backend se llama distinto (p. ej. "/doctores").
+    cargarDoctores() {
+      this.loadingDoctores = true;
+      ApiService.get(MEDICOS_ENDPOINT)
+        .then((res) => {
+          this.doctoresDisponibles = res.data;
+        })
+        .catch((err) => {
+          this.mostrarToast("⚠ No se pudo cargar la lista de doctores", "error");
+          console.error("Error cargando doctores:", err);
+        })
+        .finally(() => {
+          this.loadingDoctores = false;
+        });
     },
 
     // Abre el modal de "nueva" garantizando que el formulario empiece limpio
@@ -383,14 +453,13 @@ export default {
     },
     // Abre el modal de edición y carga los datos del item seleccionado en el formulario
     editar(item) {
+      const medicoActual = item.medicos && item.medicos.length > 0 ? item.medicos[0] : null;
       this.form = {
         ...FORM_VACIO,
         ...item,
-        // El backend entrega el doctor dentro del array "medicos",
-        // pero el formulario usa un campo plano "doctor". Si el item
-        // ya trae "doctor" como string lo respetamos; si no, lo
-        // tomamos del primer médico relacionado.
-        doctor: item.doctor || (item.medicos && item.medicos.length > 0 ? item.medicos[0].nombre : ""),
+        doctorId: medicoActual ? medicoActual.id : null,
+        // Solo se usa como respaldo visual si ese médico ya no aparece en doctoresDisponibles.
+        doctorNombreActual: medicoActual ? medicoActual.nombre : "",
       };
       this.formErrors = {};
       this.modales.editar = true;
@@ -407,8 +476,8 @@ export default {
       if (!this.form.nombre || !this.form.nombre.trim()) {
         errores.nombre = "El nombre es obligatorio";
       }
-      if (!this.form.doctor || !this.form.doctor.trim()) {
-        errores.doctor = "El doctor es obligatorio";
+      if (!this.form.doctorId) {
+        errores.doctor = "Debes seleccionar un doctor responsable";
       }
       if (!this.form.folio || !this.form.folio.trim()) {
         errores.folio = "El folio es obligatorio";
@@ -420,7 +489,8 @@ export default {
       return Object.keys(errores).length === 0;
     },
 
-    // Guarda una nueva especialidad, actualiza la lista, cierra el formulario y muestra un mensaje de éxito.
+    // Guarda una nueva especialidad, reasigna el doctor elegido a esa especialidad,
+    // actualiza la lista, cierra el formulario y muestra un mensaje de éxito.
     guardar() {
       if (!this.validarForm()) {
         this.mostrarToast("⚠ Revisa los campos marcados", "error");
@@ -428,9 +498,24 @@ export default {
       }
       // Bloquea el botón de guardar mientras se realiza la petición
       this.loading.guardar = true;
-      ApiService.post("/especialidades", this.form)
+      // doctorId es un campo de UI para el <select>; no forma parte del payload
+      // que espera el endpoint de especialidades.
+      const { doctorId, doctorNombreActual, ...datosEspecialidad } = this.form;
+
+      ApiService.post("/especialidades", datosEspecialidad)
+        .then((res) => {
+          const nuevaEspecialidadId = res.data && res.data.id;
+          if (doctorId && nuevaEspecialidadId) {
+            // ⚠️ Ajusta el método/ruta si tu backend espera algo distinto
+            // a PUT `${MEDICOS_ENDPOINT}/{id}` con { especialidad_id }.
+            return ApiService.put(`${MEDICOS_ENDPOINT}/${doctorId}`, {
+              especialidad_id: nuevaEspecialidadId,
+            });
+          }
+        })
         .then(() => {
           this.cargar();
+          this.cargarDoctores();
           this.modales.nueva = false;
           this.resetForm();
           this.mostrarToast("✓ Especialidad guardada correctamente");
@@ -445,7 +530,8 @@ export default {
         });
     },
 
-    // Actualiza los datos de una especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
+    // Actualiza los datos de una especialidad, reasigna el doctor elegido a esa
+    // especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
     actualizar() {
       if (!this.validarForm()) {
         this.mostrarToast("⚠ Revisa los campos marcados", "error");
@@ -453,9 +539,21 @@ export default {
       }
       // Bloquea el botón de actualizar mientras se realiza la petición
       this.loading.actualizar = true;
-      ApiService.put(`/especialidades/${this.form.id}`, this.form)
+      const { doctorId, doctorNombreActual, ...datosEspecialidad } = this.form;
+
+      ApiService.put(`/especialidades/${this.form.id}`, datosEspecialidad)
+        .then(() => {
+          if (doctorId) {
+            // ⚠️ Ajusta el método/ruta si tu backend espera algo distinto
+            // a PUT `${MEDICOS_ENDPOINT}/{id}` con { especialidad_id }.
+            return ApiService.put(`${MEDICOS_ENDPOINT}/${doctorId}`, {
+              especialidad_id: this.form.id,
+            });
+          }
+        })
         .then(() => {
           this.cargar();
+          this.cargarDoctores();
           this.modales.editar = false;
           this.resetForm();
           this.mostrarToast("✓ Actualización guardada");
