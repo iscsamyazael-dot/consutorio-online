@@ -18,8 +18,6 @@ use App\Http\Controllers\ArchivosClinicosController;
 use App\Http\Controllers\CitaController;
 use Illuminate\Support\Facades\Route;
 
-
-
 Route::get('/', function () {
     return view('dashboard');
 });
@@ -50,9 +48,9 @@ Route::get('/dashboard', function () {
     // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
     // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
     // Route::delete('eliminarMedico/{id}', [MedicoController::class, 'destroy']);
-    Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
-    Route::get('ubicaciones/list', [UbicacionController::class, 'listar'])->name('ubicaciones.listar');
-    Route::get('/medicos/estadisticas', [MedicoController::class, 'obtenerEstadisticas']);
+    // Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
+    // Route::get('ubicaciones/list', [UbicacionController::class, 'listar'])->name('ubicaciones.listar');
+    // Route::get('/medicos/estadisticas', [MedicoController::class, 'obtenerEstadisticas']);
 });
 
 Route::resource('especialidades', SpecialtyController::class);
@@ -120,7 +118,6 @@ Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function() {
     Route::resource('recetas', RecetaController::class);
     Route::resource('receta-detalles', RecetaDetalleController::class);
     Route::get('Medicamentos', function() { return view('medicamentos.index'); });
-    Route::resource('especialidades', SpecialtyController::class);
     Route::get('MedicosAlta',function(){return view('medicos.altamedicos'); });
     
     //Codigo que lleva a HISTORIAL DE RECETAS
@@ -156,9 +153,6 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
     Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
     
 });
-
-
-
 
 
 // Cambias 'SubirArchivosControlador' por el que ya tengas
@@ -197,14 +191,10 @@ Route::resource('citas', App\Http\Controllers\CitaController::class);
 // api de calendario//
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
 
-//  especialidades — CRUD vía JSON, todo bajo /api //
-Route::prefix('api')->group(function () {
-    Route::get('/specialties', [SpecialtyController::class, 'list']);
-    Route::post('/specialties', [SpecialtyController::class, 'store']);
-    Route::put('/specialties/{specialty}', [SpecialtyController::class, 'update']);
-    Route::delete('/specialties/{specialty}', [SpecialtyController::class, 'destroy']);
-});
 
+Route::get('ConsultarEspecialidades',function(){
+          return view('specialties.index');
+});
 //Código que lleva a la vita de medicamentos e inventario//
 Route::get('Medicamentos',function(){
           return view('medicamentos.index');
