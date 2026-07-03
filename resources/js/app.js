@@ -26,15 +26,13 @@ import expedientepaciente from './components/pasientes/maesterexpediente.vue'
 import consultapaciente from './components/consultas/masterindividual.vue'// historial de las consultas del pacinte //
 import nuevaconsultamedica from'./components/consultas/maesternuevaconsulta.vue'
 import centroconsultas from './components/consultas/mastercentro.vue'
-import Maesterexpediente from './components/pasientes/maesterexpediente.vue'
+
 //Modulo de Historial de recetas 
 import Historialreceta from './components/recetass/PanelRecetas.vue'
 import Especialidades from './components/Especialidades/Especialidades.vue'// importa especialidades 
 //Modulo de inventario de medicamentos
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
-//Modulo de Perfil
-import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
-import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
+
 //MODULO DE ALTA MEDICOS
 import AltaMedicos from './components/medicos-alta/PanelMedicos.vue'
 import RegistroMedico from './components/medicos-alta/PanelRegistro.vue'
@@ -42,6 +40,12 @@ import RegistroMedico from './components/medicos-alta/PanelRegistro.vue'
 //MODULO AGENDA 
 import masteragenda from './components/citasmedicas/mastercitas.vue'
 import masterprocita from './components/citasmedicas/masterprograma.vue'
+
+//Modulo de Perfil
+import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
+import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
+
+
 
 import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
 

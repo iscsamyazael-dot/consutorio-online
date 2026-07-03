@@ -7,19 +7,18 @@ use Illuminate\Http\Request;
 
 class SpecialtyController extends Controller
 {
-    // Vista principal
+    
     public function index(Request $request)
     {
 
-        return $specialties = Specialty::all();
+
+        return $specialties=Specialty::all();
 
         $specialties = Specialty::query()
             ->when($request->search, function ($query, $search) {
                 $query->where('nombre', 'like', "%{$search}%");
             })
             ->paginate(12);
-
-        //return view('specialties.index', compact('specialties'));
     }
 
     // API para Vue (devuelve JSON)
@@ -35,7 +34,7 @@ class SpecialtyController extends Controller
 
     public function create()
     {
-        return view('specialties.create');
+    
     }
 
     public function store(Request $request)

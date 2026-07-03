@@ -441,10 +441,19 @@ return [
         // ==========================================
      
         ['header'=> 'CONFIGURACIÓN MÉDICA'],
+        [   'header' => 'CONFIGURACIÓN MÉDICA',
+            'can' => 'rol-medico',
+        ],
         [
             'text' => 'Especialidades',
             'url' => 'medico/especialidades',
             'icon' => 'fas fa-fw fa-user',
+            'can' => 'rol-medico', // 🔒 Oculto para asistente
+        ],
+        [
+            'text' => 'Médicos',
+            'url'  => 'medico/MedicosAlta', 
+            'icon' => 'fas fa-fw fa-user-md',
             'can' => 'rol-medico', // 🔒 Oculto para asistente
         ],
 
@@ -473,6 +482,14 @@ return [
         ['header' => 'CONFIGURACIÓN DEL SISTEMA',
          'can'    => 'ver-admin', // 🔒 Oculta el encabezado para Asistente y Médico
         ],
+        [
+            'header' => 'CONFIGURACIÓN DEL SISTEMA',
+            'can'    => 'ver-admin', // 🔒 Oculta el encabezado para Asistente y Médico
+        ],
+            'url'  => 'ConsultarEspecialidades', // O 'admin/specialties' si tu ruta tiene prefijo
+            'icon' => 'fas fa-fw fa-user',
+],
+        ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
         [
             'text' => 'Perfil',
             'url'  => 'perfil',
