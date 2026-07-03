@@ -30,107 +30,166 @@
             <!-- COLUMNA IZQUIERDA -->
             <div class="col-lg-8">
 
-                <!-- INFORMACIÓN PERSONAL -->
-                <div class="card card-custom shadow-lg mb-4 border-0 overflow-hidden">
-                    <div class="card-decor-line bg-primary-gradient"></div>
+                    <!-- INFORMACIÓN PERSONAL -->
+                    <div class="card card-custom shadow-lg mb-4 border-0 overflow-hidden">
+                        <div class="card-decor-line bg-primary-gradient"></div>
 
-                    <div class="card-body p-4">
+                        <div class="card-body p-4">
 
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="icon-shape bg-primary-light text-primary rounded-circle mr-3">
-                                <i class="fas fa-id-card fa-lg"></i>
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="icon-shape bg-primary-light text-primary rounded-circle mr-3">
+                                    <i class="fas fa-id-card fa-lg"></i>
+                                </div>
+                                <h4 class="mb-0 font-weight-bold text-dark-blue">
+                                    Información Personal
+                                </h4>
                             </div>
-                            <h4 class="mb-0 font-weight-bold text-dark-blue">
-                                Información Personal
-                            </h4>
-                        </div>
 
-                        <div class="row">
+                            <div class="row">
 
-                            <div class="col-md-6 mb-4">
-                                <label class="form-label-custom">
-                                    Nombre Completo
-                                    <span class="text-danger">*</span>
-                                </label>
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label-custom">
+                                        Nombre Completo
+                                        <span class="text-danger">*</span>
+                                    </label>
 
-                                <div class="input-group-custom">
-                                    <i class="fas fa-user input-icon"></i>
+                                    <div class="input-group-custom">
+                                        <i class="fas fa-user input-icon"></i>
 
-                                    <input
-                                        type="text"
-                                        class="form-control-custom"
-                                        placeholder="Ej. Dr. Alejandro Ríos"
-                                        v-model="form.nombre"
-                                        required
-                                    >
+                                        <input
+                                            type="text"
+                                            class="form-control-custom"
+                                            placeholder="Ej. Dr. Alejandro Ríos"
+                                            v-model="form.nombre"
+                                            required
+                                        >
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
+                        </div>
                     </div>
-                </div>
 
-                <!-- INFORMACIÓN PROFESIONAL -->
-                <div class="card card-custom shadow-lg mb-4 border-0 overflow-hidden">
+                    <!-- INFORMACIÓN PROFESIONAL -->
+                    <div class="card card-custom shadow-lg mb-4 border-0 overflow-hidden">
 
-                    <div class="card-decor-line bg-success-gradient"></div>
+                        <div class="card-decor-line bg-success-gradient"></div>
 
-                    <div class="card-body p-4">
+                        <div class="card-body p-4">
 
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="icon-shape bg-success-light text-success rounded-circle mr-3">
-                                <i class="fas fa-graduation-cap fa-lg"></i>
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="icon-shape bg-success-light text-success rounded-circle mr-3">
+                                    <i class="fas fa-graduation-cap fa-lg"></i>
+                                </div>
+
+                                <h4 class="mb-0 font-weight-bold text-dark-blue">
+                                    Información Profesional
+                                </h4>
                             </div>
 
-                            <h4 class="mb-0 font-weight-bold text-dark-blue">
-                                Información Profesional
-                            </h4>
+                            <div class="row">
+
+                                <div class="col-md-6 mb-4">
+
+                                    <label class="form-label-custom">
+                                        Cédula Profesional
+                                        <span class="text-danger">*</span>
+                                    </label>
+
+                                    <div class="input-group-custom">
+                                        <i class="fas fa-file-medical input-icon"></i>
+
+                                        <input
+                                            type="text"
+                                            class="form-control-custom"
+                                            placeholder="Ingrese número de cédula"
+                                            v-model="form.cedula_profesional"
+                                            required
+                                        >
+                                    </div>
+
+                                </div>
+
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label-custom">
+                                        Especialidad Médica
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group-custom">
+                                        <i class="fas fa-stethoscope input-icon"></i>
+                                        <select
+                                            class="form-control-custom select-custom"
+                                            v-model="form.especialidad"
+                                            required
+                                        >
+                                            <option disabled value="">
+                                                Seleccione una especialidad...
+                                            </option>
+                                            <option
+                                                v-for="especialidad in especialidades"
+                                                :key="especialidad.id"
+                                                :value="especialidad.id"
+                                            >
+                                                {{ especialidad.nombre }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <div class="card card-custom mt-4">
+                    <div class="card-decor-line bg-warning-gradient rounded-top"></div>
+                    
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="icon-shape bg-warning-light rounded-circle text-warning me-3">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <h5 class="m-0 font-weight-bold text-dark-blue">Información de la Consulta</h5>
                         </div>
 
                         <div class="row">
-
                             <div class="col-md-6 mb-4">
-
                                 <label class="form-label-custom">
-                                    Cédula Profesional
+                                    Costo de la Consulta
                                     <span class="text-danger">*</span>
                                 </label>
-
                                 <div class="input-group-custom">
-                                    <i class="fas fa-file-medical input-icon"></i>
-
+                                    <i class="fas fa-dollar-sign input-icon"></i>
                                     <input
-                                        type="text"
+                                        type="number"
                                         class="form-control-custom"
-                                        placeholder="Ingrese número de cédula"
-                                        v-model="form.cedula_profesional"
+                                        v-model.number="form.costo_consulta"
+                                        placeholder="Ej. 450.00"
+                                        min="0"
+                                        step="0.01"
                                         required
-                                    >
+                                    />
                                 </div>
-
                             </div>
 
                             <div class="col-md-6 mb-4">
                                 <label class="form-label-custom">
-                                    Especialidad Médica
+                                    Sucursal / Ubicación
                                     <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group-custom">
-                                    <i class="fas fa-stethoscope input-icon"></i>
+                                    <i class="fas fa-hospital input-icon"></i>
                                     <select
                                         class="form-control-custom select-custom"
-                                        v-model="form.especialidad"
+                                        v-model="form.ubicacion_id"
                                         required
                                     >
                                         <option disabled value="">
-                                            Seleccione una especialidad...
+                                            Seleccione una sucursal...
                                         </option>
                                         <option
-                                            v-for="especialidad in especialidades"
-                                            :key="especialidad.id"
-                                            :value="especialidad.id"
+                                            v-for="sucursal in sucursales"
+                                            :key="sucursal.id"
+                                            :value="sucursal.id"
                                         >
-                                            {{ especialidad.nombre }}
+                                            {{ sucursal.nombre }}
                                         </option>
                                     </select>
                                 </div>
@@ -139,6 +198,9 @@
                     </div>
                 </div>
             </div>
+            
+            
+        
 
             <!-- COLUMNA DERECHA -->
             <div class="col-lg-4">
@@ -197,7 +259,26 @@
 
                             </div>
 
+                            
+
+                            <div class="mb-4">
+                                <label class="form-label-custom">Duración de la Consulta <span class="text-danger">*</span></label>
+                                <div class="input-group-custom">
+                                    <input type="number" 
+                                        name="duracion_consulta" 
+                                        class="form-control-custom" 
+                                        placeholder="Ej. 30" 
+                                        min="5"
+                                         v-model="form.duracion_consulta" 
+                                        required>
+                                    <i class="fas fa-hourglass-half input-icon"></i>
+                                    
+                                    <span class="input-suffix">Minutos</span>
+                                </div>
+                            </div>
+
                             <hr class="my-4 border-light">
+
 
                             <!-- DÍAS LABORALES -->
 
@@ -301,6 +382,8 @@ export default {
         return {
 
             medicos: [],
+            especialidades: [],
+            sucursales: [],
 
 
             form: {
@@ -310,11 +393,15 @@ export default {
                 especialidad: '',
                 hora_entrada: '',
                 hora_salida: '',
+                duracion_consulta: '',
+                ubicacion_id: '',       
+                costo_consulta: '',
                 dias_laborales: []
+                
 
             },
 
-            especialidades: [],
+            
 
             dias: [
 
@@ -339,6 +426,7 @@ export default {
 
         this.obtenerEspecialidades();
         this.obtenerMedicos();
+        this.obtenerSucursales();
 
     },
 
@@ -348,16 +436,16 @@ export default {
 
             try {
 
-                const response = await ApiService.get('/medicos')
+                const response = await ApiService.get('/medicos/')
                 this.medicos = response.data
                 console.log(
-                    'Especialidades cargadas:',
+                    'Medicos cargados:',
                     this.medicos
                 )
             } catch (error) {
 
                 console.error(
-                    'Error al obtener especialidades:',
+                    'Error al obtener medicos:',
                     error
                 )
             }
@@ -368,7 +456,7 @@ export default {
 
             try {
 
-                const response = await ApiService.get('/specialties')
+                const response = await ApiService.get('/especialidades/')
 
                 this.especialidades = response.data
 
@@ -385,8 +473,31 @@ export default {
                 )
 
             }
-
+ 
         },
+
+        async obtenerSucursales() {
+            try {
+                // Hacemos la petición a la ruta de ubicaciones/sucursales
+                const response = await ApiService.get('/ubicaciones/list')
+                
+                // Guardamos los datos en tu array del data()
+                this.sucursales = response.data
+                
+                console.log(
+                    'Sucursales cargadas:',
+                    this.sucursales
+                )
+            } catch (error) {
+                console.error(
+                    'Error al obtener sucursales:',
+                    error
+                )
+            }
+        },
+
+
+        
 
         async guardarMedico() {
 
@@ -394,10 +505,7 @@ export default {
 
                 const response = await ApiService.post('/medicos',this.form)
 
-                console.log(
-                    'Médico registrado:',
-                    response.data
-                )
+                console.log('Médico registrado:', response.data)
 
                 this.mensajeSuccess =
                     response.data.message ||
@@ -643,6 +751,42 @@ export default {
     .animate-pulse {
         animation: pulse 2s infinite ease-in-out;
     }
+
+    /* SUFIJO PARA EL INPUT DE DURACIÓN (MINUTOS) */
+    .input-group-custom .input-suffix {
+        position: absolute;
+        right: 43px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.5 px;
+        pointer-events: none; 
+    }
+
+    /* AJUSTES ESPECÍFICOS PARA EL INPUT DE PRECIO */
+    .input-group-custom .input-icon-price {
+        position: absolute;
+        left: 16px;
+        color: #94a3b8;
+        font-size: 1.1rem;
+        font-weight: 700;
+        transition: color 0.25s ease;
+        pointer-events: none;
+    }
+
+    /* Cambia el color del $ al enfocar el input de precio */
+    .form-control-price:focus + .input-icon-price {
+        color: #0061f2;
+    }
+
+    /* Margen izquierdo extra exclusivo para el input de precio para que no choque con el $ */
+    .form-control-price {
+        padding-left: 35px !important; 
+    }
+
+
+
 </style>
 
 

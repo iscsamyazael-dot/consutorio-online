@@ -16,7 +16,8 @@ class HorarioMedico extends Model
         'dia_semana',
         'hora_inicio',
         'hora_fin',
-        'duracion_consulta'
+        'duracion_consulta',
+        'ubicacion_id'
     ];
 
     // Relación inversa: Un horario le pertenece a un médico
