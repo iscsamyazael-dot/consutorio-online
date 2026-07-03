@@ -13,8 +13,6 @@ use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::resource('especialidades', SpecialtyController::class);
-
 Route::get('/', function () {
     return view('welcome');
 });
@@ -37,6 +35,8 @@ Route::resource('recetas', RecetaController::class);
 Route::resource('receta-detalles', RecetaDetalleController::class);
 Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
+Route::resource('especialidades', SpecialtyController::class);
+
 
 
 
@@ -67,13 +67,16 @@ Route::resource('citas', App\Http\Controllers\CitaController::class);
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
 
 //  especialidades — CRUD vía JSON, todo bajo /api //
-Route::prefix('api')->group(function () {
-    Route::get('/specialties', [SpecialtyController::class, 'list']);
-    Route::post('/specialties', [SpecialtyController::class, 'store']);
-    Route::put('/specialties/{specialty}', [SpecialtyController::class, 'update']);
-    Route::delete('/specialties/{specialty}', [SpecialtyController::class, 'destroy']);
-});
+// Route::prefix('api')->group(function () {
+//     Route::get('/specialties', [SpecialtyController::class, 'list']);
+//     Route::post('/specialties', [SpecialtyController::class, 'store']);
+//     Route::put('/specialties/{specialty}', [SpecialtyController::class, 'update']);
+//     Route::delete('/specialties/{specialty}', [SpecialtyController::class, 'destroy']);
+// });
 
+Route::get('ConsultarEspecialidades',function(){
+          return view('specialties.index');
+});
 //Código que lleva a la vita de medicamentos e inventario//
 Route::get('Medicamentos',function(){
           return view('medicamentos.index');

@@ -262,6 +262,9 @@
 <script>
 import ApiService from '../../services/ApiService.js';
 
+const ESTADOS = ["Activo", "Inactivo"];
+const FORM_VACIO = { id: null, nombre: "", doctor: "", folio: "", descripcion: "", estado: "Activo" };
+
 export default {
   data() {
     return {
@@ -270,21 +273,49 @@ export default {
       status: "",
       selected: {},
       specialtyToDelete: null,
-      // folio agregado al modelo del formulario
-      form: { id: null, nombre: "", doctor: "", folio: "", descripcion: "", estado: "Activo" },
+      form: { ...FORM_VACIO },
+      formErrors: {},
       modales: { ver: false, nueva: false, editar: false, eliminar: false },
-      toast: { visible: false, mensaje: "" },
+      toast: { visible: false, mensaje: "", tipo: "success" },
       _toastTimer: null,
+      // Estados de carga separados para no bloquear toda la pantalla por una sola acción
+      loading: {
+        lista: false,
+        guardar: false,
+        actualizar: false,
+        eliminar: false,
+      },
+      loadError: null,
+      estadosDisponibles: ESTADOS,
     };
   },
+
   // Filtra automáticamente las especialidades según el texto de búsqueda y el estado seleccionado.
   computed: {
     filteredSpecialties() {
+      const term = this.search.trim().toLowerCase();
       return this.specialties.filter((s) => {
-        const matchSearch = s.nombre.toLowerCase().includes(this.search.toLowerCase());
+        const matchSearch =
+          term === "" ||
+          (s.nombre || "").toLowerCase().includes(term) ||
+          (s.doctor || "").toLowerCase().includes(term) ||
+          (s.folio || "").toLowerCase().includes(term);
         const matchStatus = this.status === "" ? true : s.estado === this.status;
         return matchSearch && matchStatus;
       });
+    },
+
+    hayEspecialidades() {
+      return this.specialties.length > 0;
+    },
+
+    hayResultados() {
+      return this.filteredSpecialties.length > 0;
+    },
+
+    // Bloquea el botón de guardar/actualizar mientras hay una petición en curso
+    isSaving() {
+      return this.loading.guardar || this.loading.actualizar;
     },
   },
 
@@ -292,37 +323,123 @@ export default {
     this.cargar();
   },
 
+  beforeUnmount() {
+    clearTimeout(this._toastTimer);
+  },
+
   methods: {
-    // ✅ CORREGIDO: sin "/api" al inicio, porque ApiService ya lo agrega automáticamente
+    // Carga la lista de especialidades desde el backend
     cargar() {
-      ApiService.get("/specialties").then((res) => {
-        this.specialties = res.data;
-      });
+      this.loading.lista = true;
+      this.loadError = null;
+      ApiService.get("/specialties")
+        .then((res) => {
+          this.specialties = res.data;
+        })
+        .catch((err) => {
+          this.loadError = "No se pudo cargar la lista de especialidades.";
+          this.mostrarToast("⚠ Error al cargar especialidades", "error");
+          console.error("Error cargando specialties:", err);
+        })
+        .finally(() => {
+          this.loading.lista = false;
+        });
     },
 
-    abrirModal(name) { this.modales[name] = true; },
+    abrirModal(name) {
+      this.modales[name] = true;
+    },
 
-    ver(item) { this.selected = item; this.modales.ver = true; },
+    // Abre el modal de "nueva" garantizando que el formulario empiece limpio
+    abrirNueva() {
+      this.resetForm();
+      this.modales.nueva = true;
+    },
 
-    editar(item) { this.form = { ...item }; this.modales.editar = true; },
+    ver(item) {
+      this.selected = item;
+      this.modales.ver = true;
+    },
+
+    cerrarVer() {
+      this.modales.ver = false;
+      this.selected = {};
+    },
+
+    editar(item) {
+      this.form = { ...item };
+      this.formErrors = {};
+      this.modales.editar = true;
+    },
+
+    cerrarEditar() {
+      this.modales.editar = false;
+      this.resetForm();
+    },
+
+    // Valida los campos obligatorios del formulario. Devuelve true si es válido.
+    validarForm() {
+      const errores = {};
+      if (!this.form.nombre || !this.form.nombre.trim()) {
+        errores.nombre = "El nombre es obligatorio";
+      }
+      if (!this.form.doctor || !this.form.doctor.trim()) {
+        errores.doctor = "El doctor es obligatorio";
+      }
+      if (!this.form.folio || !this.form.folio.trim()) {
+        errores.folio = "El folio es obligatorio";
+      }
+      if (!ESTADOS.includes(this.form.estado)) {
+        errores.estado = "Estado inválido";
+      }
+      this.formErrors = errores;
+      return Object.keys(errores).length === 0;
+    },
 
     // Guarda una nueva especialidad, actualiza la lista, cierra el formulario y muestra un mensaje de éxito.
     guardar() {
-      ApiService.post("/specialties", this.form).then(() => {
-        this.cargar();
-        this.modales.nueva = false;
-        this.resetForm();
-        this.mostrarToast("✓ Especialidad guardada correctamente");
-      });
+      if (!this.validarForm()) {
+        this.mostrarToast("⚠ Revisa los campos marcados", "error");
+        return;
+      }
+      this.loading.guardar = true;
+      ApiService.post("/specialties", this.form)
+        .then(() => {
+          this.cargar();
+          this.modales.nueva = false;
+          this.resetForm();
+          this.mostrarToast("✓ Especialidad guardada correctamente");
+        })
+        .catch((err) => {
+          this.mostrarToast("⚠ No se pudo guardar la especialidad", "error");
+          console.error("Error guardando specialty:", err);
+        })
+        .finally(() => {
+          this.loading.guardar = false;
+        });
     },
 
     // Actualiza los datos de una especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
     actualizar() {
-      ApiService.put(`/specialties/${this.form.id}`, this.form).then(() => {
-        this.cargar();
-        this.modales.editar = false;
-        this.mostrarToast("✓ Actualización guardada");
-      });
+      if (!this.validarForm()) {
+        this.mostrarToast("⚠ Revisa los campos marcados", "error");
+        return;
+      }
+      this.loading.actualizar = true;
+      ApiService.put(`/specialties/${this.form.id}`, this.form)
+        .then(() => {
+          this.cargar();
+          this.modales.editar = false;
+          this.resetForm();
+          this.mostrarToast("✓ Actualización guardada");
+        })
+        .catch((err) => {
+          this.mostrarToast("⚠ No se pudo actualizar la especialidad", "error");
+          console.error("Error actualizando specialty:", err);
+        })
+        .finally(() => {
+          this.loading.actualizar = false;
+        });
     },
 
     // Guarda la especialidad seleccionada y abre el cuadro de confirmación para eliminarla.
@@ -331,14 +448,30 @@ export default {
       this.modales.eliminar = true;
     },
 
+    cerrarEliminar() {
+      this.modales.eliminar = false;
+      this.specialtyToDelete = null;
+    },
+
     // Elimina la especialidad seleccionada, actualiza la lista y muestra un mensaje de confirmación.
     confirmarEliminar() {
-      ApiService.delete(`/specialties/${this.specialtyToDelete.id}`).then(() => {
-        this.cargar();
-        this.modales.eliminar = false;
-        this.mostrarToast(`✓ "${this.specialtyToDelete.nombre}" eliminada`);
-        this.specialtyToDelete = null;
-      });
+      if (!this.specialtyToDelete) return;
+      this.loading.eliminar = true;
+      const nombre = this.specialtyToDelete.nombre;
+      ApiService.delete(`/specialties/${this.specialtyToDelete.id}`)
+        .then(() => {
+          this.cargar();
+          this.modales.eliminar = false;
+          this.mostrarToast(`✓ "${nombre}" eliminada`);
+          this.specialtyToDelete = null;
+        })
+        .catch((err) => {
+          this.mostrarToast(`⚠ No se pudo eliminar "${nombre}"`, "error");
+          console.error("Error eliminando specialty:", err);
+        })
+        .finally(() => {
+          this.loading.eliminar = false;
+        });
     },
 
     // Cierra el formulario de nueva especialidad y limpia los datos ingresados.
@@ -347,17 +480,21 @@ export default {
       this.resetForm();
     },
 
-    // folio incluido en el reset
     resetForm() {
-      this.form = { id: null, nombre: "", doctor: "", folio: "", descripcion: "", estado: "Activo" };
+      this.form = { ...FORM_VACIO };
+      this.formErrors = {};
     },
 
     // Muestra un mensaje tipo toast temporal y lo oculta automáticamente después de unos segundos.
-    mostrarToast(mensaje) {
+    // tipo puede ser "success" o "error" para permitir estilos distintos en el template.
+    mostrarToast(mensaje, tipo = "success") {
       clearTimeout(this._toastTimer);
       this.toast.mensaje = mensaje;
+      this.toast.tipo = tipo;
       this.toast.visible = true;
-      this._toastTimer = setTimeout(() => { this.toast.visible = false; }, 2500);
+      this._toastTimer = setTimeout(() => {
+        this.toast.visible = false;
+      }, 2500);
     },
 
     // Limita la longitud de un texto y agrega puntos suspensivos si excede el tamaño permitido.
