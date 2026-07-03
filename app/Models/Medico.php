@@ -41,6 +41,7 @@ class Medico extends Model
     }
     
     //Metodo para crear el folio o ID representativo
+
     protected static function booted()
     {
         static::creating(function ($medico) {
