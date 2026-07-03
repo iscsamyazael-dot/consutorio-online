@@ -317,146 +317,171 @@ return [
             'type' => 'sidebar-menu-search',
             'text' => 'Buscar',
         ],
+        
+        
+        // ==========================================
+        // 📋 MOVIMIENTOS GENERALES (COMPARTIDOS)
+        // ==========================================
         [
-            'text' => 'blog',
-            'url' => 'admin/blog',
-            'can' => 'manage-blog',
+            'header' => 'MOVIMIENTOS DEL SISTEMA',
+            'can' => 'rol-asistente-medico',
         ],
-         ['header' => 'MOVIMIENTOS DEL SISTEMA'],
         [
             'text' => 'Pacientes',
             'icon' => 'fas fa-fw fa-user',
-            'submenu' =>[
+            'can' => 'rol-asistente-medico',
+            'submenu' => [
                 [
-                'text' => 'Lista de pacientes',
-                'icon' => 'fas fa-fw fa-list',
-                'url' => 'pacientes',
+                    'text' => 'Lista de pacientes',
+                    'icon' => 'fas fa-fw fa-list',
+                    'url' => 'asistente/pacientes.index', // Apunta al grupo del rol
                 ],
                 [
-                'text' => 'Registrar paciente',
-                'icon' => 'fas fa-fw fa-user-plus',
-                'url' => 'PacienteNuevo',
+                    'text' => 'Registrar paciente',
+                    'icon' => 'fas fa-fw fa-user-plus',
+                    'url' => 'asistente/PacienteNuevo',
                 ],
             ],
-        
         ],
         [
             'text' => 'Consultas',
             'icon' => 'fas fa-fw fa-stethoscope',
-             'submenu' =>[
+            'can' => 'rol-asistente-medico',
+            'submenu' => [
                 [
-    'text' => 'Lista de consulta',
-    'url'  => 'ListaConsultas',
-    'icon' => 'fas fa-fw fa-notes-medical',
-],
+                    'text' => 'Lista de consulta',
+                    'url'  => 'asistente/ListaConsultas', // Visible para Asistente y Médico
+                    'icon' => 'fas fa-fw fa-notes-medical',
+                ],
                 [
-    'text' => 'Nueva consulta',
-    'url'  => 'NuevaConsulta',
-    'icon' => 'fas fa-plus-circle',
-],
+                    'text' => 'Nueva consulta',
+                    'url'  => 'medico/NuevaConsulta',
+                    'icon' => 'fas fa-plus-circle',
+                    'can'  => 'rol-medico', // 🔒 Oculto para asistente
+                ],
                 [
-                'text' => 'Consulta Inteligente',
-                'icon' => 'fas fa-network-wired',
-                'url' => 'ConsultaInteligente',
+                    'text' => 'Consulta Inteligente',
+                    'icon' => 'fas fa-network-wired',
+                    'url'  => 'medico/ConsultaInteligente',
+                    'can'  => 'rol-medico', // 🔒 Oculto para asistente
                 ],
             ],
         ],
         [
             'text' => 'Atención Médica',
             'icon' => 'fas fa-fw fa-hospital',
-             'submenu' =>[
+            'can' => 'rol-medico', // 🔒 Oculto para asistente
+            'submenu' => [
                 [
-                'text' => 'Triage',
-                'icon' => 'fas fa-fw fa-exclamation',
-                'url' => 'TRIAGE',
+                    'text' => 'Triage',
+                    'icon' => 'fas fa-fw fa-exclamation',
+                    'url' => 'medico/TRIAGE',
                 ],
                 [
-                'text' => 'Evaluación IA',
-                'icon' => 'fas fa-fw fa-robot',
-                'url' => 'EvaluacionIa',
+                    'text' => 'Evaluación IA',
+                    'icon' => 'fas fa-fw fa-robot',
+                    'url' => 'medico/EvaluacionIa',
                 ],
                 [
-                'text' => 'Archivos Clínicos',
-                'icon' => 'fas fa-fw fa-folder-open',
-                'url' => 'ArchivosClinicos',
+                    'text' => 'Archivos Clínicos',
+                    'icon' => 'fas fa-fw fa-folder-open',
+                    'url' => 'medico/ArchivosClinicos',
                 ],
                 [
-                'text' => 'Derivaciones',
-                'icon' => 'fas fa-fw fa-eye',
-                'url' => 'Derivaciones',
+                    'text' => 'Derivaciones',
+                    'icon' => 'fas fa-fw fa-eye',
+                    'url' => 'medico/Derivaciones',
+                ],
+            ],
+        ],
+       [
+            'text'    => 'Agenda',
+            'icon'    => 'fas fa-fw fa-calendar',
+            'can'     => 'rol-asistente-medico', 
+            'submenu' => [
+                [
+                    'text' => 'Citas',
+                    'icon' => 'fas fa-fw fa-list',
+                    'url'  => 'dashboard/citas', // 👈 Usaremos una URL base neutral
+                ],
+                [
+                    'text' => 'Programar cita',
+                    'icon' => 'fas fa-fw fa-user-clock',
+                    'url'  => 'dashboard/citas/create', // 👈 Usaremos una URL base neutral
                 ],
             ],
         ],
         [
-    'text'    => 'Agenda',
-    'icon'    => 'fas fa-fw fa-calendar',
-    'submenu' => [
-        [
-            'text' => 'Citas',
-            'route'  => 'citas.index', // Apunta a tu ruta de listado
-            'icon' => 'fas fa-fw fa-list',
-        ],
-        [
-            'text' => 'Programar cita',
-            'route'  => 'citas.create', // Apunta a tu ruta de formulario
-            'icon' => 'fas fa-fw fa-user-clock',
-        ],
-    ],
-],
-        [
             'text' => 'Recetas',
             'icon' => 'fas fa-fw fa-prescription',
-             'submenu' =>[
+            'can' => 'rol-medico', // 🔒 Oculto para asistente
+            'submenu' => [
                 [
-                'text' => 'Historialde recetas',
-                'icon' => 'fas fa-fw fa-book-medical',
-                'url' => '#',
+                    'text' => 'Historial de recetas',
+                    'icon' => 'fas fa-fw fa-book-medical',
+                    'url' => 'medico/HistorialRecetas',
                 ],
             ],
         ],
         [
             'text' => 'Medicamentos',
             'icon' => 'fas fa-fw fa-capsules',
-            'submenu' =>[
+            'can' => 'rol-medico', // 🔒 Oculto para asistente
+            'submenu' => [
                 [
-                'text' => 'Inventario',
-                'icon' => 'fas fa-fw fa-pump-medical',
-                'url' => 'Medicamentos',
+                    'text' => 'Inventario',
+                    'icon' => 'fas fa-fw fa-pump-medical',
+                    'url' => 'medico/Medicamentos',
                 ],
-                // [
-                // 'text' => 'Registrar Medicamento',
-                // 'icon' => 'fas fa-fw fa-cart-plus',
-                // 'url' => '#',
-                // ],
             ],
         ],
-        ['header'=> 'CONFIGURACIÓN MÉDICA'],
+
+        // ==========================================
+        // 🩺 CONFIGURACIÓN EXCLUSIVA MÉDICA
+        // ==========================================
+        [   'header' => 'CONFIGURACIÓN MÉDICA',
+            'can' => 'rol-medico',
+        ],
         [
             'text' => 'Especialidades',
-            'url'  => 'especialidades', // O 'admin/specialties' si tu ruta tiene prefijo
+            'url' => 'medico/especialidades',
             'icon' => 'fas fa-fw fa-user',
+            'can' => 'rol-medico', // 🔒 Oculto para asistente
         ],
         [
             'text' => 'Médicos',
-            'url'  => 'MedicosAlta', 
+            'url'  => 'medico/MedicosAlta', 
             'icon' => 'fas fa-fw fa-user-md',
+            'can' => 'rol-medico', // 🔒 Oculto para asistente
         ],
-        
-        ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
+
+        // ==========================================
+        // ⚙️ CONFIGURACIÓN DEL SISTEMA (TODOS)
+        // ==========================================
+        // ==========================================
+        // 🛡️ SECCIÓN EXCLUSIVA: ADMINISTRADOR (CONFIGURACIÓN)
+        // ==========================================
+        [
+            'header' => 'CONFIGURACIÓN DEL SISTEMA',
+            'can'    => 'ver-admin', // 🔒 Oculta el encabezado para Asistente y Médico
+        ],
         [
             'text' => 'Perfil',
-            'url' => 'admin/settings',
+            'url'  => 'perfil',
             'icon' => 'fas fa-fw fa-user',
+            'can'  => 'ver-admin', // 🔒 Oculta el botón
         ],
         [
             'text' => 'Cambiar contraseña',
-            'url' => 'admin/settings',
+            'url'  => 'cambiar-contraseña',
             'icon' => 'fas fa-fw fa-lock',
+            'can'  => 'ver-admin', // 🔒 Oculta el botón
         ],
         [
-             'text' => 'Cerrar sesión',
+            'text' => 'Cerrar sesión',
             'url'  => 'logout',
             'icon' => 'fas fa-sign-out-alt',
+            'can'  => 'ver-admin', // 🔒 Oculta el botón
         ],
     ],
 

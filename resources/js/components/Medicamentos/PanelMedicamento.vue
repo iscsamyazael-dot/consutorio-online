@@ -2,26 +2,17 @@
     <!-- ========================================= -->
     <!-- ACCCIONES DEL MÉNU DE LOS MEDICAMENTOS -->
     <!-- ========================================= -->
-     <acciones_botones @cambiarVista="vista = $event"></acciones_botones>
+     <acciones_botones 
+         @cambiarVista="vista = $event"
+         @actualizar-inventario="refrescarInventario">
+    </acciones_botones>
     <!-- ========================================= -->
     <!-- KPI CARDS -->
     <!-- ========================================= -->
-     <kpicards></kpicards>
-    <!-- ========================================= -->
-    <!-- ALERTAS -->
-    <!-- ========================================= -->
-     
-
-    <!-- INVENTARIO MEDICAMENTOS -->
-    <!-- ========================================= -->
-     
-
-    <!-- ALERTA FARMACIA -->
-    <!-- ========================================= -->
-     
     <template v-if="vista === 'inventario'">
+        <kpicards></kpicards>
         <alertasResumen></alertasResumen>
-        <inventario></inventario>
+        <inventario ref="tablaInventario"></inventario>
     </template>
 
     <template v-if="vista === 'alertas'">
@@ -54,6 +45,9 @@
         methods: {
             cambiarVista(vistaNueva){
                 this.vista = vistaNueva
+            },
+            refrescarInventario(){
+                this.$refs.tablaInventario.obtenerMedicamentos()
             }
         }
 }
