@@ -201,6 +201,8 @@ Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas'
 Route::get('ConsultarEspecialidades',function(){
           return view('specialties.index');
 });
+
+
 //Código que lleva a la vita de medicamentos e inventario//
 Route::get('Medicamentos',function(){
           return view('medicamentos.index');

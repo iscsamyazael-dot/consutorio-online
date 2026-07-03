@@ -332,7 +332,7 @@ export default {
     cargar() {
       this.loading.lista = true;
       this.loadError = null;
-      ApiService.get("/specialties")
+      ApiService.get("/especialidades")
         .then((res) => {
           this.specialties = res.data;
         })
@@ -405,7 +405,7 @@ export default {
       }
       // Bloquea el botón de guardar mientras se realiza la petición
       this.loading.guardar = true;
-      ApiService.post("/specialties", this.form)
+      ApiService.post("/especialidades", this.form)
         .then(() => {
           this.cargar();
           this.modales.nueva = false;
@@ -430,7 +430,7 @@ export default {
       }
       // Bloquea el botón de actualizar mientras se realiza la petición
       this.loading.actualizar = true;
-      ApiService.put(`/specialties/${this.form.id}`, this.form)
+      ApiService.put(`/especialidades/${this.form.id}`, this.form)
         .then(() => {
           this.cargar();
           this.modales.editar = false;
@@ -464,7 +464,7 @@ export default {
       if (!this.specialtyToDelete) return;
       this.loading.eliminar = true;
       const nombre = this.specialtyToDelete.nombre;
-      ApiService.delete(`/specialties/${this.specialtyToDelete.id}`)
+      ApiService.delete(`/especialidades/${this.specialtyToDelete.id}`)
         .then(() => {
           this.cargar();
           this.modales.eliminar = false;
