@@ -66,13 +66,6 @@ Route::resource('citas', App\Http\Controllers\CitaController::class);
 // api de calendario//
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getEventos']);
 
-//  especialidades — CRUD vía JSON, todo bajo /api //
-// Route::prefix('api')->group(function () {
-//     Route::get('/specialties', [SpecialtyController::class, 'list']);
-//     Route::post('/specialties', [SpecialtyController::class, 'store']);
-//     Route::put('/specialties/{specialty}', [SpecialtyController::class, 'update']);
-//     Route::delete('/specialties/{specialty}', [SpecialtyController::class, 'destroy']);
-// });
 
 Route::get('ConsultarEspecialidades',function(){
           return view('specialties.index');

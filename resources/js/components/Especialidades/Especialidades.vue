@@ -336,6 +336,7 @@ export default {
         .then((res) => {
           this.specialties = res.data;
         })
+        // Manejo de errores: muestra un mensaje de error y registra el error en la consola
         .catch((err) => {
           this.loadError = "No se pudo cargar la lista de especialidades.";
           this.mostrarToast("⚠ Error al cargar especialidades", "error");
@@ -355,23 +356,23 @@ export default {
       this.resetForm();
       this.modales.nueva = true;
     },
-
+// Abre el modal de ver y carga los datos del item seleccionado
     ver(item) {
       this.selected = item;
       this.modales.ver = true;
     },
-
+// Cierra el modal de ver y limpia la selección
     cerrarVer() {
       this.modales.ver = false;
       this.selected = {};
     },
-
+    // Abre el modal de edición y carga los datos del item seleccionado en el formulario
     editar(item) {
       this.form = { ...item };
       this.formErrors = {};
       this.modales.editar = true;
     },
-
+// Cierra el modal de edición y reinicia el formulario
     cerrarEditar() {
       this.modales.editar = false;
       this.resetForm();
@@ -402,6 +403,7 @@ export default {
         this.mostrarToast("⚠ Revisa los campos marcados", "error");
         return;
       }
+      // Bloquea el botón de guardar mientras se realiza la petición
       this.loading.guardar = true;
       ApiService.post("/specialties", this.form)
         .then(() => {
@@ -410,6 +412,7 @@ export default {
           this.resetForm();
           this.mostrarToast("✓ Especialidad guardada correctamente");
         })
+        // Manejo de errores: muestra un toast y registra el error en la consola
         .catch((err) => {
           this.mostrarToast("⚠ No se pudo guardar la especialidad", "error");
           console.error("Error guardando specialty:", err);
@@ -425,6 +428,7 @@ export default {
         this.mostrarToast("⚠ Revisa los campos marcados", "error");
         return;
       }
+      // Bloquea el botón de actualizar mientras se realiza la petición
       this.loading.actualizar = true;
       ApiService.put(`/specialties/${this.form.id}`, this.form)
         .then(() => {
@@ -433,10 +437,12 @@ export default {
           this.resetForm();
           this.mostrarToast("✓ Actualización guardada");
         })
+        // Manejo de errores: muestra un toast y registra el error en la consola
         .catch((err) => {
           this.mostrarToast("⚠ No se pudo actualizar la especialidad", "error");
           console.error("Error actualizando specialty:", err);
         })
+        // Desbloquea el botón de actualizar después de completar la petición
         .finally(() => {
           this.loading.actualizar = false;
         });
@@ -447,7 +453,7 @@ export default {
       this.specialtyToDelete = item;
       this.modales.eliminar = true;
     },
-
+// Cierra el cuadro de confirmación de eliminación y limpia la especialidad seleccionada.
     cerrarEliminar() {
       this.modales.eliminar = false;
       this.specialtyToDelete = null;
@@ -479,7 +485,7 @@ export default {
       this.modales.nueva = false;
       this.resetForm();
     },
-
+// Reinicia el formulario a su estado inicial y limpia los errores.
     resetForm() {
       this.form = { ...FORM_VACIO };
       this.formErrors = {};
