@@ -437,7 +437,7 @@ return [
             'icon' => 'fas fa-fw fa-user',
         ],
         [
-    'text' => 'Ubicaciones',
+    'text' => 'Sucursales',
     'icon' => 'fas fa-fw fa-map-marker-alt',
     'url' => 'ubicaciones',
         ],

@@ -10,28 +10,25 @@ use Illuminate\View\View;
 class UbicacionController extends Controller
 {
     /**
-     * Muestra la vista principal (formulario + tabla) de ubicaciones.
+     * Muestra la vista principal.
      */
     public function index(): View
     {
-        $ubicaciones = Ubicacion::orderBy('nombre')->get();
-
-        return view('ubicaciones.index', compact('ubicaciones'));
+        return view('ubicaciones.index');
     }
 
     /**
-     * Devuelve el listado de ubicaciones en formato JSON,
-     * usado por el componente Vue para llenar la tabla.
+     * Devuelve el listado de ubicaciones en formato JSON.
      */
     public function listar(): JsonResponse
     {
-        $ubicaciones = Ubicacion::orderBy('nombre')->get();
+        $ubicaciones = Ubicacion::orderBy('folio_sucursal', 'asc')->get();
 
         return response()->json($ubicaciones);
     }
 
     /**
-     * Valida y guarda una nueva ubicación.
+     * Guarda una nueva ubicación.
      */
     public function store(Request $request)
     {
@@ -44,11 +41,7 @@ class UbicacionController extends Controller
             'activo' => ['nullable', 'boolean'],
         ]);
 
-        $ubicacion = Ubicacion::create($validated);
-
-        if ($request->wantsJson()) {
-            return response()->json($ubicacion, 201);
-        }
+        Ubicacion::create($validated);
 
         return redirect()
             ->route('ubicaciones.index')
@@ -56,7 +49,7 @@ class UbicacionController extends Controller
     }
 
     /**
-     * Valida y actualiza una ubicación existente (datos y/o estado activo/inactivo).
+     * Actualiza una ubicación existente.
      */
     public function update(Request $request, $id): JsonResponse
     {
@@ -72,6 +65,9 @@ class UbicacionController extends Controller
 
         $ubicacion->update($validated);
 
-        return response()->json($ubicacion);
+        return response()->json([
+            'message' => 'Ubicación actualizada correctamente.',
+            'data' => $ubicacion
+        ]);
     }
 }
