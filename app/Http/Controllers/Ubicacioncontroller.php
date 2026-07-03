@@ -14,7 +14,7 @@ class UbicacionController extends Controller
      */
     public function index(): View
     {
-        $ubicaciones = Ubicacion::orderBy('folio_sucursal')->get();
+        $ubicaciones = Ubicacion::orderBy('folio_sucursal','DESC')->get();
 
         return view('ubicaciones.index', compact('ubicaciones'));
     }
@@ -25,7 +25,7 @@ class UbicacionController extends Controller
      */
     public function listar(): JsonResponse
     {
-        $ubicaciones = Ubicacion::orderBy('nombre')->get();
+        $ubicaciones = Ubicacion::orderBy('folio_sucursal','ASC')->get();
 
         return response()->json($ubicaciones);
     }
