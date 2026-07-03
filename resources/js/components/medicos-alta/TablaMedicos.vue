@@ -9,7 +9,7 @@
             <div class="small-box bg-info">
 
                 <div class="inner">
-                    <h3>15</h3>
+                    <h3>{{ cards.total }}</h3>
                     <p>Doctores Registrados</p>
                 </div>
 
@@ -26,7 +26,7 @@
             <div class="small-box bg-success">
 
                 <div class="inner">
-                    <h3>12</h3>
+                    <h3>{{ cards.activos }}</h3>
                     <p>Activos</p>
                 </div>
 
@@ -43,7 +43,7 @@
             <div class="small-box bg-warning">
 
                 <div class="inner">
-                    <h3>3</h3>
+                    <h3>{{ cards.inactivos }}</h3>
                     <p>Inactivos</p>
                 </div>
 
@@ -94,6 +94,8 @@
                         <th>Horario</th>
                         <th>Días Laborales</th>
                         <th>Estado</th>
+                        <th>Dur. consulta</th>
+                        <th>Sucursal</th>
                         <th width="180">Acciones</th>
                     </tr>
                 </thead>
@@ -146,6 +148,26 @@
                                 :class="medico.activo == 1 ? 'badge-success' : 'badge-secondary'"
                             >
                                 {{ medico.activo == 1 ? 'Activo' : 'Inactivo' }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span v-if="medico.horarios && medico.horarios.length > 0" class="badge bg-light text-dark border fw-semibold">
+                                <i class="fas fa-clock text-primary me-1" style="font-size: 12px;"></i>
+                                {{ medico.horarios[0].duracion_consulta }} min
+                            </span>
+                            <span v-else class="text-muted" style="font-size: 13px;">
+                                --
+                            </span>
+                        </td>
+
+                        <td>
+                            <span v-if="medico.configuraciones && medico.configuraciones.length > 0 && medico.configuraciones[0].ubicacion">
+                                <i class="fas fa-map-marker-alt text-muted me-1" style="font-size: 12px;"></i>
+                                {{ medico.configuraciones[0].ubicacion.nombre }}
+                            </span>
+                            <span v-else class="text-muted text-uppercase fw-medium" style="font-size: 11px;">
+                                Sin Sucursal
                             </span>
                         </td>
 
@@ -232,28 +254,36 @@
                 </div>
                 </div>
 
-                <!--COSTO SUCURSAL-->
+                <!--COSTO SUCURSAL Y DURACION DE CONSULTA-->
 
                 <div class="col-12 mt-2">
                     <hr class="my-0" style="border-color:#e8edf2">
                 </div>
 
-                <div class="col-md-7">
+                <div class="col-md-4">
                     <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#000;">Sucursal / Ubicación</label>
                     <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
                         <span class="input-group-text bg-white border-0" style="color:#94a3b8"><i class="fas fa-map-marker-alt" style="font-size:14px"></i></span>
                         <select v-model="formMedico.ubicacion_id" class="form-select bg-white border-0 py-2" style="font-size:14px" required>
-                        <option value="" disabled>Selecciona una sucursal</option>
-                        <option v-for="s in sucursales" :key="s.id" :value="s.id">{{ s.nombre }}</option>
+                            <option value="" disabled>Selecciona una sucursal</option>
+                            <option v-for="s in sucursales" :key="s.id" :value="s.id">{{ s.nombre }}</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#000;">Costo de Consulta</label>
                     <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
                         <span class="input-group-text bg-white border-0" style="color:#10b981"><i class="fas fa-dollar-sign" style="font-size:14px"></i></span>
                         <input v-model="formMedico.costo_consulta" type="number" step="0.01" min="0" class="form-control bg-white border-0 py-2" style="font-size:14px" placeholder="0.00" required />
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#000;">Duración (Minutos)</label>
+                    <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
+                        <span class="input-group-text bg-white border-0" style="color:#3b82f6"><i class="fas fa-clock" style="font-size:14px"></i></span>
+                        <input v-model="formMedico.duracion_consulta" type="number" min="5" step="5" class="form-control bg-white border-0 py-2" style="font-size:14px" placeholder="Ej. 30" required />
                     </div>
                 </div>
 
@@ -326,26 +356,7 @@
 </div>
 
 
-<!--MODAL ELIMINAR MEDICO-->
 
-<div class="modal fade" id="modalEliminarMedico" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title">Confirmar Eliminación</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body text-center p-4">
-        <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 2.5rem;"></i>
-        <p class="fs-5">¿Realmente quieres eliminar este registro?</p>
-      </div>
-      <div class="modal-footer d-flex justify-content-center">
-        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-danger px-4" @click="eliminarMedicoConfirmado">Eliminar</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- CONTENEDOR FLOTANTE PARA TOASTS -->
 
@@ -419,7 +430,14 @@ export default {
             hora_inicio: '',       
             hora_fin: '',
             ubicacion_id: '',
-            costo_consulta: ''      
+            costo_consulta: '',
+            duracion_consulta: ''     
+            },
+
+            cards: {
+                total: 0,
+                activos: 0,
+                inactivos: 0
             },
 
             // Control de los Días Laborales de forma visual e independiente
@@ -475,41 +493,46 @@ export default {
         this.obtenerEspecialidades();
         this.obtenerMedicos();
         this.obtenerSucursales();
+        this.obtenerEstadisticasMedicos();
         
 
     },
 
     methods: {
         // Trae los datos desde la BD al modal de Editar usando la KEY (id)
-        async editarMedico(id) {
+       async editarMedico(id) {
             try {
                 const response = await ApiService.get(`/medicos/${id}`)
                 const medico = response.data
 
-                this.formMedico.id               = medico.id
-                this.formMedico.folio            = medico.folio
-                this.formMedico.nombre           = medico.nombre
+                this.formMedico.id                 = medico.id
+                this.formMedico.folio              = medico.folio
+                this.formMedico.nombre             = medico.nombre
                 this.formMedico.cedula_profesional = medico.cedula_profesional
-                this.formMedico.especialidad_id  = medico.especialidad_id
-                this.formMedico.estado           = medico.activo == 1 ? 'Activo' : 'Inactivo' // ← nuevo
-               
+                this.formMedico.especialidad_id    = medico.especialidad_id
+                this.formMedico.estado             = medico.activo == 1 ? 'Activo' : 'Inactivo'
                 
-                // Extraemos el lugar y costo desde la relación intermedia
+                // Lugar y costo (Desde configuraciones)
                 if (medico.configuraciones && medico.configuraciones.length > 0) {
                     this.formMedico.ubicacion_id   = medico.configuraciones[0].ubicacion_id
                     this.formMedico.costo_consulta = medico.configuraciones[0].costo_consulta
                 } else {
-                    // Valores por defecto limpios por si un médico no tiene sucursal asignada todavía
                     this.formMedico.ubicacion_id   = ''
                     this.formMedico.costo_consulta = ''
                 }
 
-                //Horarios
-                if (medico.horarios.length > 0) {
-                    this.formMedico.hora_inicio = medico.horarios[0].hora_inicio.substring(0, 5)
-                    this.formMedico.hora_fin    = medico.horarios[0].hora_fin.substring(0, 5)
+                // Horarios Y Duración (Desde la tabla horarios)
+                if (medico.horarios && medico.horarios.length > 0) {
+                    this.formMedico.hora_inicio       = medico.horarios[0].hora_inicio.substring(0, 5)
+                    this.formMedico.hora_fin          = medico.horarios[0].hora_fin.substring(0, 5)
+                    this.formMedico.duracion_consulta = medico.horarios[0].duracion_consulta // ← Extraído de horarios
+                } else {
+                    this.formMedico.hora_inicio       = ''
+                    this.formMedico.hora_fin          = ''
+                    this.formMedico.duracion_consulta = '' // ← Limpio si no hay horarios
                 }
-                //Dias seleccionados 
+                
+                // Días seleccionados 
                 const diasMap = { 1:'Lunes', 2:'Martes', 3:'Miércoles', 4:'Jueves', 5:'Viernes', 6:'Sábado', 7:'Domingo' }
                 this.diasSeleccionados = medico.horarios.map(h => diasMap[h.dia_semana])
 
@@ -521,14 +544,15 @@ export default {
         async guardarCambiosMedico() {
             try {
                 const payload = {
-                    nombre:          this.formMedico.nombre,
-                    especialidad_id: this.formMedico.especialidad_id,
-                    estado:          this.formMedico.estado,
-                    hora_inicio:     this.formMedico.hora_inicio,
-                    hora_fin:        this.formMedico.hora_fin,
-                    dias:            this.diasSeleccionados,
-                    ubicacion_id:    this.formMedico.ubicacion_id,
-                    costo_consulta:  this.formMedico.costo_consulta
+                    nombre:            this.formMedico.nombre,
+                    especialidad_id:   this.formMedico.especialidad_id,
+                    estado:            this.formMedico.estado,
+                    hora_inicio:       this.formMedico.hora_inicio,
+                    hora_fin:          this.formMedico.hora_fin,
+                    dias:              this.diasSeleccionados,
+                    ubicacion_id:      this.formMedico.ubicacion_id,
+                    costo_consulta:    this.formMedico.costo_consulta,
+                    duracion_consulta: this.formMedico.duracion_consulta // En el payload se queda igual porque el Controlador lo mapea a los horarios
                 }
 
                 await ApiService.put(`/medicos/${this.formMedico.id}`, payload)
@@ -539,7 +563,9 @@ export default {
                     await this.obtenerMedicos()
                 }
 
-                // ✅ Cierra el modal sin usar bootstrap.Modal
+                // Actualiza los contadores de las cartas de inmediato
+                await this.obtenerEstadisticasMedicos();
+
                 document.getElementById('modalEditarMedico')
                     .querySelector('[data-bs-dismiss="modal"]')
                     .click()
@@ -615,6 +641,16 @@ export default {
                     'Error al obtener sucursales:',
                     error
                 )
+            }
+        },
+
+
+        async obtenerEstadisticasMedicos() {
+            try {
+                const response = await ApiService.get('/medicos/estadisticas');
+                this.cards = response.data; // Asigna { total, activos, inactivos }
+            } catch (error) {
+                console.error('Error al obtener las estadísticas:', error);
             }
         },
 

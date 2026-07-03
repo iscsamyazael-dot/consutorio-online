@@ -117,6 +117,10 @@ class MedicoController extends Controller
             'hora_fin'          => 'required',
             'dias'              => 'required|array|min:1',
             'duracion_consulta' => 'required|integer|min:5|max:240',
+            
+            // Agregamos la validación de los campos de configuración que vienen del modal
+            'ubicacion_id'      => 'required|exists:ubicaciones,id',
+            'costo_consulta'    => 'required|numeric|min:0',
         ]);
 
         $mapeoDias = [
@@ -134,12 +138,22 @@ class MedicoController extends Controller
         try {
             $medico = Medico::findOrFail($id);
 
+            // 1. Actualizar datos base del Médico
             $medico->nombre          = $request->nombre;
             $medico->especialidad_id = $request->especialidad_id;
             $medico->activo          = $request->estado === 'Activo' ? 1 : 0;
             $medico->save();
 
-            // Borra los horarios anteriores y los recrea desde cero
+            // 2. Actualizar o crear la configuración de sucursal y costo
+            ConfiguracionMedicoSucursal::updateOrCreate(
+                ['medico_id' => $medico->id], // Condición de búsqueda
+                [
+                    'ubicacion_id'   => $request->ubicacion_id,
+                    'costo_consulta' => $request->costo_consulta,
+                ]
+            );
+
+            // 3. Borrar los horarios anteriores y recrearlos incorporando los nuevos datos
             HorarioMedico::where('medico_id', $medico->id)->delete();
 
             foreach ($request->dias as $diaNombre) {
@@ -149,13 +163,14 @@ class MedicoController extends Controller
                     'hora_inicio'       => $request->hora_inicio,
                     'hora_fin'          => $request->hora_fin,
                     'duracion_consulta' => $request->duracion_consulta,
+                    'ubicacion_id'      => $request->ubicacion_id, // Añadido para mantener consistencia con el store
                 ]);
             }
 
             DB::commit();
 
-            // Devuelve el médico actualizado con sus relaciones para tu vista Vue
-            $medico->load(['especialidad', 'horarios']);
+            // Devuelve el médico actualizado cargando también su configuración para que Vue actualice la tabla reactiva correctamente
+            $medico->load(['especialidad', 'horarios', 'configuraciones.ubicacion']);
 
             return response()->json([
                 'success' => true,
@@ -208,4 +223,25 @@ class MedicoController extends Controller
             )
             ->get();
     }
+
+    public function obtenerEstadisticas()
+    {
+        // SELECT COUNT(folio) FROM medicos
+        $total = Medico::count();
+
+        // SELECT COUNT(folio) FROM medicos WHERE activo = 1
+        $activos = Medico::where('activo', 1)->count();
+
+        // SELECT COUNT(folio) FROM medicos WHERE activo = 0
+        $inactivos = Medico::where('activo', 0)->count();
+
+        // Retornamos los tres contadores en una sola respuesta JSON
+        return response()->json([
+            'total'     => $total,
+            'activos'   => $activos,
+            'inactivos' => $inactivos
+        ]);
+    }
+
+
 }

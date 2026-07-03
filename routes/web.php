@@ -40,6 +40,7 @@ Route::get('/dashboard', function () {
     // Route::delete('eliminarMedico/{id}', [MedicoController::class, 'destroy']);
     Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
     Route::get('ubicaciones/list', [UbicacionController::class, 'listar'])->name('ubicaciones.listar');
+    Route::get('/medicos/estadisticas', [MedicoController::class, 'obtenerEstadisticas']);
 });
 
 Route::resource('pacientes', PacienteController::class);
