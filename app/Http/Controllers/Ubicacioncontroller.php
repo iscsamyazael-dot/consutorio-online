@@ -9,27 +9,17 @@ use Illuminate\View\View;
 
 class UbicacionController extends Controller
 {
-    /**
-     * Muestra la vista principal.
-     */
     public function index(): View
     {
         return view('ubicaciones.index');
     }
 
-    /**
-     * Devuelve el listado de ubicaciones en formato JSON.
-     */
     public function listar(): JsonResponse
     {
         $ubicaciones = Ubicacion::orderBy('folio_sucursal', 'asc')->get();
-
         return response()->json($ubicaciones);
     }
 
-    /**
-     * Guarda una nueva ubicación.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -48,9 +38,6 @@ class UbicacionController extends Controller
             ->with('exito', 'Ubicación registrada correctamente.');
     }
 
-    /**
-     * Actualiza una ubicación existente.
-     */
     public function update(Request $request, $id): JsonResponse
     {
         $ubicacion = Ubicacion::findOrFail($id);
