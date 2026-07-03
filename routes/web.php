@@ -51,6 +51,7 @@ Route::get('/dashboard', function () {
     // Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
     // Route::get('ubicaciones/list', [UbicacionController::class, 'listar'])->name('ubicaciones.listar');
     // Route::get('/medicos/estadisticas', [MedicoController::class, 'obtenerEstadisticas']);
+    Route::get('/api/especialidades', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
 });
 
 Route::resource('especialidades', SpecialtyController::class);

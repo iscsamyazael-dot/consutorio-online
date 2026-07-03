@@ -16,7 +16,7 @@
         <h1 class="page-title">Especialidades Médicas</h1>
         <p class="text-muted">Administra las especialidades disponibles en el consultorio</p>
       </div>
-      <button class="btn-primary" @click="abrirModal('nueva')">
+      <button class="btn-primary" @click="abrirNueva()">
         <i class="fas fa-plus"></i> Nueva especialidad
       </button>
     </div>
@@ -97,12 +97,12 @@
     </div>
 
     <!-- ===== MODAL VER ===== -->
-    <div v-if="modales.ver" class="modal-overlay" @click.self="modales.ver = false">
+    <div v-if="modales.ver" class="modal-overlay" @click.self="cerrarVer()">
       <div class="modal-box">
 
         <div class="modal-header">
           <h2><i class="fas fa-stethoscope"></i> Detalle de la especialidad</h2>
-          <button class="btn-close" @click="modales.ver = false" aria-label="Cerrar">
+          <button class="btn-close" @click="cerrarVer()" aria-label="Cerrar">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -161,9 +161,10 @@
         <label><i class="fas fa-user-md field-icon"></i> Doctor responsable</label>
         <input v-model="form.doctor" type="text" placeholder="Nombre del doctor responsable" />
 
-        <!-- ★ Folio — campo nuevo -->
+        <!-- ★ Folio — se genera automáticamente, no editable -->
         <label><i class="fas fa-hashtag field-icon"></i> Folio</label>
-        <input v-model="form.folio" type="text" placeholder="Ej. ESP-001" />
+        <input v-model="form.folio" type="text" readonly disabled class="input-readonly" />
+        <p class="field-hint">El folio se genera automáticamente.</p>
 
         <label><i class="fas fa-align-left field-icon"></i> Descripción</label>
         <textarea v-model="form.descripcion" placeholder="Describe brevemente esta especialidad"></textarea>
@@ -185,12 +186,12 @@
     </div>
 
     <!-- ===== MODAL EDITAR ===== -->
-    <div v-if="modales.editar" class="modal-overlay" @click.self="modales.editar = false">
+    <div v-if="modales.editar" class="modal-overlay" @click.self="cerrarEditar()">
       <div class="modal-box">
 
         <div class="modal-header">
           <h2><i class="fas fa-edit"></i> Editar especialidad</h2>
-          <button class="btn-close" @click="modales.editar = false" aria-label="Cerrar">
+          <button class="btn-close" @click="cerrarEditar()" aria-label="Cerrar">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -201,9 +202,10 @@
         <label><i class="fas fa-user-md field-icon"></i> Doctor responsable</label>
         <input v-model="form.doctor" type="text" />
 
-        <!-- ★ Folio — campo nuevo -->
+        <!-- ★ Folio — no editable, se generó al crear la especialidad -->
         <label><i class="fas fa-hashtag field-icon"></i> Folio</label>
-        <input v-model="form.folio" type="text" placeholder="Ej. ESP-001" />
+        <input v-model="form.folio" type="text" readonly disabled class="input-readonly" />
+        <p class="field-hint">El folio no se puede modificar.</p>
 
         <label><i class="fas fa-align-left field-icon"></i> Descripción</label>
         <textarea v-model="form.descripcion"></textarea>
@@ -215,7 +217,7 @@
         </select>
 
         <div class="modal-actions">
-          <button class="btn-cancel" @click="modales.editar = false">Cancelar</button>
+          <button class="btn-cancel" @click="cerrarEditar()">Cancelar</button>
           <button class="btn-save" @click="actualizar">
             <i class="fas fa-save"></i> Actualizar
           </button>
@@ -225,12 +227,12 @@
     </div>
 
     <!-- ===== MODAL ELIMINAR ===== -->
-    <div v-if="modales.eliminar" class="modal-overlay" @click.self="modales.eliminar = false">
+    <div v-if="modales.eliminar" class="modal-overlay" @click.self="cerrarEliminar()">
       <div class="modal-box modal-box--danger">
 
         <div class="modal-header">
           <h2><i class="fas fa-exclamation-triangle" style="color:#b91c1c;"></i> Eliminar especialidad</h2>
-          <button class="btn-close" @click="modales.eliminar = false" aria-label="Cerrar">
+          <button class="btn-close" @click="cerrarEliminar()" aria-label="Cerrar">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -247,7 +249,7 @@
         </div>
 
         <div class="modal-actions">
-          <button class="btn-cancel" @click="modales.eliminar = false">Cancelar</button>
+          <button class="btn-cancel" @click="cerrarEliminar()">Cancelar</button>
           <button class="btn-delete" @click="confirmarEliminar">
             <i class="fas fa-trash"></i> Sí, eliminar
           </button>
@@ -332,7 +334,7 @@ export default {
     cargar() {
       this.loading.lista = true;
       this.loadError = null;
-      ApiService.get("/specialties")
+      ApiService.get("/especialidades")
         .then((res) => {
           this.specialties = res.data;
         })
@@ -352,27 +354,48 @@ export default {
     },
 
     // Abre el modal de "nueva" garantizando que el formulario empiece limpio
+    // y con un folio autogenerado (no lo escribe el usuario).
     abrirNueva() {
       this.resetForm();
+      this.form.folio = this.generarFolio();
       this.modales.nueva = true;
     },
-// Abre el modal de ver y carga los datos del item seleccionado
+
+    // Genera el siguiente folio disponible con formato ESP-001, ESP-002, ...
+    // tomando como base el folio numérico más alto ya existente en la lista.
+    generarFolio() {
+      const numeros = this.specialties
+        .map((s) => (s.folio || "").match(/(\d+)\s*$/))
+        .filter(Boolean)
+        .map((m) => parseInt(m[1], 10));
+      const siguiente = (numeros.length ? Math.max(...numeros) : 0) + 1;
+      return "ESP-" + String(siguiente).padStart(3, "0");
+    },
+    // Abre el modal de ver y carga los datos del item seleccionado
     ver(item) {
       this.selected = item;
       this.modales.ver = true;
     },
-// Cierra el modal de ver y limpia la selección
+    // Cierra el modal de ver y limpia la selección
     cerrarVer() {
       this.modales.ver = false;
       this.selected = {};
     },
     // Abre el modal de edición y carga los datos del item seleccionado en el formulario
     editar(item) {
-      this.form = { ...item };
+      this.form = {
+        ...FORM_VACIO,
+        ...item,
+        // El backend entrega el doctor dentro del array "medicos",
+        // pero el formulario usa un campo plano "doctor". Si el item
+        // ya trae "doctor" como string lo respetamos; si no, lo
+        // tomamos del primer médico relacionado.
+        doctor: item.doctor || (item.medicos && item.medicos.length > 0 ? item.medicos[0].nombre : ""),
+      };
       this.formErrors = {};
       this.modales.editar = true;
     },
-// Cierra el modal de edición y reinicia el formulario
+    // Cierra el modal de edición y reinicia el formulario
     cerrarEditar() {
       this.modales.editar = false;
       this.resetForm();
@@ -405,7 +428,7 @@ export default {
       }
       // Bloquea el botón de guardar mientras se realiza la petición
       this.loading.guardar = true;
-      ApiService.post("/specialties", this.form)
+      ApiService.post("/especialidades", this.form)
         .then(() => {
           this.cargar();
           this.modales.nueva = false;
@@ -430,7 +453,7 @@ export default {
       }
       // Bloquea el botón de actualizar mientras se realiza la petición
       this.loading.actualizar = true;
-      ApiService.put(`/specialties/${this.form.id}`, this.form)
+      ApiService.put(`/especialidades/${this.form.id}`, this.form)
         .then(() => {
           this.cargar();
           this.modales.editar = false;
@@ -453,7 +476,7 @@ export default {
       this.specialtyToDelete = item;
       this.modales.eliminar = true;
     },
-// Cierra el cuadro de confirmación de eliminación y limpia la especialidad seleccionada.
+    // Cierra el cuadro de confirmación de eliminación y limpia la especialidad seleccionada.
     cerrarEliminar() {
       this.modales.eliminar = false;
       this.specialtyToDelete = null;
@@ -464,7 +487,7 @@ export default {
       if (!this.specialtyToDelete) return;
       this.loading.eliminar = true;
       const nombre = this.specialtyToDelete.nombre;
-      ApiService.delete(`/specialties/${this.specialtyToDelete.id}`)
+      ApiService.delete(`/especialidades/${this.specialtyToDelete.id}`)
         .then(() => {
           this.cargar();
           this.modales.eliminar = false;
@@ -485,7 +508,7 @@ export default {
       this.modales.nueva = false;
       this.resetForm();
     },
-// Reinicia el formulario a su estado inicial y limpia los errores.
+    // Reinicia el formulario a su estado inicial y limpia los errores.
     resetForm() {
       this.form = { ...FORM_VACIO };
       this.formErrors = {};
@@ -668,6 +691,8 @@ export default {
 .modal-box input, .modal-box textarea, .modal-box select{ width:100%; padding:12px 14px; margin-bottom:16px; border:1.5px solid var(--border); border-radius:10px; outline:none; font-family:'Inter',sans-serif; font-size:14.5px; color:var(--ink); background:var(--surface); transition:.2s; box-sizing:border-box; }
 .modal-box input:focus, .modal-box textarea:focus, .modal-box select:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(37,99,235,.12); }
 .modal-box textarea{ resize:vertical; min-height:110px; }
+.input-readonly{ background:var(--bg); color:var(--body-text); cursor:not-allowed; }
+.field-hint{ margin:-10px 0 16px; font-size:12px; color:var(--muted); }
 .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:6px; }
 .btn-save, .btn-cancel{ display:inline-flex; align-items:center; gap:8px; border:none; border-radius:10px; padding:12px 20px; font-weight:600; font-size:14px; cursor:pointer; transition:.2s; }
 .btn-save{ background:var(--primary); color:#fff; }
