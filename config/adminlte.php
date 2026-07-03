@@ -439,7 +439,7 @@ return [
         [
     'text' => 'Sucursales',
     'icon' => 'fas fa-fw fa-map-marker-alt',
-    'url' => 'ubicaciones',
+    'url' => 'Sucursales',
         ],
         ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
         [

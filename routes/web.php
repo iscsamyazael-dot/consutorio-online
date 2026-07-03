@@ -8,6 +8,8 @@ use App\Http\Controllers\RecetaController;
 use App\Http\Controllers\RecetaDetalleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ConsultaIAController;
+use App\Http\Controllers\Ubicacioncontroller;
+
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +37,7 @@ Route::resource('recetas', RecetaController::class);
 Route::resource('receta-detalles', RecetaDetalleController::class);
 Route::resource('usuarios', UserController::class);
 Route::resource('consultaIA', ConsultaIAController::class);
+Route::resource('ubicaciones', UbicacionController::class);
 
 
 
@@ -69,8 +72,12 @@ Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas'
 //codigo de ubicaciones nuevas rutas  (sucursales)//
 Route::get('/ubicaciones/listar', [App\Http\Controllers\UbicacionController::class, 'listar'])
     ->name('ubicaciones.listar');
-Route::resource('ubicaciones', App\Http\Controllers\UbicacionController::class)
-    ->only(['index', 'store', 'update']);
+
+Route::get('Sucursales',function(){
+        return view('ubicaciones.index'); 
+});
+    
+
 
 require __DIR__.'/auth.php';
 

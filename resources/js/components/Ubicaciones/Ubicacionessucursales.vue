@@ -567,6 +567,7 @@ export default {
       animatedInactivas: 0,
     };
   },
+  // ----- Computed properties -----
   computed: {
     activasCount() {
       return this.ubicaciones.filter(u => u.activo).length;
@@ -580,13 +581,13 @@ export default {
     ubicacionesFiltradas() {
       const texto = this.busqueda.toLowerCase().trim();
       let resultado = this.ubicaciones;
-
+// Filtra por estado activo/inactivo
       if (this.filtroEstado === 'activas') {
         resultado = resultado.filter(u => u.activo);
       } else if (this.filtroEstado === 'inactivas') {
         resultado = resultado.filter(u => !u.activo);
       }
-
+// Filtra por texto en nombre o folio_sucursal
       if (texto) {
         resultado = resultado.filter(u =>
           u.nombre.toLowerCase().includes(texto) ||
@@ -629,7 +630,7 @@ export default {
       for (let i = 0; i < texto.length; i++) suma += texto.charCodeAt(i);
       return paleta[suma % paleta.length];
     },
-
+// Limpia los filtros de búsqueda y estado
     limpiarFiltros() {
       this.busqueda = '';
       this.filtroEstado = 'todas';
@@ -646,7 +647,7 @@ export default {
       const inactivasInicial = this.animatedInactivas;
       const duracion = 500;
       const inicio = performance.now();
-
+// Función de paso de la animación, llamada en cada frame
       const paso = (ahora) => {
         const progreso = Math.min((ahora - inicio) / duracion, 1);
         const facilitado = 1 - Math.pow(1 - progreso, 3);
@@ -657,7 +658,7 @@ export default {
       };
       requestAnimationFrame(paso);
     },
-
+// Convierte cualquier valor de hora al formato HH:MM para mostrarlo en la tabla
     formatoHora(hora) {
       if (!hora) return '--:--';
       return hora.slice(0, 5);
@@ -677,9 +678,9 @@ export default {
     // El correlativo se reinicia cada año y se calcula a partir del folio más alto
     // ya registrado para el año actual.
     generarFolioSucursal() {
-      const anioActual = new Date().getFullYear();
+      const anioActual = new Date().getFullYear();// Obtiene el año actual
       const numeros = this.ubicaciones.map(u => {
-        const match = (u.folio_sucursal || '').match(/^UBIC-(\d{4})-(\d+)$/);
+        const match = (u.folio_sucursal || '').match(/^UBIC-(\d{4})-(\d+)$/);// Extrae el año y el número correlativo del folio_sucursal
         if (match && parseInt(match[1], 10) === anioActual) {
           return parseInt(match[2], 10);
         }
@@ -706,7 +707,7 @@ export default {
     cerrarModalConfirmacion() {
       this.modalConfirmacion.visible = false;
     },
-
+//LIMPIAR ERRORES
     limpiarError(campo) {
       if (this.errores[campo]) {
         this.errores = { ...this.errores, [campo]: null };
@@ -717,10 +718,11 @@ export default {
         this.erroresEdicion = { ...this.erroresEdicion, [campo]: null };
       }
     },
+    // ----- Carga de ubicaciones desde la API -----
     async cargarUbicaciones() {
       this.cargando = true;
       try {
-        const { data } = await ApiService.get('/ubicaciones/listar');
+        const { data } = await ApiService.get('/ubicaciones');
         this.ubicaciones = data;
         this.animarContadores();
       } catch (error) {
@@ -729,82 +731,86 @@ export default {
         this.cargando = false;
       }
     },
+    // ----- Guardado de nueva ubicación -----
     async guardarUbicacion() {
       this.guardando = true;
       this.errores = {};
-
+// Prepara el payload con los datos del formulario y normaliza los horarios
       const payload = {
         ...this.form,
-        horario_apertura: this.normalizarHora(this.form.horario_apertura),
-        horario_cierre: this.normalizarHora(this.form.horario_cierre),
-        folio_sucursal: this.generarFolioSucursal(),
+        horario_apertura: this.normalizarHora(this.form.horario_apertura),// Normaliza los horarios al formato HH:MM
+        horario_cierre: this.normalizarHora(this.form.horario_cierre),// Normaliza los horarios al formato HH:MM
+        folio_sucursal: this.generarFolioSucursal(),// Genera el folio_sucursal automáticamente siguiendo el patrón UBIC-<año>-<correlativo>
       };
-
+// Envía la solicitud POST a la API y maneja la respuesta
       try {
         await ApiService.post('/ubicaciones', payload);
-
+// Muestra un modal de éxito y reinicia el formulario
         this.mostrarModalConfirmacion('success', '¡Sucursal agregada!', `"${this.form.nombre}" se guardó correctamente.`);
-        this.form = { nombre: '', direccion: '', horario_apertura: '', horario_cierre: '' };
-        await this.cargarUbicaciones();
+        this.form = { nombre: '', direccion: '', horario_apertura: '', horario_cierre: '' };// Reinicia los campos del formulario
+        await this.cargarUbicaciones();// Recarga la lista de ubicaciones para reflejar la nueva ubicación
       } catch (error) {
-        if (error.response && error.response.status === 422) {
+        if (error.response && error.response.status === 422) { // Maneja los errores de validación del backend
           const backendErrores = error.response.data.errors || {};
           this.errores = Object.keys(backendErrores).reduce((acc, key) => {
             acc[key] = backendErrores[key][0];
-            return acc;
+            return acc;// Mapea los errores de validación del backend al objeto de errores del formulario
           }, {});
           this.mostrarModalConfirmacion('error', 'Revisa el formulario', 'Hay campos con errores, corrígelos e intenta de nuevo.');
         } else {
-          console.error('Error al guardar ubicación:', error);
+          console.error('Error al guardar ubicación:', error); // Muestra un modal de error si ocurre un error inesperado
           this.mostrarModalConfirmacion('error', 'No se pudo guardar', 'Ocurrió un error al registrar la sucursal. Intenta de nuevo.');
         }
       } finally {
         this.guardando = false;
       }
     },
-
+//----- Edición de ubicación -----
     abrirEdicion(ubicacion) {
       this.ubicacionEditando = {
         ...ubicacion,
         horario_apertura: this.normalizarHora(ubicacion.horario_apertura),
         horario_cierre: this.normalizarHora(ubicacion.horario_cierre),
       };
+      // Reinicia los errores de edición al abrir el modal
       this.erroresEdicion = {};
       this.editando = true;
     },
+    // Cierra el modal de edición y reinicia los datos de edición
     cerrarEdicion() {
       this.editando = false;
       this.ubicacionEditando = {};
       this.erroresEdicion = {};
     },
+    // Guarda los cambios de edición de la ubicación, manteniendo los valores originales de nombre, dirección y horario de apertura.
     async guardarEdicion() {
-      this.guardandoEdicion = true;
+      this.guardandoEdicion = true;// Reinicia los errores de edición antes de enviar la solicitud
       this.erroresEdicion = {};
 
       try {
         const payload = {
-          nombre: this.ubicacionEditando.nombre,
-          direccion: this.ubicacionEditando.direccion,
-          horario_apertura: this.normalizarHora(this.ubicacionEditando.horario_apertura),
+          nombre: this.ubicacionEditando.nombre,// Mantener el nombre original
+          direccion: this.ubicacionEditando.direccion,// Mantener la dirección original
+          horario_apertura: this.normalizarHora(this.ubicacionEditando.horario_apertura),// Mantener el horario de apertura original
           horario_cierre: this.normalizarHora(this.ubicacionEditando.horario_cierre),
-          activo: this.ubicacionEditando.activo,
+          activo: this.ubicacionEditando.activo,// Mantener el estado original
         };
 
-        await ApiService.put(`/ubicaciones/${this.ubicacionEditando.id}`, payload);
-
+        await ApiService.put(`/ubicaciones/${this.ubicacionEditando.id}`, payload);// Envía la solicitud PUT a la API para actualizar la ubicación
+         // Cierra el modal de edición y muestra un mensaje de éxito
         this.cerrarEdicion();
         this.mostrarModalConfirmacion('success', 'Cambios guardados', `"${payload.nombre}" se actualizó correctamente.`);
-        await this.cargarUbicaciones();
+        await this.cargarUbicaciones();// Recarga la lista de ubicaciones para reflejar los cambios
       } catch (error) {
         if (error.response && error.response.status === 422) {
           const backendErrores = error.response.data.errors || {};
           this.erroresEdicion = Object.keys(backendErrores).reduce((acc, key) => {
-            acc[key] = backendErrores[key][0];
+            acc[key] = backendErrores[key][0];// Mapea los errores de validación del backend al objeto de errores de edición
             return acc;
           }, {});
           this.mostrarToast('error', 'Revisa el formulario', 'Hay campos con errores.');
         } else {
-          console.error('Error al editar ubicación:', error);
+          console.error('Error al editar ubicación:', error);// Muestra un modal de error si ocurre un error inesperado
           this.mostrarModalConfirmacion('error', 'No se pudo guardar', 'Ocurrió un error al editar la ubicación. Intenta de nuevo.');
         }
       } finally {
