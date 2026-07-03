@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-
 class Medico extends Model
 {
    
@@ -21,6 +20,7 @@ class Medico extends Model
         'activo'
     ];
 
+    // Un médico pertenece a una especialidad
 
     
     public function especialidad()
@@ -39,6 +39,8 @@ class Medico extends Model
     {
         return $this->hasMany(ConfiguracionMedicoSucursal::class, 'medico_id');
     }
+    
+    //Metodo para crear el folio o ID representativo
 
     protected static function booted()
     {

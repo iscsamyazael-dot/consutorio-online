@@ -84,7 +84,7 @@
             </div>
         </div>
 
-        <div class="table-responsive card-body p-0">
+        <div class="table-responsive-sm card-body p-0">
             <table class="table table-hover text-nowrap">
                 <thead class="thead-light">
                     <tr>
