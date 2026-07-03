@@ -19,7 +19,7 @@ class SpecialtyController extends Controller
             })
             ->paginate(12);
 
-        return view('specialties.index', compact('specialties'));
+        //return view('specialties.index', compact('specialties'));
     }
 
     // API para Vue (devuelve JSON)
