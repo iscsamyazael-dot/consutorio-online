@@ -443,6 +443,8 @@ return [
             'header' => 'CONFIGURACIÓN MÉDICA',
             'can' => 'rol-medico',
         ],
+        
+        ['header'=> 'CONFIGURACIÓN MÉDICA'],
         [
             'text' => 'Especialidades',
             'url' => 'medico/especialidades',
@@ -469,6 +471,12 @@ return [
             'text' => 'Médicos',
             'url'  => 'MedicosAlta', 
             'icon' => 'fas fa-fw fa-user-md',
+        ],
+
+        [
+        'text' => 'Sucursales',
+        'icon' => 'fas fa-fw fa-map-marker-alt',
+        'url' => 'Sucursales',
         ],
         
         ['header' => 'CONFIGURACIÓN DEL SISTEMA'],

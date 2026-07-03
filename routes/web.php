@@ -13,6 +13,7 @@ use App\Http\Controllers\TriageController;
 use App\Http\Controllers\ArchivosClinicosController;
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\SpecialtyController;
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\UbicacionController;
@@ -292,6 +293,17 @@ Route::get('/consultas/create', function () {
     return view('consultas.create');
 });
 
+
+//codigo de ubicaciones nuevas rutas  (sucursales)//
+// Route::get('/ubicaciones/listar', [App\Http\Controllers\UbicacionController::class, 'listar'])
+//     ->name('ubicaciones.listar');
+
+Route::get('Sucursales',function(){
+        return view('ubicaciones.index'); 
+});
+    
+
+
 require __DIR__.'/auth.php';
 
 
@@ -300,31 +312,8 @@ require __DIR__.'/auth.php';
 // });
 
 
-Route::get('/test-whatsapp', function () {
-
-    WhatsAppService::enviar(
-        '529991234567',
-        'Hola, prueba de WhatsApp desde Laravel'
-    );
-
-    return 'Mensaje enviado';
-});
-
-Route::get('/probar-n8n', function () {
-
-    $response = Http::withoutVerifying()->post(
-        'https://luna110604.app.n8n.cloud/webhook-test/d5aca0e1-0db0-4105-9712-cafc5e5d947c',
-        [
-            'mensaje' => 'Hola desde Laravel',
-            'modulo' => 'agendas',
-            'estado' => 'funcionando'
-        ]
-    );
-
-    return $response->json();
-});
-
 //ruta de nuevo paciente //
 Route::get('/pacientes/create', function () {
     return view('pacientes.create');
 });
+
