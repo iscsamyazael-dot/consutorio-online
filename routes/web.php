@@ -69,6 +69,7 @@ Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas'
 Route::get('/ubicaciones', [App\Http\Controllers\UbicacionController::class, 'index'])->name('ubicaciones.index');
 Route::get('/ubicaciones/listar', [App\Http\Controllers\UbicacionController::class, 'listar'])->name('ubicaciones.listar');
 Route::post('/ubicaciones', [App\Http\Controllers\UbicacionController::class, 'store'])->name('ubicaciones.store');
+Route::put('/ubicaciones/{id}', [App\Http\Controllers\UbicacionController::class, 'update'])->name('ubicaciones.update');
 
 require __DIR__.'/auth.php';
 

@@ -51,6 +51,10 @@
           <span class="stat-value">{{ animatedActivas }}</span>
           <span class="stat-label">Activas</span>
         </div>
+        <div class="stat-pill stat-pill--danger">
+          <span class="stat-value">{{ animatedInactivas }}</span>
+          <span class="stat-label">Inactivas</span>
+        </div>
       </div>
     </header>
 
@@ -197,7 +201,57 @@
             <p class="card-subtext">Gestiona el estado de cada sede</p>
           </div>
         </div>
-        <span class="count-badge">{{ ubicaciones.length }} {{ ubicaciones.length === 1 ? 'sede' : 'sedes' }}</span>
+        <span class="count-badge">{{ conteoBadge }}</span>
+      </div>
+
+      <!-- Barra de búsqueda y filtros -->
+      <div class="table-toolbar">
+        <div class="search-box">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m21 21-4.3-4.3" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="text"
+            v-model="busqueda"
+            placeholder="Buscar por folio o nombre..."
+          />
+          <button v-if="busqueda" class="search-clear" @click="busqueda = ''" title="Limpiar búsqueda">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+              <path d="M18 6 6 18M6 6l12 12" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="filter-tabs">
+          <button
+            type="button"
+            class="filter-tab"
+            :class="{ 'is-active': filtroEstado === 'todas' }"
+            @click="filtroEstado = 'todas'"
+          >
+            Todas
+            <span class="tab-count">{{ ubicaciones.length }}</span>
+          </button>
+          <button
+            type="button"
+            class="filter-tab"
+            :class="{ 'is-active': filtroEstado === 'activas' }"
+            @click="filtroEstado = 'activas'"
+          >
+            Activas
+            <span class="tab-count">{{ activasCount }}</span>
+          </button>
+          <button
+            type="button"
+            class="filter-tab"
+            :class="{ 'is-active': filtroEstado === 'inactivas' }"
+            @click="filtroEstado = 'inactivas'"
+          >
+            Inactivas
+            <span class="tab-count">{{ inactivasCount }}</span>
+          </button>
+        </div>
       </div>
 
       <div v-if="cargando" class="skeleton-wrap">
@@ -222,6 +276,18 @@
         <p class="empty-subtitle">Las sedes que registres aparecerán aquí</p>
       </div>
 
+      <div v-else-if="ubicacionesFiltradas.length === 0" class="table-state empty">
+        <div class="empty-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m21 21-4.3-4.3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="empty-title">No se encontraron resultados</p>
+        <p class="empty-subtitle">Intenta con otro término de búsqueda o cambia el filtro</p>
+        <button class="btn-clear-filters" @click="limpiarFiltros">Limpiar filtros</button>
+      </div>
+
       <table v-else class="ubicaciones-table">
         <thead>
           <tr>
@@ -234,22 +300,25 @@
         </thead>
         <tbody>
           <tr
-            v-for="(u, i) in ubicaciones"
+            v-for="(u, i) in ubicacionesFiltradas"
             :key="u.id"
             class="row-enter"
             :style="{ animationDelay: (i * 45) + 'ms' }"
           >
             <td>
               <div class="cell-nombre-wrap">
-                                <div
-                class="row-avatar"
-                :class="{ 'row-avatar--inactive': !u.activo }"
-                :style="u.activo ? { background: avatarColor(u.nombre).bg, color: avatarColor(u.nombre).fg } : {}"
-                :title="u.nombre"
+                <div
+                  class="row-avatar"
+                  :class="{ 'row-avatar--inactive': !u.activo }"
+                  :style="u.activo ? { background: avatarColor(u.nombre).bg, color: avatarColor(u.nombre).fg } : {}"
+                  :title="u.nombre"
                 >
-                {{ inicial(u.nombre) }}
+                  {{ inicial(u.nombre) }}
                 </div>
-                <span class="cell-nombre">{{ u.nombre }}</span>
+                <div class="cell-nombre-info">
+                  <span class="cell-nombre">{{ u.nombre }}</span>
+                  <span class="cell-folio" v-if="u.folio_sucursal">{{ u.folio_sucursal }}</span>
+                </div>
               </div>
             </td>
             <td class="cell-direccion">
@@ -428,6 +497,27 @@
         </transition>
       </div>
     </transition>
+
+    <!-- Modal de confirmación (éxito / error al guardar) -->
+    <transition name="modal-fade">
+      <div v-if="modalConfirmacion.visible" class="modal-overlay" @click.self="cerrarModalConfirmacion">
+        <transition name="modal-pop" appear>
+          <div v-if="modalConfirmacion.visible" class="confirm-modal" :class="`confirm-modal--${modalConfirmacion.tipo}`">
+            <div class="confirm-icon-wrap">
+              <svg v-if="modalConfirmacion.tipo === 'success'" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
+                <path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <svg v-else width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="confirm-title">{{ modalConfirmacion.titulo }}</h3>
+            <p class="confirm-message">{{ modalConfirmacion.mensaje }}</p>
+            <button class="btn-primary confirm-btn" @click="cerrarModalConfirmacion">Aceptar</button>
+          </div>
+        </transition>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -443,12 +533,15 @@ export default {
         direccion: '',
         horario_apertura: '',
         horario_cierre: '',
-        busqueda: '',
       },
       errores: {},
       ubicaciones: [],
       cargando: true,
       guardando: false,
+
+      // Búsqueda y filtros de la tabla
+      busqueda: '',
+      filtroEstado: 'todas', // 'todas' | 'activas' | 'inactivas'
 
       // Edición
       editando: false,
@@ -456,45 +549,72 @@ export default {
       erroresEdicion: {},
       guardandoEdicion: false,
 
-      // Notificaciones
+      // Notificaciones (toast)
       toasts: [],
       toastId: 0,
+
+      // Ventana emergente de confirmación (éxito / error al guardar)
+      modalConfirmacion: {
+        visible: false,
+        tipo: 'success', // 'success' | 'error'
+        titulo: '',
+        mensaje: '',
+      },
 
       // Contadores animados del encabezado
       animatedTotal: 0,
       animatedActivas: 0,
+      animatedInactivas: 0,
     };
   },
   computed: {
     activasCount() {
       return this.ubicaciones.filter(u => u.activo).length;
     },
-     ubicacionesFiltradas() {
-    const texto = this.busqueda.toLowerCase().trim();
+    inactivasCount() {
+      return this.ubicaciones.filter(u => !u.activo).length;
+    },
+    filtroActivo() {
+      return this.busqueda.trim() !== '' || this.filtroEstado !== 'todas';
+    },
+    ubicacionesFiltradas() {
+      const texto = this.busqueda.toLowerCase().trim();
+      let resultado = this.ubicaciones;
 
-    if (!texto) return this.ubicaciones;
+      if (this.filtroEstado === 'activas') {
+        resultado = resultado.filter(u => u.activo);
+      } else if (this.filtroEstado === 'inactivas') {
+        resultado = resultado.filter(u => !u.activo);
+      }
 
-    return this.ubicaciones.filter(u =>
-      u.nombre.toLowerCase().includes(texto) ||
-      u.direccion.toLowerCase().includes(texto)
-    );
-    }
+      if (texto) {
+        resultado = resultado.filter(u =>
+          u.nombre.toLowerCase().includes(texto) ||
+          (u.folio_sucursal || '').toLowerCase().includes(texto)
+        );
+      }
+
+      return resultado;
+    },
+    conteoBadge() {
+      const plural = n => (n === 1 ? 'sede' : 'sedes');
+      if (this.filtroActivo) {
+        return `${this.ubicacionesFiltradas.length} de ${this.ubicaciones.length} ${plural(this.ubicaciones.length)}`;
+      }
+      return `${this.ubicaciones.length} ${plural(this.ubicaciones.length)}`;
+    },
   },
   mounted() {
     this.cargarUbicaciones();
   },
   methods: {
-   inicial(nombre) {
-  if (!nombre) return '?';
+    inicial(nombre) {
+      if (!nombre) return '?';
 
-  return nombre
-    .trim()
-    .substring(0, 2)
-    .toUpperCase();
-},
-    formatoHora(hora) {
-      if (!hora) return '--:--';
-      return hora.slice(0, 5);
+      return nombre
+        .trim()
+        .substring(0, 2)
+        .toUpperCase();
     },
 
     avatarColor(nombre) {
@@ -510,13 +630,20 @@ export default {
       return paleta[suma % paleta.length];
     },
 
-    // Anima los contadores del encabezado (Total / Activas) de su valor
+    limpiarFiltros() {
+      this.busqueda = '';
+      this.filtroEstado = 'todas';
+    },
+
+    // Anima los contadores del encabezado (Total / Activas / Inactivas) de su valor
     // actual al nuevo, en vez de saltar directo al número final.
     animarContadores() {
       const totalDestino = this.ubicaciones.length;
       const activasDestino = this.ubicaciones.filter(u => u.activo).length;
+      const inactivasDestino = totalDestino - activasDestino;
       const totalInicial = this.animatedTotal;
       const activasInicial = this.animatedActivas;
+      const inactivasInicial = this.animatedInactivas;
       const duracion = 500;
       const inicio = performance.now();
 
@@ -525,9 +652,24 @@ export default {
         const facilitado = 1 - Math.pow(1 - progreso, 3);
         this.animatedTotal = Math.round(totalInicial + (totalDestino - totalInicial) * facilitado);
         this.animatedActivas = Math.round(activasInicial + (activasDestino - activasInicial) * facilitado);
+        this.animatedInactivas = Math.round(inactivasInicial + (inactivasDestino - inactivasInicial) * facilitado);
         if (progreso < 1) requestAnimationFrame(paso);
       };
       requestAnimationFrame(paso);
+    },
+
+    formatoHora(hora) {
+      if (!hora) return '--:--';
+      return hora.slice(0, 5);
+    },
+
+    // Normaliza cualquier valor de hora ("17:30", "17:30:00") al formato
+    // estricto HH:MM que Laravel espera (date_format:H:i). Evita que los
+    // segundos que vienen de la columna TIME de MySQL rompan la validación,
+    // tanto al precargar el modal de edición como al enviar el payload.
+    normalizarHora(hora) {
+      if (!hora) return '';
+      return hora.length > 5 ? hora.slice(0, 5) : hora;
     },
 
     // ----- Generación de folio_sucursal -----
@@ -547,7 +689,7 @@ export default {
       return `UBIC-${anioActual}-${String(siguiente).padStart(4, '0')}`;
     },
 
-    // ----- Notificaciones -----
+    // ----- Notificaciones (toast) -----
     mostrarToast(type, title, message = '') {
       const id = ++this.toastId;
       this.toasts.push({ id, type, title, message });
@@ -555,6 +697,14 @@ export default {
     },
     cerrarToast(id) {
       this.toasts = this.toasts.filter(t => t.id !== id);
+    },
+
+    // ----- Ventana emergente de confirmación -----
+    mostrarModalConfirmacion(tipo, titulo, mensaje = '') {
+      this.modalConfirmacion = { visible: true, tipo, titulo, mensaje };
+    },
+    cerrarModalConfirmacion() {
+      this.modalConfirmacion.visible = false;
     },
 
     limpiarError(campo) {
@@ -585,13 +735,15 @@ export default {
 
       const payload = {
         ...this.form,
+        horario_apertura: this.normalizarHora(this.form.horario_apertura),
+        horario_cierre: this.normalizarHora(this.form.horario_cierre),
         folio_sucursal: this.generarFolioSucursal(),
       };
 
       try {
         await ApiService.post('/ubicaciones', payload);
 
-        this.mostrarToast('success', 'Ubicación registrada', `"${this.form.nombre}" se guardó correctamente.`);
+        this.mostrarModalConfirmacion('success', '¡Sucursal agregada!', `"${this.form.nombre}" se guardó correctamente.`);
         this.form = { nombre: '', direccion: '', horario_apertura: '', horario_cierre: '' };
         await this.cargarUbicaciones();
       } catch (error) {
@@ -601,10 +753,10 @@ export default {
             acc[key] = backendErrores[key][0];
             return acc;
           }, {});
-          this.mostrarToast('error', 'Revisa el formulario', 'Hay campos con errores.');
+          this.mostrarModalConfirmacion('error', 'Revisa el formulario', 'Hay campos con errores, corrígelos e intenta de nuevo.');
         } else {
           console.error('Error al guardar ubicación:', error);
-          this.mostrarToast('error', 'No se pudo registrar', 'Ocurrió un error al guardar la ubicación.');
+          this.mostrarModalConfirmacion('error', 'No se pudo guardar', 'Ocurrió un error al registrar la sucursal. Intenta de nuevo.');
         }
       } finally {
         this.guardando = false;
@@ -612,7 +764,11 @@ export default {
     },
 
     abrirEdicion(ubicacion) {
-      this.ubicacionEditando = { ...ubicacion };
+      this.ubicacionEditando = {
+        ...ubicacion,
+        horario_apertura: this.normalizarHora(ubicacion.horario_apertura),
+        horario_cierre: this.normalizarHora(ubicacion.horario_cierre),
+      };
       this.erroresEdicion = {};
       this.editando = true;
     },
@@ -629,15 +785,15 @@ export default {
         const payload = {
           nombre: this.ubicacionEditando.nombre,
           direccion: this.ubicacionEditando.direccion,
-          horario_apertura: this.ubicacionEditando.horario_apertura,
-          horario_cierre: this.ubicacionEditando.horario_cierre,
+          horario_apertura: this.normalizarHora(this.ubicacionEditando.horario_apertura),
+          horario_cierre: this.normalizarHora(this.ubicacionEditando.horario_cierre),
           activo: this.ubicacionEditando.activo,
         };
 
         await ApiService.put(`/ubicaciones/${this.ubicacionEditando.id}`, payload);
 
-        this.mostrarToast('success', 'Cambios guardados', `"${payload.nombre}" se actualizó correctamente.`);
         this.cerrarEdicion();
+        this.mostrarModalConfirmacion('success', 'Cambios guardados', `"${payload.nombre}" se actualizó correctamente.`);
         await this.cargarUbicaciones();
       } catch (error) {
         if (error.response && error.response.status === 422) {
@@ -649,7 +805,7 @@ export default {
           this.mostrarToast('error', 'Revisa el formulario', 'Hay campos con errores.');
         } else {
           console.error('Error al editar ubicación:', error);
-          this.mostrarToast('error', 'No se pudo guardar', 'Ocurrió un error al editar la ubicación.');
+          this.mostrarModalConfirmacion('error', 'No se pudo guardar', 'Ocurrió un error al editar la ubicación. Intenta de nuevo.');
         }
       } finally {
         this.guardandoEdicion = false;
@@ -682,12 +838,18 @@ export default {
   --ochre-soft: #FBF1DE;
   --ochre-dark: #8A5A16;
 
+  /* Fondo de página: gris azulado muy claro para que las tarjetas blancas
+     tengan contraste y "floten" en vez de fundirse con el fondo. */
+  --page-bg: #EEF2F3;
+
   position: relative;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-main);
   max-width: 980px;
   margin: 0 auto;
   padding: 36px 24px 72px;
+  background: var(--page-bg);
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -713,7 +875,7 @@ export default {
   border-left: 3px solid var(--success);
   border-radius: 12px;
   padding: 14px 14px 14px 16px;
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.12);
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.14);
 }
 
 .toast--error {
@@ -801,17 +963,13 @@ export default {
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 32px;
-  padding: 22px 18px;
-  border: 1px solid var(--border);
+  padding: 24px 22px;
+  border: none;
   border-radius: 16px;
 
-  background: linear-gradient(
-    135deg,
-    rgba(11, 114, 133, 0.06),
-    rgba(194, 135, 46, 0.04)
-  );
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent) 70%, var(--ochre-dark));
 
-  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 22px rgba(11, 114, 133, 0.22);
 }
 
 .header-icon {
@@ -822,9 +980,9 @@ export default {
   height: 48px;
   flex-shrink: 0;
   border-radius: 13px;
-  background: linear-gradient(145deg, var(--accent), var(--accent-dark));
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
-  box-shadow: 0 4px 10px rgba(11, 114, 133, 0.28), 0 0 0 6px var(--ochre-soft);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.08);
 }
 
 .header-text {
@@ -837,7 +995,7 @@ export default {
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .page-header h1 {
@@ -846,11 +1004,12 @@ export default {
   font-weight: 700;
   letter-spacing: -0.01em;
   margin: 4px 0 6px;
+  color: #fff;
 }
 
 .subtitle {
   font-size: 14px;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.82);
   margin: 0;
 }
 
@@ -858,6 +1017,7 @@ export default {
   display: flex;
   gap: 10px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .stat-pill {
@@ -867,12 +1027,17 @@ export default {
   min-width: 68px;
   padding: 8px 14px;
   border-radius: 12px;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .stat-pill--success {
-  background: var(--success-soft);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: transparent;
+}
+
+.stat-pill--danger {
+  background: rgba(255, 255, 255, 0.1);
   border-color: transparent;
 }
 
@@ -880,12 +1045,16 @@ export default {
   font-family: 'Sora', sans-serif;
   font-size: 18px;
   font-weight: 700;
-  color: var(--text-main);
+  color: #fff;
   line-height: 1.2;
 }
 
 .stat-pill--success .stat-value {
-  color: var(--success);
+  color: #fff;
+}
+
+.stat-pill--danger .stat-value {
+  color: #fff;
 }
 
 .stat-label {
@@ -893,7 +1062,7 @@ export default {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-faint);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 /* ============ Card heading ============ */
@@ -947,15 +1116,15 @@ export default {
     #fbfcfd
   );
 
-  border: 1px solid rgba(231, 236, 238, 0.9);
+  border: 1px solid transparent;
   border-radius: 16px;
 
-  padding: 26px 26px 24px;
+  padding: 22px 24px 20px;
   margin-bottom: 22px;
 
   box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 12px 30px rgba(16, 24, 40, 0.05);
+    0 2px 4px rgba(16, 24, 40, 0.05),
+    0 10px 26px rgba(16, 24, 40, 0.09);
 
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -984,44 +1153,10 @@ export default {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-/* Botón base */
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-/*  EDIT */
-.btn-edit {
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #c2410c;
-  background: #FFF7E6 !important;
-}
-
-.btn-edit:hover {
-  background: #ffa023 !important;
-  border-color: #f59e0b;
-  color: #9a3412;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.18);
-}
-
-.btn-edit:active {
-  transform: translateY(0) scale(0.96);
-}
 
 .form-card:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03), 0 12px 28px rgba(11, 114, 133, 0.1);
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.04), 0 14px 30px rgba(11, 114, 133, 0.14);
 }
 
 .form-grid {
@@ -1174,16 +1309,41 @@ export default {
   transform: scale(0.97);
 }
 
+.btn-clear-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-clear-filters:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
+.btn-clear-filters:active {
+  transform: translateY(0) scale(0.97);
+}
 
 /* ============ Table card ============ */
 .table-card {
   position: relative;
   overflow: hidden;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 16px;
-  padding: 26px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03), 0 1px 8px rgba(16, 24, 40, 0.03);
+  padding: 22px 24px;
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05), 0 10px 26px rgba(16, 24, 40, 0.08);
 }
 
 .table-card::before {
@@ -1215,6 +1375,136 @@ export default {
   font-weight: 700;
   padding: 5px 12px;
   border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ============ Toolbar: búsqueda + filtros ============ */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 18px 0 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+  max-width: 340px;
+}
+
+.search-box .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.search-box input {
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  font-size: 13.5px;
+  padding: 10px 32px 10px 34px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-muted);
+  color: var(--text-main);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.search-box input::placeholder {
+  color: var(--text-faint);
+}
+
+.search-box input:hover {
+  border-color: var(--border-strong);
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.search-clear {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.search-clear:hover {
+  background: var(--border);
+  color: var(--text-main);
+}
+
+.filter-tabs {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filter-tab:hover {
+  color: var(--text-main);
+}
+
+.filter-tab.is-active {
+  background: var(--surface);
+  color: var(--accent-dark);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.1);
+}
+
+.filter-tab .tab-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.filter-tab.is-active .tab-count {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
 }
 
 .table-state {
@@ -1313,7 +1603,7 @@ export default {
 .ubicaciones-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 14px;
+  margin-top: 4px;
 }
 
 .ubicaciones-table th {
@@ -1394,9 +1684,24 @@ export default {
   color: var(--text-faint);
 }
 
+.cell-nombre-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
 .cell-nombre {
   font-weight: 600;
   color: var(--text-main);
+}
+
+.cell-folio {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.01em;
 }
 
 .cell-direccion-inner,
@@ -1494,6 +1799,25 @@ export default {
 }
 
 .btn-icon:active {
+  transform: translateY(0) scale(0.96);
+}
+
+/* Edit button */
+.btn-edit {
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #c2410c;
+  background: #FFF7E6 !important;
+}
+
+.btn-edit:hover {
+  background: #ffa023 !important;
+  border-color: #f59e0b;
+  color: #9a3412;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.18);
+}
+
+.btn-edit:active {
   transform: translateY(0) scale(0.96);
 }
 
@@ -1651,6 +1975,68 @@ export default {
   color: #B91C1C;
 }
 
+/* ============ Modal de confirmación (éxito / error) ============ */
+.confirm-modal {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border-radius: 18px;
+  box-shadow: 0 24px 48px rgba(16, 24, 40, 0.24);
+  padding: 32px 28px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.confirm-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin-bottom: 16px;
+  background: var(--success-soft);
+  color: var(--success);
+  animation: confirmPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.confirm-modal--error .confirm-icon-wrap {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+@keyframes confirmPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.confirm-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: var(--text-main);
+}
+
+.confirm-message {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+.confirm-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.confirm-modal--error .confirm-btn {
+  background: linear-gradient(145deg, var(--danger), #8f1e17);
+  box-shadow: 0 2px 6px rgba(179, 38, 30, 0.22);
+}
+
 /* ============ Animations ============ */
 .spin {
   animation: spin 0.8s linear infinite;
@@ -1705,6 +2091,16 @@ export default {
     left: 10px;
     max-width: none;
     width: auto;
+  }
+  .table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-box {
+    max-width: none;
+  }
+  .filter-tabs {
+    justify-content: space-between;
   }
 }
 </style>

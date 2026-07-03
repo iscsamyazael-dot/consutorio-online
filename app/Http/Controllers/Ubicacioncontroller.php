@@ -54,4 +54,24 @@ class UbicacionController extends Controller
             ->route('ubicaciones.index')
             ->with('exito', 'Ubicación registrada correctamente.');
     }
+
+    /**
+     * Valida y actualiza una ubicación existente (datos y/o estado activo/inactivo).
+     */
+    public function update(Request $request, $id): JsonResponse
+    {
+        $ubicacion = Ubicacion::findOrFail($id);
+
+        $validated = $request->validate([
+            'nombre' => ['required', 'string', 'max:100'],
+            'direccion' => ['required', 'string', 'max:255'],
+            'horario_apertura' => ['nullable', 'date_format:H:i'],
+            'horario_cierre' => ['nullable', 'date_format:H:i'],
+            'activo' => ['required', 'boolean'],
+        ]);
+
+        $ubicacion->update($validated);
+
+        return response()->json($ubicacion);
+    }
 }
