@@ -13,9 +13,9 @@ use App\Http\Controllers\TriageController;
 use App\Http\Controllers\ArchivosClinicosController;
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\SpecialtyController;
-
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CitaController;
+use App\Http\Controllers\UbicacionController;
 use Illuminate\Support\Facades\Route;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
@@ -28,7 +28,7 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+    Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -51,6 +51,8 @@ Route::middleware('auth')->group(function () {
     // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
     // Route::delete('eliminarMedico/{id}', [MedicoController::class, 'destroy']);
     Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
+    Route::get('ubicaciones/list', [UbicacionController::class, 'listar'])->name('ubicaciones.listar');
+    Route::get('/medicos/estadisticas', [MedicoController::class, 'obtenerEstadisticas']);
 });
 
 Route::resource('especialidades', SpecialtyController::class);
@@ -64,6 +66,10 @@ Route::resource('consultaIA', ConsultaIAController::class);
 Route::resource('movimientos',MovimientoInventarioController::class);
 Route::resource('triage', TriageController::class);
 Route::resource('archivoclinico', ArchivosClinicosController::class);
+
+Route::resource('medicos', MedicoController::class);
+Route::resource('ubicaciones', UbicacionController::class);
+
 
    
 // ==========================================
@@ -151,8 +157,6 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
     Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
     
 });
-Route::resource('medicos', MedicoController::class);
-Route::resource('especialidades', SpecialtyController::class);
 
 
 

@@ -9,7 +9,7 @@
             <div class="small-box bg-info">
 
                 <div class="inner">
-                    <h3>15</h3>
+                    <h3>{{ cards.total }}</h3>
                     <p>Doctores Registrados</p>
                 </div>
 
@@ -26,7 +26,7 @@
             <div class="small-box bg-success">
 
                 <div class="inner">
-                    <h3>12</h3>
+                    <h3>{{ cards.activos }}</h3>
                     <p>Activos</p>
                 </div>
 
@@ -43,7 +43,7 @@
             <div class="small-box bg-warning">
 
                 <div class="inner">
-                    <h3>3</h3>
+                    <h3>{{ cards.inactivos }}</h3>
                     <p>Inactivos</p>
                 </div>
 
@@ -60,9 +60,9 @@
         <!-- Tabla -->
     <div class="card shadow">
         <div class="card-header">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-md-6">
-                    <h3 class="card-title">
+                    <h3 class="card-title m-0">
                         Lista de Doctores
                     </h3>
                 </div>
@@ -94,7 +94,9 @@
                         <th>Horario</th>
                         <th>Días Laborales</th>
                         <th>Estado</th>
-                        <th width="180">Acciones</th>
+                        <th>Dur. consulta</th>
+                        <th>Sucursal</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -116,7 +118,7 @@
                         </td>
 
                              <!-- Días Laborales (Mapeando el arreglo de horarios) -->
-                            <td class="align-middle">
+                            <td class="text-wrap" style="max-width: 220px; font-size: 13px;">
                                 <!-- El secreto: un contenedor con ancho máximo que obliga al contenido a saltar de línea -->
                                 <div style="max-width: 180px; width: 100%;">
                                     <div class="d-flex flex-wrap gap-1">
@@ -146,6 +148,26 @@
                                 :class="medico.activo == 1 ? 'badge-success' : 'badge-secondary'"
                             >
                                 {{ medico.activo == 1 ? 'Activo' : 'Inactivo' }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span v-if="medico.horarios && medico.horarios.length > 0" class="badge bg-light text-dark border fw-semibold">
+                                <i class="fas fa-clock text-primary me-1" style="font-size: 12px;"></i>
+                                {{ medico.horarios[0].duracion_consulta }} min
+                            </span>
+                            <span v-else class="text-muted" style="font-size: 13px;">
+                                --
+                            </span>
+                        </td>
+
+                        <td class="text-wrap" style="max-width: 220px; font-size: 13px;">
+                            <span v-if="medico.configuraciones && medico.configuraciones.length > 0 && medico.configuraciones[0].ubicacion">
+                                <i class="fas fa-map-marker-alt text-muted me-1" style="font-size: 12px;"></i>
+                                {{ medico.configuraciones[0].ubicacion.nombre }}
+                            </span>
+                            <span v-else class="text-muted text-uppercase fw-medium" style="font-size: 11px;">
+                                Sin Sucursal
                             </span>
                         </td>
 
@@ -188,10 +210,9 @@
           </div>
           <div class="d-flex align-items-center gap-2">
             <span class="font-monospace fw-bold text-white px-3 py-1 rounded-pill"
-                  style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);font-size:11px;letter-spacing:0.8px">
+                  style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);font-size:16px;letter-spacing:0.8px">
               {{ formMedico.folio }}
             </span>
-            <button type="button" class="btn-close btn-close-white opacity-75 ms-1" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
         </div>
       </div>
@@ -199,88 +220,120 @@
       <form @submit.prevent="guardarCambiosMedico">
         <!-- BODY -->
         <div class="modal-body p-4" style="background:#f8fafc">
-          <div class="row g-3">
+            <div class="row g-3">
 
-            <!-- Nombre -->
-            <div class="col-12">
-              <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#94a3b8">Nombre del médico</label>
-              <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
-                <span class="input-group-text bg-white border-0" style="color:#94a3b8"><i class="fas fa-user" style="font-size:14px"></i></span>
-                <input v-model="formMedico.nombre" type="text" class="form-control bg-white border-0 py-2" style="font-size:14px" required />
-              </div>
-            </div>
-
-            <!-- Especialidad + Estado -->
-            <div class="col-md-7">
-              <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#94a3b8">Especialidad médica</label>
-              <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
-                <span class="input-group-text bg-white border-0" style="color:#94a3b8"><i class="fas fa-stethoscope" style="font-size:14px"></i></span>
-                <select v-model="formMedico.especialidad_id" class="form-select bg-white border-0 py-2" style="font-size:14px">
-                  <option v-for="e in especialidades" :key="e.id" :value="e.id">{{ e.nombre }}</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="col-md-5">
-              <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#94a3b8">Estado</label>
-              <div class="d-flex align-items-center rounded-3 border bg-white px-3" style="height:42px;border-color:#e2e8f0!important;gap:10px">
-                <span class="rounded-circle flex-shrink-0" :style="{ width:'8px', height:'8px', background: formMedico.estado === 'Activo' ? '#10b981' : '#94a3b8' }"></span>
-                <select v-model="formMedico.estado" class="border-0 bg-transparent w-100 py-0 fw-medium" style="font-size:14px;outline:none"
-                        :style="{ color: formMedico.estado === 'Activo' ? '#10b981' : '#64748b' }" required>
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Horario -->
-            <div class="col-12 mt-2">
-              <hr class="my-0" style="border-color:#e8edf2">
-            </div>
-            <div class="col-12">
-              <p class="text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#94a3b8">Horario de atención</p>
-              <p class="mb-2" style="font-size:12px;color:#94a3b8">Rango de horas disponibles para consultas</p>
-              <div class="d-flex align-items-center gap-2">
-                <div class="input-group rounded-3 overflow-hidden border flex-grow-1" style="border-color:#e2e8f0!important">
-                  <span class="input-group-text bg-white border-0"><i class="fas fa-clock" style="color:#10b981;font-size:14px"></i></span>
-                  <input type="time" v-model="formMedico.hora_inicio" class="form-control bg-white border-0 py-2 font-monospace" style="font-size:14px" />
+                <!-- Nombre -->
+                <div class="col-12">
+                <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color: #000;">Nombre del médico</label>
+                <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
+                    <span class="input-group-text bg-white border-0" style="color:#94a3b8"><i class="fas fa-user" style="font-size:14px"></i></span>
+                    <input v-model="formMedico.nombre" type="text" class="form-control bg-white border-0 py-2" style="font-size:14px" required />
                 </div>
-                <span class="text-muted fw-bold flex-shrink-0" style="font-size:18px">→</span>
-                <div class="input-group rounded-3 overflow-hidden border flex-grow-1" style="border-color:#e2e8f0!important">
-                  <span class="input-group-text bg-white border-0"><i class="fas fa-clock" style="color:#ef4444;font-size:14px"></i></span>
-                  <input type="time" v-model="formMedico.hora_fin" class="form-control bg-white border-0 py-2 font-monospace" style="font-size:14px" />
                 </div>
-              </div>
-            </div>
 
-            <!-- Días laborales -->
-            <div class="col-12 mt-2">
-              <hr class="my-0" style="border-color:#e8edf2">
-            </div>
-            <div class="col-12">
-              <p class="text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#94a3b8">Días laborales autorizados</p>
-              <p class="mb-3" style="font-size:12px;color:#94a3b8">Selecciona los días habilitados para consultas</p>
-              <div class="d-flex flex-wrap gap-2">
-                <label
-                  v-for="dia in listaDiasDisponibles"
-                  :key="dia"
-                  class="user-select-none"
-                  style="cursor:pointer">
-                  <input type="checkbox" :value="dia" v-model="diasSeleccionados" class="d-none" />
-                  <span
-                    class="d-inline-block px-3 py-2 rounded-2 fw-semibold transition-all"
-                    style="font-size:12px;letter-spacing:0.2px;border:1.5px solid;transition:all 0.15s"
-                    :style="diasSeleccionados.includes(dia)
-                      ? 'background:#1a56db;border-color:#1a56db;color:#fff'
-                      : 'background:#fff;border-color:#e2e8f0;color:#64748b'"
-                  >
-                    {{ dia }}
-                  </span>
-                </label>
-              </div>
-            </div>
+                <!-- Especialidad + Estado -->
+                <div class="col-md-7">
+                <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#000;">Especialidad médica</label>
+                <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
+                    <span class="input-group-text bg-white border-0" style="color:#94a3b8"><i class="fas fa-stethoscope" style="font-size:14px"></i></span>
+                    <select v-model="formMedico.especialidad_id" class="form-select bg-white border-0 py-2" style="font-size:14px">
+                    <option v-for="e in especialidades" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+                    </select>
+                </div>
+                </div>
 
-          </div>
+                <div class="col-md-5">
+                <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#000;">Estado</label>
+                <div class="d-flex align-items-center rounded-3 border bg-white px-3" style="height:42px;border-color:#e2e8f0!important;gap:10px">
+                    <span class="rounded-circle flex-shrink-0" :style="{ width:'8px', height:'8px', background: formMedico.estado === 'Activo' ? '#10b981' : '#94a3b8' }"></span>
+                    <select v-model="formMedico.estado" class="border-0 bg-transparent w-100 py-0 fw-medium" style="font-size:14px;outline:none"
+                            :style="{ color: formMedico.estado === 'Activo' ? '#10b981' : '#64748b' }" required>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                    </select>
+                </div>
+                </div>
+
+                <!--COSTO SUCURSAL Y DURACION DE CONSULTA-->
+
+                <div class="col-12 mt-2">
+                    <hr class="my-0" style="border-color:#e8edf2">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#000;">Sucursal / Ubicación</label>
+                    <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
+                        <span class="input-group-text bg-white border-0" style="color:#94a3b8"><i class="fas fa-map-marker-alt" style="font-size:14px"></i></span>
+                        <select v-model="formMedico.ubicacion_id" class="form-select bg-white border-0 py-2" style="font-size:14px" required>
+                            <option value="" disabled>Selecciona una sucursal</option>
+                            <option v-for="s in sucursales" :key="s.id" :value="s.id">{{ s.nombre }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#000;">Costo de Consulta</label>
+                    <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
+                        <span class="input-group-text bg-white border-0" style="color:#10b981"><i class="fas fa-dollar-sign" style="font-size:14px"></i></span>
+                        <input v-model="formMedico.costo_consulta" type="number" step="0.01" min="0" class="form-control bg-white border-0 py-2" style="font-size:14px" placeholder="0.00" required />
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color:#000;">Duración (Minutos)</label>
+                    <div class="input-group rounded-3 overflow-hidden border" style="border-color:#e2e8f0!important">
+                        <span class="input-group-text bg-white border-0" style="color:#3b82f6"><i class="fas fa-clock" style="font-size:14px"></i></span>
+                        <input v-model="formMedico.duracion_consulta" type="number" min="5" step="5" class="form-control bg-white border-0 py-2" style="font-size:14px" placeholder="Ej. 30" required />
+                    </div>
+                </div>
+
+                <!-- Horario -->
+                <div class="col-12 mt-2">
+                <hr class="my-0" style="border-color:#e8edf2">
+                </div>
+                <div class="col-12">
+                <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color: #000;">HORARIO DE ATENCION</label>
+                <p class="mb-2" style="font-size:12px;color:#94a3b8">Rango de horas disponibles para consultas</p>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="input-group rounded-3 overflow-hidden border flex-grow-1" style="border-color:#e2e8f0!important">
+                    <span class="input-group-text bg-white border-0"><i class="fas fa-clock" style="color:#10b981;font-size:14px"></i></span>
+                    <input type="time" v-model="formMedico.hora_inicio" class="form-control bg-white border-0 py-2 font-monospace" style="font-size:14px" />
+                    </div>
+                    <span class="text-muted fw-bold flex-shrink-0" style="font-size:18px">→</span>
+                    <div class="input-group rounded-3 overflow-hidden border flex-grow-1" style="border-color:#e2e8f0!important">
+                    <span class="input-group-text bg-white border-0"><i class="fas fa-clock" style="color:#ef4444;font-size:14px"></i></span>
+                    <input type="time" v-model="formMedico.hora_fin" class="form-control bg-white border-0 py-2 font-monospace" style="font-size:14px" />
+                    </div>
+                </div>
+                </div>
+
+                <!-- Días laborales -->
+                <div class="col-12 mt-2">
+                <hr class="my-0" style="border-color:#e8edf2">
+                </div>
+                <div class="col-12">
+                    <label class="form-label text-uppercase fw-bold mb-1" style="font-size:11px;letter-spacing:0.8px;color: #000;">DÍAS LABORALES AUTORIZADOS</label>
+                    <p class="mb-3" style="font-size:12px;color:#94a3b8">Selecciona los días habilitados para consultas</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <label
+                            v-for="dia in listaDiasDisponibles"
+                            :key="dia"
+                            class="user-select-none"
+                            style="cursor:pointer">
+                            <input type="checkbox" :value="dia" v-model="diasSeleccionados" class="d-none" />
+                            <span
+                                class="d-inline-block px-3 py-2 rounded-2 fw-semibold transition-all"
+                                style="font-size:12px;letter-spacing:0.2px;border:1.5px solid;transition:all 0.15s"
+                                :style="diasSeleccionados.includes(dia)
+                                ? 'background:#1a56db;border-color:#1a56db;color:#fff'
+                                : 'background:#fff;border-color:#e2e8f0;color:#64748b'"
+                            >
+                                {{ dia }}
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- FOOTER -->
@@ -303,26 +356,7 @@
 </div>
 
 
-<!--MODAL ELIMINAR MEDICO-->
 
-<div class="modal fade" id="modalEliminarMedico" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title">Confirmar Eliminación</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body text-center p-4">
-        <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 2.5rem;"></i>
-        <p class="fs-5">¿Realmente quieres eliminar este registro?</p>
-      </div>
-      <div class="modal-footer d-flex justify-content-center">
-        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-danger px-4" @click="eliminarMedicoConfirmado">Eliminar</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- CONTENEDOR FLOTANTE PARA TOASTS -->
 
@@ -394,7 +428,16 @@ export default {
             especialidad_id: '',
             estado: 'Activo', 
             hora_inicio: '',       
-            hora_fin: '',      
+            hora_fin: '',
+            ubicacion_id: '',
+            costo_consulta: '',
+            duracion_consulta: ''     
+            },
+
+            cards: {
+                total: 0,
+                activos: 0,
+                inactivos: 0
             },
 
             // Control de los Días Laborales de forma visual e independiente
@@ -406,6 +449,8 @@ export default {
             buscar: '',    // Vinculado al input de texto
             medicos: [],
             especialidades: [],
+            sucursales:[],
+            costo_consulta:[],
 
             dias: [
 
@@ -447,29 +492,47 @@ export default {
 
         this.obtenerEspecialidades();
         this.obtenerMedicos();
+        this.obtenerSucursales();
+        this.obtenerEstadisticasMedicos();
         
 
     },
 
     methods: {
         // Trae los datos desde la BD al modal de Editar usando la KEY (id)
-        async editarMedico(id) {
+       async editarMedico(id) {
             try {
                 const response = await ApiService.get(`/medicos/${id}`)
                 const medico = response.data
 
-                this.formMedico.id               = medico.id
-                this.formMedico.folio            = medico.folio
-                this.formMedico.nombre           = medico.nombre
+                this.formMedico.id                 = medico.id
+                this.formMedico.folio              = medico.folio
+                this.formMedico.nombre             = medico.nombre
                 this.formMedico.cedula_profesional = medico.cedula_profesional
-                this.formMedico.especialidad_id  = medico.especialidad_id
-                this.formMedico.estado           = medico.activo == 1 ? 'Activo' : 'Inactivo' // ← nuevo
-
-                if (medico.horarios.length > 0) {
-                    this.formMedico.hora_inicio = medico.horarios[0].hora_inicio.substring(0, 5)
-                    this.formMedico.hora_fin    = medico.horarios[0].hora_fin.substring(0, 5)
+                this.formMedico.especialidad_id    = medico.especialidad_id
+                this.formMedico.estado             = medico.activo == 1 ? 'Activo' : 'Inactivo'
+                
+                // Lugar y costo (Desde configuraciones)
+                if (medico.configuraciones && medico.configuraciones.length > 0) {
+                    this.formMedico.ubicacion_id   = medico.configuraciones[0].ubicacion_id
+                    this.formMedico.costo_consulta = medico.configuraciones[0].costo_consulta
+                } else {
+                    this.formMedico.ubicacion_id   = ''
+                    this.formMedico.costo_consulta = ''
                 }
 
+                // Horarios Y Duración (Desde la tabla horarios)
+                if (medico.horarios && medico.horarios.length > 0) {
+                    this.formMedico.hora_inicio       = medico.horarios[0].hora_inicio.substring(0, 5)
+                    this.formMedico.hora_fin          = medico.horarios[0].hora_fin.substring(0, 5)
+                    this.formMedico.duracion_consulta = medico.horarios[0].duracion_consulta // ← Extraído de horarios
+                } else {
+                    this.formMedico.hora_inicio       = ''
+                    this.formMedico.hora_fin          = ''
+                    this.formMedico.duracion_consulta = '' // ← Limpio si no hay horarios
+                }
+                
+                // Días seleccionados 
                 const diasMap = { 1:'Lunes', 2:'Martes', 3:'Miércoles', 4:'Jueves', 5:'Viernes', 6:'Sábado', 7:'Domingo' }
                 this.diasSeleccionados = medico.horarios.map(h => diasMap[h.dia_semana])
 
@@ -481,12 +544,15 @@ export default {
         async guardarCambiosMedico() {
             try {
                 const payload = {
-                    nombre:          this.formMedico.nombre,
-                    especialidad_id: this.formMedico.especialidad_id,
-                    estado:          this.formMedico.estado,
-                    hora_inicio:     this.formMedico.hora_inicio,
-                    hora_fin:        this.formMedico.hora_fin,
-                    dias:            this.diasSeleccionados,
+                    nombre:            this.formMedico.nombre,
+                    especialidad_id:   this.formMedico.especialidad_id,
+                    estado:            this.formMedico.estado,
+                    hora_inicio:       this.formMedico.hora_inicio,
+                    hora_fin:          this.formMedico.hora_fin,
+                    dias:              this.diasSeleccionados,
+                    ubicacion_id:      this.formMedico.ubicacion_id,
+                    costo_consulta:    this.formMedico.costo_consulta,
+                    duracion_consulta: this.formMedico.duracion_consulta // En el payload se queda igual porque el Controlador lo mapea a los horarios
                 }
 
                 await ApiService.put(`/medicos/${this.formMedico.id}`, payload)
@@ -497,7 +563,9 @@ export default {
                     await this.obtenerMedicos()
                 }
 
-                // ✅ Cierra el modal sin usar bootstrap.Modal
+                // Actualiza los contadores de las cartas de inmediato
+                await this.obtenerEstadisticasMedicos();
+
                 document.getElementById('modalEditarMedico')
                     .querySelector('[data-bs-dismiss="modal"]')
                     .click()
@@ -554,6 +622,36 @@ export default {
 
             }
 
+        },
+
+        async obtenerSucursales() {
+            try {
+                // Hacemos la petición a la ruta de ubicaciones/sucursales
+                const response = await ApiService.get('/ubicaciones/list')
+                
+                // Guardamos los datos en tu array del data()
+                this.sucursales = response.data
+                
+                console.log(
+                    'Sucursales cargadas:',
+                    this.sucursales
+                )
+            } catch (error) {
+                console.error(
+                    'Error al obtener sucursales:',
+                    error
+                )
+            }
+        },
+
+
+        async obtenerEstadisticasMedicos() {
+            try {
+                const response = await ApiService.get('/medicos/estadisticas');
+                this.cards = response.data; // Asigna { total, activos, inactivos }
+            } catch (error) {
+                console.error('Error al obtener las estadísticas:', error);
+            }
         },
 
         async buscarMedico() {
