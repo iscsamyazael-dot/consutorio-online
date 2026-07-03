@@ -439,11 +439,7 @@ return [
         // ==========================================
         // 🩺 CONFIGURACIÓN EXCLUSIVA MÉDICA
         // ==========================================
-        [
-            'header' => 'CONFIGURACIÓN MÉDICA',
-            'can' => 'rol-medico',
-        ],
-        
+     
         ['header'=> 'CONFIGURACIÓN MÉDICA'],
         [
             'text' => 'Especialidades',
@@ -452,34 +448,31 @@ return [
             'can' => 'rol-medico', // 🔒 Oculto para asistente
         ],
 
+        [
+            'text' => 'Médicos',
+            'url'  => 'MedicosAlta', 
+            'icon' => 'fas fa-fw fa-user-md',
+            'can' => 'rol-medico', // 🔒 Oculto para asistente
+        ],
+
+        [
+            'text' => 'Sucursales',
+            'icon' => 'fas fa-fw fa-map-marker-alt',
+            'url' => 'Sucursales',
+            'can' => 'rol-medico', // 🔒 Oculto para asistente
+        ],
+
+
         // ==========================================
         // ⚙️ CONFIGURACIÓN DEL SISTEMA (TODOS)
         // ==========================================
         // ==========================================
         // 🛡️ SECCIÓN EXCLUSIVA: ADMINISTRADOR (CONFIGURACIÓN)
         // ==========================================
-        [
-            'header' => 'CONFIGURACIÓN DEL SISTEMA',
-            'can'    => 'ver-admin', // 🔒 Oculta el encabezado para Asistente y Médico
-        ],
-        [
-            'text' => 'Especialidades',
-            'url'  => 'especialidades', // O 'admin/specialties' si tu ruta tiene prefijo
-            'icon' => 'fas fa-fw fa-user',
-        ],
-        [
-            'text' => 'Médicos',
-            'url'  => 'MedicosAlta', 
-            'icon' => 'fas fa-fw fa-user-md',
-        ],
-
-        [
-        'text' => 'Sucursales',
-        'icon' => 'fas fa-fw fa-map-marker-alt',
-        'url' => 'Sucursales',
-        ],
         
-        ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
+        ['header' => 'CONFIGURACIÓN DEL SISTEMA',
+         'can'    => 'ver-admin', // 🔒 Oculta el encabezado para Asistente y Médico
+        ],
         [
             'text' => 'Perfil',
             'url'  => 'perfil',
