@@ -121,6 +121,7 @@ Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function() {
     Route::resource('receta-detalles', RecetaDetalleController::class);
     Route::get('Medicamentos', function() { return view('medicamentos.index'); });
     Route::resource('especialidades', SpecialtyController::class);
+    Route::get('MedicosAlta',function(){return view('medicos.altamedicos'); });
     
     //Codigo que lleva a HISTORIAL DE RECETAS
     Route::get('HistorialRecetas',function(){return view('recetas.historial-recetas');});
