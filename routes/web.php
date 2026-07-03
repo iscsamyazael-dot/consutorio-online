@@ -66,7 +66,7 @@ Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class
 Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
 
 
-//codigo de ubicaciones (sucursales)//
+//codigo de ubicaciones nuevas rutas  (sucursales)//
 Route::get('/ubicaciones/listar', [App\Http\Controllers\UbicacionController::class, 'listar'])
     ->name('ubicaciones.listar');
 Route::resource('ubicaciones', App\Http\Controllers\UbicacionController::class)
