@@ -26,15 +26,25 @@ class ActualizarCitasInasistencias extends Command
      */
     public function handle()
     {
-        // Buscamos citas 'Agendado' que corresponden a hoy y cuya hora ya pasó
+        // Usamos 'now()' que es la hora que Laravel tiene configurada
+        $fechaHoy = now()->format('Y-m-d');
+        $horaLimite = now()->subHour()->format('H:i:s');
+
+        $this->info("Hora actual del sistema: " . now()->format('H:i:s'));
+        $this->info("Buscando citas de hoy ($fechaHoy) con hora <= $horaLimite");
+
         $citas = Cita::where('estado', 'Agendado')
-            ->where('fecha', now()->format('Y-m-d'))
-            ->where('hora', '<=', now()->subHour()->format('H:i:s'))
+            ->where('fecha', $fechaHoy)
+            ->where('hora', '<=', $horaLimite)
             ->get();
+
+        if ($citas->isEmpty()) {
+            $this->info("No se encontraron citas para actualizar.");
+        }
 
         foreach ($citas as $cita) {
             $cita->update(['estado' => 'Inasistencia']);
-            $this->info("Cita ID {$cita->id} actualizada a Inasistencia.");
+            $this->info("Cita {$cita->folio} marcada como Inasistencia.");
         }
     }
 }
