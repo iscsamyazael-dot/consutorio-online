@@ -1,10 +1,20 @@
 <template>
-    <agenda-medica :create-url="createUrl"></agenda-medica>
+    <agenda-medica
+        :create-url="createUrl"
+        :medicos="medicosDisponibles"
+        :especialidades="especialidadesDisponibles"
+        @filtro-cambiado="onFiltroCambiado"
+    ></agenda-medica>
     <dradmin></dradmin>
 
     <div style="display: flex; gap: 16px; align-items: flex-start;">
         <div style="flex: 2;">
-            <calendario></calendario>
+            <calendario
+                :medico-id="filtroMedicoId"
+                :especialidad-id="filtroEspecialidadId"
+                :citas="citas"
+                @cita-actualizada="obtenerCitas"
+            ></calendario>
         </div>
         <div style="flex: 1;">
             <resumen-medico :citas="citas" :pendientes="citasPendientes"></resumen-medico>
@@ -12,7 +22,6 @@
     </div>
 </template>
 <script> 
-//importa los componenetes hijos que se usan en este template
 import AgendaMedica from './agendamedica.vue';
 import DrAdmin from './dradmin.vue';
 import Calendario from './calendario.vue';  
@@ -29,8 +38,40 @@ import axios from 'axios';
         data() {
             return {
                 citas: [],
-                createUrl: '/citas/create',//Url a la que debe apuntar el voton Nueva cita  dentro de agenda medica 
-                citasPendientes: [] // antes no existía y se usaba en el template, ver nota abajo
+                createUrl: '/citas/create',
+                citasPendientes: [],
+                filtroMedicoId: '',
+                filtroEspecialidadId: ''
+            }
+        },
+        computed: {
+            // Lista única de médicos a partir de las citas ya cargadas
+            medicosDisponibles() {
+                const mapa = new Map()
+                this.citas.forEach(c => {
+                    if (!c.medico) return
+                    const id = c.medico.id ?? c.medico.nombre
+                    if (!mapa.has(id)) {
+                        mapa.set(id, {
+                            id,
+                            nombre: c.medico.nombre,
+                            especialidadId: c.especialidad ? (c.especialidad.id ?? c.especialidad.nombre) : ''
+                        })
+                    }
+                })
+                return Array.from(mapa.values())
+            },
+            // Lista única de especialidades a partir de las citas ya cargadas
+            especialidadesDisponibles() {
+                const mapa = new Map()
+                this.citas.forEach(c => {
+                    if (!c.especialidad) return
+                    const id = c.especialidad.id ?? c.especialidad.nombre
+                    if (!mapa.has(id)) {
+                        mapa.set(id, { id, nombre: c.especialidad.nombre })
+                    }
+                })
+                return Array.from(mapa.values())
             }
         },
         watch: {
@@ -55,6 +96,10 @@ import axios from 'axios';
                             this.citas = res.data
                         })
                         .catch(err => console.error(err))
+            },
+            onFiltroCambiado(filtro) {
+                this.filtroMedicoId = filtro.medicoId
+                this.filtroEspecialidadId = filtro.especialidadId
             }
         }
     }

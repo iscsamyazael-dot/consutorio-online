@@ -190,12 +190,31 @@ export default {
   name: 'Calendario',
   components: { FullCalendar },
 
+  props: {
+    // ID del médico seleccionado en la barra de filtros (viene del padre)
+    medicoId: {
+      type: [String, Number],
+      default: ''
+    },
+    // ID de la especialidad seleccionada en la barra de filtros (viene del padre)
+    especialidadId: {
+      type: [String, Number],
+      default: ''
+    },
+    // Citas ya cargadas por el padre (única fuente de la verdad)
+    citas: {
+      type: Array,
+      default: () => []
+    }
+  },
+
+  emits: ['cita-actualizada'],
+
   data() {
     return {
       busqueda:           '',
       vistaDetalle:       false,
       fechaSeleccionada:  null,
-      citas:              [],
 
       // Modal
       mostrarModalEstado: false,
@@ -215,17 +234,21 @@ export default {
       ],
     }
   },
-
-  mounted() {
-    fetch('/api/citas')
-      .then(res => res.json())
-      .then(data => { this.citas = data })
-      .catch(err => console.error('Error cargando citas:', err))
-  },
 //colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
   computed: {
+    // NUEVO: aplica el filtro de médico/especialidad sobre todas las citas cargadas
+    citasFiltradas() {
+      return this.citas.filter(c => {
+        const medicoOk = !this.medicoId ||
+          (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoId)
+        const especialidadOk = !this.especialidadId ||
+          (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadId)
+        return medicoOk && especialidadOk
+      })
+    },
+
     eventos() {
-      return this.citas.map(cita => ({
+      return this.citasFiltradas.map(cita => ({
         id:    cita.id,
         title: (cita.paciente && cita.paciente.nombre) ? cita.paciente.nombre : 'Paciente',
         start: `${cita.fecha}T${cita.hora}`,
@@ -236,7 +259,7 @@ export default {
 // obtiene las citas del día seleccionado, ordenadas por hora
     citasDelDia() {
       if (!this.fechaSeleccionada) return []
-      return this.citas
+      return this.citasFiltradas
         .filter(c => c.fecha === this.fechaSeleccionada)
         .sort((a, b) => a.hora.localeCompare(b.hora))
     },
@@ -425,7 +448,7 @@ export default {
       this.citaSeleccionada   = null
       this.nuevoEstado        = ''
     },
-// confirma el cambio de estado y actualiza la cita
+// confirma el cambio de estado y avisa al padre para que refresque
     async confirmarCambioEstado() {
       if (!this.citaSeleccionada || this.nuevoEstado === this.citaSeleccionada.estado) return
 
@@ -442,14 +465,9 @@ export default {
 
         if (!res.ok) throw new Error('Error al actualizar')
 
-        // Actualizar localmente sin recargar
-        const idx = this.citas.findIndex(c => c.id === this.citaSeleccionada.id)
-        if (idx !== -1) {
-          this.citas[idx] = { ...this.citas[idx], estado: this.nuevoEstado }
-        }
-
         this.cerrarModal()
         this.mostrarToast(`Estado actualizado a "${this.nuevoEstado}" correctamente.`, 'exito')
+        this.$emit('cita-actualizada')
 
       } catch (err) {
         console.error('Error actualizando estado:', err)
