@@ -46,7 +46,15 @@
           <span>Canceladas</span>
         </div>
       </div>
-
+      <div class="stat-item stat-amber">
+          <div class="stat-icon">
+            <i class="fas fa-user-slash"></i>
+          </div>
+          <div class="stat-info">
+            <h5>{{ citasInasistencia }}</h5>
+            <span>Inasistencia</span>
+          </div>
+        </div>
     </div>
   </div>
 </template>
@@ -66,21 +74,27 @@ export default {
     totalCitas() {
       return this.citas.length
     },
-
+// Completadas: citas con estado "finalizada", "completada" o "atendida"
     citasCompletadas() {
       return this.citas.filter(c => this.normalizarEstado(c.estado).includes('final')
         || this.normalizarEstado(c.estado).includes('completad')
         || this.normalizarEstado(c.estado).includes('atendid')).length
     },
-
+// Pendientes: citas con estado "agendada" o "programada"
     citasPendientesCount() {
       return this.citas.filter(c => this.normalizarEstado(c.estado).includes('agendad')
         || this.normalizarEstado(c.estado).includes('programad')).length
     },
-
+// Canceladas: citas con estado "cancelada" o "anulada"
     citasCanceladas() {
       return this.citas.filter(c => this.normalizarEstado(c.estado).includes('cancelad')).length
-    }
+    },
+// Inasistencia: citas con estado "inasistencia", "ausente" o "no asistio"
+    citasInasistencia() {
+      return this.citas.filter(c => this.normalizarEstado(c.estado).includes('inasistencia')
+    || this.normalizarEstado(c.estado).includes('ausente')
+    || this.normalizarEstado(c.estado).includes('no asistio')).length
+},
   },
 
   methods: {
@@ -194,4 +208,16 @@ export default {
 }
 .stat-red .stat-info h5  { color: #b91c1c; }
 .stat-red .stat-info span { color: #ef4444; }
+
+
+/* Ámbar (Inasistencia) */
+.stat-amber {
+  background: #fffbeb;
+}
+.stat-amber .stat-icon {
+  background: #fef3c7;
+  color: #d97706;
+}
+.stat-amber .stat-info h5  { color: #b45309; }
+.stat-amber .stat-info span { color: #f59e0b; }
 </style>
