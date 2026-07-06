@@ -246,7 +246,7 @@ export default {
         return medicoOk && especialidadOk
       })
     },
-
+    // Genera los eventos para FullCalendar a partir de las citas filtradas
     eventos() {
       return this.citasFiltradas.map(cita => ({
         id:    cita.id,
@@ -290,19 +290,19 @@ export default {
           const color  = this.colorPorEstado(estado)
           const icono  = this.iconoPorEstado(estado)
           const hora   = arg.timeText ? `${arg.timeText} ` : ''
-
+          // Crea un contenedor para el evento con icono y texto
           const wrapper = document.createElement('div')
           wrapper.style.display = 'flex'
           wrapper.style.alignItems = 'center'
           wrapper.style.gap = '4px'
           wrapper.style.overflow = 'hidden'
-
+          //wrapper.style.textOverflow = 'ellipsis'
           const iconEl = document.createElement('i')
           iconEl.className = `fas ${icono}`
           iconEl.style.color = color
           iconEl.style.fontSize = '.62rem'
           iconEl.style.flexShrink = '0'
-
+          //iconEl.style.marginRight = '4px'
           const textEl = document.createElement('span')
           textEl.style.overflow = 'hidden'
           textEl.style.textOverflow = 'ellipsis'
@@ -423,13 +423,13 @@ export default {
     mostrarToast(mensaje, tipo = 'exito') {
       // Cancela el timer anterior si hay uno activo
       if (this.toastTimer) clearTimeout(this.toastTimer)
-
+      // Muestra el nuevo toast
       this.toast = {
         mensaje,
         tipo,
         icono: tipo === 'exito' ? 'fas fa-check-circle' : 'fas fa-times-circle',
       }
-
+      // Oculta el toast después de 3 segundos
       this.toastTimer = setTimeout(() => {
         this.toast = null
       }, 3000)
@@ -441,7 +441,7 @@ export default {
       this.nuevoEstado        = cita.estado
       this.mostrarModalEstado = true
     },
-
+    // Cierra el modal y resetea los datos
     cerrarModal() {
       if (this.guardando) return
       this.mostrarModalEstado = false
@@ -464,7 +464,7 @@ export default {
         })
 
         if (!res.ok) throw new Error('Error al actualizar')
-
+          // Actualiza el estado localmente para reflejar el cambio inmediatamente
         this.cerrarModal()
         this.mostrarToast(`Estado actualizado a "${this.nuevoEstado}" correctamente.`, 'exito')
         this.$emit('cita-actualizada')
@@ -518,17 +518,36 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: none;
   border-radius: 10px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   font-size: .82rem;
   font-weight: 700;
-  color: #334155;
+  color: white;
   cursor: pointer;
-  transition: background .2s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, .25);
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
 }
-.btn-volver:hover { background: #e2e8f0; }
+
+.btn-volver i {
+  transition: transform .25s ease;
+}
+
+.btn-volver:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, .35);
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+}
+
+.btn-volver:hover i {
+  transform: translateX(-4px);
+}
+
+.btn-volver:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 8px rgba(59, 130, 246, .3);
+}
 
 .calendar-search {
   position: relative;
