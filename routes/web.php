@@ -66,6 +66,16 @@ Route::resource('movimientos', MovimientoInventarioController::class);
 Route::resource('triage', TriageController::class);
 Route::resource('archivoclinico', ArchivosClinicosController::class);
 Route::resource('citas', CitaController::class);
+Route::resource('usuarios', UserController::class);
+Route::resource('medicamentos', MedicamentoController::class);
+Route::resource('asistente/pacientes', PacienteController::class);
+Route::resource('dashboard/citas', CitaController::class);
+Route::resource('consultas', ConsultaController::class)->except(['index']);
+Route::resource('consultaIA', ConsultaIAController::class);
+Route::resource('medicamentos', MedicamentoController::class);
+Route::resource('recetas', RecetaController::class);
+Route::resource('receta-detalles', RecetaDetalleController::class);
+ Route::resource('citas', CitaController::class);
 
 Route::patch('/citas/{cita}/estado', [CitaController::class, 'actualizarEstado'])->name('citas.estado');
 Route::get('/api/citas', [CitaController::class, 'getCitas']);
@@ -75,8 +85,6 @@ Route::get('/api/citas', [CitaController::class, 'getCitas']);
 // ==========================================
 Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function () {
     Route::get('/', function () { return view('dashboard'); })->name('dashboard');
-    Route::resource('usuarios', UserController::class);
-    Route::resource('medicamentos', MedicamentoController::class);
     Route::get('Medicamentos', function () { return view('medicamentos.index'); });
 });
 
@@ -89,13 +97,11 @@ Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function () {
     Route::get('/dashboard', function () { return view('dashboard'); });
 
     // 👥 PACIENTES (Compartido)
-    Route::resource('asistente/pacientes', PacienteController::class);
     Route::get('asistente/pacientes.index', function () { return view('pacientes.index'); });
     Route::get('asistente/PacienteNuevo', function () { return view('pacientes.create'); });
     Route::get('asistente/ExpedientePacientes', function () { return view('pacientes.expediente'); });
 
     // 📅 CITAS / AGENDA (Compartido)
-    Route::resource('dashboard/citas', CitaController::class);
     Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);
 
     // 👁️ CONSULTAS: Lista de Consultas (Compartido)
@@ -107,16 +113,8 @@ Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function () {
 // 🔒 SECCIÓN EXCLUSIVA PARA MÉDICO
 // ==========================================
 Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function () {
-
-    Route::resource('consultas', ConsultaController::class)->except(['index']);
-    Route::resource('consultaIA', ConsultaIAController::class);
-
     Route::get('NuevaConsulta', function () { return view('consultas.create'); });
     Route::get('ConsultaInteligente', function () { return view('consultas.consulta_inteligente'); });
-
-    Route::resource('medicamentos', MedicamentoController::class);
-    Route::resource('recetas', RecetaController::class);
-    Route::resource('receta-detalles', RecetaDetalleController::class);
     Route::get('Medicamentos', function () { return view('medicamentos.index'); });
     Route::get('MedicosAlta', function () { return view('medicos.altamedicos'); });
     Route::get('HistorialRecetas', function () { return view('recetas.historial-recetas'); });
@@ -140,7 +138,6 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
     });
 
     // Citas (Agenda) — exclusivo de este grupo
-    Route::resource('citas', CitaController::class);
     Route::get('/api/citas', [CitaController::class, 'getEventos']);
 });
 
