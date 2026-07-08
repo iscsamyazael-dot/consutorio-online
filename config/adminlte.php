@@ -375,7 +375,7 @@ return [
                 [
                     'text' => 'Triage',
                     'icon' => 'fas fa-fw fa-exclamation',
-                    'url' => 'medico/TRIAGE',
+                    'url' => 'medico/TRIAGES',
                 ],
                 [
                     'text' => 'Evaluación IA',

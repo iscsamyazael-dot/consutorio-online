@@ -43,10 +43,7 @@ Route::get('/dashboard', function () {
     Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
     Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
     // Ruta para procesar el formulario y guardar el registro en las tablas
-    Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
-    Route::get('/medicos-horarios', [MedicoController::class, 'index']);
-    //ruta que filtra los medicos locales de la tabla 
-    Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);
+   
     //para traer actualizar y eliminar medicos
     // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
     // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
@@ -54,9 +51,14 @@ Route::get('/dashboard', function () {
     // Route::get('/api/specialties', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
     // Route::get('ubicaciones/list', [UbicacionController::class, 'listar'])->name('ubicaciones.listar');
     // Route::get('/medicos/estadisticas', [MedicoController::class, 'obtenerEstadisticas']);
-    Route::get('/api/especialidades', [SpecialtyController::class, 'list']); // Ruta API que obtiene la lista de especialidades médicas
+    
 });
-
+// Ruta API que obtiene la lista de especialidades médicas
+Route::get('/api/especialidades', [SpecialtyController::class, 'list']); 
+Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
+Route::get('/medicos-horarios', [MedicoController::class, 'index']);
+//ruta que filtra los medicos locales de la tabla 
+Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);
 Route::resource('especialidades', SpecialtyController::class);
 Route::resource('pacientes', PacienteController::class);
 Route::resource('consultas', ConsultaController::class);
@@ -70,16 +72,31 @@ Route::resource('ubicaciones', UbicacionController::class);
 Route::resource('movimientos',MovimientoInventarioController::class);
 Route::resource('triage', TriageController::class);
 Route::resource('archivoclinico', ArchivosClinicosController::class);
+//Route::resource('dashboard/citas', CitaController::class);
+Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);
+//Route::resource('consultas', ConsultaController::class)->except(['index']);
+Route::resource('citas', CitaController::class);
+Route::get('/api/citas', [CitaController::class, 'getEventos']);
+// Cambias 'SubirArchivosControlador' por el que ya tengas
+Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
+//Código para hacer el filtro de un paciente mediante un input //
+Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
+//Codigo para las vistas y que son usadas en el menú de adminlte"
+//codigo  de las citas //
+//actualiza el estado 
+Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class, 'actualizarEstado'])->name('citas.estado');
+// api de calendario//
+Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
+//Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
+Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
+       ->name('ExpedienteDetalle');
 
 
-   
 // ==========================================
 // 🛡️ SECCIÓN / PREFIJO PARA ADMINISTRADOR
 // ==========================================
 Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function() {
     Route::get('/', function() { return view('dashboard'); })->name('dashboard');
-    Route::resource('usuarios', UserController::class);
-    Route::resource('medicamentos', MedicamentoController::class);
     Route::get('Medicamentos', function() { return view('medicamentos.index'); });
 });
 
@@ -93,15 +110,12 @@ Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function() {
     Route::get('/dashboard', function() { return view('dashboard'); });
 
     // 👥 PACIENTES (Compartido)
-    Route::resource('asistente/pacientes', PacienteController::class);
+    
     Route::get('asistente/pacientes.index', function () {return view('pacientes.index');});
     Route::get('asistente/PacienteNuevo', function() { return view('pacientes.create'); });
     Route::get('asistente/ExpedientePacientes', function() { return view('pacientes.expediente'); });
 
     // 📅 CITAS / AGENDA (Compartido)
-    Route::resource('dashboard/citas', CitaController::class);
-    Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);
-
     // 👁️ CONSULTAS: Lista de Consultas (Compartido)
     Route::get('asistente/ListaConsultas', function () { return view('consultas.index'); });
     Route::get('medico/HistorialConsulta', function() { return view('consultas.consultaIndividual'); });
@@ -112,22 +126,14 @@ Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function() {
 // 🔒 SECCIÓN EXCLUSIVA PARA MÉDICO
 // ==========================================
 Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function() {
-    
-    Route::resource('consultas', ConsultaController::class)->except(['index']);
-    Route::resource('consultaIA', ConsultaIAController::class);
-    
     Route::get('NuevaConsulta', function () { return view('consultas.create'); });
     Route::get('ConsultaInteligente', function() { return view('consultas.consulta_inteligente'); });
-
-    Route::resource('medicamentos', MedicamentoController::class);
-    Route::resource('recetas', RecetaController::class);
-    Route::resource('receta-detalles', RecetaDetalleController::class);
     Route::get('Medicamentos', function() { return view('medicamentos.index'); });
     Route::get('MedicosAlta',function(){return view('medicos.altamedicos'); });
     
     //Codigo que lleva a HISTORIAL DE RECETAS
     Route::get('HistorialRecetas',function(){return view('recetas.historial-recetas');});
-    Route::get('TRIAGE', function() { return view('atencion-medica.triage'); });
+    Route::get('TRIAGES', function() { return view('atencion-medica.triage'); });
     Route::get('EvaluacionIa', function() { return view('atencion-medica.evaluacion-ia'); });
     Route::get('ArchivosClinicos', function() { return view('atencion-medica.archivos-clinicos'); });
     Route::get('Derivaciones', function() { return view('atencion-medica.derivaciones'); });
@@ -144,9 +150,7 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
     });
 
     // Pacientes y Citas (Agenda)
-    Route::resource('pacientes', PacienteController::class);
-    Route::resource('citas', CitaController::class);
-    Route::get('/api/citas', [CitaController::class, 'getEventos']);
+  
 
     // 👁️ ÚNICO submódulo de consultas permitido: Lista de Consultas
     Route::get('ListaConsultas', function () { return view('consultas.index'); });
@@ -160,11 +164,7 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
 });
 
 
-// Cambias 'SubirArchivosControlador' por el que ya tengas
-Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
-//Código para hacer el filtro de un paciente mediante un input //
-Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
-//Codigo para las vistas y que son usadas en el menú de adminlte"
+
 Route::view('inicio','dashboard');
 //Código que lleva a la vista para crear un nuevo paciente de forma manual///
 Route::get('PacienteNuevo',function(){
@@ -191,12 +191,7 @@ Route::get('HistorialConsulta',function(){
 Route::get('ConsultaInteligente',function(){
           return view('consultas.consulta_inteligente');
 });
-//codigo  de las citas //
-Route::resource('citas', App\Http\Controllers\CitaController::class);
-//actualiza el estado 
-Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class, 'actualizarEstado'])->name('citas.estado');
-// api de calendario//
-Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
+
 
 
 Route::get('ConsultarEspecialidades',function(){
@@ -210,7 +205,7 @@ Route::get('Medicamentos',function(){
 });
 
 //Codigo que lleva a TRIAGE
-Route::get('TRIAGE',function(){
+Route::get('TRIAGES',function(){
           return view('atencion-medica.triage');
 });
 //Codigo que lleva a EVALUACION IA
@@ -258,17 +253,14 @@ Route::get('HistorialRecetas',function(){
 });
 
 //ruta que te dirige a  lista de consutas //
-Route::get('consultas', function () {
+Route::get('ListaConsultas', function () {
     return view('consultas.index');
 });
 
 //Rutas parametrizadas (Sirve para hacer consultas entre diferentes 
 // componentes es decir enviar datos entre la URL)//
 
-//Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
-Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
-       ->name('ExpedienteDetalle');
-       
+
 //Aqui termina la ruta parametrizada //
 
 // Route::get('NuevaConsulta', function () {
