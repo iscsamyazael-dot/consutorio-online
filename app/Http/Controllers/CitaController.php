@@ -16,10 +16,10 @@ class CitaController extends Controller
     {
         // Obtiene todas las citas junto con
         // el paciente, médico y especialidad relacionados.
-        $citas = Cita::with(['paciente', 'medico', 'especialidad'])->get();
+        return $citas = Cita::with(['paciente', 'medico', 'especialidad'])->get();
 
         // Envía la información a la vista.
-        return view('citas.index', compact('citas'));
+        //return view('citas.index', compact('citas'));
     }
 
   //devuelve todas las citas en formato JSON para el calendario
