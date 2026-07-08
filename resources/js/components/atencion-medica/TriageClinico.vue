@@ -1,4 +1,14 @@
 <template>
+
+        <div>
+        <h1 class="font-weight-bold text-dark">
+            TRIAGE Clínico
+        </h1>
+        <small class="text-muted">
+            Clasificación médica de urgencias
+        </small>
+    </div>
+
     <div class="row mb-4">
     <div class="col-lg-3 col-md-6 col-sm-12">
         <div class="small-box bg-danger shadow">

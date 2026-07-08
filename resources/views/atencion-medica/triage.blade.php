@@ -1,3 +1,4 @@
+
 @extends('adminlte::page')
 
 @section('title', 'TRIAGE')
@@ -5,19 +6,10 @@
 @section('content_header')
 
 <div class="d-flex justify-content-between align-items-center">
+    <meta name="base-url" content="{{ url('/') }}">
     <input type="hidden" name="route" value="{{ url('/') }}">
-    <div>
-        <h1 class="font-weight-bold text-dark">
-            TRIAGE Clínico
-        </h1>
-        <small class="text-muted">
-            Clasificación médica de urgencias
-        </small>
-    </div>
-    <button class="btn btn-primary shadow">
-        <i class="fas fa-user-plus"></i>
-        Nuevo TRIAGE
-    </button>
+    
+    
 </div>
 @stop
 @section('content')

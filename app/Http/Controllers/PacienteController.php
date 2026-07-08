@@ -1,11 +1,9 @@
 <?php
-
 namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
 use App\Models\Triage;
-
 
 class PacienteController extends Controller
 {
@@ -13,6 +11,7 @@ class PacienteController extends Controller
     {
        return Paciente::with(['triages'])->get();
     }
+    
     public function filtrar_paciente(Request $request)
     {
         $buscar = $request->buscar;
@@ -97,30 +96,38 @@ class PacienteController extends Controller
             'Paciente' => $paciente,
             'Triage' => $triage]
         ]);
-
     }
-
-
-
+    
     public function show(string $id)
     {
         return Paciente::with(['triages','archivos'])->find($id);
     }
 
+    /**
+     * Show the form for editing the specified resource.
+     */
     public function edit(string $id)
     {
-       
+        return view('pacientes.edit', compact('paciente'));
+
     }
 
+    /**
+     * Update the specified resource in storage.
+     */
     public function update(Request $request, string $id)
     {
-       
+        $paciente->update($request->all());
+
+        return redirect()->route('pacientes.index');
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy(string $id)
     {
-        
+         $paciente->delete();
+        return back();
     }
-
-    
 }

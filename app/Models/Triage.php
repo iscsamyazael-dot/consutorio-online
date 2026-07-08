@@ -30,6 +30,7 @@ class Triage extends Model
     'evaluacion_ia',
     'requiere_medico'
 ];
+    
 
     /**
      * El triage pertenece a un paciente
@@ -55,3 +56,4 @@ class Triage extends Model
         return $this->hasOne(Consulta::class, 'triage_id');
     }
 }
+
