@@ -20,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {   
-        $this->registerPolicies();
+    
         // El Administrador ve absolutamente todo en el sistema
         Gate::before(function ($user, $ability) {
             if ($user->rol === 'admin') {
