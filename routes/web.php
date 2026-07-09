@@ -104,7 +104,6 @@ Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function() {
     Route::get('Medicamentos', function() { return view('medicamentos.index'); });
     Route::get('pacientes.index', function () {return view('pacientes.index'); });
     Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); });
-    Route::get('listaConsultas', function () { return view('consultas.index'); });
     Route::get('HistorialConsulta', function() { return view('consultas.consultaIndividual'); });
     Route::get('NuevaConsulta', function () { return view('consultas.create'); });
     Route::get('ConsultaInteligente', function() { return view('consultas.consulta_inteligente'); });
