@@ -122,14 +122,14 @@ class CitaController extends Controller
             ->where('estado', 'Activo')
             ->get();
 
-        return view(
-            'citas.create',
-            compact(
-                'pacientes',
-                'medicos',
-                'especialidades'
-            )
-        );
+        // return view(
+        //     'citas.create',
+        //     compact(
+        //         'pacientes',
+        //         'medicos',
+        //         'especialidades'
+        //     )
+        // );
     }
 
 

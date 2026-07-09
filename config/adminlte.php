@@ -324,7 +324,6 @@ return [
         // ==========================================
         [
             'header' => 'MOVIMIENTOS DEL SISTEMA',
-            'can' => 'acceso-general',
         ],
         [
             'text' => 'Pacientes',
@@ -334,7 +333,7 @@ return [
                 [
                     'text' => 'Lista de pacientes',
                     'icon' => 'fas fa-fw fa-list',
-                    'url' => 'pacientes.index', // Apunta al grupo del rol
+                    'url' => 'ListaPacientes', // Apunta al grupo del rol
                 ],
                 [
                     'text' => 'Registrar paciente',
@@ -440,24 +439,16 @@ return [
         // 🩺 CONFIGURACIÓN EXCLUSIVA MÉDICA
         // ==========================================
      
-        ['header'=> 'CONFIGURACIÓN MÉDICA'],
         [   'header' => 'CONFIGURACIÓN MÉDICA',
             'can' => 'acceso-medico-admin',
         ],
         [
             'text' => 'Especialidades',
             'url' => 'ConsultarEspecialidades',
-            'url' => 'medico/ConsultarEspecialidades',
             'icon' => 'fas fa-fw fa-user',
             
         ],
-        [
-            'text' => 'Médicos',
-            'url'  => 'medico/MedicosAlta', 
-            'icon' => 'fas fa-fw fa-user-md',
-            
-        ],
-
+       
         [
             'text' => 'Médicos',
             'url'  => 'MedicosAlta', 
