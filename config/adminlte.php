@@ -324,7 +324,7 @@ return [
         // ==========================================
         [
             'header' => 'MOVIMIENTOS DEL SISTEMA',
-            'can' => 'rol-medico',
+            'can' => 'acceso-general',
         ],
         [
             'text' => 'Pacientes',
