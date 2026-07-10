@@ -194,6 +194,12 @@ Route::get('perfil',function(){
           return view('configuracion-sistema.perfil');
 });
 
+//Codigo que lleva a PERFIL
+Route::get('agregar-usuario',function(){
+          return view('configuracion-sistema.agregar-usuario');
+});
+
+
 //Codigo que lleva a CAMBIAR CONTRASEÑA
 Route::get('cambiar-contraseña', function () {
     return view('configuracion-sistema.cambiar-contraseña');

@@ -30,6 +30,9 @@ import PanelContraseña from './components/configuracion-sistema/PanelContraseñ
 
 //Modulo de Historial de recetas 
 import Historialreceta from './components/recetass/PanelRecetas.vue'
+//Modulo de registro de usuario 
+import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
+
 
 
 const app = createApp({})
@@ -105,6 +108,12 @@ app.component(
     'recetass-historial',
     Historialreceta
 );
+
+app.component(
+     'registro-usuario',
+     RegistrarUsuario
+ );
+ 
 
     
 // 3. MONTAJE DE LA APP

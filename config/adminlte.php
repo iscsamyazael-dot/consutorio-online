@@ -459,24 +459,38 @@ return [
             'header' => 'CONFIGURACIÓN DEL SISTEMA',
             'can'    => 'ver-admin', // 🔒 Oculta el encabezado para Asistente y Médico
         ],
-        [
-            'text' => 'Perfil',
-            'url'  => 'perfil',
+
+        ['text' => 'Perfil',
             'icon' => 'fas fa-fw fa-user',
-            'can'  => 'ver-admin', // 🔒 Oculta el botón
+            'can'  => 'ver-admin',
+            'submenu' => [
+                [
+                    'text' => 'Ver Perfil',
+                    'url'  => 'perfil',
+                    'icon' => 'fas fa-fw fa-user',
+                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                ],
+                [
+                    'text' => 'Agregar Usuario',
+                    'url'  => 'agregar-usuario',
+                    'icon' => 'fas fa-fw fa-user',
+                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                ],
+            ],
         ],
-        [
-            'text' => 'Cambiar contraseña',
-            'url'  => 'cambiar-contraseña',
-            'icon' => 'fas fa-fw fa-lock',
-            'can'  => 'ver-admin', // 🔒 Oculta el botón
-        ],
-        [
-            'text' => 'Cerrar sesión',
-            'url'  => 'logout',
-            'icon' => 'fas fa-sign-out-alt',
-            'can'  => 'ver-admin', // 🔒 Oculta el botón
-        ],
+                [
+                    'text' => 'Cambiar contraseña',
+                    'url'  => 'cambiar-contraseña',
+                    'icon' => 'fas fa-fw fa-lock',
+                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                ],
+                [
+                    'text' => 'Cerrar sesión',
+                    'url'  => 'logout',
+                    'icon' => 'fas fa-sign-out-alt',
+                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                ],
+        
     ],
 
     /*
