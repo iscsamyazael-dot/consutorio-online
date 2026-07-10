@@ -3,7 +3,10 @@
 @section('title', 'Agenda Médica')
 
 @section('content_header')
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <input type="hidden" name="route" value="{{ url('/') }}">
+<meta name="base-url" content="{{ url('/') }}">
+
     
 @stop
 @section('content')
