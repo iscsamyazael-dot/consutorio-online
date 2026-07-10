@@ -202,7 +202,8 @@ export default {
       type: [String, Number],
       default: ''
     },
-    // Citas ya cargadas por el padre (única fuente de la verdad)
+    // Citas ya cargadas por el padre (se usan como respaldo mientras
+    // se resuelve la primera carga vía ApiService)
     citas: {
       type: Array,
       default: () => []
@@ -216,6 +217,10 @@ export default {
       busqueda:           '',
       vistaDetalle:       false,
       fechaSeleccionada:  null,
+
+      // NUEVO: citas ya filtradas, cargadas desde el backend vía ApiService
+      citasFiltradas:     [],
+      cargandoCitas:      false,
 
       // Modal
       mostrarModalEstado: false,
@@ -237,17 +242,11 @@ export default {
   },
 
   computed: {
-    // NUEVO: aplica el filtro de médico/especialidad sobre todas las citas cargadas
-    citasFiltradas() {
-      return this.citas.filter(c => {
-        const medicoOk = !this.medicoId ||
-          (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoId)
-        const especialidadOk = !this.especialidadId ||
-          (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadId)
-        return medicoOk && especialidadOk
-      })
-    },
-    // Genera los eventos para FullCalendar a partir de las citas filtradas
+    // Genera los eventos para FullCalendar a partir de las citas filtradas.
+// NOTA: esta función NO hace ninguna petición al backend ni usa ApiService,
+// porque solo transforma datos que YA fueron cargados previamente
+// (this.citasFiltradas viene de ApiService.get('citas', ...) en cargarCitasFiltradas()).
+// Aquí solo se da formato a esos datos para que FullCalendar los pueda dibujar.
     eventos() {
       return this.citasFiltradas.map(cita => ({
         id:    cita.id,
@@ -257,20 +256,22 @@ export default {
         extendedProps: { estado: cita.estado, hora: cita.hora },
       }))
     },
-    // obtiene las citas del día seleccionado, ordenadas por hora
+    // Obtiene las citas del día seleccionado, ordenadas por hora
     citasDelDia() {
       if (!this.fechaSeleccionada) return []
       return this.citasFiltradas
         .filter(c => c.fecha === this.fechaSeleccionada)
         .sort((a, b) => a.hora.localeCompare(b.hora))
     },
-    // formatea la fecha seleccionada a un formato legible
+    //   Formatea la fecha seleccionada utilizando las funciones nativas de JavaScript (sin consumir una API externa).
     fechaSeleccionadaFormateada() {
       if (!this.fechaSeleccionada) return ''
       const [y, m, d] = this.fechaSeleccionada.split('-')
       const fecha = new Date(y, m - 1, d)
       return fecha.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     },
+    // No es necesario consumir una API, ya que esta función únicamente configura el componente FullCalendar
+    // utilizando datos locales almacenados en `this.eventos`.
     opcionesCalendario() {
       return {
         plugins:     [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -323,7 +324,49 @@ export default {
     },
   },
 
+  watch: {
+    // Cada vez que cambia el médico seleccionado, se recarga desde el backend
+    medicoId() {
+      this.cargarCitasFiltradas()
+    },
+    // Cada vez que cambia la especialidad seleccionada, se recarga desde el backend
+    especialidadId() {
+      this.cargarCitasFiltradas()
+    },
+    // Si el padre actualiza el arreglo de citas (por ejemplo tras crear una nueva),
+    // se vuelve a pedir la lista filtrada actualizada
+    citas: {
+      deep: true,
+      handler() {
+        this.cargarCitasFiltradas()
+      }
+    }
+  },
+
+  mounted() {
+    this.cargarCitasFiltradas()
+  },
+
   methods: {
+    // NUEVO: pide al backend las citas ya filtradas por médico/especialidad
+    async cargarCitasFiltradas() {
+      this.cargandoCitas = true
+      try {
+        const params = {}
+        if (this.medicoId)        params.medico_id        = this.medicoId
+        if (this.especialidadId)  params.especialidad_id   = this.especialidadId
+
+        const { data } = await ApiService.get('citas', { params })
+        this.citasFiltradas = data
+      } catch (err) {
+        console.error('Error cargando citas filtradas:', err)
+        this.mostrarToast('No se pudieron cargar las citas.', 'error')
+        // Respaldo: si falla la petición, usamos lo que haya llegado por prop
+        this.citasFiltradas = this.citas
+      } finally {
+        this.cargandoCitas = false
+      }
+    },
     colorPorEstado(estado) {
       const clave = this.normalizarEstado(estado)
       const colores = {
@@ -456,6 +499,8 @@ export default {
         this.cerrarModal()
         this.mostrarToast(`Estado actualizado a "${this.nuevoEstado}" correctamente.`, 'exito')
         this.$emit('cita-actualizada')
+        // Refresca la lista propia con ApiService para reflejar el cambio de inmediato
+        await this.cargarCitasFiltradas()
 
       } catch (err) {
         console.error('Error actualizando estado:', err)
