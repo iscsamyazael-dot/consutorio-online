@@ -124,9 +124,9 @@ Route::middleware('auth')->group(function () {
             Route::get('RegistroMedico', function (){ return view('medicos.medicocreate'); })->name('medicos.medicocreate');
             Route::get('perfil',function(){ return view('configuracion-sistema.perfil'); })->name('configuracion-sistema.perfil');
             Route::get('cambiar-contraseña', function () { return view('configuracion-sistema.cambiar-contraseña'); })->name('configuracion-sistema.cambiar-contraseña');
-            Route::get('Sucursales',function(){ return view('ubicaciones.index'); })->name('ubicaciones.index');
-            Route::get('Agenda',function(){ return view('citas.index'); })->name('citas.index');
-            Route::get('AgendarCitas',function(){ return view('citas.create'); })->name('citas.create');
+            Route::get('Sucursales',function(){ return view('Ubicaciones.index'); })->name('Ubicaciones.index');
+            Route::get('Agenda',function(){ return view('Citas.index'); })->name('Citas.index');
+            Route::get('AgendarCitas',function(){ $datos = (new CitaController())->create(); return view('Citas.create',$datos); });
             Route::get('ExpedientePacientes/{id}', function ($id) {
                 return view('pacientes.expediente');
             })->name('pacientes.expediente');
