@@ -444,10 +444,6 @@ export default {
       this.nuevoEstado        = ''
     },
 
-    // confirma el cambio de estado y avisa al padre para que refresque
-    // Consume la API a través de ApiService (instancia de axios con
-    // baseURL y CSRF token ya configurados), siguiendo la misma lógica
-    // usada en el resto del proyecto (ej. módulo Medicamentos).
     async confirmarCambioEstado() {
       if (!this.citaSeleccionada || this.nuevoEstado === this.citaSeleccionada.estado) return
 

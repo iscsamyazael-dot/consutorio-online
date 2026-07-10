@@ -3,194 +3,212 @@
 @section('title', 'Lista Pacientes')
 
 @section('content_header')
-    <h1>Lista de Pacientes</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <input type="hidden" name="route" value="{{ url('/') }}">
+        <meta name="base-url" content="{{ url('/') }}">
+
+        <div>
+            <h1 class="fw-bold text-dark mb-1">
+                <i class="fas fa-user-injured text-primary"></i>
+                Lista de Pacientes
+            </h1>
+
+            <small class="text-muted">
+                Gestión médica inteligente
+            </small>
+        </div>
+
+        <a href="{{ url('PacienteNuevo') }}" class="btn btn-primary shadow-sm px-4 rounded-pill">
+            <i class="fas fa-user-plus"></i>
+            Nuevo Paciente
+        </a>
+    </div>
 @stop
 
-@section('content') 
-    <div class="content">
-        <section class="content-header">
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="col text-end">
-                        <a href="" class="btn btn-primary"><i class="fas fa-user-plus"></i> Lista de Paciente</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <section class="content">
-            <div class="container-fluid">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-user-injured"></i> Lista de Pacientes</h3>
-                    </div>
-                    <div class="card-body table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Teléfono</th>
-                                    <th>Edad</th>
-                                    <th>Sexo</th>
-                                    <th width="220">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>001</td>
-                                    <td>Samy Azael Lopez Acosta</td>
-                                    <td>9889677449</td>
-                                    <td>32</td>
-                                    <td>Masculino</td>
-                                    <td>
-                                        <a class="btn btn-info btn-sm" data-bs-toggle="modal" href="#verpacienteModal" role="button"><i class="fas fa-eye"></i>
-                                        </a>
-                                        <a class="btn btn-primary btn-sm" href="{{url('ExpedientePacientes')}}" role="button"><i class="fas fa-folder-open"></i>
-                                        </a>
-                                        <a class="btn btn-warning btn-sm"  data-bs-toggle="modal" href="#editarpacienteModal" role="button"><i class="fas fa-edit"></i>
-                                        </a>
-                                        <button class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+@section('content')
 
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+<div class="container-fluid">
+
+    {{-- TARJETAS SUPERIORES --}}
+    <div class="row mb-4">
+
+        <div class="col-md-3">
+            <div class="small-box bg-primary shadow border-0 rounded-4">
+                <div class="inner">
+                    <h3>245</h3>
+                    <p>Total Pacientes</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-users"></i>
                 </div>
             </div>
-        </section>
-    </div>
- <!-- Modal para ver la información de un paciente  -->
-    <div class="modal fade" id="verpacienteModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title" id="exampleModalLabel"><i class="fas fa-user"></i> Información del Paciente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="col-md-3">
+            <div class="small-box bg-success shadow border-0 rounded-4">
+                <div class="inner">
+                    <h3>34</h3>
+                    <p>Consultas Hoy</p>
                 </div>
-                <div class="modal-body">
-                    <h6 class="text-primary">Datos Personales</h6>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for=""><strong>Nombre:</strong></label>
-                            <p id="ver_nombre">Samy Azael Lopez Acosta</p>
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Telefono:</strong></label>
-                            <p id="ver_nombre">9889677449</p>
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Sexo:</strong></label>
-                            <p id="ver_nombre">Masculino</p>
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Fecha de nacimiento:</strong></label>
-                            <p id="ver_nombre">25 de noviembre 1992</p>
-                        </div>
-                        <div class="col-md-12">
-                            <label for=""><strong>Dirección:</strong></label>
-                            <p id="ver_nombre">Calle 10a x 15 y 17 Sudzal Yucatán</p>
-                        </div>
-                    </div>
-                    <h6 class="text-danger mt-3">Información médica</h6>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for=""><strong>Tipo de sangre</strong></label>
-                            <p id="ver_tipo_sangre">O Positivo</p>
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Alergias</strong></label>
-                            <p id="ver_alergias">Ninguna</p>
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Enfermedades crónicas</strong></label>
-                            <p id="ver_enfermedades">Sindrome de colon irritable</p>
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Antecedentes</strong></label>
-                            <p id="ver_antecedentes">Ninguna</p>
-                        </div>
-                    </div>
+                <div class="icon">
+                    <i class="fas fa-stethoscope"></i>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">cerrar</button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="small-box bg-warning shadow border-0 rounded-4">
+                <div class="inner">
+                    <h3>12</h3>
+                    <p>Urgencias</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="small-box bg-danger shadow border-0 rounded-4">
+                <div class="inner">
+                    <h3>5</h3>
+                    <p>pendientes</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-procedures"></i>
                 </div>
             </div>
         </div>
     </div>
-<!-- Modal para editar la información de un paciente -->
-    <div class="modal fade" id="editarpacienteModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title" id="exampleModalLabel"><i class="fas fa-user"></i> Información del Paciente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <h6 class="text-primary">Datos Personales</h6>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for=""><strong>Nombre:</strong></label>
-                            <input class="form-control" type="text" placeholder="Nombre Completo" aria-label="default input example">
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Telefono:</strong></label>
-                            <input class="form-control" type="text" placeholder="Numero de Telefono" aria-label="default input example">
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Sexo:</strong></label>
-                            <select class="form-select" aria-label="Default select example">
-                                <option selected>Selecciona Uno</option>
-                                <option value="1">Masculino</option>
-                                <option value="2">Femenino</option>
-                                <option value="3">Binario</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Fecha de nacimiento:</strong></label>
-                            <input type="date" class="form-control">
-                        </div>
-                        <div class="col-md-12">
-                            <label for=""><strong>Dirección:</strong></label>
-                            <input class="form-control" type="text" placeholder="Dirección completa" aria-label="default input example">
-                        </div>
-                    </div>
-                    <h6 class="text-danger mt-3">Información médica</h6>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for=""><strong>Tipo de sangre</strong></label>
-                             <input class="form-control" type="text" placeholder="Tipo de Sangre" aria-label="default input example">
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Alergias</strong></label>
-                             <input class="form-control" type="text" placeholder="Alergias" aria-label="default input example">
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Enfermedades crónicas</strong></label>
-                             <input class="form-control" type="text" placeholder="Enfermedades crónicas" aria-label="default input example">
-                        </div>
-                        <div class="col-md-6">
-                            <label for=""><strong>Antecedentes</strong></label>
-                             <input class="form-control" type="text" placeholder="Antecedentes médicos" aria-label="default input example">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">cerrar</button>
-                </div>
-            </div>
-        </div>
+    <div id="app">
+        <pacientes-index></pacientes-index>
     </div>
+</div>
 @stop
 
 @section('css')
-    {{-- <link rel="stylesheet" href="/css/admin_custom.css"> --}}
+
+<style>
+body{
+    background:#f4f6f9;
+}
+
+.card{
+    border-radius:24px;
+}
+
+.table thead th{
+    border:none;
+    padding:18px;
+    font-weight:700;
+    color:#495057;
+}
+
+.table tbody td{
+    padding:18px;
+    vertical-align:middle;
+}
+
+.table-hover tbody tr:hover{
+    background:#f8fbff;
+    transition:.3s;
+}
+
+.avatar-circle{
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#0d6efd,#00c6ff);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-weight:bold;
+    font-size:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,.15);
+}
+
+.avatar-large{
+    width:80px;
+    height:80px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#0d6efd,#00c6ff);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-size:30px;
+    font-weight:bold;
+}
+
+.action-btn{
+    border-radius:12px;
+    transition:.3s;
+    box-shadow:0 3px 8px rgba(0,0,0,.1);
+}
+
+.action-btn:hover{
+    transform:translateY(-3px);
+}
+
+.search-box{
+    position:relative;
+    width:300px;
+}
+
+.search-box i{
+    position:absolute;
+    top:13px;
+    left:15px;
+    color:#999;
+}
+
+.search-box input{
+    padding-left:40px;
+    border-radius:14px;
+    border:1px solid #e5e7eb;
+    height:45px;
+}
+
+.modal-content{
+    box-shadow:0 10px 40px rgba(0,0,0,.15);
+}
+
+.patient-profile{
+    display:flex;
+    align-items:center;
+    gap:20px;
+}
+
+.info-card{
+    background:#f8fafc;
+    border-radius:16px;
+    padding:18px;
+}
+
+.info-card label{
+    color:#6c757d;
+    font-size:14px;
+}
+
+.info-card h6{
+    margin-top:8px;
+    font-weight:700;
+}
+
+.small-box{
+    border-radius:22px !important;
+}
+
+.small-box .icon{
+    top:10px;
+}
+
+.small-box:hover{
+    transform:translateY(-5px);
+    transition:.3s;
+}
+</style>
+
 @stop
 
 @section('js')
-    <script> console.log('Hi!'); </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 @stop

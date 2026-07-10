@@ -156,9 +156,10 @@ return [
     'layout_topnav' => null,
     'layout_boxed' => null,
     'layout_fixed_sidebar' => true,
-    'layout_fixed_navbar' => null,
+    'layout_fixed_navbar' => true,
     'layout_fixed_footer' => null,
     'layout_dark_mode' => null,
+    
 
     /*
     |--------------------------------------------------------------------------
@@ -316,141 +317,186 @@ return [
             'type' => 'sidebar-menu-search',
             'text' => 'Buscar',
         ],
+        
+        
+        // ==========================================
+        // 📋 MOVIMIENTOS GENERALES (COMPARTIDOS)
+        // ==========================================
         [
-            'text' => 'blog',
-            'url' => 'admin/blog',
-            'can' => 'manage-blog',
+            'header' => 'MOVIMIENTOS DEL SISTEMA',
         ],
-         ['header' => 'MOVIMIENTOS DEL SISTEMA'],
         [
             'text' => 'Pacientes',
             'icon' => 'fas fa-fw fa-user',
-            'submenu' =>[
+            'can' => 'acceso-general',
+            'submenu' => [
                 [
-                'text' => 'Lista de pacientes',
-                'icon' => 'fas fa-fw fa-list',
-                'url' => 'pacientes',
+                    'text' => 'Lista de pacientes',
+                    'icon' => 'fas fa-fw fa-list',
+                    'url' => 'ListaPacientes', // Apunta al grupo del rol
                 ],
                 [
-                'text' => 'Registrar paciente',
-                'icon' => 'fas fa-fw fa-user-plus',
-                'url' => 'PacienteNuevo',
+                    'text' => 'Registrar paciente',
+                    'icon' => 'fas fa-fw fa-user-plus',
+                    'url' => 'PacienteNuevo',
                 ],
             ],
-        
         ],
         [
             'text' => 'Consultas',
             'icon' => 'fas fa-fw fa-stethoscope',
-             'submenu' =>[
+            'can' => 'acceso-general',
+            'submenu' => [
                 [
-                'text' => 'Lista de consuta',
-                'icon' => 'fas fa-fw fa-receipt',
-                'url' => '#',
+                    'text' => 'Lista de consulta',
+                    'url'  => 'ListaConsultas', // Visible para Asistente y Médico
+                    'icon' => 'fas fa-fw fa-notes-medical',
                 ],
                 [
-                'text' => 'Nueva consulta',
-                'icon' => 'fas fa-fw fa-book-medical',
-                'url' => '#',
+                    'text' => 'Nueva consulta',
+                    'url'  => 'NuevaConsulta',
+                    'icon' => 'fas fa-plus-circle',
+                    'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
                 ],
                 [
-                'text' => 'Consulta Inteligente',
-                'icon' => 'fas fa-network-wired',
-                'url' => 'ConsultaInteligente',
+                    'text' => 'Consulta Inteligente',
+                    'icon' => 'fas fa-network-wired',
+                    'url'  => 'ConsultaInteligente',
+                    'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
                 ],
             ],
         ],
         [
             'text' => 'Atención Médica',
             'icon' => 'fas fa-fw fa-hospital',
-             'submenu' =>[
+            'can' => 'acceso-medico-admin', // 🔒 Oculto para asistente
+            'submenu' => [
                 [
-                'text' => 'Triage',
-                'icon' => 'fas fa-fw fa-exclamation',
-                'url' => '#',
+                    'text' => 'Triage',
+                    'icon' => 'fas fa-fw fa-exclamation',
+                    'url' => 'TRIAGES',
                 ],
                 [
-                'text' => 'Evaluación IA',
-                'icon' => 'fas fa-fw fa-robot',
-                'url' => '#',
+                    'text' => 'Evaluación IA',
+                    'icon' => 'fas fa-fw fa-robot',
+                    'url' => 'EvaluacionIa',
                 ],
                 [
-                'text' => 'Archivos Clínicos',
-                'icon' => 'fas fa-fw fa-folder-open',
-                'url' => '#',
+                    'text' => 'Archivos Clínicos',
+                    'icon' => 'fas fa-fw fa-folder-open',
+                    'url' => 'ArchivosClinicos',
                 ],
                 [
-                'text' => 'Derivaciones',
-                'icon' => 'fas fa-fw fa-eye',
-                'url' => '#',
+                    'text' => 'Derivaciones',
+                    'icon' => 'fas fa-fw fa-eye',
+                    'url' => 'Derivaciones',
+                ],
+            ],
+        ],
+       [
+            'text'    => 'Agenda',
+            'icon'    => 'fas fa-fw fa-calendar',
+            'can'     => 'acceso-medico-admin', 
+            'submenu' => [
+                [
+                    'text' => 'Citas',
+                    'icon' => 'fas fa-fw fa-list',
+                    'url'  => 'Agenda', // 👈 Usaremos una URL base neutral
+                ],
+                [
+                    'text' => 'Programar cita',
+                    'icon' => 'fas fa-fw fa-user-clock',
+                    'url'  => 'AgendarCitas', // 👈 Usaremos una URL base neutral
                 ],
             ],
         ],
         [
-    'text'    => 'Agenda',
-    'icon'    => 'fas fa-fw fa-calendar',
-    'submenu' => [
-        [
-            'text' => 'Citas',
-            'route'  => 'citas.index', // Apunta a tu ruta de listado
-            'icon' => 'fas fa-fw fa-list',
-        ],
-        [
-            'text' => 'Programar cita',
-            'route'  => 'citas.create', // Apunta a tu ruta de formulario
-            'icon' => 'fas fa-fw fa-user-clock',
-        ],
-    ],
-],
-        [
             'text' => 'Recetas',
             'icon' => 'fas fa-fw fa-prescription',
-             'submenu' =>[
+            'can' => 'acceso-medico-admin', // 🔒 Oculto para asistente
+            'submenu' => [
                 [
-                'text' => 'Historialde recetas',
-                'icon' => 'fas fa-fw fa-book-medical',
-                'url' => '#',
+                    'text' => 'Historial de recetas',
+                    'icon' => 'fas fa-fw fa-book-medical',
+                    'url' => 'HistorialRecetas',
                 ],
             ],
         ],
         [
             'text' => 'Medicamentos',
             'icon' => 'fas fa-fw fa-capsules',
-            'submenu' =>[
+            'can' => 'acceso-medico-admin', // 🔒 Oculto para asistente
+            'submenu' => [
                 [
-                'text' => 'Inventario',
-                'icon' => 'fas fa-fw fa-pump-medical',
-                'url' => '#',
-                ],
-                [
-                'text' => 'Registrar Medicamento',
-                'icon' => 'fas fa-fw fa-cart-plus',
-                'url' => '#',
+                    'text' => 'Inventario',
+                    'icon' => 'fas fa-fw fa-pump-medical',
+                    'url' => 'Medicamentos',
                 ],
             ],
         ],
-        ['header'=> 'CONFIGURACIÓN MÉDICA'],
+
+        // ==========================================
+        // 🩺 CONFIGURACIÓN EXCLUSIVA MÉDICA
+        // ==========================================
+     
+        [   'header' => 'CONFIGURACIÓN MÉDICA',
+            'can' => 'acceso-medico-admin',
+        ],
         [
             'text' => 'Especialidades',
-            'url' => '#',
+            'url' => 'ConsultarEspecialidades',
             'icon' => 'fas fa-fw fa-user',
+            
         ],
-        ['header' => 'CONFIGURACIÓN DEL SISTEMA'],
+       
+        [
+            'text' => 'Médicos',
+            'url'  => 'MedicosAlta', 
+            'icon' => 'fas fa-fw fa-user-md',
+            
+        ],
+
+        [
+            'text' => 'Sucursales',
+            'icon' => 'fas fa-fw fa-map-marker-alt',
+            'url' => 'Sucursales',
+            
+        ],
+
+
+        // ==========================================
+        // ⚙️ CONFIGURACIÓN DEL SISTEMA (TODOS)
+        // ==========================================
+        // ==========================================
+        // 🛡️ SECCIÓN EXCLUSIVA: ADMINISTRADOR (CONFIGURACIÓN)
+        // ==========================================
+        
+        ['header' => 'CONFIGURACIÓN DEL SISTEMA',
+         'can'    => 'admin', // 🔒 Oculta el encabezado para Asistente y Médico
+        ],
+        [
+            'url'  => 'ConsultarEspecialidades', // O 'admin/specialties' si tu ruta tiene prefijo
+            'icon' => 'fas fa-fw fa-user',
+           
+        ],
         [
             'text' => 'Perfil',
-            'url' => 'admin/settings',
+            'url'  => 'perfil',
             'icon' => 'fas fa-fw fa-user',
+           
         ],
         [
             'text' => 'Cambiar contraseña',
-            'url' => 'admin/settings',
+            'url'  => 'cambiar-contraseña',
             'icon' => 'fas fa-fw fa-lock',
+            
         ],
         [
-             'text' => 'Cerrar sesión',
+            'text' => 'Cerrar sesión',
             'url'  => 'logout',
             'icon' => 'fas fa-sign-out-alt',
-        ],
+            
+        ]
     ],
 
     /*

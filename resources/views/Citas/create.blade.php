@@ -4,6 +4,7 @@
 
 @section('content_header')
 <input type="hidden" name="route" value="{{ url('/') }}">
+<meta name="base-url" content="{{url('/')}}">
 @stop
 
 @section('content')
@@ -18,7 +19,6 @@
     ></masterprocita>
 </div>
 @stop
-
 @section('js')
 @vite('resources/js/app.js')
 @stop
