@@ -156,7 +156,7 @@ return [
     'layout_topnav' => null,
     'layout_boxed' => null,
     'layout_fixed_sidebar' => true,
-    'layout_fixed_navbar' => null,
+    'layout_fixed_navbar' => true,
     'layout_fixed_footer' => null,
     'layout_dark_mode' => null,
     
@@ -406,7 +406,7 @@ return [
                 [
                     'text' => 'Programar cita',
                     'icon' => 'fas fa-fw fa-user-clock',
-                    'url'  => 'dashboard/citas/create', // 👈 Usaremos una URL base neutral
+                    'url'  => 'AgendarCitas', // 👈 Usaremos una URL base neutral
                 ],
             ],
         ],
