@@ -38,7 +38,7 @@ import axios from 'axios';
         data() {
             return {
                 citas: [],
-                createUrl: '/citas/create',
+                createUrl: '/AgendarCitas', //  Corregido: apunta a la ruta con precarga de datos (CitaController@create)
                 citasPendientes: [],
                 filtroMedicoId: '',
                 filtroEspecialidadId: ''

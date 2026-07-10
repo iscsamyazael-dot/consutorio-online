@@ -490,7 +490,7 @@ export default {
     async confirmarCambioEstado() {
       if (!this.citaSeleccionada || this.nuevoEstado === this.citaSeleccionada.estado) return
 
-      this.guardando = true
+      this.guardando = true 
       try {
         await ApiService.patch(`citas/${this.citaSeleccionada.id}/estado`, {
           estado: this.nuevoEstado,
