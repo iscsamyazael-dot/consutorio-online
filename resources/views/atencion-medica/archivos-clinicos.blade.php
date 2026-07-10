@@ -9,6 +9,7 @@
 <div class="content">
         <div class="content-header">
             <div class="container-fluid">
+                <meta name="base-url" content="{{ url('/') }}">
                 <input type="hidden" name="route" value="{{ url('/') }}">
 
                 <div id="app">

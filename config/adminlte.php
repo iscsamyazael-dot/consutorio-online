@@ -333,7 +333,7 @@ return [
                 [
                     'text' => 'Lista de pacientes',
                     'icon' => 'fas fa-fw fa-list',
-                    'url' => 'asistente/pacientesindex', // Apunta al grupo del rol
+                    'url' => 'asistente/pacientes.index', // Apunta al grupo del rol
                 ],
                 [
                     'text' => 'Registrar paciente',
@@ -574,7 +574,7 @@ return [
             ],
         ],
         'Sweetalert2' => [
-            'active' => true,
+            'active' => false,
             'files' => [
                 [
                     'type' => 'js',
