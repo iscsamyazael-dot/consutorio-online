@@ -475,6 +475,7 @@ return [
          'can'    => 'admin', // 🔒 Oculta el encabezado para Asistente y Médico
         ],
         [
+            'text' => 'ESpecialidades',
             'url'  => 'ConsultarEspecialidades', // O 'admin/specialties' si tu ruta tiene prefijo
             'icon' => 'fas fa-fw fa-user',
            
@@ -482,7 +483,6 @@ return [
 
         ['text' => 'Perfil',
             'icon' => 'fas fa-fw fa-user',
-<<<<<<< HEAD
             'can'  => 'ver-admin',
             'submenu' => [
                 [
@@ -497,8 +497,6 @@ return [
                     'icon' => 'fas fa-fw fa-user',
                     'can'  => 'ver-admin', // 🔒 Oculta el botón
                 ],
-            ],
-        ],
                 [
                     'text' => 'Cambiar contraseña',
                     'url'  => 'cambiar-contraseña',
@@ -510,26 +508,10 @@ return [
                     'url'  => 'logout',
                     'icon' => 'fas fa-sign-out-alt',
                     'can'  => 'ver-admin', // 🔒 Oculta el botón
-                ],
-        
-=======
-           
+                ], 
+            ],
         ],
-        [
-            'text' => 'Cambiar contraseña',
-            'url'  => 'cambiar-contraseña',
-            'icon' => 'fas fa-fw fa-lock',
-            
-        ],
-        [
-            'text' => 'Cerrar sesión',
-            'url'  => 'logout',
-            'icon' => 'fas fa-sign-out-alt',
-            
-        ]
->>>>>>> 06a6358ee08f6baa219df38eea28b7a99b969b0c
     ],
-
     /*
     |--------------------------------------------------------------------------
     | Menu Filters
