@@ -17,7 +17,7 @@ class CheckRole
     {
         // 1. Si el usuario ni siquiera ha iniciado sesión, mandarlo al login
         if (!auth()->check()) {
-            return redirect('/login');
+            return redirect(url('/login'));
         }
 
         // ⭐ NUEVO: Si es Administrador, ¡déjalo pasar a donde quiera!

@@ -1032,7 +1032,7 @@ export default {
         /*//Metodo para traer la lista de los medicamentos //*/
         async obtenerMedicamentos(){
             try {
-                const response = await ApiService.get('/medicamentos')
+                const response = await ApiService.get('medicamentos')
                 this.medicamentos = response.data
                 console.log('Medicamentos cargados:',this.medicamentos)
             }

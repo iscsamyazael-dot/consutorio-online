@@ -26,7 +26,9 @@ class Medico extends Model
     public function especialidad()
     {
         return $this->belongsTo(Specialty::class, 'especialidad_id');
+        return $this->belongsTo(Especialidad::class);
     }
+
 
     // Relación con Horarios
     public function horarios()
@@ -65,4 +67,13 @@ class Medico extends Model
         });
     }
 
+    // public function especialidad()
+    // {
+        
+    // }
+    
+    public function citas()
+    {
+        return $this->hasMany(Cita::class);
+    }
 }
