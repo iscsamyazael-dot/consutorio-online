@@ -9,7 +9,7 @@
             <div class="modal-header bg-primary text-white">
 
                 <h5 class="modal-title">
-                    Información del Paciente
+                    Información del Paciente 
                 </h5>
 
                 <button

@@ -33,19 +33,14 @@ class AuthenticatedSessionController extends Controller
         $user = $request->user();
 
         // 4. Redirección según el rol guardado en la base de datos
-        switch ($user->rol) {
+        switch ($user->rol) { 
             case 'admin':
-                return redirect()->to('/admin');
-                
-            case 'medico':
-                return redirect()->to('/medico');
-                
+            case 'medico':   
             case 'asistente':
-                return redirect()->to('/asistente');
-
+                return redirect()->route('dashboard');
             default:
                 // Ruta por defecto por si acaso (ej. un usuario común o el dashboard estándar)
-                return redirect()->intended(route('dashboard', absolute: false));
+               return redirect()->route('dashboard');
         }
     }
 

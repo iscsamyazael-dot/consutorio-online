@@ -48,7 +48,7 @@
                         </label>
                         <div class="fs-5">
                             <i class="fas fa-briefcase text-primary me-2"></i>
-                            Médico
+                            {{ perfil.rol }}
                         </div>
                     </div>
 
@@ -223,11 +223,8 @@
 
 
 </template>
-
-
 <script>
 import ApiService from '../../services/ApiService.js'
-
 
 export default {
 
@@ -235,7 +232,6 @@ export default {
 
         return {
 
-            // Datos del perfil
             perfil: {
 
                 nombre: '',
@@ -253,10 +249,7 @@ export default {
         // Carga la información del usuario al abrir la página
         await this.obtenerPerfil()
 
-    
-
-    console.log('MOUNTED EJECUTADO')
-
+        console.log('MOUNTED EJECUTADO')
     },
 
     methods: {
@@ -266,7 +259,8 @@ export default {
             try {
 
                 // Obtiene los datos desde Laravel
-                const response = await axios.get('perfil-usuario')
+                const response = await ApiService.get('perfil-usuario')
+
                 console.log(response.data)
 
                 // Llena el objeto perfil
@@ -282,38 +276,40 @@ export default {
 
                     rol: response.data.rol,
 
-                    // Formatea la fecha de registro
                     fechaRegistro: new Date(
                         response.data.created_at
                     ).toLocaleDateString('es-MX')
                 }
 
+                console.log('Perfil cargado:', this.perfil)
+
             } catch (error) {
 
-                console.error(error)
+                console.error('Error al obtener perfil:', error)
             }
         },
 
         async guardarPerfil() {
 
-        try {
+            try {
 
-        // Envía los cambios al servidor
-            await axios.put(
-                '/perfil-usuario',
-                this.perfil
+                await ApiService.put(
+                    'perfil-usuario',
+                    {
+                        name: this.perfil.nombre,
+                        email: this.perfil.correo,
+                        especialidad: this.perfil.especialidad,
+                        cedula_profesional: this.perfil.cedula
+                    }
                 )
 
-            // Recarga los datos desde la BD
-            await this.obtenerPerfil()
+                await this.obtenerPerfil()
 
-                alert(
-                    'Perfil actualizado correctamente'
-                )
+                alert('Perfil actualizado correctamente')
 
-                } catch (error) {
+            } catch (error) {
 
-                console.error(error)
+                console.error('Error al guardar perfil:', error)
             }
         }
     }
