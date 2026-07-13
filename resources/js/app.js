@@ -35,7 +35,7 @@ import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 //Modulo de Perfil
 import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
 import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
-
+import PanelTabla from './components/configuracion-sistema/PanelTabla.vue'
 //Modulo de registro de usuario 
 import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
 
@@ -146,7 +146,13 @@ app.component(
 app.component(
      'registro-usuario',
      RegistrarUsuario
- );
+);
+
+
+app.component(
+     'panel-tabla',
+     PanelTabla
+);
  
 
     

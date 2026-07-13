@@ -14,6 +14,7 @@ use App\Http\Controllers\ArchivosClinicosController;
 use App\Http\Controllers\SpecialtyController; // <--- AGREGA ESTA LÍNEA
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CitaController;
+use App\Http\Controllers\UserRegisterController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -39,6 +40,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
     Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
     Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
+    Route::post('/usuarios/registro', UserRegisterController::class);
+    Route::get('/usuarios', [UserController::class, 'index']);
+    Route::delete('usuarios/{id}', [UserController::class, 'destroy']);
 });
 
 Route::resource('especialidades', SpecialtyController::class);

@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -13,6 +13,11 @@ class UserController extends Controller
     public function index()
     {
         //
+         $usuarios = User::select('id', 'name', 'email', 'rol', 'activo', 'created_at')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($usuarios);
     }
 
     /**
@@ -58,8 +63,15 @@ class UserController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy($id)
     {
-        //
+        $usuario = User::findOrFail($id);
+
+        $usuario->activo = 0;
+        $usuario->save();
+
+        return response()->json([
+            'message' => 'Usuario desactivado correctamente.'
+        ]);
     }
 }
