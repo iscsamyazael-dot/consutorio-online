@@ -49,12 +49,12 @@ class Consulta extends Model
     {
         return $this->hasMany(ConsultaTranscripcion::class);
     }
-    
+
     public function recetas()
     {
         return $this->hasMany(Receta::class);
     }
-    
+
     public function archivos()
     {
         return $this->hasMany(ArchivoClinico::class);
@@ -62,7 +62,6 @@ class Consulta extends Model
 
     public function evaluacionIA()
     {
-        return $this->belongsTo(EvaluacionIA::class,'evaluacion_ia_id');
+        return $this->belongsTo(EvaluacionIA::class, 'evaluacion_ia_id');
     }
-
 }

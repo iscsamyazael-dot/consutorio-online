@@ -39,7 +39,7 @@ class Medicamento extends Model
     // INVENTARIO
     public function inventario()
     {
-        return $this->hasOne(Inventario::class,'medicamento_id','id');
+        return $this->hasOne(inventario::class,'medicamento_id','id');
     }
 
     // MOVIMIENTOS
