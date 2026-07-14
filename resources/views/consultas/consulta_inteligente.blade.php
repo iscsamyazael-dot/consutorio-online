@@ -5,6 +5,7 @@
 @section('content_header')
 <div class="container-fluid">
     <input type="hidden" name="route" value="{{ url('/') }}">
+    <meta name="base-url" content="{{url('/')}}"> 
     <!-- HEADER CLÍNICO -->
     <div class="card shadow-sm border-0 mb-3">
         <div class="card-body py-3">
