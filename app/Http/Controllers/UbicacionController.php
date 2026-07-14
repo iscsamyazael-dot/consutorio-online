@@ -16,11 +16,11 @@ class UbicacionController extends Controller
     }
     
 
-    // public function listar(): JsonResponse
-    // {
-    //     $ubicaciones = Ubicacion::orderBy('folio_sucursal', 'asc')->get();
-    //     return response()->json($ubicaciones);
-    // }
+    public function listar()
+    {
+        $ubicaciones = Ubicacion::orderBy('folio_sucursal', 'asc')->get();
+        return response()->json($ubicaciones);
+    }
 
     public function store(Request $request)
     {

@@ -627,8 +627,7 @@ export default {
         async obtenerSucursales() {
             try {
                 // Hacemos la petición a la ruta de ubicaciones/sucursales
-                const response = await ApiService.get('/ubicaciones/list')
-                
+                const response = await ApiService.get('listaUbicaciones')
                 // Guardamos los datos en tu array del data()
                 this.sucursales = response.data
                 
@@ -647,7 +646,7 @@ export default {
 
         async obtenerEstadisticasMedicos() {
             try {
-                const response = await ApiService.get('/medicos/estadisticas');
+                const response = await ApiService.get('medicoEstadistica');
                 this.cards = response.data; // Asigna { total, activos, inactivos }
             } catch (error) {
                 console.error('Error al obtener las estadísticas:', error);
