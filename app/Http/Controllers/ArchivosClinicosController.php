@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\Archivoclinico;
+use App\Models\ArchivoClinico;
 use App\Models\Paciente;
 use App\Models\Consulta;
 use Illuminate\Http\Request;

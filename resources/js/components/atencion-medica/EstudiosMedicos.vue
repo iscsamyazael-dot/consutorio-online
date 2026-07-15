@@ -752,7 +752,7 @@ export default {
 
                 async ObtenerArchivos() {
                     try {
-                        const response = await ApiService.get('/archivoclinico')
+                        const response = await ApiService.get('archivoclinico')
                         this.listaArchivos = response.data
                         console.log('archivos:', this.listaArchivos)
                     } catch (error) {

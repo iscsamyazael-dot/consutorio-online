@@ -479,7 +479,7 @@ export default {
         async obtenerSucursales() {
             try {
                 // Hacemos la petición a la ruta de ubicaciones/sucursales
-                const response = await ApiService.get('/ubicaciones/list')
+                const response = await ApiService.get('listaUbicaciones')
                 
                 // Guardamos los datos en tu array del data()
                 this.sucursales = response.data
