@@ -61,6 +61,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('receta-detalles', RecetaDetalleController::class);
         Route::resource('usuarios', UserController::class);
         Route::resource('consultaIA', ConsultaIAController::class);
+        Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente');
+        Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente');
         Route::resource('medicos', MedicoController::class);
         Route::resource('ubicaciones', UbicacionController::class);
         Route::resource('movimientos',MovimientoInventarioController::class);

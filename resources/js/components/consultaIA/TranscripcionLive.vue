@@ -107,7 +107,10 @@
 
                         </div>
 
-                        <div class="direct-chat-text bg-light">
+                        <div
+                            class="direct-chat-text"
+                            :class="msg.error ? 'bg-danger text-white' : 'bg-light'"
+                        >
 
                             {{ msg.texto }}
 
@@ -124,6 +127,24 @@
         <!-- FOOTER -->
         <div class="card-footer">
 
+            <!-- AVISO: consulta no inicializada -->
+            <div
+                v-if="!consultaId"
+                class="alert alert-warning py-1 px-2 mb-2"
+                style="font-size:13px;"
+            >
+
+                ⚠️ No se pudo inicializar la consulta. Los mensajes no se enviarán hasta reconectar.
+
+                <button
+                    class="btn btn-sm btn-link p-0 ml-1"
+                    @click="iniciarConsulta"
+                >
+                    Reintentar
+                </button>
+
+            </div>
+
             <div class="row">
 
                 <div class="col-md-8">
@@ -133,6 +154,7 @@
                         class="form-control"
                         placeholder="Simular mensaje..."
                         v-model="nuevoMensaje"
+                        :disabled="enviando || !consultaId"
                         @keyup.enter="enviarMensaje"
                     >
 
@@ -142,10 +164,16 @@
 
                     <button
                         class="btn btn-primary btn-block"
+                        :disabled="enviando || !consultaId"
                         @click="enviarMensaje"
                     >
 
-                        Enviar mensaje
+                        <span v-if="enviando">
+                            <i class="fas fa-spinner fa-spin"></i> Enviando...
+                        </span>
+                        <span v-else>
+                            Enviar mensaje
+                        </span>
 
                     </button>
 
@@ -161,6 +189,14 @@
                     🤖 Síntomas detectados
 
                 </h6>
+
+                <span
+                    v-if="sintomas.length === 0"
+                    class="text-muted"
+                    style="font-size:13px;"
+                >
+                    Aún no se detectaron síntomas.
+                </span>
 
                 <span
                     v-for="(sintoma,index) in sintomas"
@@ -185,37 +221,22 @@ import axios from 'axios'
 var route = document.querySelector("[name=route]").value //Esta linea sirve para las rutas parametrizadas //
 
 var urlConsultaIA = route + '/consultaIA'; //Se consume la ruta de la API que se encuentra en el archivo web//
+
 export default {
     data() {
 
         return {
-            
+
             consultaId: null,
             nuevoMensaje: '',
             sintomas: [],
-            mensajes: [
-
-                {
-                    tipo: 'medico',
-                    texto: '¿Dónde siente el dolor?'
-                },
-
-                {
-                    tipo: 'paciente',
-                    texto: 'Tengo dolor abdominal.'
-                },
-
-                {
-                    tipo: 'ia',
-                    texto: 'IA detectó posible dolor abdominal.'
-                }
-
-            ]
+            mensajes: [],
+            enviando: false
 
         }
 
     },
-     mounted() {
+    mounted() {
         this.iniciarConsulta()
     },
 
@@ -223,25 +244,52 @@ export default {
 
         async iniciarConsulta(){
             try{
-                const response = await axios.post(
+                const response = await axios.post( 
                     urlConsultaIA,
                     {
                         iniciar_consulta:true
                     }
                 )
                 this.consultaId = response.data.consulta_id
+                this.$emit('actualizarConsultaId', this.consultaId)
                 console.log('Consulta ID:', this.consultaId)
-                console.log(response.data);
+                console.log(response.data)
             }catch(error){
-                console.error(error)
+                console.error('Error al iniciar consulta:', error)
+                this.consultaId = null
             }
         },
 
-       async enviarMensaje() {
+        /**
+         * Combina los síntomas ya acumulados en la consulta con los
+         * detectados en el mensaje más reciente, evitando duplicados
+         * (comparación insensible a mayúsculas/espacios). Se conserva
+         * la redacción del primer síntoma detectado en cada caso.
+         */
+        combinarSintomas(actuales, nuevos) {
+            const combinados = [...actuales]
+            const normalizados = new Set(
+                actuales.map(s => s.trim().toLowerCase())
+            )
 
-            if(this.nuevoMensaje === '') return
-            
-            //  GUARDAR MENSAJE
+            nuevos.forEach(sintoma => {
+                const clave = sintoma.trim().toLowerCase()
+                if (!normalizados.has(clave)) {
+                    normalizados.add(clave)
+                    combinados.push(sintoma)
+                }
+            })
+
+            return combinados
+        },
+
+        async enviarMensaje() {
+
+            if(this.nuevoMensaje === '' || !this.consultaId || this.enviando) return
+
+            this.enviando = true
+
+            // GUARDAR MENSAJE
             const mensajePaciente = this.nuevoMensaje
 
             // MENSAJE PACIENTE
@@ -252,95 +300,82 @@ export default {
 
             })
 
-            // LIMPIAR IMPUTS
+            // LIMPIAR INPUT
             this.nuevoMensaje = ''
             this.scrollBottom()
 
-            // IA SIMULADA
+            // ESPERAR RESPUESTA REAL DE LA IA
             setTimeout(async() => {
 
-                this.mensajes.push({
+                // Guardamos el índice del mensaje "analizando..." para poder reemplazarlo
+                const idxAnalizando = this.mensajes.push({
 
                     tipo: 'ia',
                     texto: 'IA analizando síntomas clínicos...'
 
-                })
+                }) - 1
 
+                this.scrollBottom()
 
-
-                // DETECTAR SINTOMAS
-                this.detectarSintomas(mensajePaciente)
-
-                //ENVIAR AL PADRE(CONSULTAINTELIGENTE)
-                this.$emit(
-                    'actualizarSintomas',
-                    this.sintomas
-                )
-                
                 try{
-                    console.log(this.consultaId)
                     const response = await axios.post(
                         urlConsultaIA,
                         {
                             consulta_id: this.consultaId,
-                            transcripcion:mensajePaciente,
-                            sintomas:this.sintomas
+                            transcripcion: mensajePaciente,
+                            sintomas: this.sintomas
                         }
                     )
-                    console.log(response.data)
+
+                    if(response.data.success) {
+
+                        // SÍNTOMAS DETECTADOS EN ESTE MENSAJE
+                        const sintomasNuevos = response.data.ia_data.sintomas || []
+
+                        // ACUMULAMOS con los ya detectados en mensajes anteriores
+                        // (antes esto se sobrescribía y se perdía contexto clave,
+                        // ej: "accidente"/"dolor de pecho" del primer mensaje se
+                        // perdían al llegar "dificultad para respirar" en el segundo)
+                        this.sintomas = this.combinarSintomas(this.sintomas, sintomasNuevos)
+
+                        // ENVIAR AL PADRE EL RESULTADO COMPLETO DE LA IA
+                        this.$emit('actualizarIaData', response.data.ia_data)
+                        this.$emit('actualizarSintomas', this.sintomas)
+
+                        // REEMPLAZAR MENSAJE "analizando..." POR EL DIAGNÓSTICO REAL
+                        this.mensajes[idxAnalizando].texto = response.data.ia_data.diagnostico_probable
+                            ? `Diagnóstico probable: ${response.data.ia_data.diagnostico_probable}`
+                            : 'Análisis completado.'
+
+                    } else {
+
+                        console.error('Backend reportó error:', response.data.error)
+
+                        this.mensajes[idxAnalizando].texto = '⚠️ No se pudo completar el análisis. Intentá de nuevo.'
+                        this.mensajes[idxAnalizando].error = true
+
+                        // AVISAR AL PADRE QUE HUBO ERROR
+                        this.$emit('marcarErrorIa')
+
+                    }
+
                 }catch(error){
-                    console.error(error)
+
+                    console.error('Error al consultar IA:', error)
+
+                    this.mensajes[idxAnalizando].texto = '⚠️ Error al conectar con la IA. Reintentá en unos segundos.'
+                    this.mensajes[idxAnalizando].error = true
+
+                    // AVISAR AL PADRE QUE HUBO ERROR
+                    this.$emit('marcarErrorIa')
+
+                }finally{
+                    this.enviando = false
                 }
 
                 this.scrollBottom()
 
             },1000)
-        },
-
-        detectarSintomas(texto) {
-
-            // NORMALIZAR TEXTO
-            texto = texto
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-
-            // DOLOR
-            if(texto.includes('dolor')) {
-
-                if(!this.sintomas.includes('Dolor')) {
-
-                    this.sintomas.push('Dolor')
-
-                }
-
-            }
-
-            // NAUSEAS
-            if(
-                texto.includes('nausea') ||
-                texto.includes('nauseas')
-            ) {
-
-            if(!this.sintomas.includes('Náuseas')) {
-
-                this.sintomas.push('Náuseas')
-
-            }
-
-            }
-
-            // FIEBRE
-            if(texto.includes('fiebre')) {
-
-            if(!this.sintomas.includes('Fiebre')) {
-
-                this.sintomas.push('Fiebre')
-
-            }
-
-            }
-
         },
 
         scrollBottom() {
@@ -349,7 +384,9 @@ export default {
 
                 const container = this.$refs.chatContainer
 
-                container.scrollTop = container.scrollHeight
+                if (container) {
+                    container.scrollTop = container.scrollHeight
+                }
 
             })
         }
