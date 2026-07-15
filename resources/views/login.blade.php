@@ -1,37 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
+
 <head>
-    <title>Login Consultorio</title>
-    <link rel="stylesheet" href="{{ asset('css/adminlte.min.css') }}">
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Consultorio Online IA</title>
+
+    <link rel="stylesheet"
+          href="{{ asset('css/adminlte.min.css') }}">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <style>
+
+        body.login-page {
+
+            background:
+                linear-gradient(
+                    rgba(13,110,253,.85),
+                    rgba(0,123,255,.75)
+                ),
+                url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3');
+
+            background-size: cover;
+            background-position: center;
+        }
+
+        .login-box .card {
+
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,.2);
+        }
+
+        .form-control {
+
+            border-radius: 12px;
+        }
+
+        .btn-primary,
+        .btn-danger {
+
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .medical-logo {
+
+            font-size: 70px;
+            color: #0d6efd;
+        }
+
+    </style>
+
 </head>
 
 <body class="login-page">
 
 <div class="login-box">
-    <div class="card card-outline card-primary">
-        <div class="card-header text-center">
-            <b>Consultorio</b> Online
-        </div>
 
-        <div class="card-body">
+    <div class="card">
 
-            <form method="POST" action="{{ route('login') }}">
+        <div class="card-body login-card-body">
+
+            <div class="text-center mb-4">
+
+                <i class="fas fa-hospital-user medical-logo"></i>
+
+                <h2 class="mt-3 font-weight-bold text-primary">
+
+                    Consultorio Online IA
+
+                </h2>
+
+                <p class="text-muted">
+
+                    Plataforma Inteligente de Atención Médica
+
+                </p>
+
+            </div>
+
+            <form method="POST"
+                  action="{{ route('login') }}">
+
                 @csrf
 
-                <div class="input-group mb-3">
-                    <input type="email" name="email"
-                        class="form-control"
-                        placeholder="Correo">
+                <div class="input-group mb-4">
+
+                    <div class="input-group-prepend">
+
+                        <div class="input-group-text bg-primary text-white">
+
+                            <span class="fas fa-envelope"></span>
+
+                        </div>
+
+                    </div>
+
+                    <input type="email"
+                           name="email"
+                           class="form-control"
+                           placeholder="Correo Médico"
+                           required>
+
                 </div>
 
-                <div class="input-group mb-3">
-                    <input type="password" name="password"
-                        class="form-control"
-                        placeholder="Password">
+                <div class="input-group mb-4">
+
+                    <div class="input-group-prepend">
+
+                        <div class="input-group-text bg-primary text-white">
+
+                            <span class="fas fa-lock"></span>
+
+                        </div>
+
+                    </div>
+
+                    <input type="password"
+                           name="password"
+                           class="form-control"
+                           placeholder="Contraseña"
+                           required>
+
                 </div>
 
-                <button class="btn btn-primary btn-block">
-                    Iniciar sesión
+                <button type="submit"
+                        class="btn btn-primary btn-block">
+
+                    <i class="fas fa-sign-in-alt"></i>
+
+                    Iniciar Sesión
+
                 </button>
 
             </form>
@@ -40,11 +146,28 @@
 
             <a href="{{ route('google.login') }}"
                class="btn btn-danger btn-block">
-               Login con Google
+
+                <i class="fab fa-google"></i>
+
+                Login con Google
+
             </a>
 
+            <div class="text-center mt-3">
+
+                <a href="{{ route('register') }}"
+                   class="text-primary">
+
+                    Crear cuenta médica
+
+                </a>
+
+            </div>
+
         </div>
+
     </div>
+
 </div>
 
 </body>

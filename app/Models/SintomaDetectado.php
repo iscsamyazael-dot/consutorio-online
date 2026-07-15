@@ -11,6 +11,7 @@ class SintomaDetectado extends Model
     protected $fillable = [
         'consulta_id',
         'consulta_folio',
+        'session_uuid',
         'nombre_sintoma',
         'descripcion',
         'nivel_confianza',

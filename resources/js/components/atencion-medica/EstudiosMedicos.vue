@@ -52,8 +52,6 @@
                     
                     <td>
                         {{mostrar.paciente?.nombre}}
-                        {{mostrar.paciente?.apellido_paterno}}
-                        {{mostrar.paciente?.apellido_materno}}
                     </td>
                     <td>{{ mostrar.tipo_archivo }}</td>
                     <td>{{ detallearchivo.fecha_subida?.split(' ')[0] }}</td>
@@ -535,8 +533,6 @@ MODAL VER ARCHIVO CLINICO
                             </small>
                             <h5 class="fw-bold mt-3">
                                 {{ detallearchivo?.paciente?.nombre }}
-                                {{ detallearchivo?.paciente?.apellido_paterno }}
-                                {{ detallearchivo?.paciente?.apellido_materno }}
                             </h5>
                         </div>
                     </div>
@@ -756,7 +752,7 @@ export default {
 
                 async ObtenerArchivos() {
                     try {
-                        const response = await ApiService.get('/archivoclinico')
+                        const response = await ApiService.get('archivoclinico')
                         this.listaArchivos = response.data
                         console.log('archivos:', this.listaArchivos)
                     } catch (error) {

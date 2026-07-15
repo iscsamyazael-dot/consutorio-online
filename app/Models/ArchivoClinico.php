@@ -35,3 +35,4 @@ class ArchivoClinico extends Model
     }
 }
 
+

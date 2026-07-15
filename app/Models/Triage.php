@@ -11,30 +11,26 @@ class Triage extends Model
 
     protected $table = 'triage';
 
-    protected $fillable = [
-        'triage_codigo',
-        'paciente_id',
-        'usuario_triage_id',
-
-        'presion',
-        'saturacion',
-        'temperatura',
-
-        'peso',
-        'talla',
-
-        'frecuencia_cardiaca',
-        'frecuencia_respiratoria',
-
-        'sintomas',
-        'motivo_consulta',
-
-        'estado',
-
-        'nivel_urgencia',
-        'evaluacion_ia',
-        'requiere_medico'
-    ];
+   protected $fillable = [
+    'triage_codigo',
+    'paciente_id',
+    'codigo_paciente',
+    'usuario_triage_id',
+    'presion',
+    'saturacion',
+    'temperatura',
+    'peso',
+    'talla',
+    'frecuencia_cardiaca',
+    'frecuencia_respiratoria',
+    'sintomas',
+    'motivo_consulta',
+    'estado',
+    'nivel_urgencia',
+    'evaluacion_ia',
+    'requiere_medico'
+];
+    
 
     /**
      * El triage pertenece a un paciente
@@ -60,3 +56,4 @@ class Triage extends Model
         return $this->hasOne(Consulta::class, 'triage_id');
     }
 }
+
