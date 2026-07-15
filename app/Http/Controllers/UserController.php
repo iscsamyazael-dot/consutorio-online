@@ -13,9 +13,10 @@ class UserController extends Controller
     public function index()
     {
         //
-         $usuarios = User::select('id', 'name', 'email', 'rol', 'activo', 'created_at')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $usuarios = User::select('id', 'name', 'email', 'rol', 'activo', 'created_at')
+        ->where('activo', 1)
+        ->orderBy('created_at', 'desc')
+        ->get();
 
         return response()->json($usuarios);
     }

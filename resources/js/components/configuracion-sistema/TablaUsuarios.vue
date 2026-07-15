@@ -1,25 +1,26 @@
 <template>
     <!-- HEADER -->
-    <div class="card-header bg-transparent border-0 p-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-                <h3 class="fw-bold text-dark mb-1">
-                    <i class="fas fa-users text-primary me-2"></i>
-                    Gestión de Usuarios
-                </h3>
-                <small class="text-muted">
-                    Administración y control de usuarios registrados
-                </small>
-            </div>
-            <button
-                class="btn btn-light border rounded-pill px-4 py-2 shadow-sm text-secondary fw-semibold"
-                @click="$emit('volver')"
-            >
-                <i class="fas fa-arrow-left me-2"></i>
-                Volver al registro
-            </button>
+    <div class="card-header bg-light border-0 pt-3 px-4 pb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h3 class="fw-bold text-dark mb-1 d-flex align-items-center">
+                <i class="fas fa-users text-primary me-2"></i>
+                Gestión de Usuarios
+            </h3>
+            <small class="text-muted d-block ps-1">
+                Administración y control de usuarios registrados
+            </small>
         </div>
+        <button
+            class="btn btn-light border rounded-pill px-4 py-2 shadow-sm text-secondary fw-semibold transition-all"
+            @click="$emit('volver')"
+        >
+            <i class="fas fa-arrow-left me-2"></i>
+            Volver al registro
+        </button>
     </div>
+</div>
+
 
     <div class="container-fluid">
         <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
