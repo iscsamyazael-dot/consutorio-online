@@ -8,7 +8,7 @@ import { createApp } from 'vue';
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 // Componentes - Consulta Inteligente
-import ConsultaInteligente from './components/ConsultaInteligente.vue'
+import ConsultaInteligente from './components/consultaIA/ConsultaInteligente.vue'
 // Componentes - Atención Médica
 import TRIAGE from './components/atencion-medica/AtencionMedica.vue'
 import EvaluacionIA from './components/atencion-medica/EvaluacionesIA.vue'
@@ -21,7 +21,7 @@ import expedientepaciente from './components/pasientes/maesterexpediente.vue'
 // Componentes - Consultas
 import CreateConsulta from './components/consultas/CreateConsulta.vue'
 import IndexConsultas from './components/consultas/IndexConsultas.vue'
-import NuevaConsulta from './components/NuevaConsulta.vue'
+import NuevaConsulta from './components/consultaIA/NuevaConsulta.vue'
 import consultapaciente from './components/consultas/masterindividual.vue'
 import nuevaconsultamedica from './components/consultas/maesternuevaconsulta.vue'
 import centroconsultas from './components/consultas/mastercentro.vue'
