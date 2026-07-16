@@ -51,14 +51,26 @@ class ConsultaIAController extends Controller
         try {
             // 1. INICIAR CONSULTA (Solo si se solicita iniciar)
             if($request->iniciar_consulta) {
+
+                // El frontend debe mandar el paciente_id real (el que se
+                // seleccionó con doble clic en la lista de pacientes y se
+                // guardó en localStorage). Antes esto estaba hardcodeado
+                // en 1, por eso todas las consultas se guardaban con el
+                // mismo paciente sin importar cuál se seleccionara.
+                $validated = $request->validate([
+                    'paciente_id' => 'required|integer|exists:pacientes,id',
+                ]);
+
                 $ultimaConsulta = Consulta::latest('id')->first();
                 $numero = $ultimaConsulta ? $ultimaConsulta->id + 1 : 1;
                 $folio = 'CONS-'.date('Y').'-'.str_pad($numero, 4, '0', STR_PAD_LEFT);
 
                 $consulta = Consulta::create([
-                    'paciente_id' => 1,
+                    'paciente_id' => $validated['paciente_id'],
                     'folio' => $folio,
-                    'user_id' => 1,
+                    // Usamos el usuario autenticado en vez de un ID fijo,
+                    // para que quede registrado quién abrió la consulta.
+                    'user_id' => auth()->id(),
                     'motivo_consulta' => 'Consulta Inteligente',
                     'estado' => 'en_proceso',
                     'consulta_inteligente' => 1,
@@ -131,6 +143,100 @@ class ConsultaIAController extends Controller
     }
 
     /**
+     * Recibe un archivo adjunto (pdf, word o imagen) para una consulta
+     * ya existente, extrae su texto (OCR en caso de imagen), lo guarda
+     * como una transcripción más (para que aparezca en el historial
+     * clínico igual que un mensaje de voz/texto) y lo manda al mismo
+     * pipeline de análisis IA que usa analizarTranscripcion().
+     */
+    public function subirArchivo(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'consulta_id' => 'required|integer|exists:consultas,id',
+                'archivo'     => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:15360', // 15MB
+            ]);
+
+            $consulta = Consulta::find($validated['consulta_id']);
+            if (!$consulta) {
+                return response()->json(['success' => false, 'error' => 'Consulta no encontrada'], 404);
+            }
+
+            $archivo = $request->file('archivo');
+            $nombreOriginal = $archivo->getClientOriginalName();
+            $mime = $archivo->getMimeType();
+
+            // Guardamos el archivo físico usando el disco 'local'.
+            // IMPORTANTE: no construir la ruta a mano con storage_path('app/'...),
+            // porque en Laravel 11 el disco 'local' guarda por defecto en
+            // storage/app/private (no storage/app). Storage::path() siempre
+            // devuelve la ruta absoluta real sin importar dónde esté configurado.
+            $rutaGuardada = $archivo->store('adjuntos_clinicos', 'local');
+            $rutaCompleta = \Illuminate\Support\Facades\Storage::disk('local')->path($rutaGuardada);
+
+            // Extraemos el texto (pdf/word directo, imagen vía OCR)
+            $textoExtraido = $this->iaClinicaService->extraerTextoDeArchivo($rutaCompleta, $mime);
+                
+            \Log::info('Texto extraído', [
+                    'texto' => $textoExtraido
+                ]);
+            if (empty($textoExtraido)) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'No se pudo extraer texto legible del archivo. Intenta con otro archivo o mejor calidad de imagen.'
+                ], 422);
+            }
+
+            // Guardamos como una transcripción más, dejando rastro de que vino de un archivo
+            $transcripcion = ConsultaTranscripcion::create([
+                'consulta_id'    => $consulta->id,
+                'consulta_folio' => $consulta->folio,
+                'mensaje'        => "[Archivo adjunto: {$nombreOriginal}]\n\n" . $textoExtraido,
+                'tipo_usuario'   => 'paciente',
+            ]);
+
+            // Mismo pipeline de análisis que ya usas con texto hablado
+            $iaData = $this->iaClinicaService->analizarTranscripcion($textoExtraido, $consulta);
+
+            if ($iaData) {
+                $recomendaciones = is_array($iaData['recomendaciones'] ?? null)
+                    ? implode(' ', $iaData['recomendaciones'])
+                    : '';
+
+                $transcripcion->update([
+                    'analizado_ia'     => 1,
+                    'observaciones_ia' => trim(
+                        ($iaData['diagnostico_probable'] ?? '') . ' — ' . $recomendaciones
+                    )
+                ]);
+            }
+
+            return response()->json([
+                'success'         => true,
+                'consulta_id'     => $consulta->id,
+                'consulta_folio'  => $consulta->folio,
+                'archivo_nombre'  => $nombreOriginal,
+                'texto_extraido'  => $textoExtraido,
+                'ia_data'         => $iaData,
+            ]);
+
+        } catch (\Throwable $e) {
+            // \Throwable para atrapar también "Class not found" si falta
+            // instalar algún paquete de Composer.
+            \Log::error("Error en subirArchivo: " . $e->getMessage(), [
+                'clase_error' => get_class($e),
+                'archivo' => $e->getFile(),
+                'linea' => $e->getLine()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error'   => 'Ocurrió un error al procesar el archivo.'
+            ], 500);
+        }
+    }
+
+    /**
      * Ejecuta el triage clínico completo con la IA (fases 1-8) y, según
      * el "tipo" que decida:
      *
@@ -153,8 +259,15 @@ class ConsultaIAController extends Controller
 
             $sintomas = $validated['sintomas'];
 
+            // Catálogo real de especialidades activas, para anclar a la IA
+            // y evitar que invente nombres que no existen en el sistema.
+            $nombresEspecialidades = Specialty::where('estado', 'Activo')
+                ->orderBy('nombre')
+                ->pluck('nombre')
+                ->toArray();
+
             // 1. La IA hace el triage completo y decide tipo: receta_inteligente | derivacion
-            $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre($sintomas);
+            $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre($sintomas, $nombresEspecialidades);
 
             if (!$respuestaIA) {
                 return response()->json([
@@ -241,13 +354,14 @@ class ConsultaIAController extends Controller
     /**
      * Sugiere una especialidad médica a la que derivar al paciente.
      *
-     * Fuente 1 (principal): la IA hace el triage completo (fases 1-8) y
-     * devuelve una especialidad sugerida en base a signos de alarma,
-     * región anatómica, etc. Si esa especialidad existe activa en la
-     * tabla `especialidades`, se usa directamente (Fase 7).
+     * Fuente 1 (principal): la IA hace el triage completo (fases 1-8),
+     * recibiendo el catálogo REAL de especialidades activas como parte
+     * del prompt (para no inventar nombres), y devuelve una especialidad
+     * sugerida en base a signos de alarma, región anatómica, etc.
      *
-     * Fuente 2 (respaldo): si la IA no responde, falla, o su sugerencia
-     * no coincide con ninguna especialidad activa, se usa el mapa de
+     * Fuente 2 (respaldo): si la IA no responde, falla, su sugerencia
+     * no coincide con ninguna especialidad activa, o el match encontrado
+     * no es clínicamente coherente con los síntomas, se usa el mapa de
      * palabras clave como respaldo determinístico.
      *
      * NOTA: las descripciones de "especialidades" en la BD son
@@ -267,12 +381,15 @@ class ConsultaIAController extends Controller
             $sintomas = $validated['sintomas'];
 
             // Listado completo activo, para poblar el <select> del frontend
+            // y para anclar a la IA (evita que invente especialidades).
             $todasLasEspecialidades = Specialty::where('estado', 'Activo')
                 ->orderBy('nombre')
                 ->get(['id', 'nombre']);
 
-            // 1. FUENTE PRINCIPAL: triage de la IA
-            $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre($sintomas);
+            $nombresEspecialidades = $todasLasEspecialidades->pluck('nombre')->toArray();
+
+            // 1. FUENTE PRINCIPAL: triage de la IA, ya anclado al catálogo real
+            $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre($sintomas, $nombresEspecialidades);
 
             $triage = null;
             $diagnosticosProbables = [];
@@ -287,12 +404,30 @@ class ConsultaIAController extends Controller
                 $motivoDerivacionIA = $respuestaIA['motivo_derivacion'] ?? null;
                 $requiereUrgencias = $respuestaIA['requiere_urgencias'] ?? false;
 
-                $nombreSugeridoIA = $respuestaIA['especialidad'] ?? null;
+                $nombreSugeridoIA = trim((string) ($respuestaIA['especialidad'] ?? ''));
 
-                if ($nombreSugeridoIA) {
+                // Solo intentamos usar la sugerencia de la IA si viene un
+                // nombre real y no vacío. Antes esto permitía que un string
+                // vacío generara un LIKE '%%' que hacía match con CUALQUIER
+                // especialidad de la tabla (normalmente la primera por id),
+                // causando derivaciones absurdas sin relación con los síntomas.
+                if ($nombreSugeridoIA !== '') {
+                    // Preferimos coincidencia EXACTA (la IA fue instruida a
+                    // copiar el nombre tal cual del catálogo). Esto evita
+                    // falsos positivos de un LIKE parcial.
                     $especialidad = Specialty::where('estado', 'Activo')
-                        ->where('nombre', 'LIKE', '%' . $nombreSugeridoIA . '%')
+                        ->whereRaw('LOWER(nombre) = ?', [mb_strtolower($nombreSugeridoIA)])
                         ->first();
+
+                    // Si no hubo coincidencia exacta, probamos un LIKE
+                    // acotado (por si la IA agregó texto extra), escapando
+                    // los comodines % y _ para no hacer matches accidentales.
+                    if (!$especialidad) {
+                        $comodinEscapado = str_replace(['%', '_'], ['\\%', '\\_'], $nombreSugeridoIA);
+                        $especialidad = Specialty::where('estado', 'Activo')
+                            ->where('nombre', 'LIKE', '%' . $comodinEscapado . '%')
+                            ->first();
+                    }
 
                     if ($especialidad) {
                         $fuente = 'ia_triage';
@@ -345,19 +480,30 @@ class ConsultaIAController extends Controller
                 'encía'        => 'Dentista',
                 'encia'        => 'Dentista',
                 'boca'         => 'Dentista',
+                'dental'       => 'Dentista',
 
                 'estómago'     => 'Gastroenterología',
                 'estomago'     => 'Gastroenterología',
                 'digestivo'    => 'Gastroenterología',
+                'digestión'    => 'Gastroenterología',
+                'digestion'    => 'Gastroenterología',
                 'hígado'       => 'Gastroenterología',
                 'higado'       => 'Gastroenterología',
                 'intestino'    => 'Gastroenterología',
                 'colon'        => 'Gastroenterología',
+                'colitis'      => 'Gastroenterología',
                 'gastritis'    => 'Gastroenterología',
                 'náusea'       => 'Gastroenterología',
                 'nausea'       => 'Gastroenterología',
                 'vómito'       => 'Gastroenterología',
                 'vomito'       => 'Gastroenterología',
+                'diarrea'      => 'Gastroenterología',
+                'estreñimiento'=> 'Gastroenterología',
+                'estrenimiento'=> 'Gastroenterología',
+                'abdominal'    => 'Gastroenterología',
+                'abdomen'      => 'Gastroenterología',
+                'reflujo'      => 'Gastroenterología',
+                'acidez'       => 'Gastroenterología',
 
                 'alimentación' => 'Nutricion',
                 'alimentacion' => 'Nutricion',
