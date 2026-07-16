@@ -1,10 +1,11 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Models\Medico;
 use App\Models\HorarioMedico;
 use App\Models\ConfiguracionMedicoSucursal; 
+use App\Models\User; 
+use Illuminate\Support\Facades\Hash; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -34,6 +35,10 @@ class MedicoController extends Controller
             // Campos para la nueva tabla de configuración
             'ubicacion_id'       => 'required|exists:ubicaciones,id',
             'costo_consulta'     => 'required|numeric|min:0',
+
+            // NUEVOS CAMPOS: Credenciales del Médico
+            'email'              => 'required|email|unique:users,email',
+            'password'           => 'required|string|min:8',
         ]);
 
         $mapeoDias = [
@@ -45,8 +50,18 @@ class MedicoController extends Controller
         DB::beginTransaction();
 
         try {
+                // Crear el registro en la tabla `users` primero
+            $user = User::create([
+                'name'     => $request->nombre,
+                'email'    => $request->email,
+                'password' => Hash::make($request->password), // Encripta la contraseña de forma segura
+                'role'     => 'medico', // Rol en enum
+                'rol'      => 'medico', // Rol secundario en string
+                'activo'   => 1,
+            ]);
             // 1. Crear el Médico principal (Genera el folio MEDI-2026-XXX en su booted solo)
             $medico = Medico::create([
+                'user_id'            => $user->id,
                 'nombre'             => $request->nombre,
                 'cedula_profesional' => $request->cedula_profesional,
                 'especialidad_id'    => $request->especialidad, 
