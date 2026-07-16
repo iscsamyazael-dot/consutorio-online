@@ -17,9 +17,11 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\UserRegisterController;
 use App\Http\Controllers\UbicacionController;
+use App\Models\Paciente;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+
 
 Route::get('/', function () { return view('auth.login'); });
 
@@ -76,6 +78,14 @@ Route::middleware('auth')->group(function () {
         Route::resource('recetas', RecetaController::class);
         Route::resource('receta-detalles', RecetaDetalleController::class);
         Route::resource('usuarios', UserController::class);
+
+        // IMPORTANTE: esta ruta debe ir ANTES de Route::resource('consultaIA', ...)
+        // y debe coincidir EXACTAMENTE con la URL que llama el frontend
+        // (urlArchivoIA = route + '/consultaIA/archivo' en TranscripcionLive.vue).
+        // Antes decía 'consulta-ia/archivo' (con guión), por eso el POST no
+        // coincidía con esa ruta y caía en la ruta GET /consultaIA/{consultaIA}
+        // que genera el resource de abajo -> Laravel respondía 405 Method Not Allowed.
+        Route::post('consultaIA/archivo', [ConsultaIAController::class, 'subirArchivo'])->name('consultaIA.subirArchivo');
         Route::resource('consultaIA', ConsultaIAController::class);
         Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente');
         Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente');
@@ -121,7 +131,9 @@ Route::middleware('auth')->group(function () {
             Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); })->name('pacientes.expediente');
             Route::get('HistorialConsulta', function() { return view('consultas.consultaIndividual'); })->name('consultas.consultaIndividual');
             Route::get('NuevaConsulta', function () { return view('consultas.create'); })->name('consultas.create');
-            Route::get('ConsultaInteligente', function() { return view('consultas.consulta_inteligente'); })->name('consultas.consulta_inteligente');
+            Route::get('ConsultaInteligenteNueva', function() { 
+                return view('consultas.consulta_inteligente', ['paciente' => null]);
+            })->name('consultas.consulta_inteligente.nueva');
             Route::get('MedicosAlta',function(){return view('medicos.altamedicos'); })->name('medicos.altamedicos');
             Route::get('HistorialRecetas',function(){ return view('recetas.historial-recetas');})->name('recetas.historial-recetas');
             Route::get('TRIAGES', function() { return view('atencion-medica.triage'); })->name('atencion-medica.triage');
@@ -142,6 +154,10 @@ Route::middleware('auth')->group(function () {
             Route::get('consultaNormal/{id}', function ($id) {
                 return view('consultas.create');
             })->name('consultas.create');
+            Route::get('ConsultaInteligente/{id}', function ($id) { 
+                $paciente = Paciente::findOrFail($id);
+                return view('consultas.consulta_inteligente', compact('paciente'));
+            })->name('consultas.consulta_inteligente');
         });
 
 });

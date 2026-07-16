@@ -8,6 +8,10 @@ use App\Models\AlertaClinica;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+use Smalot\PdfParser\Parser as PdfParser;
+use PhpOffice\PhpWord\IOFactory as WordIOFactory;
+use thiagoalessio\TesseractOCR\TesseractOCR;
+
 class IAClinicaService
 {
     public function analizarTranscripcion($texto, $consulta)
@@ -89,6 +93,103 @@ class IAClinicaService
         return $maxNivel;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | LECTURA DE ARCHIVOS ADJUNTOS (PDF, Word, Imágenes)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Extrae texto plano de un archivo subido (pdf, docx/doc, imagen).
+     * Para imágenes usa OCR (Tesseract) ya que la API de DeepSeek es
+     * solo de texto y no acepta imágenes directamente.
+     */
+    public function extraerTextoDeArchivo(string $rutaCompleta, string $mime): string
+    {
+        try {
+            // --- PDF ---
+            if ($mime === 'application/pdf') {
+                $parser = new PdfParser();
+                $pdf = $parser->parseFile($rutaCompleta);
+                return trim($pdf->getText());
+            }
+
+            // --- Word (.docx / .doc) ---
+            if (in_array($mime, [
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/msword'
+            ])) {
+                $phpWord = WordIOFactory::load($rutaCompleta);
+                $texto = '';
+                foreach ($phpWord->getSections() as $section) {
+                    foreach ($section->getElements() as $element) {
+                        if (method_exists($element, 'getText')) {
+                            $texto .= $element->getText() . "\n";
+                        } elseif (method_exists($element, 'getElements')) {
+                            // Párrafos con formato mixto (negritas, etc.)
+                            foreach ($element->getElements() as $sub) {
+                                if (method_exists($sub, 'getText')) {
+                                    $texto .= $sub->getText();
+                                }
+                            }
+                            $texto .= "\n";
+                        }
+                    }
+                }
+                return trim($texto);
+            }
+
+            // --- Imágenes (OCR) ---
+            if (str_starts_with($mime, 'image/')) {
+                return trim(
+                    (new TesseractOCR($rutaCompleta))
+                        ->executable('C:\Users\Usuario\Desktop\llave de ultrafarmacia\tesseract.exe')
+                        ->lang('spa', 'eng')
+                        ->run()
+                );
+            }
+
+            Log::warning('Tipo de archivo no soportado para extracción', ['mime' => $mime]);
+            return '';
+
+        } catch (\Throwable $e) {
+            // \Throwable (no solo \Exception) para atrapar también
+            // "Class not found" si falta instalar algún paquete de
+            // Composer (smalot/pdfparser, phpoffice/phpword, tesseract_ocr).
+            Log::error('Error extrayendo texto de archivo: ' . $e->getMessage(), [
+                'ruta' => $rutaCompleta,
+                'mime' => $mime,
+                'clase_error' => get_class($e)
+            ]);
+            return '';
+        }
+    }
+
+    /**
+     * Extrae el texto de un archivo adjunto y lo analiza con el mismo
+     * pipeline clínico que se usa para transcripciones de voz/texto.
+     */
+    public function analizarArchivoAdjunto(string $rutaCompleta, string $mime, $consulta)
+    {
+        $textoExtraido = $this->extraerTextoDeArchivo($rutaCompleta, $mime);
+
+        if (empty($textoExtraido)) {
+            return [
+                'texto_extraido' => '',
+                'resultado' => null,
+                'error' => 'No se pudo extraer texto legible del archivo.',
+            ];
+        }
+
+        $resultado = $this->analizarTranscripcion($textoExtraido, $consulta);
+
+        return [
+            'texto_extraido' => $textoExtraido,
+            'resultado' => $resultado,
+            'error' => null,
+        ];
+    }
+
     /**
      * Sugerencia de la IA con triage clínico completo (fases 1-8).
      *
@@ -111,9 +212,13 @@ class IAClinicaService
      *   justificacion: ""
      * }
      */
-    public function sugerirMedicamentoLibre(array $sintomas)
+    public function sugerirMedicamentoLibre(array $sintomas, array $especialidadesDisponibles = [])
     {
         $textoSintomas = implode(', ', $sintomas);
+
+        $textoEspecialidades = !empty($especialidadesDisponibles)
+            ? implode(', ', $especialidadesDisponibles)
+            : 'No disponible (no se proporcionó catálogo, usa tu mejor criterio clínico general)';
 
         $prompt = "
 
@@ -304,21 +409,48 @@ class IAClinicaService
 
         Selecciona la especialidad médica más adecuada.
 
-        El sistema consultará la tabla:
+        CATÁLOGO REAL DE ESPECIALIDADES DISPONIBLES EN EL SISTEMA:
 
-        especialidades
+        $textoEspecialidades
 
-        Si la especialidad existe:
+        REGLA OBLIGATORIA:
 
-        Utiliza únicamente esa especialidad.
+        - Si el catálogo anterior tiene especialidades listadas, DEBES elegir
+          el campo \"especialidad\" copiando EXACTAMENTE uno de esos nombres,
+          tal cual aparece escrito. No inventes ni modifiques el nombre.
+        - Si ninguna especialidad del catálogo es clínicamente adecuada para
+          los síntomas del paciente, usa \"Medicina general\" si está en el
+          catálogo, o el nombre más cercano disponible.
+        - Solo si el catálogo dice 'No disponible', sugiere libremente la
+          especialidad médica más apropiada según los ejemplos de abajo.
 
-        Si NO existe:
+        COHERENCIA CLÍNICA OBLIGATORIA (ejemplos de referencia, no exhaustivos):
 
-        Sugiere la especialidad médica más adecuada.
+        - Síntomas digestivos (dolor abdominal, diarrea, náuseas, vómito,
+          colon irritado, gastritis, reflujo) -> Gastroenterología o Medicina
+          General. NUNCA Odontología/Dentista salvo que el síntoma sea
+          dental, de encías o de boca explícitamente.
+        - Síntomas óseos/articulares/musculares o traumatismos -> Traumatología.
+        - Síntomas respiratorios -> Neumología o Urgencias si es grave.
+        - Síntomas cardíacos (dolor torácico, palpitaciones) -> Cardiología.
+        - Síntomas neurológicos (convulsiones, pérdida de fuerza, alteración
+          de conciencia) -> Neurología o Urgencias si es grave.
+        - Síntomas ginecológicos -> Ginecología.
+        - Síntomas en menores de edad -> Pediatría.
+        - Síntomas de piel -> Dermatología.
+        - Síntomas de oído/nariz/garganta -> Otorrinolaringología.
+        - Síntomas oculares -> Oftalmología.
+        - Síntomas urinarios -> Urología.
+        - Ansiedad, depresión, crisis emocional -> Psiquiatría o Psicología.
+        - Si el motivo de consulta no calza claramente con ninguna
+          especialidad específica -> Medicina General.
 
-        Explica brevemente el motivo.
+        La especialidad elegida SIEMPRE debe tener relación médica directa
+        y evidente con los síntomas reportados. Antes de responder, verifica
+        que tu elección sea coherente; si no lo es, corrígela.
 
-        Ejemplos:
+        Ejemplos genéricos de especialidades (solo como referencia si el
+        catálogo no está disponible):
 
         Traumatología y Ortopedia
 
@@ -343,6 +475,10 @@ class IAClinicaService
         Neumología
 
         Psiquiatría
+
+        Gastroenterología
+
+        Medicina General
 
         =========================================================
         FASE 8 - RESPUESTA
@@ -410,7 +546,7 @@ class IAClinicaService
             $response = Http::withToken(config('services.ai.key'))
                 ->timeout(20)
                 ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-chat',
+                    'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object']
                 ]);
@@ -430,45 +566,215 @@ class IAClinicaService
 
     private function consultarIA($texto)
     {
-        $prompt = "Eres un asistente clínico. Analiza esta nota médica del paciente: '$texto'.
+        $prompt = "
 
-        Sé ESPECÍFICO, no genérico:
-        - En 'diagnostico', nombra la condición probable concreta según los síntomas descritos
-          (ej: 'Gastritis aguda probable' en vez de solo 'Malestar digestivo').
-        - En 'recomendacion', da una acción concreta y accionable relacionada a los síntomas
-          exactos mencionados (ej: 'Evitar alimentos irritantes y controlar en 48h si persiste
-          el dolor' en vez de 'Descansar y beber líquidos').
-        - Evita respuestas genéricas que servirían para cualquier síntoma.
+Actúa como un asistente médico inteligente especializado en análisis clínico.
 
-        Presta especial atención a menciones explícitas de:
-        - Alergias a medicamentos, alimentos o sustancias
-        - Señales de gravedad o urgencia (dificultad para respirar, dolor de pecho intenso,
-          sangrado, pérdida de conciencia, fiebre muy alta persistente)
+Este análisis pertenece a un sistema de expediente médico digital.
+Tu función es apoyar al médico identificando síntomas, posibles condiciones,
+riesgos y alertas clínicas.
 
-        Devuelve estrictamente un JSON con esta forma exacta, sin texto adicional:
+IMPORTANTE:
+
+- No reemplazas al médico.
+- No emites diagnósticos definitivos.
+- Los diagnósticos son únicamente probabilidades clínicas.
+- No inventes información que no esté en la nota médica.
+- Si un dato no aparece responde 'No disponible'.
+
+
+NOTA MÉDICA DEL PACIENTE:
+
+$texto
+
+
+====================================
+FILTRADO DE TRANSCRIPCIÓN
+====================================
+
+El texto anterior proviene de una transcripción automática de audio y puede
+contener elementos que NO son parte de la información clínica del paciente.
+
+Ignora por completo:
+
+- Risas o expresiones como 'jaja', 'jeje', '(risas)'.
+- Ruido ambiental descrito o transcrito por error: motos, carros, claxon,
+  bocinas, sirenas, tráfico, música de fondo.
+- Muletillas y relleno verbal: 'este', 'o sea', 'eh', 'mmm', 'like', 'ajá'.
+- Interjecciones sin contenido clínico: 'ok', 'perfecto', 'gracias', 'okay doc'.
+- Conversación de cortesía o small talk no relacionado con el motivo de consulta
+  (saludos, despedidas, comentarios sobre el clima, bromas).
+- Fragmentos inaudibles o mal transcritos que no tengan sentido clínico.
+- Repeticiones producto de tartamudeo o corrección en el habla (quédate solo
+  con la versión final de la frase).
+
+NO uses estos elementos como síntomas, antecedentes ni parte del análisis.
+NO los menciones en el JSON de salida.
+
+Solo analiza el contenido que tenga relevancia clínica real.
+
+
+====================================
+ANÁLISIS DE INFORMACIÓN
+====================================
+
+Extrae:
+
+- Síntomas actuales.
+- Duración de síntomas si existe.
+- Intensidad si está disponible.
+- Zona anatómica afectada.
+- Antecedentes relevantes.
+- Medicamentos mencionados.
+- Alergias mencionadas.
+- Factores de riesgo.
+
+
+====================================
+SÍNTOMAS
+====================================
+
+Identifica todos los síntomas encontrados.
+
+Sé específico.
+
+Ejemplo:
+
+Incorrecto:
+[
+'Dolor'
+]
+
+Correcto:
+[
+'Dolor abdominal inferior',
+'Náuseas',
+'Fiebre'
+]
+
+
+====================================
+DIAGNÓSTICO PROBABLE
+====================================
+
+Genera una condición probable basada únicamente en los síntomas.
+
+Ejemplo:
+
+'Gastritis aguda probable'
+
+No uses términos demasiado generales como:
+
+'Malestar'
+'Problema digestivo'
+'Dolencia'
+
+
+====================================
+RIESGO CLÍNICO
+====================================
+
+Evalúa señales de alarma:
+
+- Dificultad respiratoria.
+- Dolor torácico.
+- Sangrado.
+- Pérdida de conciencia.
+- Convulsiones.
+- Fiebre persistente.
+- Alteración neurológica.
+- Dolor intenso.
+- Traumatismos importantes.
+
+
+====================================
+ALERTAS
+====================================
+
+Genera alertas únicamente si existe información real.
+
+Tipos permitidos:
+
+alergia
+gravedad
+respiratoria
+cardiaca
+neurologica
+otro
+
+
+Nivel:
+
+alto
+medio
+bajo
+
+
+Nunca inventes alertas.
+
+
+====================================
+RECOMENDACIÓN
+====================================
+
+Genera una recomendación concreta relacionada con los síntomas.
+
+Debe ser útil para el médico.
+
+Evita frases genéricas como:
+
+'Tomar líquidos'
+'Descansar'
+
+
+====================================
+FORMATO DE RESPUESTA
+====================================
+
+
+Devuelve únicamente JSON válido:
+
+
+{
+    \"sintomas\": [
+        \"\"
+    ],
+
+    \"diagnostico\": \"\",
+
+    \"recomendacion\": \"\",
+
+    \"confianza\": 0,
+
+    \"nivel_riesgo\": \"bajo\",
+
+    \"alertas\": [
         {
-            \"sintomas\": [\"lista\", \"de\", \"sintomas\"],
-            \"diagnostico\": \"diagnostico especifico basado en los sintomas descritos\",
-            \"recomendacion\": \"accion concreta y especifica a los sintomas, no generica\",
-            \"confianza\": 90,
-            \"alertas\": [
-                {
-                    \"tipo\": \"alergia\" o \"gravedad\" o \"respiratoria\" o \"cardiaca\" o \"otro\",
-                    \"titulo\": \"texto corto tipo badge, ej: Alergia a penicilina\",
-                    \"descripcion\": \"explicación breve de la alerta\",
-                    \"nivel\": \"alto\" o \"medio\" o \"bajo\"
-                }
-            ]
+            \"tipo\": \"\",
+            \"titulo\": \"\",
+            \"descripcion\": \"\",
+            \"nivel\": \"\"
         }
+    ]
+}
 
-        Si no se detecta ninguna alergia ni señal de gravedad, \"alertas\" debe ser un array vacío [].
-        No inventes alergias ni gravedad que el paciente no haya mencionado explícitamente.";
+
+REGLAS FINALES:
+
+- No escribas texto fuera del JSON.
+- No uses Markdown.
+- No inventes datos.
+- Diferencia datos reales de interpretaciones.
+- Ignora ruido de transcripción (risas, tráfico, muletillas, small talk) como se indicó arriba.
+- Prioriza seguridad del paciente.
+
+";
 
         try {
             $response = Http::withToken(config('services.ai.key'))
                 ->timeout(20)
                 ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-chat',
+                    'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object']
                 ]);

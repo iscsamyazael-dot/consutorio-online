@@ -363,7 +363,7 @@ return [
                 [
                     'text' => 'Consulta Inteligente',
                     'icon' => 'fas fa-network-wired',
-                    'url'  => 'ConsultaInteligente',
+                    'url'  => 'ConsultaInteligenteNueva',
                     'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
                 ],
             ],
