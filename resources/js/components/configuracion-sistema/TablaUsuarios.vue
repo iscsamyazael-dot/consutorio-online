@@ -1,25 +1,25 @@
 <template>
     <!-- HEADER -->
     <div class="card-header bg-light border-0 pt-3 px-4 pb-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-            <h3 class="fw-bold text-dark mb-1 d-flex align-items-center">
-                <i class="fas fa-users text-primary me-2"></i>
-                Gestión de Usuarios
-            </h3>
-            <small class="text-muted d-block ps-1">
-                Administración y control de usuarios registrados
-            </small>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h3 class="fw-bold text-dark mb-1 d-flex align-items-center">
+                    <i class="fas fa-users text-primary me-2"></i>
+                    Gestión de Usuarios
+                </h3>
+                <small class="text-muted d-block ps-1">
+                    Administración y control de usuarios registrados
+                </small>
+            </div>
+            <button
+                class="btn btn-light border rounded-pill px-4 py-2 shadow-sm text-secondary fw-semibold transition-all"
+                @click="$emit('volver')"
+            >
+                <i class="fas fa-arrow-left me-2"></i>
+                Volver al registro
+            </button>
         </div>
-        <button
-            class="btn btn-light border rounded-pill px-4 py-2 shadow-sm text-secondary fw-semibold transition-all"
-            @click="$emit('volver')"
-        >
-            <i class="fas fa-arrow-left me-2"></i>
-            Volver al registro
-        </button>
     </div>
-</div>
 
 
     <div class="container-fluid">
@@ -132,15 +132,156 @@
                                         </span>
                                         <i v-else class="fas fa-trash"></i>
                                     </button>
+
+                                    <button
+                                        class="btn btn-edit me-2"
+                                        @click="abrirModalEditar(usuario)"
+                                        title="Editar usuario"
+                                    >
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-
             </div>
         </div>
     </div>
+
+    <!--MODAL EDITAR USUARIO-->
+    <div
+        class="modal fade"
+        id="modalEditarUsuario"
+        tabindex="-1"
+    >
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Editar Usuario
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="avatar-edit">
+                            {{ inicialesUsuario }}
+                        </div>
+
+                        <h4 class="mt-3 mb-0">
+                            {{ formEditar.name }}
+                        </h4>
+                        <span class="badge bg-info mt-2">
+                            <i class="fas fa-user-tag"></i>
+                            {{ formEditar.rol }}
+                        </span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">
+                                Nombre
+                            </label>
+
+                            <input
+                                class="form-control"
+                                v-model="formEditar.name"
+                                readonly>
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">
+                                Rol
+                            </label>
+                            <input
+                                class="form-control"
+                                v-model="formEditar.rol"
+                                readonly>
+                        </div>
+
+                        <div class="col-12 mb-4">
+                            <label class="form-label">
+                                Correo electrónico
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+
+                                <input
+                                    class="form-control"
+                                    type="email"
+                                    v-model="formEditar.email">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                Nueva contraseña
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input
+                                    class="form-control"
+                                    type="password"
+                                    v-model="formEditar.password"
+                                    placeholder="Dejar vacío para no cambiar">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                Confirmar contraseña
+                            </label>
+
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+
+                                <input
+                                    class="form-control"
+                                    type="password"
+                                    v-model="formEditar.password_confirmation">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button
+                        ref="btnCerrarModal"
+                        type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button
+                        class="btn btn-primary px-4"
+                        @click="actualizarUsuario">
+
+                        <i class="fas fa-save me-2"></i>
+
+                        Guardar Cambios
+
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </template>
 
 <script>
@@ -155,6 +296,15 @@ export default {
             busqueda: '',
             cargando: false,
             eliminando: null, // id del usuario que se está eliminando
+
+            formEditar: {
+                id: null,
+                name: '',
+                email: '',
+                rol: '',
+                password: '',
+                password_confirmation: ''
+            }
         }
     },
 
@@ -168,7 +318,19 @@ export default {
                 u.email.toLowerCase().includes(q) ||
                 this.rolConfig(u.rol).label.toLowerCase().includes(q)
             )
-        }
+        },
+
+        inicialesUsuario() {
+            if (!this.formEditar.name) return ''
+
+            return this.formEditar.name
+                .split(' ')
+                .map(p => p[0])
+                .join('')
+                .substring(0,2)
+                .toUpperCase()
+        },
+
     },
 
     mounted() {
@@ -263,7 +425,111 @@ export default {
                 farmacia:  { label: 'Farmacia',       icono: 'fas fa-pills',        bg: '#fffbeb', color: '#d97706' },
             }
             return config[rol] ?? { label: rol, icono: 'fas fa-user', bg: '#f1f5f9', color: '#64748b' }
-        }
+        },
+
+
+        abrirModalEditar(usuario) {
+            this.formEditar = {
+                id: usuario.id,
+                name: usuario.name,
+                email: usuario.email,
+                rol: usuario.rol,
+                password: '',
+                password_confirmation: ''
+            }
+            const modal = new bootstrap.Modal(
+                document.getElementById('modalEditarUsuario')
+            )
+            modal.show()
+        },
+
+        async actualizarUsuario() {
+
+            if (
+                this.formEditar.password &&
+                this.formEditar.password !== this.formEditar.password_confirmation
+            ) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Las contraseñas no coinciden'
+                })
+                return
+            }
+
+            try {
+
+                await ApiService.put(`usuarios/${this.formEditar.id}`,this.formEditar)
+
+                const usuario = this.usuarios.find(
+                    u => u.id === this.formEditar.id
+                )
+
+                if(usuario){
+                    usuario.email = this.formEditar.email
+                }
+
+                bootstrap.Modal
+                    .getInstance(document.getElementById('modalEditarUsuario'))
+                    .hide()
+
+                Swal.fire({
+                    icon:'success',
+                    title:'Usuario actualizado',
+                    timer:1800,
+                    showConfirmButton:false
+                })
+
+            } catch(error){
+                console.error(error)
+
+                Swal.fire({
+                    icon:'error',
+                    title:'Error',
+                    text:'No se pudo actualizar el usuario.'
+                })
+            }
+        },
+
+
+
     }
 }
 </script>
+
+
+<style>
+.avatar-edit{
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    background:#eef6ff;
+    border:4px solid #d7eaff;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:30px;
+    font-weight:bold;
+    color:#0d6efd;
+
+    margin:auto;
+}
+
+.btn-edit{
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    border:2px solid #0d6efd;
+    color:#0d6efd;
+    background:white;
+    transition:.25s;
+}
+
+.btn-edit:hover{
+    background:#0d6efd;
+    color:white;
+    transform:scale(1.08);
+}
+
+</style>

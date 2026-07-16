@@ -58,7 +58,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
         Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
         // Ruta para procesar el formulario y guardar el registro en las tablas
-    
+        
         //para traer actualizar y eliminar medicos
         // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
         // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);

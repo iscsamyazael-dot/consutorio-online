@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\User;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -58,8 +59,20 @@ class UserController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+    $usuario = User::findOrFail($id);
+
+    $usuario->email = $request->email;
+
+    if ($request->filled('password')) {
+        $usuario->password = Hash::make($request->password);
     }
+
+    $usuario->save();
+
+    return response()->json([
+        'message' => 'Usuario actualizado'
+    ]);
+}
 
     /**
      * Remove the specified resource from storage.

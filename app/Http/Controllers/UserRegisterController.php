@@ -49,4 +49,5 @@ class UserRegisterController extends Controller
             ],
         ], 201);
     }
+
 }
