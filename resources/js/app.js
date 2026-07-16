@@ -39,6 +39,11 @@ import masterprocita from './components/citasmedicas/masterprograma.vue'
 import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
 import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
 // Módulo de ubicaciones
+import PanelTabla from './components/configuracion-sistema/PanelTabla.vue'
+//Modulo de registro de usuario 
+import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
+
+
 import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
 
 // ------------------------------------------------------
@@ -72,6 +77,144 @@ app.component('recetass-historial', Historialreceta);
 app.component('configuracion-sistema', ConfiSistema);
 app.component('configuracion-sistema-panelcontrasena', PanelContraseña);
 // Montaje de la app
+app.component(
+    'Especialidades',
+    Especialidades
+);
+
+app.component(
+    'Ubicacionesmaster',
+     Ubicacionesmaster
+    );
+
+app.component(
+    'masterprocita',
+    masterprocita
+);
+
+app.component(
+    'masteragenda',
+    masteragenda
+);
+
+app.component(
+     'alta-medicos',
+     AltaMedicos
+);
+
+app.component(
+     'registro-medicos',
+     RegistroMedico
+);
+
+app.component(
+     'consulta-inteligente',
+     ConsultaInteligente
+ );
+
+app.component(
+    'medicamentos-inventario',
+    medicamentos
+);
+
+app.component(
+    'atencion-medica-evaluacionia',
+    EvaluacionIA
+);
+app.component(
+    'alerta-farmacia',
+    AlertaFarmacia
+);
+
+app.component(
+    'atencion-medica-archivosclinicos',
+    ArchivosClinico
+);
+
+app.component(
+    'atencion-medica-derivaciones',
+    Derivacion
+);
+
+app.component(
+    'atencion-medica',
+     TRIAGE
+);
+
+
+app.component(
+    'centroconsultas',
+    centroconsultas
+);
+
+app.component(
+    'nuevaconsultamedica',
+    nuevaconsultamedica
+);
+
+app.component(
+    'consultapaciente',
+    consultapaciente 
+);
+
+app.component(
+    'expedientepaciente',
+    expedientepaciente
+);
+
+app.component(
+    'master-registro-paciente', 
+    InformacionPaciente
+);
+// 2. REGISTRO DE COMPONENTES
+app.component(
+    'index-consultas',
+    IndexConsultas
+);
+
+app.component(
+    'crear-consulta',
+    CreateConsulta // <-- Corregido para que coincida exactamente con la importación de arriba
+);
+
+app.component(
+    'nueva-consulta',
+    NuevaConsulta // <-- Corregido para usar la variable importada
+);
+
+app.component(
+    'pacientes-index',
+    PacientesIndex
+);
+
+app.component(
+    'recetass-historial',
+    Historialreceta
+);
+app.component(
+    'configuracion-sistema',
+    ConfiSistema
+);
+
+app.component(
+    'configuracion-sistema-panelcontrasena',
+    PanelContraseña
+);
+
+app.component(
+     'registro-usuario',
+     RegistrarUsuario
+);
+
+
+app.component(
+     'panel-tabla',
+     PanelTabla
+);
+ 
+
+    
+// 3. MONTAJE DE LA APP
 app.mount('#app');
 
 // ------------------------------------------------------

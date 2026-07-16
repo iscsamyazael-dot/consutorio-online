@@ -481,25 +481,38 @@ return [
             'url'  => 'ConsultarEspecialidades', // O 'admin/specialties' si tu ruta tiene prefijo
             'icon' => 'fas fa-fw fa-user',  
         ],
-        [
-            'text' => 'Perfil',
-            'url'  => 'perfil',
+
+        ['text' => 'Perfil',
             'icon' => 'fas fa-fw fa-user',
-           
+            'can'  => 'ver-admin',
+            'submenu' => [
+                [
+                    'text' => 'Ver Perfil',
+                    'url'  => 'perfil',
+                    'icon' => 'fas fa-fw fa-user',
+                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                ],
+                [
+                    'text' => 'Agregar Usuario',
+                    'url'  => 'agregar-usuario',
+                    'icon' => 'fas fa-fw fa-user',
+                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                ],
+            ],
         ],
-        [
-            'text' => 'Cambiar contraseña',
-            'url'  => 'cambiar-contraseña',
-            'icon' => 'fas fa-fw fa-lock',
-            
-            
-        ],
-        [
-            'text' => 'Cerrar sesión',
-            'url'  => 'logout',
-            'icon' => 'fas fa-sign-out-alt',
-        ]
-            
+                [
+                    'text' => 'Cambiar contraseña',
+                    'url'  => 'cambiar-contraseña',
+                    'icon' => 'fas fa-fw fa-lock',
+                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                ],
+                [
+                    'text' => 'Cerrar sesión',
+                    'url'  => 'logout',
+                    'icon' => 'fas fa-sign-out-alt',
+                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                ]
+                
     ],
     
 

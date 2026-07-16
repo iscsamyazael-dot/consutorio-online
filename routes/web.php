@@ -15,6 +15,7 @@ use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CitaController;
+use App\Http\Controllers\UserRegisterController;
 use App\Http\Controllers\UbicacionController;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
@@ -23,6 +24,21 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () { return view('auth.login'); });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
+    Route::get('/api/specialties', [SpecialtyController::class, 'list']);
+    //Código para hacer el filtro de un paciente mediante un input //
+    //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
+    Route::get('/perfil-usuario', [ProfileController::class, 'obtenerPerfil']);
+    //ACTUALIZA DATOS DEL PERFIL
+    Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
+    Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
+    Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
+    Route::post('/usuarios/registro', UserRegisterController::class);
+    Route::get('/usuarios', [UserController::class, 'index']);
+    Route::delete('usuarios/{id}', [UserController::class, 'destroy']);
         Route::get('/dashboard', function () { return view('dashboard'); })->name('dashboard');
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -36,7 +52,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
         Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
         // Ruta para procesar el formulario y guardar el registro en las tablas
-
+        
         //para traer actualizar y eliminar medicos
         // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
         // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
@@ -95,6 +111,7 @@ Route::middleware('auth')->group(function () {
             Route::get('ListaPacientes', function () { return view('pacientes.index'); })->name('pacientes.index');
             Route::get('PacienteNuevo', function() { return view('pacientes.create'); })->name('pacientes.create');
             Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); })->name('pacientes.create');
+            Route::get('agregar-usuario',function(){ return view('configuracion-sistema.agregar-usuario');});
         });
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO///
@@ -289,6 +306,12 @@ Route::get('Sucursales', function () {
 // Route::get('perfil',function(){
 //           return view('configuracion-sistema.perfil');
 // });
+
+//Codigo que lleva a PERFIL
+//Route::get('agregar-usuario',function(){
+//          return view('configuracion-sistema.agregar-usuario');
+//});
+
 
 //Codigo que lleva a CAMBIAR CONTRASEÑA
 // Route::get('cambiar-contraseña', function () {
