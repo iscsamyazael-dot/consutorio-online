@@ -485,4 +485,89 @@ class IAClinicaService
             return null;
         }
     }
+
+    /**
+     * Analiza signos vitales del triage y devuelve prioridad + estado para la tabla
+     */
+    public function analizarTriage(array $datos): array
+    {
+        $prompt = "
+    Eres un sistema experto en triage médico de urgencias hospitalarias.
+    Analiza los siguientes signos vitales y síntomas del paciente.
+
+    Síntomas: {$datos['sintomas']}
+    Presión Arterial: {$datos['presion']}
+    Saturación O₂: {$datos['saturacion']}%
+    Temperatura: {$datos['temperatura']}°C
+
+    Clasifica al paciente según el Sistema de Triage de Manchester (MTS):
+
+    ROJO    → Emergencia. Riesgo vital inmediato. Atención en ≤ 10 minutos.
+    NARANJA → Muy urgente. Riesgo alto. Atención en ≤ 30 minutos.
+    AMARILLO→ Urgente. Riesgo moderado. Atención en ≤ 60 minutos.
+    VERDE   → No urgente. Estable. Atención en ≤ 120 minutos.
+
+    Estado clínico:
+    - grave    → corresponde a ROJO / NARANJA
+    - moderado → corresponde a AMARILLO
+    - leve     → corresponde a VERDE
+
+    Devuelve EXCLUSIVAMENTE este JSON sin texto adicional ni Markdown:
+    {
+    \"prioridad\": \"rojo|naranja|amarillo|verde\",
+    \"estado\": \"grave|moderado|leve\",
+    \"justificacion\": \"Una sola oración corta explicando la clasificación\"
+    }
+        ";
+
+        try {
+            $response = Http::withToken(config('services.ai.key'))
+                ->timeout(15)
+                ->post('https://api.deepseek.com/chat/completions', [
+                    'model'           => 'deepseek-chat',
+                    'messages'        => [['role' => 'user', 'content' => $prompt]],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature'     => 0.1, // Determinista para triage
+                ]);
+
+            if (!$response->successful()) {
+                Log::error('Error HTTP triage IA', ['status' => $response->status()]);
+                return $this->triageFallback();
+            }
+
+            $data = json_decode($response->json('choices.0.message.content'), true);
+
+            // Validar que el JSON tenga los campos esperados
+            if (!isset($data['prioridad'], $data['estado'])) {
+                Log::error('Respuesta de triage IA incompleta', ['data' => $data]);
+                return $this->triageFallback();
+            }
+
+            return [
+                'prioridad'     => strtolower($data['prioridad']),
+                'estado'        => strtolower($data['estado']),
+                'justificacion' => $data['justificacion'] ?? '',
+                'fuente'        => 'ia',
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Excepción triage IA: ' . $e->getMessage());
+            return $this->triageFallback();
+        }
+    }
+
+    private function triageFallback(): array
+    {
+        return [
+            'prioridad'     => 'verde',
+            'estado'        => 'leve',
+            'justificacion' => 'IA no disponible. Clasificación por defecto.',
+            'fuente'        => 'fallback',
+        ];
+    }
+
+
+
+
+
 }

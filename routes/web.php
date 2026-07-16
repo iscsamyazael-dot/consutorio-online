@@ -86,6 +86,10 @@ Route::middleware('auth')->group(function () {
         //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
         Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
             ->name('ExpedienteDetalle');
+        Route::get('/triage', [TriageController::class, 'index']);
+        // ← NUEVA, debe ir ANTES de /{id}
+        Route::get('/triage/{pacienteId}/analizar-ia', [TriageController::class, 'analizarIA']);
+        Route::get('/triage/{id}', [TriageController::class, 'show']);
         ///*** AQUI TERMINA LAS RUTAS DE LAS LAS APIS Y CONSUMO DE DATOS */
 
         //**INICIA LAS RUTAS PARA LAS VISTAS DE ACUERDO AL ACESSO DE CADA USUARIO *//
