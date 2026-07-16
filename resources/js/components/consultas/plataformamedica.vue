@@ -14,9 +14,44 @@
         <button class="btn-ghost">
           <i class="ti ti-adjustments-horizontal"></i> Filtros
         </button>
-        <a :href="url('consultas/create')" class="btn-primary">
-          <i class="ti ti-plus"></i> Nueva consulta
-        </a>
+
+        <!-- ▼ Botón "Nueva consulta" convertido en select/dropdown ▼ -->
+        <div class="new-consulta-dropdown" ref="dropdownRef">
+          <button
+            type="button"
+            class="btn-primary"
+            @click="toggleDropdown"
+            :aria-expanded="showDropdown"
+          >
+            <i class="ti ti-plus"></i> Nueva consulta
+            <i class="ti ti-chevron-down dropdown-caret" :class="{ 'is-open': showDropdown }"></i>
+          </button>
+
+          <transition name="fade-slide">
+            <div v-if="showDropdown" class="dropdown-menu-custom">
+              <a :href="url('NuevaConsulta')" class="dropdown-item" @click="closeDropdown">
+                <span class="dropdown-item-icon dropdown-item-icon--blue">
+                  <i class="ti ti-file-plus"></i>
+                </span>
+                <span class="dropdown-item-text">
+                  <span class="dropdown-item-title">Nueva consulta</span>
+                  <span class="dropdown-item-sub">Registro manual estándar</span>
+                </span>
+              </a>
+
+              <a :href="url('ConsultaInteligenteNueva')" class="dropdown-item" @click="closeDropdown">
+                <span class="dropdown-item-icon dropdown-item-icon--purple">
+                  <i class="ti ti-brain"></i>
+                </span>
+                <span class="dropdown-item-text">
+                  <span class="dropdown-item-title">Consulta inteligente</span>
+                  <span class="dropdown-item-sub">Asistida con IA</span>
+                </span>
+              </a>
+            </div>
+          </transition>
+        </div>
+        <!-- ▲ fin dropdown ▲ -->
       </div>
     </div>
 
@@ -67,6 +102,7 @@
     </div>
   </div>
 </template>
+
 <script>
 export default {
   name: 'CentroConsultas',
@@ -86,13 +122,41 @@ export default {
       default: 2,
     },
   },
+
+  data() {
+    return {
+      showDropdown: false,
+    }
+  },
+
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside)
+  },
+
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside)
+  },
+
   methods: {
     url(path) {
       return `/${path}`
     },
+    toggleDropdown() {
+      this.showDropdown = !this.showDropdown
+    },
+    closeDropdown() {
+      this.showDropdown = false
+    },
+    handleClickOutside(event) {
+      const el = this.$refs.dropdownRef
+      if (el && !el.contains(event.target)) {
+        this.showDropdown = false
+      }
+    },
   },
 }
 </script>
+
 <style scoped>
 /* ── Layout ── */
 .consultas-wrap {
@@ -199,6 +263,93 @@ export default {
 .btn-primary:hover {
   background: #0c447c;
   color: #e6f1fb;
+}
+
+/* ── Dropdown "Nueva consulta" ── */
+.new-consulta-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-caret {
+  font-size: 13px;
+  transition: transform 0.15s ease;
+}
+.dropdown-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu-custom {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  background: #ffffff;
+  border: 0.5px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  z-index: 30;
+  padding: 6px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+.dropdown-item:hover {
+  background: #f3f6fb;
+}
+
+.dropdown-item-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.dropdown-item-icon--blue {
+  background: #e6f1fb;
+  color: #185fa5;
+}
+.dropdown-item-icon--purple {
+  background: #f1e9fb;
+  color: #7c3aed;
+}
+
+.dropdown-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.dropdown-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.dropdown-item-sub {
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+/* Transición del dropdown */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 /* ── Stat grid (tarjetas de color sólido, estilo imagen de referencia) ── */

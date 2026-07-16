@@ -135,6 +135,12 @@
         <input type="text" v-model="busqueda" placeholder="Buscar por nombre o folio…" />
       </div>
 
+      <!-- Aviso de cómo seleccionar un paciente para nueva consulta -->
+      <div class="cc-hint">
+        <i class="ti ti-info-circle" aria-hidden="true"></i>
+        Doble clic sobre un paciente para seleccionarlo y usarlo en <strong>Nueva consulta</strong>.
+      </div>
+
       <div class="cc-table-wrap">
         <table class="cc-table">
           <thead>
@@ -149,11 +155,17 @@
           <tbody>
             <!-- Una fila por cada paciente filtrado -->
             <!-- cc-row--active resalta la fila del paciente seleccionado en el panel -->
+            <!-- cc-row--selected resalta la fila seleccionada para "Nueva consulta" (doble clic) -->
             <tr
               v-for="p in pacientesFiltrados"
               :key="p.id"
               class="cc-row"
-              :class="{ 'cc-row--active': pacienteActivo && p.paciente_id === pacienteActivo.paciente_id }"
+              :class="{
+                'cc-row--active': pacienteActivo && p.paciente_id === pacienteActivo.paciente_id,
+                'cc-row--selected': pacienteSeleccionadoId === p.id
+              }"
+              title="Doble clic para seleccionar este paciente"
+              @dblclick="seleccionarParaConsulta(p)"
             >
               <!-- Avatar circular + nombre en negritas + motivo de consulta debajo -->
               <td class="cc-td--patient">
@@ -161,7 +173,10 @@
                   {{ initials(nombreCompleto(p)) }}
                 </div>
                 <div>
-                  <p class="cc-patient-name">{{ nombreCompleto(p) }}</p>
+                  <p class="cc-patient-name">
+                    {{ nombreCompleto(p) }}
+                    <i v-if="pacienteSeleccionadoId === p.id" class="ti ti-circle-check cc-selected-icon" aria-hidden="true"></i>
+                  </p>
                   <p class="cc-patient-diag">{{ ultimoTriage(p)?.motivo_consulta || '—' }}</p>
                 </div>
               </td>
@@ -485,6 +500,9 @@
 <script>
 import ApiService from '../../services/ApiService.js'
 
+// Clave usada en localStorage para el paciente seleccionado para "Nueva consulta"
+const CLAVE_PACIENTE_SELECCIONADO = 'pacienteSeleccionado'
+
 export default {
   name: 'ConsultaClinica',
 
@@ -522,6 +540,10 @@ export default {
 
       // Imágenes cargadas en el dropzone del expediente (base64)
       previews: [],
+
+      // ID del paciente seleccionado con doble clic para "Nueva consulta"
+      // (se sincroniza con localStorage para resaltar la fila al recargar)
+      pacienteSeleccionadoId: null,
 
       // Formulario completo del expediente clínico
       form: {
@@ -572,6 +594,7 @@ export default {
   // Al montar el componente, carga la lista de pacientes
   mounted() {
     this.obtenerPacientes()
+    this.cargarSeleccionPrevia()
   },
 
   methods: {
@@ -601,6 +624,51 @@ export default {
         await this.obtenerPacientes()
       } catch (error) {
         console.error('Error al guardar paciente:', error)
+      }
+    },
+
+    // ──────────────────────────────────────────
+    // Selección de paciente para "Nueva consulta" (doble clic)
+    // ──────────────────────────────────────────
+
+    // Al recargar la página, si ya había un paciente seleccionado
+    // previamente, resalta esa misma fila en la tabla
+    cargarSeleccionPrevia() {
+      const guardado = localStorage.getItem(CLAVE_PACIENTE_SELECCIONADO)
+      if (!guardado) return
+      try {
+        const data = JSON.parse(guardado)
+        this.pacienteSeleccionadoId = data.id || null
+      } catch (error) {
+        console.error('No se pudo leer el paciente seleccionado guardado:', error)
+      }
+    },
+
+    // Guarda el paciente elegido en localStorage para que lo recojan
+    // los componentes de "Nueva consulta" y "Consulta inteligente"
+    seleccionarParaConsulta(paciente) {
+      if (!paciente) return
+
+      const payload = {
+        id:          paciente.id,
+        paciente_id: paciente.paciente_id,
+        nombre:      this.nombreCompleto(paciente)
+      }
+
+      localStorage.setItem(CLAVE_PACIENTE_SELECCIONADO, JSON.stringify(payload))
+      this.pacienteSeleccionadoId = paciente.id
+
+      // Aviso visual de confirmación (usa SweetAlert2, ya disponible en el proyecto)
+      if (window.Swal) {
+        window.Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `${payload.nombre} seleccionado`,
+          showConfirmButton: false,
+          timer: 1600,
+          timerProgressBar: true
+        })
       }
     },
 
@@ -1073,6 +1141,16 @@ export default {
 }
 .cc-table-search input::placeholder { color: #9ca3af; }
 
+/* Aviso de "doble clic para seleccionar" */
+.cc-hint {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 24px;
+  font-size: 12px; color: #185FA5;
+  background: #eff6ff;
+  border-bottom: 1px solid #dbeafe;
+}
+.cc-hint i { font-size: 15px; flex-shrink: 0; }
+
 .cc-table-wrap { overflow-x: auto; }
 
 /* Tabla sin bordes externos, solo separadores entre filas */
@@ -1102,8 +1180,21 @@ export default {
   background: #fff;
 }
 .cc-row:last-child td { border-bottom: none; }
-.cc-row:hover td      { background: #fafbff; }      /* hover sutil */
+.cc-row:hover td      { background: #fafbff; cursor: pointer; }      /* hover sutil */
 .cc-row--active td    { background: #eff6ff; }      /* fila del paciente activo */
+
+/* Fila seleccionada para "Nueva consulta" (doble clic) */
+.cc-row--selected td {
+  background: #ecfdf5;
+  box-shadow: inset 3px 0 0 #059669;
+}
+
+/* Ícono de check junto al nombre del paciente seleccionado */
+.cc-selected-icon {
+  color: #059669;
+  font-size: 14px;
+  margin-left: 6px;
+}
 
 /* Estado vacío cuando el buscador no encuentra resultados */
 .cc-table-empty {
@@ -1133,6 +1224,7 @@ export default {
 .cc-patient-name {
   font-weight: 700; color: #111827;
   font-size: 13.5px; line-height: 1.3;
+  display: flex; align-items: center;
 }
 
 /* Texto secundario debajo del nombre (motivo de consulta) en azul */
