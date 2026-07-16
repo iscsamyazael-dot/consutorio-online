@@ -18,10 +18,11 @@ class User extends Authenticatable
      * @var list<string>
      */ 
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'rol'
+    'name',
+    'email',
+    'password',
+    'rol',    // varchar — el que usa el frontend
+    'activo',
     ];
 
     public function consultas()
