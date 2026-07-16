@@ -27,7 +27,7 @@
                                     type="text"
                                     class="form-control custom-input with-icon"
                                     placeholder="Nombre del paciente"
-                                    v-model="infoPacientes.nombre"
+                                    v-model="infoPacientes.nombre_completo"
                                 >
 
                             </div>
@@ -283,10 +283,47 @@ import ApiService from '../../services/ApiService.js'
                     const response = await ApiService.get('/ExpedienteDetalle/' + this.pacienteId)
                     this.infoPacientes = response.data
                     console.log('Pacientes cargados:',this.infoPacientes)
+                    // Una vez que llegan los datos del paciente, rellenamos el formulario
+                    this.precargarDatosPaciente()
                 }catch(error){
                         console.error("Error al obtener pacientes:", error)
                 }
             },
+
+            // Toma los datos del paciente (y su último triage, si existe)
+            // y prellena el formulario de la nueva consulta
+            precargarDatosPaciente() {
+                const p = this.infoPacientes
+                if (!p) return
+
+                // Nombre completo para mostrar/editar en el campo "Paciente"
+                p.nombre_completo = [p.nombre, p.apellido_paterno, p.apellido_materno]
+                    .filter(Boolean)
+                    .join(' ')
+
+                // Último triage/consulta registrada, si el paciente ya tiene historial
+                const ultimoTriage = (p.triages && p.triages.length)
+                    ? p.triages[p.triages.length - 1]
+                    : null
+
+                // Fecha y hora actuales como valor por defecto de ESTA nueva consulta
+                const ahora = new Date()
+                const fechaHoy   = ahora.toISOString().split('T')[0]
+                const horaAhora  = ahora.toTimeString().slice(0, 5)
+
+                this.form = {
+                    fecha: fechaHoy,
+                    hora: horaAhora,
+                    // Motivo y signos vitales se traen del último triage como referencia
+                    motivo:        ultimoTriage?.motivo_consulta || '',
+                    diagnostico:   '', // el diagnóstico se captura en esta nueva consulta
+                    peso:          ultimoTriage?.peso    || '',
+                    presion:       ultimoTriage?.presion || '',
+                    observaciones: '',
+                    sintomas:      ultimoTriage?.sintomas || ''
+                }
+            },
+
             validarFormulario() {
                 this.errores = {
                     fecha: '',
