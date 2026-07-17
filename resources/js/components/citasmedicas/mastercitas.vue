@@ -38,11 +38,7 @@ import axios from 'axios';
         data() {
             return {
                 citas: [],
-<<<<<<< HEAD
                 createUrl: 'AgendarCitas',
-=======
-                createUrl: '/AgendarCitas',
->>>>>>> 42624ea4c2ebe3560f9574d25752761ff6747348
                 citasPendientes: [],
                 filtroMedicoId: '',
                 filtroEspecialidadId: ''
