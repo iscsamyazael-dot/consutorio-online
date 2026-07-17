@@ -63,13 +63,18 @@ Route::middleware('auth')->group(function () {
         Route::resource('receta-detalles', RecetaDetalleController::class);
         Route::resource('usuarios', UserController::class);
 
-        // IMPORTANTE: esta ruta debe ir ANTES de Route::resource('consultaIA', ...)
-        // y debe coincidir EXACTAMENTE con la URL que llama el frontend
+        // IMPORTANTE: estas rutas deben ir ANTES de Route::resource('consultaIA', ...)
+        // y deben coincidir EXACTAMENTE con la URL que llama el frontend
         // (urlArchivoIA = route + '/consultaIA/archivo' en TranscripcionLive.vue).
         // Antes decía 'consulta-ia/archivo' (con guión), por eso el POST no
         // coincidía con esa ruta y caía en la ruta GET /consultaIA/{consultaIA}
         // que genera el resource de abajo -> Laravel respondía 405 Method Not Allowed.
         Route::post('consultaIA/archivo', [ConsultaIAController::class, 'subirArchivo'])->name('consultaIA.subirArchivo');
+        // Listado y descarga de archivos clínicos para ArchivosClinicos.vue.
+        // Mismo motivo que la de arriba: deben ir antes del resource para
+        // no caer en la ruta GET /consultaIA/{consultaIA} del resource.
+        Route::get('consultaIA/archivos/{consultaId}', [ConsultaIAController::class, 'listarArchivos'])->name('consultaIA.listarArchivos');
+        Route::get('consultaIA/archivo/{id}/descargar', [ConsultaIAController::class, 'descargarArchivo'])->name('consultaIA.descargarArchivo');
         Route::resource('consultaIA', ConsultaIAController::class);
         Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente');
         Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente');
