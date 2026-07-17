@@ -58,6 +58,7 @@
         </div>
         <div class="col-lg-6">
             <TranscripcionLive
+                :paciente-id="pacienteId"
                 @actualizarSintomas="actualizarSintomas"
                 @actualizarIaData="actualizarIaData"
                 @marcarErrorIa="marcarErrorIa"
