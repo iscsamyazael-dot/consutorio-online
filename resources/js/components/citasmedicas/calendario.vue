@@ -185,6 +185,7 @@ import dayGridPlugin     from '@fullcalendar/daygrid'
 import timeGridPlugin    from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import esLocale          from '@fullcalendar/core/locales/es'
+import ApiService        from '../../services/ApiService.js'
 
 export default {
   name: 'Calendario',
@@ -201,7 +202,8 @@ export default {
       type: [String, Number],
       default: ''
     },
-    // Citas ya cargadas por el padre (única fuente de la verdad)
+    // Citas ya cargadas por el padre (se usan como respaldo mientras
+    // se resuelve la primera carga vía ApiService)
     citas: {
       type: Array,
       default: () => []
@@ -216,6 +218,10 @@ export default {
       vistaDetalle:       false,
       fechaSeleccionada:  null,
 
+      // NUEVO: citas ya filtradas, cargadas desde el backend vía ApiService
+      citasFiltradas:     [],
+      cargandoCitas:      false,
+
       // Modal
       mostrarModalEstado: false,
       citaSeleccionada:   null,
@@ -225,7 +231,7 @@ export default {
       // Toast
       toast:              null,
       toastTimer:         null,
-// Estados disponibles para cambiar
+      // Estados disponibles para cambiar
       estadosDisponibles: [
         { valor: 'Agendado',     color: '#3b82f6', icono: 'fas fa-calendar-alt' },
         { valor: 'Finalizada',   color: '#10b981', icono: 'fas fa-check' },
@@ -234,19 +240,13 @@ export default {
       ],
     }
   },
-//colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
-  computed: {
-    // NUEVO: aplica el filtro de médico/especialidad sobre todas las citas cargadas
-    citasFiltradas() {
-      return this.citas.filter(c => {
-        const medicoOk = !this.medicoId ||
-          (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoId)
-        const especialidadOk = !this.especialidadId ||
-          (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadId)
-        return medicoOk && especialidadOk
-      })
-    },
 
+  computed: {
+    // Genera los eventos para FullCalendar a partir de las citas filtradas.
+// NOTA: esta función NO hace ninguna petición al backend ni usa ApiService,
+// porque solo transforma datos que YA fueron cargados previamente
+// (this.citasFiltradas viene de ApiService.get('citas', ...) en cargarCitasFiltradas()).
+// Aquí solo se da formato a esos datos para que FullCalendar los pueda dibujar.
     eventos() {
       return this.citasFiltradas.map(cita => ({
         id:    cita.id,
@@ -256,21 +256,22 @@ export default {
         extendedProps: { estado: cita.estado, hora: cita.hora },
       }))
     },
-// obtiene las citas del día seleccionado, ordenadas por hora
+    // Obtiene las citas del día seleccionado, ordenadas por hora
     citasDelDia() {
       if (!this.fechaSeleccionada) return []
       return this.citasFiltradas
         .filter(c => c.fecha === this.fechaSeleccionada)
         .sort((a, b) => a.hora.localeCompare(b.hora))
     },
-// formatea la fecha seleccionada a un formato legible
+    //   Formatea la fecha seleccionada utilizando las funciones nativas de JavaScript (sin consumir una API externa).
     fechaSeleccionadaFormateada() {
       if (!this.fechaSeleccionada) return ''
       const [y, m, d] = this.fechaSeleccionada.split('-')
       const fecha = new Date(y, m - 1, d)
       return fecha.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     },
-//opcionesCalendario, colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
+    // No es necesario consumir una API, ya que esta función únicamente configura el componente FullCalendar
+    // utilizando datos locales almacenados en `this.eventos`.
     opcionesCalendario() {
       return {
         plugins:     [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -284,25 +285,22 @@ export default {
         },
         buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' },
         events: this.eventos,
-//eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
         eventContent: (arg) => {
           const estado = arg.event.extendedProps.estado
           const color  = this.colorPorEstado(estado)
           const icono  = this.iconoPorEstado(estado)
           const hora   = arg.timeText ? `${arg.timeText} ` : ''
-
+          // Crea un contenedor para el evento con icono y texto
           const wrapper = document.createElement('div')
           wrapper.style.display = 'flex'
           wrapper.style.alignItems = 'center'
           wrapper.style.gap = '4px'
           wrapper.style.overflow = 'hidden'
-
           const iconEl = document.createElement('i')
           iconEl.className = `fas ${icono}`
           iconEl.style.color = color
           iconEl.style.fontSize = '.62rem'
           iconEl.style.flexShrink = '0'
-
           const textEl = document.createElement('span')
           textEl.style.overflow = 'hidden'
           textEl.style.textOverflow = 'ellipsis'
@@ -314,12 +312,10 @@ export default {
 
           return { domNodes: [wrapper] }
         },
-//eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
         dateClick: (info) => {
           this.fechaSeleccionada = info.dateStr
           this.vistaDetalle      = true
         },
-//fechaClick, eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
         eventClick: (info) => {
           this.fechaSeleccionada = info.event.startStr.split('T')[0]
           this.vistaDetalle      = true
@@ -327,8 +323,50 @@ export default {
       }
     },
   },
-//colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
+
+  watch: {
+    // Cada vez que cambia el médico seleccionado, se recarga desde el backend
+    medicoId() {
+      this.cargarCitasFiltradas()
+    },
+    // Cada vez que cambia la especialidad seleccionada, se recarga desde el backend
+    especialidadId() {
+      this.cargarCitasFiltradas()
+    },
+    // Si el padre actualiza el arreglo de citas (por ejemplo tras crear una nueva),
+    // se vuelve a pedir la lista filtrada actualizada
+    citas: {
+      deep: true,
+      handler() {
+        this.cargarCitasFiltradas()
+      }
+    }
+  },
+
+  mounted() {
+    this.cargarCitasFiltradas()
+  },
+
   methods: {
+    // NUEVO: pide al backend las citas ya filtradas por médico/especialidad
+    async cargarCitasFiltradas() {
+      this.cargandoCitas = true
+      try {
+        const params = {}
+        if (this.medicoId)        params.medico_id        = this.medicoId
+        if (this.especialidadId)  params.especialidad_id   = this.especialidadId
+
+        const { data } = await ApiService.get('citas', { params })
+        this.citasFiltradas = data
+      } catch (err) {
+        console.error('Error cargando citas filtradas:', err)
+        this.mostrarToast('No se pudieron cargar las citas.', 'error')
+        // Respaldo: si falla la petición, usamos lo que haya llegado por prop
+        this.citasFiltradas = this.citas
+      } finally {
+        this.cargandoCitas = false
+      }
+    },
     colorPorEstado(estado) {
       const clave = this.normalizarEstado(estado)
       const colores = {
@@ -349,7 +387,7 @@ export default {
       }
       return colores[clave] ?? '#94a3b8'
     },
-// obtiene el icono correspondiente al estado
+    // obtiene el icono correspondiente al estado
     iconoPorEstado(estado) {
       const clave = this.normalizarEstado(estado)
       const iconos = {
@@ -370,7 +408,7 @@ export default {
       }
       return iconos[clave] ?? 'fa-calendar-alt'
     },
-// normaliza el estado para comparación
+    // normaliza el estado para comparación
     normalizarEstado(estado) {
       if (!estado) return ''
       return estado
@@ -380,7 +418,7 @@ export default {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '') // quita acentos para comparar mejor
     },
-// formatea la hora de 24h a 12h con AM/PM
+    // formatea la hora de 24h a 12h con AM/PM
     formatearHora(hora) {
       if (!hora) return ''
       const [h, m] = hora.split(':')
@@ -389,12 +427,12 @@ export default {
       const h12  = hr % 12 || 12
       return `${h12}:${m} ${ampm}`
     },
-// obtiene las iniciales del paciente
+    // obtiene las iniciales del paciente
     inicialesPaciente(cita) {
       const nombre = cita.paciente?.nombre ?? 'P'
       return nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
     },
-// filtra los eventos según el término de búsqueda
+    // filtra los eventos según el término de búsqueda
     filtrarEventos() {
       const api = this.$refs.calendarRef?.getApi()
       if (!api) return
@@ -404,14 +442,14 @@ export default {
         event.setProp('display', coincide || termino === '' ? 'auto' : 'none')
       })
     },
-// verifica si los datos del paciente están incompletos
+    // verifica si los datos del paciente están incompletos
     datosPacienteIncompletos(cita) {
       const p = cita.paciente
       if (!p) return true
       const camposRequeridos = ['nombre', 'sexo', 'telefono', 'email', 'direccion', 'curp', 'tipo_sangre', 'alergias']
       return camposRequeridos.some(campo => !p[campo] || p[campo].toString().trim() === '')
     },
-// redirige a la página de completar datos del paciente
+    // redirige a la página de completar datos del paciente
     irACompletarPaciente(cita) {
       const p = cita.paciente
       if (!p) return
@@ -423,13 +461,13 @@ export default {
     mostrarToast(mensaje, tipo = 'exito') {
       // Cancela el timer anterior si hay uno activo
       if (this.toastTimer) clearTimeout(this.toastTimer)
-
+      // Muestra el nuevo toast
       this.toast = {
         mensaje,
         tipo,
         icono: tipo === 'exito' ? 'fas fa-check-circle' : 'fas fa-times-circle',
       }
-
+      // Oculta el toast después de 3 segundos
       this.toastTimer = setTimeout(() => {
         this.toast = null
       }, 3000)
@@ -441,37 +479,34 @@ export default {
       this.nuevoEstado        = cita.estado
       this.mostrarModalEstado = true
     },
-
+    // Cierra el modal y resetea los datos
     cerrarModal() {
       if (this.guardando) return
       this.mostrarModalEstado = false
       this.citaSeleccionada   = null
       this.nuevoEstado        = ''
     },
-// confirma el cambio de estado y avisa al padre para que refresque
+
     async confirmarCambioEstado() {
       if (!this.citaSeleccionada || this.nuevoEstado === this.citaSeleccionada.estado) return
 
-      this.guardando = true
+      this.guardando = true 
       try {
-        const res = await fetch(`/citas/${this.citaSeleccionada.id}/estado`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-          },
-          body: JSON.stringify({ estado: this.nuevoEstado }),
+        await ApiService.patch(`citas/${this.citaSeleccionada.id}/estado`, {
+          estado: this.nuevoEstado,
         })
-
-        if (!res.ok) throw new Error('Error al actualizar')
 
         this.cerrarModal()
         this.mostrarToast(`Estado actualizado a "${this.nuevoEstado}" correctamente.`, 'exito')
         this.$emit('cita-actualizada')
+        // Refresca la lista propia con ApiService para reflejar el cambio de inmediato
+        await this.cargarCitasFiltradas()
 
       } catch (err) {
         console.error('Error actualizando estado:', err)
-        this.mostrarToast('No se pudo actualizar el estado. Intenta nuevamente.', 'error')
+        const mensaje = err.response?.data?.message
+          || 'No se pudo actualizar el estado. Intenta nuevamente.'
+        this.mostrarToast(mensaje, 'error')
       } finally {
         this.guardando = false
       }
@@ -518,17 +553,36 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: none;
   border-radius: 10px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   font-size: .82rem;
   font-weight: 700;
-  color: #334155;
+  color: white;
   cursor: pointer;
-  transition: background .2s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, .25);
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
 }
-.btn-volver:hover { background: #e2e8f0; }
+
+.btn-volver i {
+  transition: transform .25s ease;
+}
+
+.btn-volver:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, .35);
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+}
+
+.btn-volver:hover i {
+  transform: translateX(-4px);
+}
+
+.btn-volver:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 8px rgba(59, 130, 246, .3);
+}
 
 .calendar-search {
   position: relative;
