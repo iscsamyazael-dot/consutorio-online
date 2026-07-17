@@ -68,6 +68,36 @@ class IAClinicaService
             ]);
         }
 
+        // Si la IA no detectó alertas explícitas, igual reflejamos el
+        // nivel de riesgo calculado (por defecto "bajo") como una alerta
+        // informativa, para que el panel de Alertas Clínicas no quede vacío.
+        if (empty($alertasDetectadas)) {
+            $alertaBaja = [
+                'tipo' => 'otro',
+                'titulo' => 'Riesgo clínico bajo',
+                'descripcion' => $data['diagnostico'] ?? 'Sin hallazgos de riesgo relevantes.',
+                'nivel' => $nivelRiesgo,
+            ];
+
+            AlertaClinica::create([
+                'consulta_id' => $consulta->id,
+                'consulta_folio' => $consulta->folio,
+                'session_uuid' => $consulta->session_uuid,
+                'paciente_id' => $consulta->paciente_id,
+                'tipo_alerta' => $alertaBaja['tipo'],
+                'titulo' => $alertaBaja['titulo'],
+                'descripcion' => $alertaBaja['descripcion'],
+                'nivel' => $alertaBaja['nivel'],
+                'nivel_riesgo' => $alertaBaja['nivel'],
+                'estado' => 'pendiente',
+                'generada_por_ia' => 1,
+                'requiere_atencion' => 0,
+                'fecha_alerta' => now()
+            ]);
+
+            $alertasDetectadas = [$alertaBaja];
+        }
+
         return [
             'diagnostico_probable' => $data['diagnostico'],
             'nivel_riesgo' => $nivelRiesgo,
@@ -592,10 +622,15 @@ $texto
 FILTRADO DE TRANSCRIPCIÓN
 ====================================
 
-El texto anterior proviene de una transcripción automática de audio y puede
-contener elementos que NO son parte de la información clínica del paciente.
+El texto anterior puede provenir de dos fuentes distintas:
 
-Ignora por completo:
+1. Una transcripción automática de audio (relato hablado del paciente).
+2. Un documento adjunto ya elaborado por un profesional (por ejemplo,
+   un reporte de radiología, laboratorio, o un estudio de imagen), que
+   contiene secciones como 'HALLAZGOS', 'IMPRESIÓN DIAGNÓSTICA',
+   'RESULTADOS' o similares, en vez de un relato de síntomas.
+
+Si el texto es una TRANSCRIPCIÓN DE AUDIO, ignora por completo:
 
 - Risas o expresiones como 'jaja', 'jeje', '(risas)'.
 - Ruido ambiental descrito o transcrito por error: motos, carros, claxon,
@@ -611,6 +646,24 @@ Ignora por completo:
 NO uses estos elementos como síntomas, antecedentes ni parte del análisis.
 NO los menciones en el JSON de salida.
 
+Si el texto es un REPORTE DE ESTUDIO YA ELABORADO (radiología, laboratorio,
+etc.) que no contiene síntomas narrados por el paciente sino hallazgos
+clínicos/imagenológicos e impresión diagnóstica:
+
+- Trata cada hallazgo relevante de la sección de HALLAZGOS/RESULTADOS y
+  cada conclusión de la IMPRESIÓN DIAGNÓSTICA como si fuera un elemento
+  del arreglo 'sintomas' (por ejemplo: 'Aumento del espacio articular
+  acromiohumeral', 'Artrosis acromioclavicular'). NO dejes el arreglo
+  'sintomas' vacío solo porque el texto no menciona síntomas narrados;
+  en este caso los hallazgos del estudio SON el equivalente clínico.
+- Ignora datos administrativos que no aportan valor clínico: nombre del
+  médico referente, cédula profesional, firma, fecha del documento,
+  encabezados de la clínica, frases de cierre ('Atentamente', etc.).
+- El campo 'diagnostico' debe reflejar la impresión diagnóstica del
+  estudio tal como fue reportada (sin inventar), aclarando que es un
+  hallazgo de estudio y no una conclusión clínica integral del médico
+  tratante.
+
 Solo analiza el contenido que tenga relevancia clínica real.
 
 
@@ -620,7 +673,7 @@ ANÁLISIS DE INFORMACIÓN
 
 Extrae:
 
-- Síntomas actuales.
+- Síntomas actuales (o hallazgos del estudio, según el caso descrito arriba).
 - Duración de síntomas si existe.
 - Intensidad si está disponible.
 - Zona anatómica afectada.
@@ -634,11 +687,12 @@ Extrae:
 SÍNTOMAS
 ====================================
 
-Identifica todos los síntomas encontrados.
+Identifica todos los síntomas (o hallazgos clínicos, si el texto es un
+reporte de estudio) encontrados.
 
 Sé específico.
 
-Ejemplo:
+Ejemplo (relato de paciente):
 
 Incorrecto:
 [
@@ -652,12 +706,25 @@ Correcto:
 'Fiebre'
 ]
 
+Ejemplo (reporte de estudio de imagen):
+
+Correcto:
+[
+'Aumento del espacio articular acromiohumeral',
+'Artrosis acromioclavicular'
+]
+
+El arreglo 'sintomas' NUNCA debe quedar vacío si el texto contiene
+información clínica real, sea narrada por el paciente o reportada en
+un estudio.
+
 
 ====================================
 DIAGNÓSTICO PROBABLE
 ====================================
 
-Genera una condición probable basada únicamente en los síntomas.
+Genera una condición probable basada únicamente en los síntomas o,
+si aplica, en la impresión diagnóstica del estudio adjunto.
 
 Ejemplo:
 
@@ -717,7 +784,8 @@ Nunca inventes alertas.
 RECOMENDACIÓN
 ====================================
 
-Genera una recomendación concreta relacionada con los síntomas.
+Genera una recomendación concreta relacionada con los síntomas o
+hallazgos del estudio.
 
 Debe ser útil para el médico.
 
@@ -765,7 +833,8 @@ REGLAS FINALES:
 - No uses Markdown.
 - No inventes datos.
 - Diferencia datos reales de interpretaciones.
-- Ignora ruido de transcripción (risas, tráfico, muletillas, small talk) como se indicó arriba.
+- Ignora ruido de transcripción (risas, tráfico, muletillas, small talk) solo cuando el texto sea una transcripción de audio, como se indicó arriba.
+- Si el texto es un reporte de estudio ya elaborado, no dejes 'sintomas' vacío: usa los hallazgos/impresión diagnóstica como se indicó arriba.
 - Prioriza seguridad del paciente.
 
 ";

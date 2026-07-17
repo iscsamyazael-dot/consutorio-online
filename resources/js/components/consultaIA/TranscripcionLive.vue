@@ -568,6 +568,9 @@ export default {
                         ? `Diagnóstico probable (según ${nombreArchivo}): ${response.data.ia_data.diagnostico_probable}`
                         : `Archivo "${nombreArchivo}" analizado.`
 
+                    // Avisamos al padre para que refresque ArchivosClinicos.vue
+                    this.$emit('archivoSubido')
+
                 } else {
 
                     console.error('Backend reportó error:', response.data.error)
