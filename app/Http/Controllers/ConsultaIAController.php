@@ -10,6 +10,7 @@ use App\Models\Consulta;
 use App\Models\ConsultaTranscripcion;
 use App\Models\Medicamento;
 use App\Models\Specialty;
+use App\Models\ArchivoClinico;
 
 use App\Services\IAClinicaService;
 
@@ -148,6 +149,9 @@ class ConsultaIAController extends Controller
      * como una transcripción más (para que aparezca en el historial
      * clínico igual que un mensaje de voz/texto) y lo manda al mismo
      * pipeline de análisis IA que usa analizarTranscripcion().
+     *
+     * Además registra el archivo en archivos_clinicos para que
+     * ArchivosClinicos.vue pueda listarlo y permitir abrirlo.
      */
     public function subirArchivo(Request $request)
     {
@@ -211,10 +215,25 @@ class ConsultaIAController extends Controller
                 ]);
             }
 
+            // Registro del archivo para que aparezca en ArchivosClinicos.vue.
+            // Usamos $consulta->paciente_id (no el request) porque ya sabemos
+            // con certeza a qué paciente pertenece esta consulta.
+            $archivoClinico = ArchivoClinico::create([
+                'paciente_id'   => $consulta->paciente_id,
+                'consulta_id'   => $consulta->id,
+                'tipo_archivo'  => $this->tipoArchivoDesdeMime($mime),
+                'archivo_url'   => $rutaGuardada,
+                'descripcion'   => $nombreOriginal,
+                'analisis_ia'   => $textoExtraido,
+                'procesado_ia'  => $iaData ? 1 : 0,
+                'Estado'        => $iaData ? 'Completado' : 'Pendiente',
+            ]);
+
             return response()->json([
                 'success'         => true,
                 'consulta_id'     => $consulta->id,
                 'consulta_folio'  => $consulta->folio,
+                'archivo_id'      => $archivoClinico->id,
                 'archivo_nombre'  => $nombreOriginal,
                 'texto_extraido'  => $textoExtraido,
                 'ia_data'         => $iaData,
@@ -234,6 +253,94 @@ class ConsultaIAController extends Controller
                 'error'   => 'Ocurrió un error al procesar el archivo.'
             ], 500);
         }
+    }
+
+    /**
+     * Determina un tipo de archivo simple ('pdf' | 'word' | 'imagen' | 'otro')
+     * a partir del mime real detectado por Laravel, para que el frontend
+     * pueda mostrar el ícono correcto sin tener que inspeccionar extensiones.
+     */
+    private function tipoArchivoDesdeMime(string $mime): string
+    {
+        if ($mime === 'application/pdf') {
+            return 'pdf';
+        }
+
+        if (in_array($mime, [
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ])) {
+            return 'word';
+        }
+
+        if (in_array($mime, ['image/jpeg', 'image/png'])) {
+            return 'imagen';
+        }
+
+        return 'otro';
+    }
+
+    /**
+     * Lista los archivos clínicos de una consulta, para el componente
+     * ArchivosClinicos.vue. Devuelve ya armada la URL de descarga (que
+     * pasa por descargarArchivo(), porque el disco 'local' no es público).
+     */
+    public function listarArchivos($consultaId)
+    {
+        try {
+            $archivos = ArchivoClinico::where('consulta_id', $consultaId)
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'descripcion', 'tipo_archivo', 'Estado', 'created_at']);
+
+            $archivos = $archivos->map(function ($archivo) {
+                return [
+                    'id'           => $archivo->id,
+                    'nombre'       => $archivo->descripcion,
+                    'tipo'         => $archivo->tipo_archivo,
+                    'estado'       => $archivo->Estado,
+                    'fecha'        => $archivo->created_at,
+                    'url_descarga' => route('consultaIA.descargarArchivo', $archivo->id),
+                ];
+            });
+
+            return response()->json([
+                'success'  => true,
+                'archivos' => $archivos
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error en listarArchivos: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'error'   => 'No se pudo obtener la lista de archivos.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Sirve el archivo físico para abrir/descargar desde el navegador.
+     * El disco 'local' no es público, así que no podemos armar una URL
+     * directa a storage/; esta ruta lee el archivo del disco y lo entrega
+     * con el nombre original, dejando que el navegador decida si lo
+     * muestra inline (PDF/imagen) o lo descarga (Word).
+     */
+    public function descargarArchivo($id)
+    {
+        $archivo = ArchivoClinico::find($id);
+
+        if (!$archivo || !$archivo->archivo_url) {
+            abort(404, 'Archivo no encontrado');
+        }
+
+        if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($archivo->archivo_url)) {
+            abort(404, 'El archivo ya no existe en el servidor');
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->response(
+            $archivo->archivo_url,
+            $archivo->descripcion
+        );
     }
 
     /**
