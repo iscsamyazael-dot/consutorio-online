@@ -26,21 +26,21 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () { return view('auth.login'); });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
-    Route::get('/api/specialties', [SpecialtyController::class, 'list']);
-    //Código para hacer el filtro de un paciente mediante un input //
-    //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
-    Route::get('/perfil-usuario', [ProfileController::class, 'obtenerPerfil']);
-    //ACTUALIZA DATOS DEL PERFIL
-    Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
-    Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
-    Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
-    Route::post('/usuarios/registro', UserRegisterController::class);
-    Route::get('/usuarios', [UserController::class, 'index']);
-    Route::delete('usuarios/{id}', [UserController::class, 'destroy']);
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+        Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
+        Route::get('/api/specialties', [SpecialtyController::class, 'list']);
+        //Código para hacer el filtro de un paciente mediante un input //
+        //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
+        Route::get('/perfil-usuario', [ProfileController::class, 'obtenerPerfil']);
+        //ACTUALIZA DATOS DEL PERFIL
+        Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
+        Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
+        Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
+        Route::post('/usuarios/registro', UserRegisterController::class);
+        Route::get('/usuarios', [UserController::class, 'index']);
+        Route::delete('usuarios/{id}', [UserController::class, 'destroy']);
         Route::get('/dashboard', function () { return view('dashboard'); })->name('dashboard');
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -169,27 +169,27 @@ Route::middleware('auth')->group(function () {
 // ==========================================
 // 🛡️ SECCIÓN / PREFIJO PARA ADMINISTRADOR
 // ==========================================
-Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function () {
-    Route::get('/', function () { return view('dashboard'); })->name('dashboard');
-    Route::get('Medicamentos', function () { return view('medicamentos.index'); });
-});
+// Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function () {
+//     Route::get('/', function () { return view('dashboard'); })->name('dashboard');
+//     Route::get('Medicamentos', function () { return view('medicamentos.index'); });
+// });
 
 
 // ==========================================
 // 📋 🩺 SECCIÓN COMPARTIDA (MÉDICO Y ASISTENTE)
 // ==========================================
 // Ruta "oficial" para pacientes / consultas compartidas entre médico y asistente.
-Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function () {
+// Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function () {
 
-    // 👥 PACIENTES (Compartido)
-    Route::get('asistente/pacientes.index', function () { return view('pacientes.index'); });
-    Route::get('asistente/PacienteNuevo', function () { return view('pacientes.create'); });
-    Route::get('asistente/ExpedientePacientes', function () { return view('pacientes.expediente'); });
+//     // 👥 PACIENTES (Compartido)
+//     Route::get('asistente/pacientes.index', function () { return view('pacientes.index'); });
+//     Route::get('asistente/PacienteNuevo', function () { return view('pacientes.create'); });
+//     Route::get('asistente/ExpedientePacientes', function () { return view('pacientes.expediente'); });
 
-    // 👁️ CONSULTAS: Lista de Consultas (Compartido)
-    Route::get('asistente/ListaConsultas', function () { return view('consultas.index'); });
-    Route::get('medico/HistorialConsulta', function () { return view('consultas.consultaIndividual'); });
-});
+//     // 👁️ CONSULTAS: Lista de Consultas (Compartido)
+//     Route::get('asistente/ListaConsultas', function () { return view('consultas.index'); });
+//     Route::get('medico/HistorialConsulta', function () { return view('consultas.consultaIndividual'); });
+// });
 // 💡 Usamos 'can:rol-asistente-medico' para dar acceso a ambos roles sin romper tu middleware actual
 // Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function() {
 //     Route::get('/dashboard', function() { return view('dashboard'); });
@@ -203,17 +203,17 @@ Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function () {
 // ==========================================
 // 🔒 SECCIÓN EXCLUSIVA PARA MÉDICO
 // ==========================================
-Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function () {
-    Route::get('NuevaConsulta', function () { return view('consultas.create'); });
-    Route::get('ConsultaInteligente', function () { return view('consultas.consulta_inteligente'); });
-    Route::get('Medicamentos', function () { return view('medicamentos.index'); });
-    Route::get('MedicosAlta', function () { return view('medicos.altamedicos'); });
-    Route::get('HistorialRecetas', function () { return view('recetas.historial-recetas'); });
-    Route::get('TRIAGE', function () { return view('atencion-medica.triage'); });
-    Route::get('EvaluacionIa', function () { return view('atencion-medica.evaluacion-ia'); });
-    Route::get('ArchivosClinicos', function () { return view('atencion-medica.archivos-clinicos'); });
-    Route::get('Derivaciones', function () { return view('atencion-medica.derivaciones'); });
-});
+// Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function () {
+//     Route::get('NuevaConsulta', function () { return view('consultas.create'); });
+//     Route::get('ConsultaInteligente', function () { return view('consultas.consulta_inteligente'); });
+//     Route::get('Medicamentos', function () { return view('medicamentos.index'); });
+//     Route::get('MedicosAlta', function () { return view('medicos.altamedicos'); });
+//     Route::get('HistorialRecetas', function () { return view('recetas.historial-recetas'); });
+//     Route::get('TRIAGE', function () { return view('atencion-medica.triage'); });
+//     Route::get('EvaluacionIa', function () { return view('atencion-medica.evaluacion-ia'); });
+//     Route::get('ArchivosClinicos', function () { return view('atencion-medica.archivos-clinicos'); });
+//     Route::get('Derivaciones', function () { return view('atencion-medica.derivaciones'); });
+// });
 
 
 // ==========================================
@@ -222,16 +222,16 @@ Route::prefix('medico')->middleware(['auth', 'rol:medico'])->group(function () {
 // NOTA: Los módulos de pacientes / lista de consultas / expediente ahora
 // viven únicamente en el grupo compartido de arriba (can:rol-asistente-medico)
 // para evitar rutas duplicadas. El asistente ya tiene acceso a ellas por ese grupo.
-Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(function () {
+// Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(function () {
 
     // Vista principal del Asistente
-    Route::get('/', function () {
-        return view('dashboard');
-    });
+    // Route::get('/', function () {
+    //     return view('dashboard');
+    // });
 
     // Citas (Agenda) — exclusivo de este grupo
-    Route::get('/api/citas', [CitaController::class, 'getEventos']);
-});
+    // Route::get('/api/citas', [CitaController::class, 'getEventos']);
+    // });
 // Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(function() {
 //     // Vista principal del Asistente
 //     Route::get('/', function() {return view('dashboard');});
@@ -251,13 +251,13 @@ Route::prefix('asistente')->middleware(['auth', 'rol:asistente'])->group(functio
 
 Route::view('inicio', 'dashboard');
 
-Route::get('/prueba', function () {
-    dd('FUNCIONA');
-});
+// Route::get('/prueba', function () {
+//     dd('FUNCIONA');
+// });
 
-Route::get('Sucursales', function () {
-    return view('ubicaciones.index');
-});
+// Route::get('Sucursales', function () {
+//     return view('ubicaciones.index');
+// });
 
 // //Código que lleva a la vista para crear un nuevo paciente de forma manual///
 // Route::get('PacienteNuevo',function(){
