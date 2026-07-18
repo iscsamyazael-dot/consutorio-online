@@ -99,7 +99,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('movimientos',MovimientoInventarioController::class);
         Route::resource('triage', TriageController::class);
         Route::resource('archivoclinico', ArchivosClinicosController::class);
-        //Route::resource('dashboard/citas', CitaController::class);
+        //Route::resource('dashboard/citas', CitaController::class hola);
         Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
         Route::resource('citas', CitaController::class);
