@@ -46,8 +46,8 @@
     <template v-else>
         <div class="col-lg-3">
             <HistorialClinico 
-                :consulta-id="consultaId" 
-                :ia-data="iaData">
+                 :paciente-id="pacienteId" 
+                 :ia-data="iaData">
             </HistorialClinico>
             <AlertasClinicas 
                 :ia-data="iaData">

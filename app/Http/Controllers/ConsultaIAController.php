@@ -659,23 +659,38 @@ class ConsultaIAController extends Controller
     }
 
     /**
-     * Devuelve el historial de intercambios (pregunta del paciente +
-     * respuesta de la IA) de una consulta, para el timeline de HistorialClinico.
+     * Devuelve el historial clínico COMPLETO de un paciente: todas sus
+     * consultas (más reciente primero), cada una con sus transcripciones
+     * (mensajes de médico/paciente/ia/sistema + observaciones de IA) en
+     * orden cronológico. Usado por HistorialClinico.vue, que agrupa
+     * visualmente por consulta.
      */
     public function historialClinico(Request $request)
     {
         try {
             $validated = $request->validate([
-                'consulta_id' => 'required|integer|exists:consultas,id'
+                'paciente_id' => 'required|integer|exists:pacientes,id'
             ]);
 
-            $transcripciones = ConsultaTranscripcion::where('consulta_id', $validated['consulta_id'])
-                ->orderBy('created_at', 'asc')
-                ->get(['id', 'mensaje', 'tipo_usuario', 'analizado_ia', 'observaciones_ia', 'created_at']);
+            $consultas = Consulta::where('paciente_id', $validated['paciente_id'])
+                ->with(['transcripciones' => function ($query) {
+                    $query->orderBy('created_at', 'asc')
+                        ->select([
+                            'id',
+                            'consulta_id',
+                            'mensaje',
+                            'tipo_usuario',
+                            'analizado_ia',
+                            'observaciones_ia',
+                            'created_at'
+                        ]);
+                }])
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado', 'created_at']);
 
             return response()->json([
                 'success' => true,
-                'historial' => $transcripciones
+                'consultas' => $consultas
             ]);
 
         } catch (\Exception $e) {
