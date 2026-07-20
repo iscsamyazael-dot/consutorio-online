@@ -11,6 +11,7 @@ use App\Models\ConsultaTranscripcion;
 use App\Models\Medicamento;
 use App\Models\Specialty;
 use App\Models\ArchivoClinico;
+use App\Models\EvaluacionIA;
 
 use App\Services\IAClinicaService;
 
@@ -662,8 +663,9 @@ class ConsultaIAController extends Controller
      * Devuelve el historial clínico COMPLETO de un paciente: todas sus
      * consultas (más reciente primero), cada una con sus transcripciones
      * (mensajes de médico/paciente/ia/sistema + observaciones de IA) en
-     * orden cronológico. Usado por HistorialClinico.vue, que agrupa
-     * visualmente por consulta.
+     * orden cronológico, y sus evaluaciones de IA (síntomas detectados
+     * y diagnóstico probable). Usado por HistorialClinico.vue, que
+     * agrupa visualmente por consulta.
      */
     public function historialClinico(Request $request)
     {
@@ -687,6 +689,31 @@ class ConsultaIAController extends Controller
                 }])
                 ->orderBy('created_at', 'desc')
                 ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado', 'created_at']);
+
+            // Traemos también las evaluaciones de IA (sintomas_detectados,
+            // diagnostico_probable) de todas las consultas del paciente en
+            // una sola query, para no golpear la BD por cada consulta.
+            $evaluaciones = EvaluacionIA::whereIn('consulta_id', $consultas->pluck('id'))
+                ->orderBy('created_at', 'desc')
+                ->get([
+                    'id',
+                    'consulta_id',
+                    'sintomas_detectados',
+                    'diagnostico_probable',
+                    'recomendacion',
+                    'confianza',
+                    'created_at'
+                ])
+                ->groupBy('consulta_id');
+
+            // Adjuntamos manualmente las evaluaciones a cada consulta. Esto
+            // cubre el caso de las consultas "vacías" (se creó el registro
+            // en `consultas` pero nunca se guardó un mensaje en
+            // `consulta_transcripciones`): si hubo un análisis de IA por
+            // otra vía (ej. archivo adjunto) igual queda visible aquí.
+            $consultas->each(function ($consulta) use ($evaluaciones) {
+                $consulta->evaluaciones = $evaluaciones->get($consulta->id, collect())->values();
+            });
 
             return response()->json([
                 'success' => true,

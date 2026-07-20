@@ -602,7 +602,7 @@ Actúa como un asistente médico inteligente especializado en análisis clínico
 
 Este análisis pertenece a un sistema de expediente médico digital.
 Tu función es apoyar al médico identificando síntomas, posibles condiciones,
-riesgos y alertas clínicas.
+riesgos y alertas clínicas .
 
 IMPORTANTE:
 

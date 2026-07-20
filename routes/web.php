@@ -75,6 +75,12 @@ Route::middleware('auth')->group(function () {
         // no caer en la ruta GET /consultaIA/{consultaIA} del resource.
         Route::get('consultaIA/archivos/{consultaId}', [ConsultaIAController::class, 'listarArchivos'])->name('consultaIA.listarArchivos');
         Route::get('consultaIA/archivo/{id}/descargar', [ConsultaIAController::class, 'descargarArchivo'])->name('consultaIA.descargarArchivo');
+        // Historial clínico completo de un paciente (todas sus consultas +
+        // transcripciones), usado por HistorialClinico.vue. Debe ser una ruta
+        // top-level porque el frontend arma la URL como `route + '/historialClinico'`
+        // (sin el prefijo consultaIA), así que no importa el orden respecto al
+        // resource de abajo, pero se deja agrupada aquí por claridad.
+        Route::get('historialClinico', [ConsultaIAController::class, 'historialClinico'])->name('consultaIA.historialClinico');
         Route::resource('consultaIA', ConsultaIAController::class);
         Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente');
         Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente');
@@ -107,8 +113,11 @@ Route::middleware('auth')->group(function () {
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO - ASISTENTE ///
         Route::middleware(['auth', 'can:acceso-general'])->group(function() {
-            Route::get('ListaPacientes', function () { return view('pacientes.index'); })->name('pacientes.index');
-            Route::get('PacienteNuevo', function() { return view('pacientes.create'); })->name('pacientes.create');
+            // Antes: closure que solo hacía "return view('pacientes.index')" sin datos.
+            // Ahora: pasa por el controlador para inyectar totalPacientes / totalPendientes / pacientesPendientes.
+            Route::get('ListaPacientes', [PacienteController::class, 'lista'])->name('pacientes.index');
+             Route::get('PacienteNuevo/{id?}', [PacienteController::class, 'create'])
+           ->name('pacientes.create');
             Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); })->name('pacientes.create');
         });
 
@@ -172,7 +181,9 @@ Route::prefix('admin')->middleware(['auth', 'rol:admin'])->group(function () {
 Route::middleware(['auth', 'can:rol-asistente-medico'])->group(function () {
 
     // 👥 PACIENTES (Compartido)
-    Route::get('asistente/pacientes.index', function () { return view('pacientes.index'); });
+    // Antes: closure que solo hacía "return view('pacientes.index')" sin datos.
+    // Ahora: pasa por el controlador para inyectar totalPacientes / totalPendientes / pacientesPendientes.
+    Route::get('asistente/pacientes.index', [PacienteController::class, 'lista']);
     Route::get('asistente/PacienteNuevo', function () { return view('pacientes.create'); });
     Route::get('asistente/ExpedientePacientes', function () { return view('pacientes.expediente'); });
 

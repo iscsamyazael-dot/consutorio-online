@@ -36,9 +36,17 @@
 
                     <div v-show="abiertos[idx]" class="timeline p-2">
 
-                        <div v-if="!consulta.transcripciones || consulta.transcripciones.length === 0"
+                        <div v-if="(!consulta.transcripciones || consulta.transcripciones.length === 0) && (!consulta.evaluaciones || consulta.evaluaciones.length === 0)"
                              class="text-muted text-center py-2" style="font-size:13px;">
                             Sin transcripciones en esta consulta.
+                        </div>
+
+                        <div v-if="(!consulta.transcripciones || consulta.transcripciones.length === 0) && consulta.evaluaciones && consulta.evaluaciones.length > 0"
+                             class="p-1">
+                            <div v-for="ev in consulta.evaluaciones" :key="ev.id" class="mb-2 pb-2 border-bottom" style="font-size:13px;">
+                                <div><strong>🩺 Síntomas detectados:</strong> {{ ev.sintomas_detectados || 'No disponible' }}</div>
+                                <div><strong>🤖 Diagnóstico probable:</strong> {{ ev.diagnostico_probable || 'No disponible' }}</div>
+                            </div>
                         </div>
 
                         <div v-for="item in consulta.transcripciones" :key="item.id">
@@ -137,7 +145,7 @@ export default {
             }
         },
         toggle(idx) {
-            this.$set(this.abiertos, idx, !this.abiertos[idx])
+            this.abiertos[idx] = !this.abiertos[idx]
         },
         formatearFecha(fecha) {
             if (!fecha) return ''

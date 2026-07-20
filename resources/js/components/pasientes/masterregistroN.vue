@@ -2,16 +2,16 @@
     <div>
 
         <!-- Card superior (ya tiene su propio glass-card interno) -->
-        <nuevopacinte></nuevopacinte>
+        <nuevopacinte :paciente="paciente"></nuevopacinte>
 
         <!-- Card de consulta general (ya tiene su propio glass-card interno) -->
-        <consultageneral></consultageneral>
+        <consultageneral :paciente="paciente"></consultageneral>
 
         <!-- Información del paciente + Triage en el mismo glass-card -->
         <div class="row mt-4">
             <div class="col-12">
                 <div class="glass-card form-card">
-                    <informacionpacinete></informacionpacinete>
+                    <informacionpacinete :paciente="paciente"></informacionpacinete>
                 </div>
             </div>
         </div>
@@ -20,6 +20,8 @@
 </template>
 
 <script>
+import axios from 'axios'
+
 import nuevopacinte from './nuevopacinte.vue'
 import consultageneral from './consultageneral.vue'
 import informacionpacinete from './informacionpacinete.vue'
@@ -32,27 +34,29 @@ export default {
         informacionpacinete,
         triage
     },
+
+    props: {
+        pacienteId: {
+            type: [Number, String],
+            default: null
+        }
+    },
+
     data() {
-        return {}
+        return {
+            paciente: {}
+        }
+    },
+
+    async mounted() {
+        if (this.pacienteId) {
+            try {
+                const response = await axios.get(`/pacientes/${this.pacienteId}`);
+                this.paciente = response.data;
+            } catch (error) {
+                console.error('Error al cargar el paciente:', error);
+            }
+        }
     }
 }
 </script>
-
-<style scoped>
-.form-card {
-    padding: 35px 40px 40px;
-    animation: cardIn .55s cubic-bezier(.22,1,.36,1) both;
-    animation-delay: .15s;
-}
-
-@keyframes cardIn {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 768px) {
-    .form-card {
-        padding: 24px 20px 28px;
-    }
-}
-</style>
