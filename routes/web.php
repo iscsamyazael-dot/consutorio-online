@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
+    Route::get('consultaNormal/{id}', [ConsultaController::class, 'create'])->name('consultas.create');
 });
 
 Route::resource('pacientes', PacienteController::class);
@@ -52,10 +53,10 @@ Route::get('ExpedientePacientes/{id}', function ($id) {
     return view('pacientes.expediente');
 });
 
-//codigo para ruta parametrisada para consultanormal//
-Route::get('consultaNormal/{id}', function ($id) {
-    return view('consultas.create');
-});
+// //codigo para ruta parametrisada para consultanormal//
+// Route::get('consultaNormal/{id}', function ($id) {
+//     return view('consultas.create');
+// });
 
 //Código que lleva a la vista de la consulta individual de un paciente//
 Route::get('HistorialConsulta',function(){

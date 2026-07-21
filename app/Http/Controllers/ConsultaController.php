@@ -1,8 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Http\Controllers\Controller;
+
 use App\Models\Consulta;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
@@ -22,7 +22,7 @@ class ConsultaController extends Controller
      */
     public function create()
     {
-        //
+       
     }
 
     /**
