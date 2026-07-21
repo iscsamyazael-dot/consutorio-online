@@ -30,7 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
-    Route::get('consultaNormal/{id}', [ConsultaController::class, 'create'])->name('consultas.create');
+    Route::get('consultaNormal/{id}', [ConsultaController::class, 'create'])->name('consultas.create_normal');
     
     
     //Código para hacer el filtro de un paciente mediante un input //
@@ -150,9 +150,7 @@ Route::middleware('auth')->group(function () {
             Route::get('ExpedientePacientes/{id}', function ($id) {
                 return view('pacientes.expediente');
             })->name('pacientes.expediente');
-            Route::get('consultaNormal/{id}', function ($id) {
-                return view('consultas.create');
-            })->name('consultas.create');
+            
             Route::get('ConsultaInteligente/{id}', function ($id) { 
                 $paciente = Paciente::findOrFail($id);
                 return view('consultas.consulta_inteligente', compact('paciente'));
@@ -272,10 +270,7 @@ Route::get('Sucursales', function () {
 // Route::get('consultaNormal/{id}', function ($id) {
 //     return view('consultas.create');
 // });
-//codigo para ruta parametrisada para consultanormal//
-// Route::get('consultaNormal/{id}', function ($id) {
-//     return view('consultas.create');
-// });
+
 
 
 //Código que lleva a la vista de la consulta individual de un paciente//

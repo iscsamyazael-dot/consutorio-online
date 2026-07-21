@@ -22,10 +22,21 @@ class ConsultaController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create($id)
     {
-       
-        return Consulta::with('paciente', 'medico')->get();
+        // 1. Obtenemos al usuario que ha iniciado sesión
+        $user = auth()->user();
+
+        // 2. Retornamos la vista pasándole los datos
+        return view('consultas.create', [
+        'pacienteId' => $id,   
+        'doctor' => [
+                'nombre' => $user->name, 
+                // Usamos la relación 'medico' y el operador nullsafe (?->) por si no tiene un registro médico asociado
+                'cedula' => $user->medico?->cedula_profesional ?? 'Pendiente' 
+            ]
+        ]);
+
     }
 
     /**

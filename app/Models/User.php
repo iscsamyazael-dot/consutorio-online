@@ -30,6 +30,13 @@ class User extends Authenticatable
          return $this->hasMany(Consulta::class);
     }
 
+    public function medico()
+    {
+        // Un usuario tiene un registro en la tabla medicos vinculado por 'user_id'
+        return $this->hasOne(Medico::class, 'user_id');
+    }
+
+
     /**
      * The attributes that should be hidden for serialization.
      *
