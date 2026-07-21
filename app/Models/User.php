@@ -16,12 +16,13 @@ class User extends Authenticatable
      * The attributes that are mass assignable.
      *
      * @var list<string>
-     */
+     */ 
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role'
+    'name',
+    'email',
+    'password',
+    'rol',    // varchar — el que usa el frontend
+    'activo',
     ];
 
     public function consultas()

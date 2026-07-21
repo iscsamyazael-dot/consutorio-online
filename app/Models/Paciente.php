@@ -70,5 +70,4 @@ class Paciente extends Model
         return $this->hasMany(ArchivoClinico::class);
     }
 
-
 }

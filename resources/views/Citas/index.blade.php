@@ -4,7 +4,7 @@
 
 @section('content_header')
 <input type="hidden" name="route" value="{{ url('/') }}">
-    
+<meta name="base-url" content="{{url('/')}}">        
 @stop
 @section('content')
 <div id="app">

@@ -1,47 +1,149 @@
-<x-guest-layout>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar sesión - Consultorio Online IA</title>
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+    <link rel="stylesheet" href="{{ asset('css/adminlte.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="Usuario" :value="__('Usuario')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+    <style>
+        body.login-page {
+            background:
+                linear-gradient(rgba(13,110,253,.85), rgba(0,123,255,.75)),
+                url('https://images.unsplash.com/photo-1586773860418-d37222d8fce3');
+            background-size: cover;
+            background-position: center;
+        }
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Contraseña')" />
+        .login-box .card {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,.2);
+        }
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
+        .form-control {
+            border-radius: 12px;
+        }
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+        .btn-primary,
+        .btn-danger {
+            border-radius: 12px;
+            font-weight: bold;
+        }
 
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Manterner Sesión Iniciada') }}</span>
-            </label>
-        </div>
+        .medical-logo {
+            font-size: 70px;
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body class="login-page">
 
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                    {{ __('¿Olvidaste tú contraseña?') }}
-                </a>
+<div class="login-box">
+    <div class="card">
+        <div class="card-body login-card-body">
+
+            <div class="text-center mb-4">
+                <i class="fas fa-hospital-user medical-logo"></i>
+                <h2 class="mt-3 font-weight-bold text-primary">Consultorio Online IA</h2>
+                <p class="text-muted">Plataforma Inteligente de Atención Médica</p>
+            </div>
+
+            @if (session('status'))
+                <div class="alert alert-success" role="alert">{{ session('status') }}</div>
             @endif
 
-            <x-primary-button class="ms-3">
-                {{ __('Iniciar Sesión') }}
-            </x-primary-button>
+            @if ($errors->any())
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('login') }}">
+                @csrf
+
+                <div class="input-group mb-4">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text bg-primary text-white">
+                            <span class="fas fa-envelope"></span>
+                        </div>
+                    </div>
+
+                    <input
+                        type="email"
+                        name="email"
+                        value="{{ old('email') }}"
+                        class="form-control"
+                        placeholder="Correo Médico"
+                        required
+                        autofocus
+                        autocomplete="username"
+                    >
+                </div>
+
+                <div class="input-group mb-4">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text bg-primary text-white">
+                            <span class="fas fa-lock"></span>
+                        </div>
+                    </div>
+
+                    <input
+                        type="password"
+                        name="password"
+                        class="form-control"
+                        placeholder="Contraseña"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-8">
+                        <div class="icheck-primary">
+                            <input type="checkbox" id="remember" name="remember" {{ old('remember') ? 'checked' : '' }}>
+                            <label for="remember">Mantener sesión</label>
+                        </div>
+                    </div>
+
+                    <div class="col-4 text-right">
+                        @if (Route::has('password.request'))
+                            <a href="{{ route('password.request') }}" class="text-primary">¿Olvidaste tu contraseña?</a>
+                        @endif
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Iniciar Sesión
+                </button>
+
+                <hr>
+
+                @if (Route::has('google.login'))
+                    <a href="{{ route('google.login') }}" class="btn btn-danger btn-block">
+                        <i class="fab fa-google"></i>
+                        Login con Google
+                    </a>
+                @endif
+
+                @if (Route::has('register'))
+                    <div class="text-center mt-3">
+                        <a href="{{ route('register') }}" class="text-primary">Crear cuenta médica</a>
+                    </div>
+                @endif
+            </form>
+
         </div>
-    </form>
-</x-guest-layout>
+    </div>
+</div>
+
+</body>
+</html>
+

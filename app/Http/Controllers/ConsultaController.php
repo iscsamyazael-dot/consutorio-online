@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Consulta;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Services\WhatsAppService;
 
 class ConsultaController extends Controller
 {
@@ -14,7 +16,7 @@ class ConsultaController extends Controller
      */
     public function index()
     {
-        return $Consulta = Consulta::all();
+     return $Consulta = Consulta::all();
     }
 
     /**
@@ -23,6 +25,7 @@ class ConsultaController extends Controller
     public function create()
     {
        
+        return Consulta::with('paciente', 'medico')->get();
     }
 
     /**
@@ -30,7 +33,65 @@ class ConsultaController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'nombre_paciente' => 'required',
+            'telefono' => 'required',
+            'motivo_consulta' => 'nullable',
+            'diagnostico' => 'nullable',
+            'observaciones' => 'nullable',
+        ]);
+
+        // CREAR O BUSCAR PACIENTE
+        $paciente = Paciente::firstOrCreate(
+
+            [
+                'nombre' => $request->nombre_paciente
+            ],
+
+            [
+                'telefono' => $request->telefono
+            ]
+        );
+
+        // ACTUALIZAR TELÉFONO
+        $paciente->telefono = $request->telefono;
+        $paciente->save();
+
+        // CREAR CONSULTA
+        $consulta = Consulta::create([
+
+            'folio' => 'CONS-' . time(),
+
+            'paciente_id' => $paciente->id,
+
+            'user_id' => Auth::id(),
+
+            'motivo_consulta' => $request->motivo_consulta,
+
+            'diagnostico' => $request->diagnostico,
+
+            'observaciones' => $request->observaciones,
+
+            'estado' => 'activa',
+
+            'estado_consulta' => 'finalizada'
+        ]);
+
+        // ENVIAR WHATSAPP
+        $telefono = '52' . $paciente->telefono;
+
+        $mensaje = "Hola {$paciente->nombre}, tu consulta médica fue registrada correctamente.";
+
+        WhatsAppService::enviar($telefono, $mensaje);
+
+        return response()->json([
+
+            'success' => true,
+
+            'message' => 'Consulta registrada correctamente',
+
+            'consulta' => $consulta
+        ]);
     }
 
     /**
@@ -38,23 +99,7 @@ class ConsultaController extends Controller
      */
     public function show(string $id)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
+        return Consulta::with('paciente', 'medico')->findOrFail($id);
     }
 
     /**
@@ -62,6 +107,15 @@ class ConsultaController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $consulta = Consulta::findOrFail($id);
+
+        $consulta->delete();
+
+        return response()->json([
+
+            'success' => true,
+
+            'message' => 'Consulta eliminada correctamente'
+        ]);
     }
 }

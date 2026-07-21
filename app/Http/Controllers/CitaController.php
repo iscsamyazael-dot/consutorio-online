@@ -1,10 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-
-// ==============================
-// Importación de modelos
-// ==============================
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\Medico;
@@ -15,27 +11,18 @@ use Illuminate\Http\Request;
 
 class CitaController extends Controller
 {
-    /**
-     * ============================================
-     * Muestra la vista principal de las citas.
-     * ============================================
-     */
+ //muestra todas las citas en la vista.
     public function index()
     {
         // Obtiene todas las citas junto con
         // el paciente, médico y especialidad relacionados.
-        $citas = Cita::with(['paciente', 'medico', 'especialidad'])->get();
+        return $citas = Cita::with(['paciente', 'medico', 'especialidad'])->get();
 
         // Envía la información a la vista.
-        return view('citas.index', compact('citas'));
+        //return view('citas.index', compact('citas'));
     }
 
-    /**
-     * ============================================
-     * Devuelve las citas en formato JSON.
-     * Se utiliza desde Vue (Agenda).
-     * ============================================
-     */
+  //devuelve todas las citas en formato JSON para el calendario
     public function getCitas()
     {
         $citas = Cita::with([
@@ -80,6 +67,7 @@ class CitaController extends Controller
                         'alergias' => $cita->paciente->alergias,
                         'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
                         'edad'        => $cita->paciente->edad,
+                        'estado'      => $cita->paciente->estado,
                         'Alergias'     => $cita->paciente->alergias,
                         'Alergias A medicamentos' => $cita->paciente->alergias_a_medicamentos,
                         'Antecedentes' => $cita->paciente->antecedentes,
@@ -116,11 +104,7 @@ class CitaController extends Controller
         );
     }
 
-    /**
-     * ============================================
-     * Muestra el formulario para crear una cita.
-     * ============================================
-     */
+   //muestra el formulario para crear una nueva cita.
     public function create()
     {
         // Obtiene únicamente los pacientes activos.
@@ -138,14 +122,20 @@ class CitaController extends Controller
             ->where('estado', 'Activo')
             ->get();
 
-        return view(
-            'citas.create',
-            compact(
-                'pacientes',
-                'medicos',
-                'especialidades'
-            )
-        );
+        return [
+            'pacientes' => $pacientes,
+            'medicos' => $medicos,
+            'especialidades' => $especialidades
+        ];
+        
+        // view(
+        //     'citas.create',
+        //     compact(
+        //         'pacientes',
+        //         'medicos',
+        //         'especialidades'
+        //     )
+        // );
     }
 
 
@@ -166,12 +156,21 @@ class CitaController extends Controller
 
         ]);
 
-        // Guarda la cita.
-        // IMPORTANTE: se guarda en la variable $cita
-        // para poder devolverla en la respuesta de abajo.
-        $cita = Cita::create([
+        //verifica si la hora ya está ocupada para el médico seleccionado
+        $horaOcupada = Cita::where('medico_id', $request->medico_id)
+            ->where('fecha', $request->fecha)
+            ->where('hora', $request->hora)
+            ->where('estado', '!=', 'Cancelada')
+            ->exists();
 
-            'folio' => 'CIT-' . time(),
+        if ($horaOcupada) {
+            return response()->json([
+                'message' => 'Esa hora ya está ocupada para este médico. Por favor selecciona otra hora.',
+            ], 422);
+        }
+
+      // Crea la cita en la base de datos. El folio se genera automáticamente
+        $cita = Cita::create([
 
             'paciente_id'     => $request->paciente_id,
             'medico_id'       => $request->medico_id,
@@ -197,11 +196,7 @@ class CitaController extends Controller
         ]);
     } // ← cierre del método store()
 
-    /**
-     * ============================================
-     * Muestra una sola cita.
-     * ============================================
-     */
+    //muestra una cita por su id.
     public function show($id)
     {
         return Cita::with([
@@ -211,15 +206,25 @@ class CitaController extends Controller
         ])->findOrFail($id);
     }
 
-    /**
-     * ============================================
-     * Actualiza todos los datos de una cita.
-     * ============================================
-     */
+   //actualiza una cita por su id.
     public function update(Request $request, $id)
     {
         // Busca la cita por su id, o falla si no existe.
         $cita = Cita::findOrFail($id);
+
+        // Validación de datos.
+        $horaOcupada = Cita::where('medico_id', $request->medico_id)
+            ->where('fecha', $request->fecha)
+            ->where('hora', $request->hora)
+            ->where('estado', '!=', 'Cancelada')
+            ->where('id', '!=', $id)
+            ->exists();
+
+        if ($horaOcupada) {
+            return response()->json([
+                'message' => 'Esa hora ya está ocupada para este médico. Por favor selecciona otra hora.',
+            ], 422);
+        }
 
         // Actualiza todos los campos con los nuevos datos.
         $cita->update([
@@ -242,14 +247,7 @@ class CitaController extends Controller
         return response()->json($cita);
     }
 
-    /**
-     * ============================================
-     * Actualiza únicamente el estado de la cita.
-     *
-     * Este método será utilizado por el modal
-     * cuando el usuario cambie el estado.
-     * ============================================
-     */
+ //Actualiza solo el estado de la cita (Agendado, Finalizada, Cancelada, Inasistencia)
     public function actualizarEstado(Request $request, $id)
     {
         // Verifica que el estado recibido sea válido.
@@ -278,11 +276,7 @@ class CitaController extends Controller
         ]);
     }
 
-    /**
-     * ============================================
-     * Elimina una cita.
-     * ============================================
-     */
+   //elimina una cita por su id.
     public function destroy($id)
     {
         // Borra la cita usando su id.
