@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ArchivoClinico extends Model
+class Archivoclinico extends Model
 {
     protected $table = 'archivos_clinicos';
 
