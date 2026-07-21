@@ -85,39 +85,14 @@
                 <p class="text-muted small mb-3" v-if="consulta.diagnostico">
                   Diagnóstico: {{ consulta.diagnostico }}
                 </p>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-primary rounded-pill px-3"
-                  @click="toggleConsulta(consulta.id)">
-                  {{ consultaExpandidaId === consulta.id ? 'Ocultar consulta' : 'Ver consulta completa' }}
-                </button>
+                <a :href="`/HistorialConsulta/${consulta.id}`" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  Ver consulta completa
+                </a>
               </template>
 
               <p class="mt-2 mb-0 text-muted" v-else>
                 {{ consulta.descripcion }}
               </p>
-
-              <!-- CHAT DE LA CONSULTA (transcripciones) -->
-              <div v-if="consultaExpandidaId === consulta.id" class="chat-consulta mt-3">
-                <div v-if="consulta.transcripciones.length === 0" class="text-muted small">
-                  Esta consulta no tiene mensajes registrados.
-                </div>
-                <div
-                  v-else
-                  v-for="mensaje in consulta.transcripciones"
-                  :key="mensaje.id"
-                  class="chat-burbuja"
-                  :class="{ 'chat-burbuja-paciente': mensaje.tipo_usuario === 'paciente' }">
-                  <div class="chat-burbuja-header">
-                    <strong>{{ etiquetaUsuario(mensaje.tipo_usuario) }}</strong>
-                    <small class="text-muted">{{ formatearFecha(mensaje.created_at) }}</small>
-                  </div>
-                  <p class="mb-0">{{ mensaje.mensaje }}</p>
-                  <p class="mb-0 mt-1 text-muted small" v-if="mensaje.observaciones_ia">
-                    Observación IA: {{ mensaje.observaciones_ia }}
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -355,7 +330,6 @@ body {
               tabActiva: 'consultas',
               infoArchivos: [],
               infoConsultas: [],
-              consultaExpandidaId: null,
               archivoSeleccionado:''
             }
         },
@@ -363,23 +337,6 @@ body {
             console.log('PROP PacienteId:', this.pacienteId);
         },
         methods: {
-          //Función para abrir/cerrar el chat de una consulta dentro de la misma tarjeta//
-          toggleConsulta(id){
-            this.consultaExpandidaId = this.consultaExpandidaId === id ? null : id
-          },
-          //Función para mostrar la etiqueta legible de quién envió el mensaje//
-          etiquetaUsuario(tipo){
-            switch((tipo || '').toLowerCase()){
-              case 'medico':
-                return 'Médico'
-              case 'ia':
-                return 'IA'
-              case 'sistema':
-                return 'Sistema'
-              default:
-                return 'Paciente'
-            }
-          },
           async obtenerConsultas(){
               try {
                   const response = await ApiService.get('/historialClinico?paciente_id=' + this.pacienteId)
@@ -398,8 +355,7 @@ body {
                       tipo_consulta: consulta.estado,
                       motivo: consulta.motivo_consulta,
                       diagnostico: evaluacion ? evaluacion.diagnostico_probable : null,
-                      descripcion: evaluacion ? evaluacion.recomendacion : null,
-                      transcripciones: consulta.transcripciones || []
+                      descripcion: evaluacion ? evaluacion.recomendacion : null
                     }
                   })
 

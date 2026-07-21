@@ -5,18 +5,30 @@ namespace App\Services;
 use App\Models\SintomaDetectado;
 use App\Models\EvaluacionIA;
 use App\Models\AlertaClinica;
+use App\Models\EventoIA;
+use App\Models\NotaPsoapp;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-
 use Smalot\PdfParser\Parser as PdfParser;
 use PhpOffice\PhpWord\IOFactory as WordIOFactory;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
 class IAClinicaService
 {
-    public function analizarTranscripcion($texto, $consulta)
-    {
-        $data = $this->consultarIA($texto);
+    /**
+     * Analiza una transcripción médica
+     */
+    public function analizarTranscripcion(
+        $texto,
+        $consulta,
+        array $historial = [],
+        $ultimaNota = null
+    ) {
+        $data = $this->consultarIA(
+            $texto,
+            $historial,
+            $ultimaNota
+        );
 
         if (!is_array($data) || !isset($data['sintomas'], $data['diagnostico'])) {
             Log::error('IA devolvió respuesta inválida', ['respuesta' => $data]);
@@ -25,29 +37,64 @@ class IAClinicaService
                 'nivel_riesgo' => 'desconocido',
                 'recomendaciones' => ['No se pudo completar el análisis. Intenta nuevamente.'],
                 'alertas' => [],
+                'nota_psoapp' => null,
             ];
         }
 
-        foreach ($data['sintomas'] as $sintoma) {
-            SintomaDetectado::updateOrCreate(
-                ['consulta_id' => $consulta->id, 'nombre_sintoma' => $sintoma],
-                ['consulta_folio' => $consulta->folio, 'session_uuid' => $consulta->session_uuid, 'origen' => 'ia']
-            );
+        // Guardar síntomas
+        if (!empty($data['sintomas'])) {
+            foreach ($data['sintomas'] as $sintoma) {
+                SintomaDetectado::updateOrCreate(
+                    ['consulta_id' => $consulta->id, 'nombre_sintoma' => $sintoma],
+                    [
+                        'consulta_folio' => $consulta->folio,
+                        'session_uuid' => $consulta->session_uuid,
+                        'origen' => 'ia'
+                    ]
+                );
+            }
         }
 
-        EvaluacionIA::create([
+        $notaPsoapp = $data['nota_psoapp'] ?? null;
+
+        $evaluacion = EvaluacionIA::create([
             'consulta_id' => $consulta->id,
             'consulta_folio' => $consulta->folio,
             'session_uuid' => $consulta->session_uuid,
-            'sintomas_detectados' => implode(', ', $data['sintomas']),
-            'diagnostico_probable' => $data['diagnostico'],
-            'recomendacion' => $data['recomendacion'],
-            'confianza' => $data['confianza']
+            'sintomas_detectados' => implode(', ', $data['sintomas'] ?? []),
+            'diagnostico_probable' => $data['diagnostico'] ?? 'No disponible',
+            'recomendacion' => $data['recomendacion'] ?? 'Sin recomendación',
+            'confianza' => $data['confianza'] ?? 0
+        ]);
+
+        // Guardar nota PSOAPP
+        if (is_array($notaPsoapp) && !empty($notaPsoapp)) {
+            NotaPsoapp::create([
+                'evaluacion_ia_id' => $evaluacion->id,
+                'consulta_id' => $consulta->id,
+                'consulta_folio' => $consulta->folio,
+                'session_uuid' => $consulta->session_uuid,
+                'presentacion' => $notaPsoapp['presentacion'] ?? null,
+                'subjetivo' => $notaPsoapp['subjetivo'] ?? null,
+                'objetivo' => $notaPsoapp['objetivo'] ?? null,
+                'analisis' => $notaPsoapp['analisis'] ?? null,
+                'plan' => $notaPsoapp['plan'] ?? null,
+                'pronostico' => $notaPsoapp['pronostico'] ?? null,
+            ]);
+        }
+
+        EventoIA::create([
+            'consulta_id' => $consulta->id,
+            'tipo_evento' => 'recomendaciones',
+            'descripcion' => 'Recomendaciones médicas generadas por IA',
+            'resultado' => $data['recomendacion'] ?? 'Sin recomendación',
+            'created_at' => now(),
         ]);
 
         $alertasDetectadas = $data['alertas'] ?? [];
         $nivelRiesgo = $this->calcularNivelRiesgo($alertasDetectadas);
 
+        // Procesar alertas
         foreach ($alertasDetectadas as $alerta) {
             if (empty($alerta['titulo'])) continue;
 
@@ -63,14 +110,12 @@ class IAClinicaService
                 'nivel_riesgo' => $alerta['nivel'] ?? 'bajo',
                 'estado' => 'pendiente',
                 'generada_por_ia' => 1,
-                'requiere_atencion' => 1,
+                'requiere_atencion' => ($alerta['nivel'] ?? 'bajo') !== 'bajo',
                 'fecha_alerta' => now()
             ]);
         }
 
-        // Si la IA no detectó alertas explícitas, igual reflejamos el
-        // nivel de riesgo calculado (por defecto "bajo") como una alerta
-        // informativa, para que el panel de Alertas Clínicas no quede vacío.
+        // Alerta por defecto si no hay alertas
         if (empty($alertasDetectadas)) {
             $alertaBaja = [
                 'tipo' => 'otro',
@@ -99,15 +144,19 @@ class IAClinicaService
         }
 
         return [
-            'diagnostico_probable' => $data['diagnostico'],
+            'diagnostico_probable' => $data['diagnostico'] ?? 'No determinado',
             'nivel_riesgo' => $nivelRiesgo,
-            'recomendaciones' => [$data['recomendacion']],
+            'recomendaciones' => [$data['recomendacion'] ?? 'Sin recomendación'],
             'confianza' => $data['confianza'] ?? null,
-            'sintomas' => $data['sintomas'],
+            'sintomas' => $data['sintomas'] ?? [],
             'alertas' => $alertasDetectadas,
+            'nota_psoapp' => $notaPsoapp,
         ];
     }
 
+    /**
+     * Calcula el nivel de riesgo
+     */
     private function calcularNivelRiesgo(array $alertas)
     {
         $orden = ['bajo' => 1, 'medio' => 2, 'alto' => 3];
@@ -123,20 +172,17 @@ class IAClinicaService
         return $maxNivel;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LECTURA DE ARCHIVOS ADJUNTOS (PDF, Word, Imágenes)
-    |--------------------------------------------------------------------------
-    */
-
     /**
-     * Extrae texto plano de un archivo subido (pdf, docx/doc, imagen).
-     * Para imágenes usa OCR (Tesseract) ya que la API de DeepSeek es
-     * solo de texto y no acepta imágenes directamente.
+     * Extrae texto de archivos
      */
     public function extraerTextoDeArchivo(string $rutaCompleta, string $mime): string
     {
         try {
+            if (!file_exists($rutaCompleta)) {
+                Log::error('Archivo no encontrado', ['ruta' => $rutaCompleta]);
+                return '';
+            }
+
             // --- PDF ---
             if ($mime === 'application/pdf') {
                 $parser = new PdfParser();
@@ -156,7 +202,6 @@ class IAClinicaService
                         if (method_exists($element, 'getText')) {
                             $texto .= $element->getText() . "\n";
                         } elseif (method_exists($element, 'getElements')) {
-                            // Párrafos con formato mixto (negritas, etc.)
                             foreach ($element->getElements() as $sub) {
                                 if (method_exists($sub, 'getText')) {
                                     $texto .= $sub->getText();
@@ -173,31 +218,27 @@ class IAClinicaService
             if (str_starts_with($mime, 'image/')) {
                 return trim(
                     (new TesseractOCR($rutaCompleta))
-                        ->executable('C:\Users\Usuario\Desktop\llave de ultrafarmacia\tesseract.exe')
+                        ->executable(config('services.tesseract.path', 'C:\Users\Usuario\Desktop\llave de ultrafarmacia\tesseract.exe'))
                         ->lang('spa', 'eng')
                         ->run()
                 );
             }
 
-            Log::warning('Tipo de archivo no soportado para extracción', ['mime' => $mime]);
+            Log::warning('Tipo de archivo no soportado', ['mime' => $mime]);
             return '';
 
         } catch (\Throwable $e) {
-            // \Throwable (no solo \Exception) para atrapar también
-            // "Class not found" si falta instalar algún paquete de
-            // Composer (smalot/pdfparser, phpoffice/phpword, tesseract_ocr).
-            Log::error('Error extrayendo texto de archivo: ' . $e->getMessage(), [
+            Log::error('Error extrayendo texto de archivo', [
+                'error' => $e->getMessage(),
                 'ruta' => $rutaCompleta,
-                'mime' => $mime,
-                'clase_error' => get_class($e)
+                'mime' => $mime
             ]);
             return '';
         }
     }
 
     /**
-     * Extrae el texto de un archivo adjunto y lo analiza con el mismo
-     * pipeline clínico que se usa para transcripciones de voz/texto.
+     * Analiza un archivo adjunto
      */
     public function analizarArchivoAdjunto(string $rutaCompleta, string $mime, $consulta)
     {
@@ -221,26 +262,7 @@ class IAClinicaService
     }
 
     /**
-     * Sugerencia de la IA con triage clínico completo (fases 1-8).
-     *
-     * IMPORTANTE: esto es apoyo de decisión para el médico, NUNCA un
-     * diagnóstico definitivo ni una dosis/marca específica. El nivel de
-     * triage y el tipo (receta_inteligente|derivacion) determinan el
-     * flujo que sigue el frontend, y siempre debe mostrarse marcado
-     * como "sugerencia de IA, no verificada" en la interfaz.
-     *
-     * Estructura del JSON devuelto:
-     * {
-     *   triage: { nivel, justificacion, signos_alarma[] },
-     *   diagnosticos_probables: [ ... hasta 3 ... ],
-     *   tipo: "receta_inteligente" | "derivacion",
-     *   palabras_clave_busqueda: [ ... ],
-     *   medicamentos_sugeridos: [ { nombre, descripcion } ... ],
-     *   especialidad: "",
-     *   motivo_derivacion: "",
-     *   requiere_urgencias: bool,
-     *   justificacion: ""
-     * }
+     * Sugerencia de medicamentos con triage completo - LENGUAJE MÉDICO PROFESIONAL
      */
     public function sugerirMedicamentoLibre(array $sintomas, array $especialidadesDisponibles = [])
     {
@@ -250,7 +272,7 @@ class IAClinicaService
             ? implode(', ', $especialidadesDisponibles)
             : 'No disponible (no se proporcionó catálogo, usa tu mejor criterio clínico general)';
 
-        $prompt = "
+        $prompt = " 
 
         Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE como apoyo para médicos durante consultas PRESENCIALES.
 
@@ -337,12 +359,22 @@ class IAClinicaService
         Justifica siempre el nivel de triage.
 
         =========================================================
-        FASE 4 - DIAGNÓSTICOS PROBABLES
+        FASE 4 - DIAGNÓSTICOS PROBABLES (LENGUAJE MÉDICO PROFESIONAL)
         =========================================================
 
-        Genera máximo tres diagnósticos probables.
+        Genera máximo tres diagnósticos probables utilizando TERMINOLOGÍA MÉDICA PRECISA.
 
-        Ordénalos desde el más probable.
+        UTILIZA los nombres técnicos de las enfermedades, por ejemplo:
+        - En lugar de 'dolor de estómago' → 'Gastritis aguda'
+        - En lugar de 'dolor de cabeza' → 'Cefalea tensional'
+        - En lugar de 'infección de garganta' → 'Faringoamigdalitis aguda'
+        - En lugar de 'dolor en las articulaciones' → 'Artralgia'
+        - En lugar de 'presión alta' → 'Hipertensión arterial sistémica'
+        - En lugar de 'azúcar alta' → 'Diabetes mellitus tipo 2'
+        - En lugar de 'dolor de pecho' → 'Dolor torácico atípico'
+        - En lugar de 'gripa' → 'Infección respiratoria aguda viral'
+
+        Ordénalos desde el más probable al menos probable.
 
         Nunca afirmes que el diagnóstico es definitivo.
 
@@ -576,7 +608,7 @@ class IAClinicaService
             $response = Http::withToken(config('services.ai.key'))
                 ->timeout(20)
                 ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-v4-flash',
+                    'model' => 'deepseek-chat',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object']
                 ]);
@@ -594,269 +626,336 @@ class IAClinicaService
         }
     }
 
-    private function consultarIA($texto)
-    {
+    /**
+     * Consulta a la IA para análisis clínico - LENGUAJE MÉDICO PROFESIONAL
+     */
+    private function consultarIA(
+        $texto,
+        array $historial = [],
+        $ultimaNota = null
+    ) {
+        $historialTexto = '';
+
+        if (!empty($historial)) {
+            $historialTexto = implode("\n\n--- REGISTRO ANTERIOR ---\n\n", $historial);
+        }
+
+        $notaAnteriorTexto = '';
+
+        if ($ultimaNota) {
+            $notaAnteriorTexto = "
+
+PRESENTACIÓN ANTERIOR:
+{$ultimaNota->presentacion}
+
+SUBJETIVO ANTERIOR:
+{$ultimaNota->subjetivo}
+
+OBJETIVO ANTERIOR:
+{$ultimaNota->objetivo}
+
+ANÁLISIS ANTERIOR:
+{$ultimaNota->analisis}
+
+PLAN ANTERIOR:
+{$ultimaNota->plan}
+
+PRONÓSTICO ANTERIOR:
+{$ultimaNota->pronostico}
+";
+        }
+
         $prompt = "
 
-Actúa como un asistente médico inteligente especializado en análisis clínico.
+        Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE como apoyo
+        para el médico dentro de un sistema de expediente médico digital. Tu función es identificar
+        síntomas, condiciones probables, riesgos y alertas clínicas, y organizar la información en
+        una nota de evolución en formato PSOAPP (Presentación, Subjetivo, Objetivo, Análisis, Plan,
+        Pronóstico), tal como se documentaría en un expediente clínico real.
+
+        IMPORTANTE:
+
+        - No reemplazas al médico ni sustituyes su criterio clínico.
+        - No emites diagnósticos definitivos, únicamente probabilidades clínicas.
+        - No inventes información que no esté en la nota médica.
+        - Si un dato no aparece, escribe 'No disponible' o 'Sin datos suficientes en la
+          transcripción' en el apartado correspondiente. Nunca lo rellenes con información inventada.
+        - UTILIZA TERMINOLOGÍA MÉDICA PRECISA Y PROFESIONAL en TODAS tus respuestas.
+        - Los diagnósticos y hallazgos deben expresarse con nombres técnicos de enfermedades.
+
+        Ejemplos de terminología correcta:
+        - 'Dolor abdominal' → 'Dolor abdominal agudo en epigastrio'
+        - 'Dolor de cabeza' → 'Cefalea tensional bilateral'
+        - 'Infección' → 'Proceso infeccioso agudo'
+        - 'Presión alta' → 'Hipertensión arterial sistémica'
+        - 'Azúcar alta' → 'Hiperglucemia'
+        - 'Dificultad para respirar' → 'Disnea de esfuerzo'
+        - 'Fiebre' → 'Pirexia'
+        - 'Dolor de garganta' → 'Odínofagia'
+        - 'Dolor al orinar' → 'Disuria'
+        - 'Sangrado' → 'Hemorragia'
+
+        NOTA MÉDICA DEL PACIENTE:
+
+        $texto
+
+        =========================================================
+        FASE 1 - CLASIFICACIÓN Y FILTRADO DE LA FUENTE
+        =========================================================
+
+        El texto anterior puede provenir de dos fuentes distintas. Identifica cuál es antes de
+        continuar:
+
+        A) TRANSCRIPCIÓN AUTOMÁTICA DE AUDIO (relato hablado del paciente).
+
+        Si el texto es de este tipo, ignora por completo y NO los menciones en el JSON de salida:
+
+        • Risas o expresiones como 'jaja', 'jeje', '(risas)'.
+        • Ruido ambiental transcrito por error: motos, carros, claxon, bocinas, sirenas, tráfico,
+          música de fondo.
+        • Muletillas y relleno verbal: 'este', 'o sea', 'eh', 'mmm', 'like', 'ajá'.
+        • Interjecciones sin contenido clínico: 'ok', 'perfecto', 'gracias', 'okay doc'.
+        • Conversación de cortesía o small talk no relacionado con el motivo de consulta.
+        • Fragmentos inaudibles o mal transcritos sin sentido clínico.
+        • Repeticiones por tartamudeo o autocorrección (quédate solo con la versión final).
+
+        B) REPORTE DE ESTUDIO YA ELABORADO (radiología, laboratorio, etc.), con secciones como
+        'HALLAZGOS', 'IMPRESIÓN DIAGNÓSTICA', 'RESULTADOS' o similares, en vez de un relato de
+        síntomas.
+
+        Si el texto es de este tipo:
+
+        - Trata cada hallazgo relevante de HALLAZGOS/RESULTADOS y cada conclusión de la IMPRESIÓN
+          DIAGNÓSTICA como equivalente clínico de un síntoma. NO dejes el arreglo 'sintomas' vacío
+          solo porque no hay síntomas narrados; en este caso los hallazgos del estudio SON el
+          equivalente clínico.
+        - Ignora datos administrativos sin valor clínico: nombre del médico referente, cédula
+          profesional, firma, fecha del documento, encabezados de la clínica, frases de cierre.
+        - El campo 'diagnostico' debe reflejar la impresión diagnóstica del estudio tal como fue
+          reportada (sin inventar), aclarando que es un hallazgo de estudio y no una conclusión
+          clínica integral del médico tratante.
+
+        Solo analiza el contenido que tenga relevancia clínica real.
+
+        =========================================================
+        FASE 2 - EXTRACCIÓN DE INFORMACIÓN CLÍNICA
+        =========================================================
+
+        Extrae del texto ya filtrado:
+
+        - Síntomas actuales (o hallazgos del estudio, según el caso de la Fase 1).
+        - Duración de síntomas si existe.
+        - Intensidad si está disponible.
+        - Zona anatómica afectada.
+        - Antecedentes relevantes.
+        - Medicamentos mencionados.
+        - Alergias mencionadas.
+        - Factores de riesgo.
+
+        =========================================================
+        FASE 3 - SÍNTOMAS / HALLAZGOS - TERMINOLOGÍA MÉDICA
+        =========================================================
+
+        Identifica todos los síntomas (o hallazgos clínicos, si el texto es un reporte de estudio)
+        encontrados. UTILIZA NOMBRES TÉCNICOS Y PRECISOS para cada uno.
+
+        Ejemplo (relato de paciente):
+
+        Incorrecto: [ 'Dolor' ]
+
+        Correcto:
+        [
+        'Dolor abdominal agudo en hipocondrio derecho',
+        'Náuseas',
+        'Pirexia de 38.5°C',
+        'Vómito'
+        ]
 
-Este análisis pertenece a un sistema de expediente médico digital.
-Tu función es apoyar al médico identificando síntomas, posibles condiciones,
-riesgos y alertas clínicas .
+        Ejemplo (reporte de estudio de imagen):
 
-IMPORTANTE:
+        Correcto:
+        [
+        'Aumento del espacio articular acromiohumeral',
+        'Artrosis acromioclavicular',
+        'Derrame articular',
+        'Edema de partes blandas'
+        ]
 
-- No reemplazas al médico.
-- No emites diagnósticos definitivos.
-- Los diagnósticos son únicamente probabilidades clínicas.
-- No inventes información que no esté en la nota médica.
-- Si un dato no aparece responde 'No disponible'.
+        El arreglo 'sintomas' NUNCA debe quedar vacío si el texto contiene información clínica real.
 
+        =========================================================
+        FASE 4 - DIAGNÓSTICO PROBABLE - NOMBRES TÉCNICOS
+        =========================================================
 
-NOTA MÉDICA DEL PACIENTE:
+        Genera una condición probable basada únicamente en los síntomas o, si aplica, en la
+        impresión diagnóstica del estudio adjunto. UTILIZA EL NOMBRE TÉCNICO COMPLETO.
 
-$texto
+        Ejemplos válidos:
 
+        'Gastritis aguda por Helicobacter pylori'
+        'Faringoamigdalitis aguda estreptocócica'
+        'Hipertensión arterial sistémica no controlada'
+        'Diabetes mellitus tipo 2 descompensada'
+        'Artrosis de rodilla bilateral'
+        'Cefalea tensional crónica'
+        'Infección de vías urinarias bajas'
+        'Bronquitis aguda'
 
-====================================
-FILTRADO DE TRANSCRIPCIÓN
-====================================
+        No uses términos demasiado generales como: 'Malestar', 'Problema digestivo', 'Dolencia',
+        'Infección', 'Problema de salud'.
 
-El texto anterior puede provenir de dos fuentes distintas:
+        Nunca afirmes que el diagnóstico es definitivo.
 
-1. Una transcripción automática de audio (relato hablado del paciente).
-2. Un documento adjunto ya elaborado por un profesional (por ejemplo,
-   un reporte de radiología, laboratorio, o un estudio de imagen), que
-   contiene secciones como 'HALLAZGOS', 'IMPRESIÓN DIAGNÓSTICA',
-   'RESULTADOS' o similares, en vez de un relato de síntomas.
+        =========================================================
+        FASE 5 - EVALUACIÓN DE RIESGO CLÍNICO
+        =========================================================
 
-Si el texto es una TRANSCRIPCIÓN DE AUDIO, ignora por completo:
+        Evalúa si existen señales de alarma:
 
-- Risas o expresiones como 'jaja', 'jeje', '(risas)'.
-- Ruido ambiental descrito o transcrito por error: motos, carros, claxon,
-  bocinas, sirenas, tráfico, música de fondo.
-- Muletillas y relleno verbal: 'este', 'o sea', 'eh', 'mmm', 'like', 'ajá'.
-- Interjecciones sin contenido clínico: 'ok', 'perfecto', 'gracias', 'okay doc'.
-- Conversación de cortesía o small talk no relacionado con el motivo de consulta
-  (saludos, despedidas, comentarios sobre el clima, bromas).
-- Fragmentos inaudibles o mal transcritos que no tengan sentido clínico.
-- Repeticiones producto de tartamudeo o corrección en el habla (quédate solo
-  con la versión final de la frase).
+        • Dificultad respiratoria.
+        • Dolor torácico.
+        • Sangrado.
+        • Pérdida de conciencia.
+        • Convulsiones.
+        • Fiebre persistente.
+        • Alteración neurológica.
+        • Dolor intenso.
+        • Traumatismos importantes.
 
-NO uses estos elementos como síntomas, antecedentes ni parte del análisis.
-NO los menciones en el JSON de salida.
+        El nivel de riesgo resultante ('bajo', 'medio', 'alto') debe ser consistente con las
+        alertas generadas en la Fase 6.
 
-Si el texto es un REPORTE DE ESTUDIO YA ELABORADO (radiología, laboratorio,
-etc.) que no contiene síntomas narrados por el paciente sino hallazgos
-clínicos/imagenológicos e impresión diagnóstica:
+        =========================================================
+        FASE 6 - ALERTAS CLÍNICAS
+        =========================================================
 
-- Trata cada hallazgo relevante de la sección de HALLAZGOS/RESULTADOS y
-  cada conclusión de la IMPRESIÓN DIAGNÓSTICA como si fuera un elemento
-  del arreglo 'sintomas' (por ejemplo: 'Aumento del espacio articular
-  acromiohumeral', 'Artrosis acromioclavicular'). NO dejes el arreglo
-  'sintomas' vacío solo porque el texto no menciona síntomas narrados;
-  en este caso los hallazgos del estudio SON el equivalente clínico.
-- Ignora datos administrativos que no aportan valor clínico: nombre del
-  médico referente, cédula profesional, firma, fecha del documento,
-  encabezados de la clínica, frases de cierre ('Atentamente', etc.).
-- El campo 'diagnostico' debe reflejar la impresión diagnóstica del
-  estudio tal como fue reportada (sin inventar), aclarando que es un
-  hallazgo de estudio y no una conclusión clínica integral del médico
-  tratante.
+        Genera alertas ÚNICAMENTE si existe información real que las respalde. Nunca inventes
+        alertas.
 
-Solo analiza el contenido que tenga relevancia clínica real.
+        Tipos permitidos: alergia | gravedad | respiratoria | cardiaca | neurologica | otro
 
+        Nivel: alto | medio | bajo
 
-====================================
-ANÁLISIS DE INFORMACIÓN
-====================================
+        Las descripciones de las alertas deben usar terminología médica precisa.
 
-Extrae:
+        =========================================================
+        FASE 7 - RECOMENDACIÓN MÉDICA
+        =========================================================
 
-- Síntomas actuales (o hallazgos del estudio, según el caso descrito arriba).
-- Duración de síntomas si existe.
-- Intensidad si está disponible.
-- Zona anatómica afectada.
-- Antecedentes relevantes.
-- Medicamentos mencionados.
-- Alergias mencionadas.
-- Factores de riesgo.
+        Genera una recomendación concreta relacionada con los síntomas o hallazgos del estudio,
+        útil para el médico, con terminología médica precisa.
 
+        Evita frases genéricas como 'Tomar líquidos' o 'Descansar'.
 
-====================================
-SÍNTOMAS
-====================================
+        =========================================================
+        FASE 8 - NOTA CLÍNICA POR APARTADOS (PSOAPP)
+        =========================================================
 
-Identifica todos los síntomas (o hallazgos clínicos, si el texto es un
-reporte de estudio) encontrados.
+        Redacta la nota de evolución en los 6 apartados del formato PSOAPP. Usa ÚNICAMENTE
+        información presente en el texto (no inventes signos vitales, hallazgos de exploración
+        física ni estudios que no fueron mencionados). Cada apartado es un párrafo breve en prosa
+        clínica profesional, no una lista.
 
-Sé específico.
+        - presentacion: Datos demográficos disponibles (edad, sexo, ocupación si se mencionan),
+          motivo de consulta en pocas palabras, y antecedentes de importancia (comorbilidades,
+          alergias, cirugías previas) si se refieren.
 
-Ejemplo (relato de paciente):
+        - subjetivo: Padecimiento actual narrado cronológicamente (inicio, localización,
+          intensidad, características, agravantes/aliviantes, evolución en el tiempo), síntomas
+          asociados referidos, y tratamientos o medicamentos que el paciente ya tomó antes de la
+          evaluación.
 
-Incorrecto:
-[
-'Dolor'
-]
+        - objetivo: Signos vitales y hallazgos de exploración física o de estudios de
+          laboratorio/imagen SOLO SI aparecen explícitamente en el texto. Si el texto es únicamente
+          un relato del paciente sin exploración física ni estudios, escribe: 'No disponible -
+          pendiente de exploración física y estudios complementarios por el médico tratante'.
 
-Correcto:
-[
-'Dolor abdominal inferior',
-'Náuseas',
-'Fiebre'
-]
+        - analisis: Razonamiento clínico breve integrando lo subjetivo y lo objetivo, e impresión
+          diagnóstica probable (nunca definitiva). Menciona si las comorbilidades referidas parecen
+          controladas o descompensadas, solo si hay datos para inferirlo.
 
-Ejemplo (reporte de estudio de imagen):
+        - plan: Sugerencias generales de plan diagnóstico (estudios que podrían solicitarse) y
+          terapéutico/educativo a nivel de apoyo a la decisión, SIN indicar dosis, vía ni
+          frecuencia de medicamentos (eso lo define el médico). Puede incluir vigilancia de signos
+          de alarma.
 
-Correcto:
-[
-'Aumento del espacio articular acromiohumeral',
-'Artrosis acromioclavicular'
-]
+        - pronostico: Estimación general (reservado/bueno/malo) para la vida y para la función, y
+          los factores de los que dependería la evolución, siempre aclarando que es una estimación
+          preliminar sujeta a valoración médica presencial.
 
-El arreglo 'sintomas' NUNCA debe quedar vacío si el texto contiene
-información clínica real, sea narrada por el paciente o reportada en
-un estudio.
+        =========================================================
+        FASE 9 - RESPUESTA
+        =========================================================
 
+        Devuelve EXCLUSIVAMENTE el siguiente JSON.
 
-====================================
-DIAGNÓSTICO PROBABLE
-====================================
-
-Genera una condición probable basada únicamente en los síntomas o,
-si aplica, en la impresión diagnóstica del estudio adjunto.
-
-Ejemplo:
-
-'Gastritis aguda probable'
-
-No uses términos demasiado generales como:
-
-'Malestar'
-'Problema digestivo'
-'Dolencia'
-
-
-====================================
-RIESGO CLÍNICO
-====================================
-
-Evalúa señales de alarma:
-
-- Dificultad respiratoria.
-- Dolor torácico.
-- Sangrado.
-- Pérdida de conciencia.
-- Convulsiones.
-- Fiebre persistente.
-- Alteración neurológica.
-- Dolor intenso.
-- Traumatismos importantes.
-
-
-====================================
-ALERTAS
-====================================
-
-Genera alertas únicamente si existe información real.
-
-Tipos permitidos:
-
-alergia
-gravedad
-respiratoria
-cardiaca
-neurologica
-otro
-
-
-Nivel:
-
-alto
-medio
-bajo
-
-
-Nunca inventes alertas.
-
-
-====================================
-RECOMENDACIÓN
-====================================
-
-Genera una recomendación concreta relacionada con los síntomas o
-hallazgos del estudio.
-
-Debe ser útil para el médico.
-
-Evita frases genéricas como:
-
-'Tomar líquidos'
-'Descansar'
-
-
-====================================
-FORMATO DE RESPUESTA
-====================================
-
-
-Devuelve únicamente JSON válido:
-
-
-{
-    \"sintomas\": [
-        \"\"
-    ],
-
-    \"diagnostico\": \"\",
-
-    \"recomendacion\": \"\",
-
-    \"confianza\": 0,
-
-    \"nivel_riesgo\": \"bajo\",
-
-    \"alertas\": [
         {
-            \"tipo\": \"\",
-            \"titulo\": \"\",
-            \"descripcion\": \"\",
-            \"nivel\": \"\"
+
+        \"nota_psoapp\": {
+        \"presentacion\": \"\",
+        \"subjetivo\": \"\",
+        \"objetivo\": \"\",
+        \"analisis\": \"\",
+        \"plan\": \"\",
+        \"pronostico\": \"\"
+        },
+
+        \"sintomas\": [
+        \"\"
+        ],
+
+        \"diagnostico\": \"\",
+
+        \"recomendacion\": \"\",
+
+        \"confianza\": 0,
+
+        \"nivel_riesgo\": \"bajo\",
+
+        \"alertas\": [
+        {
+        \"tipo\": \"alergia|gravedad|respiratoria|cardiaca|neurologica|otro\",
+        \"titulo\": \"\",
+        \"descripcion\": \"\",
+        \"nivel\": \"alto|medio|bajo\"
         }
-    ]
-}
+        ]
 
+        }
 
-REGLAS FINALES:
+        =========================================================
+        REGLAS IMPORTANTES
+        =========================================================
 
-- No escribas texto fuera del JSON.
-- No uses Markdown.
-- No inventes datos.
-- Diferencia datos reales de interpretaciones.
-- Ignora ruido de transcripción (risas, tráfico, muletillas, small talk) solo cuando el texto sea una transcripción de audio, como se indicó arriba.
-- Si el texto es un reporte de estudio ya elaborado, no dejes 'sintomas' vacío: usa los hallazgos/impresión diagnóstica como se indicó arriba.
-- Prioriza seguridad del paciente.
+        - Responde únicamente con JSON.
+        - No escribas explicaciones fuera del JSON.
+        - No uses Markdown.
+        - No inventes síntomas, hallazgos ni antecedentes que no estén en el texto.
+        - Si un dato no aparece, usa 'No disponible' o 'Sin datos suficientes en la transcripción'.
+        - El diagnóstico siempre es probable y nunca definitivo.
+        - Prioriza siempre la seguridad del paciente al evaluar riesgo y alertas.
+        - Nunca inventes alertas: solo genéralas si hay evidencia real en el texto.
 
-";
+        ";
 
         try {
             $response = Http::withToken(config('services.ai.key'))
                 ->timeout(20)
                 ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-v4-flash',
+                    'model' => 'deepseek-chat',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object']
                 ]);
 
             if (!$response->successful()) {
-                Log::error('Error HTTP al consultar IA', ['status' => $response->status(), 'body' => $response->body()]);
+                Log::error('Error HTTP al consultar IA clínica', ['status' => $response->status()]);
                 return null;
             }
 
             return json_decode($response->json('choices.0.message.content'), true);
 
         } catch (\Exception $e) {
-            Log::error('Excepción al consultar IA: ' . $e->getMessage());
+            Log::error('Excepción al consultar IA clínica: ' . $e->getMessage());
             return null;
         }
     }

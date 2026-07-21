@@ -31,39 +31,61 @@
 
     {{-- TARJETAS SUPERIORES --}}
     <div class="row mb-4">
-
-        <div class="col-md-6">
-            <div class="small-box bg-primary shadow border-0 rounded-4">
-                <div class="inner">
-                    <h3>{{ $totalPacientes }}</h3>
-                    <p>Total Pacientes</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-users"></i>
-                </div>
+    {{-- Tarjeta 1 --}}
+    <div class="col-md-6">
+        <div class="small-box bg-primary shadow border-0 rounded-4">
+            <div class="inner">
+                <h3 class="h4"> {{ $totalPacientes }} </h3>
+                <p class="mb-0">Total Pacientes</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-users"></i>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-6">
-    <div id="btnVerListaPendientes"
-         class="small-box bg-danger shadow border-0 rounded-4 tarjeta-pendientes">
+    {{-- Tarjeta 2 --}}
+    <div class="col-md-6">
+        <div id="btnVerListaPendientes" class="small-box bg-danger shadow border-0 rounded-4 tarjeta-pendientes">
+    <div class="inner">
+        <h3 class="h4">{{ $totalPendientes }}</h3>
+        <p class="mb-0">Pacientes con datos incompletos</p>
 
-        <div class="inner">
-            <h3>{{ $totalPendientes }}</h3>
-            <p class="mb-0">Pacientes con datos incompletos</p>
-
-            @if($totalPendientes > 0)
-                <small class="text-white">
-                    <i class="fas fa-hand-pointer"></i>
-                    Haz clic para ver la lista
-                </small>
-            @endif
+        @if($totalPendientes > 0)
+            <small class="d-block mt-1">
+                <i class="fas fa-hand-pointer"></i>
+                Haz clic para ver la lista
+            </small>
+        @endif
+    </div>
+</div>
         </div>
+    </div>
 
-        <div class="icon">
-            <i class="fas fa-user-clock"></i>
+    {{-- LISTA DESPLEGABLE DE PACIENTES CON DATOS INCOMPLETOS --}}
+    @if($totalPendientes > 0)
+    <div id="listaPendientes" class="mb-4" style="display:none;">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Pacientes que deben completar sus datos</h6>
+                <ul class="list-group list-group-flush">
+                    @foreach($pacientesPendientes as $p)
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ $p->nombre }}
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-primary rounded-pill"
+                            onclick='completarDatos(@json($p))'>
+                            Completar datos
+                        </button>
+                    </li>
+                    @endforeach
+                </ul>
+            </div>
         </div>
-
+    </div>
+    @endif
+        </div>
     </div>
 </div>
 
@@ -238,11 +260,28 @@ body{
 
 .small-box{
     border-radius:22px !important;
+    height:120px !important;
+    display:flex;
+    align-items:center;
+    position:relative;
+    overflow:hidden;
+}
+
+
+.small-box .inner{
+    width:100%;
+    z-index:2;
 }
 
 .small-box .icon{
-    top:10px;
+    position:absolute;
+    right:20px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:65px;
+    opacity:.18;
 }
+
 
 .small-box:hover{
     transform:translateY(-5px);

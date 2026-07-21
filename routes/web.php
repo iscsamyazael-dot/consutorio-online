@@ -75,6 +75,11 @@ Route::middleware('auth')->group(function () {
         // no caer en la ruta GET /consultaIA/{consultaIA} del resource.
         Route::get('consultaIA/archivos/{consultaId}', [ConsultaIAController::class, 'listarArchivos'])->name('consultaIA.listarArchivos');
         Route::get('consultaIA/archivo/{id}/descargar', [ConsultaIAController::class, 'descargarArchivo'])->name('consultaIA.descargarArchivo');
+        // Guarda la nota PSOAPP (borrador o final) y genera el PDF de
+        // diagnóstico/receta. Igual que las de arriba, deben ir antes del
+        // resource para que no las intercepte la ruta GET /consultaIA/{consultaIA}.
+        Route::post('consultaIA/{consultaId}/psoapp', [ConsultaIAController::class, 'guardarPsoapp'])->name('consultaIA.guardarPsoapp'); // NUEVO
+        Route::get('consultaIA/{consultaId}/pdf/{tipo}', [ConsultaIAController::class, 'generarPdf'])->name('consultaIA.generarPdf'); // NUEVO
         // Historial clínico completo de un paciente (todas sus consultas +
         // transcripciones), usado por HistorialClinico.vue. Debe ser una ruta
         // top-level porque el frontend arma la URL como `route + '/historialClinico'`
@@ -126,7 +131,11 @@ Route::middleware('auth')->group(function () {
             Route::get('/', function() { return view('dashboard'); })->name('dashboard');
             Route::get('Medicamentos', function() { return view('medicamentos.index'); })->name('medicamentos.index');
             Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); })->name('pacientes.expediente');
-            Route::get('HistorialConsulta', function() { return view('consultas.consultaIndividual'); })->name('consultas.consultaIndividual');
+            // Ahora acepta un {id?} opcional: si viene, es el id de la consulta
+            // a mostrar (usado por ExpedienteTabs.vue -> "Ver consulta completa").
+            // Se dejó opcional para no romper otros lugares que ya enlazan a
+            // esta ruta sin id.
+            Route::get('HistorialConsulta/{id?}', function($id = null) { return view('consultas.consultaIndividual', compact('id')); })->name('consultas.consultaIndividual');
             Route::get('NuevaConsulta', function () { return view('consultas.create'); })->name('consultas.create');
             Route::get('ConsultaInteligenteNueva', function() { 
                 return view('consultas.consulta_inteligente', ['paciente' => null]);
