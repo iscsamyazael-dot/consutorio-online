@@ -53,15 +53,18 @@
                 :ia-data="iaData">
             </AlertasClinicas>
             <ArchivosClinicos 
+                ref="archivosClinicos"
                 :consulta-id="consultaId">
             </ArchivosClinicos>
         </div>
         <div class="col-lg-6">
             <TranscripcionLive
+                :paciente-id="pacienteId"
                 @actualizarSintomas="actualizarSintomas"
                 @actualizarIaData="actualizarIaData"
                 @marcarErrorIa="marcarErrorIa"
-                @actualizarConsultaId="actualizarConsultaId">
+                @actualizarConsultaId="actualizarConsultaId"
+                @archivoSubido="refrescarArchivos">
             </TranscripcionLive>
             <PanelIA 
                 :ia-data="iaData" 
@@ -216,6 +219,14 @@ export default {
         },
         actualizarConsultaId(consultaId){
             this.consultaId = consultaId
+        },
+        refrescarArchivos(){
+            // Se dispara cuando TranscripcionLive.vue termina de subir
+            // un archivo con éxito, para que la lista de ArchivosClinicos.vue
+            // se actualice sin necesidad de recargar la página.
+            if (this.$refs.archivosClinicos) {
+                this.$refs.archivosClinicos.cargarArchivos()
+            }
         }
     }
 }

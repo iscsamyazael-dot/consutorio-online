@@ -29,7 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::post('/triage', [TriageController::class, 'store']) ->name('triage.store');
+    Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
     Route::get('consultaNormal/{id}', [ConsultaController::class, 'create'])->name('consultas.create_normal');
     
     
@@ -45,12 +45,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('usuarios/{id}', [UserController::class, 'destroy']);
     Route::get('/dashboard', function () { return view('dashboard'); })->name('dashboard');
         
-        
-        
-        //Código para hacer el filtro de un paciente mediante un input //
-        //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
-        
-
         
         // Ruta para procesar el formulario y guardar el registro en las tablas
         
@@ -78,13 +72,18 @@ Route::middleware('auth')->group(function () {
         Route::resource('receta-detalles', RecetaDetalleController::class);
         Route::resource('usuarios', UserController::class);
 
-        // IMPORTANTE: esta ruta debe ir ANTES de Route::resource('consultaIA', ...)
-        // y debe coincidir EXACTAMENTE con la URL que llama el frontend
+        // IMPORTANTE: estas rutas deben ir ANTES de Route::resource('consultaIA', ...)
+        // y deben coincidir EXACTAMENTE con la URL que llama el frontend
         // (urlArchivoIA = route + '/consultaIA/archivo' en TranscripcionLive.vue).
         // Antes decía 'consulta-ia/archivo' (con guión), por eso el POST no
         // coincidía con esa ruta y caía en la ruta GET /consultaIA/{consultaIA}
         // que genera el resource de abajo -> Laravel respondía 405 Method Not Allowed.
         Route::post('consultaIA/archivo', [ConsultaIAController::class, 'subirArchivo'])->name('consultaIA.subirArchivo');
+        // Listado y descarga de archivos clínicos para ArchivosClinicos.vue.
+        // Mismo motivo que la de arriba: deben ir antes del resource para
+        // no caer en la ruta GET /consultaIA/{consultaIA} del resource.
+        Route::get('consultaIA/archivos/{consultaId}', [ConsultaIAController::class, 'listarArchivos'])->name('consultaIA.listarArchivos');
+        Route::get('consultaIA/archivo/{id}/descargar', [ConsultaIAController::class, 'descargarArchivo'])->name('consultaIA.descargarArchivo');
         Route::resource('consultaIA', ConsultaIAController::class);
         Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente');
         Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente');
@@ -93,7 +92,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('movimientos',MovimientoInventarioController::class);
         Route::resource('triage', TriageController::class);
         Route::resource('archivoclinico', ArchivosClinicosController::class);
-        //Route::resource('dashboard/citas', CitaController::class);
+        //Route::resource('dashboard/citas', CitaController::class hola);
         Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
         Route::resource('citas', CitaController::class);
@@ -120,13 +119,14 @@ Route::middleware('auth')->group(function () {
             Route::get('ListaPacientes', function () { return view('pacientes.index'); })->name('pacientes.index');
             Route::get('PacienteNuevo', function() { return view('pacientes.create'); })->name('pacientes.create');
             Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); })->name('pacientes.create');
-            Route::get('agregar-usuario',function(){ return view('configuracion-sistema.agregar-usuario');});
+            
         });
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO///
             Route::middleware(['auth', 'can:acceso-medico-admin'])->group(function() {
             Route::get('/', function() { return view('dashboard'); })->name('dashboard');
             Route::get('Medicamentos', function() { return view('medicamentos.index'); })->name('medicamentos.index');
+            Route::get('agregar-usuario',function(){ return view('configuracion-sistema.agregar-usuario');});
             Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); })->name('pacientes.expediente');
             Route::get('HistorialConsulta', function() { return view('consultas.consultaIndividual'); })->name('consultas.consultaIndividual');
             Route::get('NuevaConsulta', function () { return view('consultas.create'); })->name('consultas.create');
@@ -364,5 +364,7 @@ Route::get('Sucursales', function () {
 // Route::get('/ubicaciones/listar', [App\Http\Controllers\UbicacionController::class, 'listar'])
 //     ->name('ubicaciones.listar');
 
+
+Route::view('inicio', 'dashboard');
 
 require __DIR__.'/auth.php';

@@ -297,6 +297,14 @@ const FORMATOS_PERMITIDOS = [
 const TAMANIO_MAXIMO_MB = 15
 
 export default {
+    props: {
+        // Recibido desde ConsultaInteligente.vue. El backend exige
+        // paciente_id en /consultaIA, por eso es obligatorio aquí.
+        pacienteId: {
+            type: [String, Number],
+            required: true
+        }
+    },
     data() {
 
         return {
@@ -338,7 +346,8 @@ export default {
                 const response = await axios.post( 
                     urlConsultaIA,
                     {
-                        iniciar_consulta:true
+                        iniciar_consulta: true,
+                        paciente_id: this.pacienteId
                     }
                 )
                 this.consultaId = response.data.consulta_id
@@ -416,6 +425,7 @@ export default {
                         urlConsultaIA,
                         {
                             consulta_id: this.consultaId,
+                            paciente_id: this.pacienteId,
                             transcripcion: mensajePaciente,
                             sintomas: this.sintomas
                         }
@@ -536,6 +546,7 @@ export default {
 
             const formData = new FormData()
             formData.append('consulta_id', this.consultaId)
+            formData.append('paciente_id', this.pacienteId)
             formData.append('archivo', archivo)
 
             try {
@@ -556,6 +567,9 @@ export default {
                     this.mensajes[idxAnalizando].texto = response.data.ia_data?.diagnostico_probable
                         ? `Diagnóstico probable (según ${nombreArchivo}): ${response.data.ia_data.diagnostico_probable}`
                         : `Archivo "${nombreArchivo}" analizado.`
+
+                    // Avisamos al padre para que refresque ArchivosClinicos.vue
+                    this.$emit('archivoSubido')
 
                 } else {
 
