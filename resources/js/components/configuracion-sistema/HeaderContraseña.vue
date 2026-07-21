@@ -1,4 +1,4 @@
-<template>
+git pull origin feature/configuracionMedica<template>
 
 <!-- Encabezado -->
 <div class="card shadow-sm border-0 mb-4">
