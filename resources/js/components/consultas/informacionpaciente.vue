@@ -26,13 +26,13 @@
               </div>
 
               <div class="col-md-6">
-                <label class="form-label">Doctor</label>
-                <div class="input-icon-box">
-                  <i class="fas fa-user-md"></i>
-                  <input
+                    <label class="form-label">Doctor</label>
+                    <div class="input-icon-box">
+                        <i class="fas fa-user-md"></i>
+                         <input
                     type="text"
                     class="form-control custom-input with-icon"
-                    placeholder="Doctor responsable"
+                    placeholder="Nombre del doctor"
                     v-model="infoPacientes.doctor"
                   >
                 </div>
@@ -205,52 +205,154 @@
 
         <!-- CARD EVALUACION CLINICA -->
         <div class="card main-card border-0 animated-section delay-2">
-          <div class="card-body p-5">
-            <div class="mb-5">
-              <h4 class="section-title">
-                <i class="fas fa-file-medical text-danger"></i>
-                Evaluación Clínica
-              </h4>
-            </div>
+            <div class="card-body p-5">
 
-            <!-- SINTOMAS -->
-            <div class="mb-4">
-              <label class="form-label">Síntomas</label>
-              <div class="textarea-icon-box">
-                <i class="fas fa-notes-medical"></i>
-                <textarea
-                  class="form-control custom-textarea with-icon"
-                  :class="{ 'is-invalid': errores.sintomas }"
-                  rows="4"
-                  placeholder="Ingrese síntomas"
-                  v-model="form.sintomas"
-                ></textarea>
-              </div>
-              <div class="invalid-feedback" v-if="errores.sintomas">
-                {{ errores.sintomas }}
-              </div>
-            </div>
+                <div class="mb-5">
+                    <h4 class="section-title">
+                        <i class="fas fa-file-medical text-danger"></i>
+                        NOTA SOAP
+                    </h4>
+                </div>
 
-            <!-- BOTONES -->
-            <div class="d-flex justify-content-end gap-3 mt-5 animated-section delay-3">
-              <button
-                type="button"
-                class="btn btn-cancel btn-lg rounded-pill px-4"
-                @click="cancelarConsulta"
-                :disabled="guardando"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary btn-lg rounded-pill px-5 save-btn"
-                :disabled="guardando"
-              >
-                <i class="fas fa-file-medical me-1"></i>
-                {{ guardando ? 'Generando expediente...' : 'Generar expediente' }}
-              </button>
+                <!-- PRESENTACIÓN -->
+                <div class="soap-card mb-4">
+                    <label class="soap-label">
+                        <i class="fas fa-user-injured text-primary me-2"></i>
+                        P - Presentación
+                    </label>
+
+                    <div class="textarea-icon-box">
+                        <i class="fas fa-user"></i>
+
+                        <textarea
+                            class="form-control custom-textarea with-icon"
+                            rows="4"
+                            placeholder="Describa la presentación del paciente..."
+                            v-model="form.presentacion"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- SUBJETIVO -->
+                <div class="soap-card mb-4">
+                    <label class="soap-label">
+                        <i class="fas fa-comments text-success me-2"></i>
+                        S - Subjetivo
+                    </label>
+
+                    <div class="textarea-icon-box">
+                        <i class="fas fa-comment-medical"></i>
+
+                        <textarea
+                            class="form-control custom-textarea with-icon"
+                            rows="5"
+                            placeholder="Información referida por el paciente..."
+                            v-model="form.subjetivo"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- OBJETIVO -->
+                <div class="soap-card mb-4">
+                    <label class="soap-label">
+                        <i class="fas fa-stethoscope text-info me-2"></i>
+                        O - Objetivo
+                    </label>
+
+                    <div class="textarea-icon-box">
+                        <i class="fas fa-heartbeat"></i>
+
+                        <textarea
+                            class="form-control custom-textarea with-icon"
+                            rows="5"
+                            placeholder="Exploración física, signos vitales y hallazgos..."
+                            v-model="form.objetivo"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- ANÁLISIS -->
+                <div class="soap-card mb-4">
+                    <label class="soap-label">
+                        <i class="fas fa-brain text-warning"></i>
+                        A - Análisis
+                    </label>
+
+                    <div class="textarea-icon-box">
+                        <i class="fas fa-notes-medical"></i>
+
+                        <textarea
+                            class="form-control custom-textarea with-icon"
+                            rows="5"
+                            placeholder="Análisis e impresión diagnóstica..."
+                            v-model="form.analisis"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- PLAN -->
+                <div class="soap-card mb-4">
+                    <label class="soap-label">
+                        <i class="fas fa-clipboard-check text-danger me-2"></i>
+                        P - Plan
+                    </label>
+
+                    <div class="textarea-icon-box">
+                        <i class="fas fa-prescription"></i>
+
+                        <textarea
+                            class="form-control custom-textarea with-icon"
+                            rows="5"
+                            placeholder="Tratamiento, indicaciones y seguimiento..."
+                            v-model="form.plan"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- PRONÓSTICO -->
+                <div class="soap-card mb-5">
+                    <label class="soap-label">
+                        <i class="fas fa-chart-line text-secondary"></i>
+                        Pronóstico
+                    </label>
+
+                    <div class="textarea-icon-box">
+                        <i class="fas fa-notes-medical"></i>
+
+                        <textarea
+                            class="form-control custom-textarea with-icon"
+                            rows="4"
+                            placeholder="Describa el pronóstico del paciente..."
+                            v-model="form.pronostico"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- BOTONES -->
+
+                <div class="d-flex justify-content-end gap-3 mt-5 animated-section delay-3">
+
+                    <button
+                        type="button"
+                        class="btn btn-cancel btn-lg rounded-pill px-4"
+                        @click="cancelarConsulta"
+                        :disabled="guardando"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary btn-lg rounded-pill px-5 save-btn"
+                        :disabled="guardando"
+                    >
+                        <i class="fas fa-file-medical me-2"></i>
+
+                        {{ guardando ? 'Generando expediente...' : 'Generar expediente' }}
+
+                    </button>
+                </div>
             </div>
-          </div>
         </div>
       </form>
     </div>
@@ -269,20 +371,17 @@ export default {
             type: [Number, String],
             required: true
         },
-        doctorNombre: {
-            type: String,
-            default: ''
-        },
-        doctorCedula: {
-            type: String,
-            default: ''
+        doctor: {
+            type: Object,
+            default: () => ({})
         }
     },
   data() {
     return {
-      infoPacientes: {},
+    infoPacientes: {},
       guardando: false,
       form: {
+        paciente_id:null,
         fecha: '',
         hora: '',
         motivo: '',
@@ -292,9 +391,16 @@ export default {
         saturacion: '',
         temperatura: '',
         observaciones: '',
-        sintomas: ''
-      },
-      errores: {
+        sintomas: '',
+        presentacion: '',
+        subjetivo: '',
+        objetivo: '',
+        analisis: '',
+        plan: '',
+        pronostico: ''
+    },
+
+    errores: {
         fecha: '',
         hora: '',
         motivo: '',
@@ -309,6 +415,7 @@ export default {
   },
   mounted() {
     console.log('PROP PacienteId:', this.pacienteId)
+    console.log('PROP Doctor:', this.doctor)
   },
   methods: {
 
@@ -422,61 +529,28 @@ export default {
 
         this.guardando = true
         try {
-            // 1. Obtener el nombre completo del paciente
-            const nombreCompleto = this.infoPacientes.nombre_completo || 
-            [this.infoPacientes.nombre, this.infoPacientes.apellido_paterno, this.infoPacientes.apellido_materno]
-                .filter(Boolean)
-                .join(' ')
-
-            // 2. Extraer el teléfono con fallback por si no viniera definido
-            const telefonoPaciente = this.infoPacientes.telefono || this.infoPacientes.celular || '0000000000'
-
-            // 3. Estructurar el payload exactamente como Laravel lo solicita
             const payload = {
-            // Requeridos por las reglas de validación en el backend:
-            nombre_paciente: nombreCompleto,
-            telefono: telefonoPaciente,
-            paciente_id: this.pacienteId,
-
-            // Datos específicos de la consulta:
-            fecha: this.form.fecha,
-            hora: this.form.hora,
-            motivo: this.form.motivo,
-            diagnostico: this.form.diagnostico,
-            sintomas: this.form.sintomas,
-            peso: this.form.peso || null,
-            presion: this.form.presion || null,
-            saturacion: this.form.saturacion || null,
-            temperatura: this.form.temperatura || null,
-            observaciones: this.form.observaciones || null
+                ...this.form,
+                paciente_id: this.pacienteId,
+                medico_id: this.doctor.id
             }
-
-            const response = await ApiService.post('/consultas', payload)
-            console.log('Consulta guardada:', response.data)
-
-            // Generar PDF y mostrar notificación
-            await this.generarPDF()
+            const response = await ApiService.post('/consultas/', payload)
+            await this.generarPDF()   // ← ahora sí espera a que termine
 
             Swal.fire({
-            icon: 'success',
-            title: 'Expediente generado',
-            text: 'La consulta fue guardada y el PDF se descargó exitosamente.',
-            confirmButtonText: 'Aceptar'
+                icon: 'success',
+                title: 'Expediente generado',
+                text: 'La consulta fue guardada y el PDF se descargó exitosamente.',
+                confirmButtonText: 'Aceptar'
             })
-
             this.limpiarFormulario()
         } catch (error) {
-            console.error('Error al guardar consulta:', error)
-            
-            if (error.response && error.response.status === 422) {
-            console.log('Campos rechazados por Laravel:', error.response.data.errors)
-            }
-
+            console.error(error)
             Swal.fire({
-            icon: 'error',
-            title: 'Error de validación',
-            text: 'Verifica los campos obligatorios del formulario.',
-            confirmButtonText: 'Aceptar'
+                icon: 'error',
+                title: 'Error',
+                text: 'Ocurrió un error al guardar la consulta. El PDF no se generó.',
+                confirmButtonText: 'Aceptar'
             })
         } finally {
             this.guardando = false
@@ -530,13 +604,12 @@ export default {
             doc.setTextColor(20, 20, 20)
             }
 
-            // ============ DATOS DOCTOR ============
+           // ============ DATOS DOCTOR ============
             const centroX = margenX + 30
-            
-            // Nombre del doctor (prop o backend)
-            const nombreDoctor = this.doctorNombre || this.infoPacientes.doctor || 'Dr(a). Nombre del Doctor'
-            // Cédula del doctor
-            const cedulaDoctor = this.doctorCedula || this.infoPacientes.cedula || 'Pendiente'
+
+            const nombreDoctor = this.doctor.nombre || 'Dr(a). Nombre del Doctor'
+            const especialidadDoctor = this.doctor.especialidad || 'Medicina General'
+            const cedulaDoctor = this.doctor.cedula || 'Pendiente'
 
             doc.setFontSize(14)
             doc.setFont('helvetica', 'bold')
@@ -545,9 +618,11 @@ export default {
             doc.setFontSize(9)
             doc.setFont('helvetica', 'normal')
             doc.setTextColor(90, 90, 90)
-            doc.text('Medicina General', centroX, y + 12)
+
+            doc.text(this.doctor.especialidad || 'Medicina General', centroX, y + 12)
             doc.text(`Cédula Profesional: ${cedulaDoctor}`, centroX, y + 17)
             doc.text('Institución: Ultra tech', centroX, y + 22)
+
             doc.setTextColor(20, 20, 20)
 
             // Fecha / Hora
@@ -806,4 +881,8 @@ export default {
     transform: translateY(0);
   }
 }
+
+/*CARDS */
+
+
 </style>

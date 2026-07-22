@@ -2,44 +2,38 @@
     <div class="container-fluid">
         <div class="row g-4">
             <Consultageneral 
-                 :paciente-id="pacienteId">
+             :paciente-id="pacienteId">
+                 
             </Consultageneral>
             <Informacionpaciente 
-                :paciente-id="pacienteId">
+                :paciente-id="pacienteId"
+                :doctor="doctor">
             </Informacionpaciente>
         </div>
     </div>
 </template>
 <script>
-
-
 import Consultageneral from './consultageneral.vue';
 import Informacionpaciente from './informacionpaciente.vue';
 
- export default{
+export default{
     components:{
         Consultageneral,
         Informacionpaciente
-    
     },
-    data (){
-        return{
-            pacienteId: ''
-        }
-    },
-    methods:{
-        //Funcion que recibe el ID del paciente a traves de la ruta paramaetrizada //
-        obtenerPacienteId() {
-            this.pacienteId = window.location.pathname.split('/').pop();
-            console.log('Paciente ID:',this.pacienteId
-            );
+    props: {
+        pacienteId: {
+            type: [Number, String],
+            default: ''
+        },
+        doctor: {
+            type: Object,
+            default: () => ({})
         }
     },
     mounted() {
-        this.obtenerPacienteId()
+        console.log('Paciente ID recibido de Blade:', this.pacienteId)
+        console.log('Doctor recibido de Blade:', this.doctor)
     }
-
-
- }
-
+}
 </script>

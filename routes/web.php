@@ -30,7 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
-    Route::get('consultaNormal/{id}', [ConsultaController::class, 'create'])->name('consultas.create_normal');
+    Route::get('consultaNormal/{id}', [ConsultaController::class, 'create'])->name('consultas.create');
     
     
     //Código para hacer el filtro de un paciente mediante un input //
@@ -108,8 +108,7 @@ Route::middleware('auth')->group(function () {
         // api de calendario//
         Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
         //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
-        Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
-            ->name('ExpedienteDetalle');
+        Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])->name('ExpedienteDetalle');
         ///*** AQUI TERMINA LAS RUTAS DE LAS LAS APIS Y CONSUMO DE DATOS */
 
         //**INICIA LAS RUTAS PARA LAS VISTAS DE ACUERDO AL ACESSO DE CADA USUARIO *//

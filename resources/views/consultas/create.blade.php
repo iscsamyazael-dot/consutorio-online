@@ -2,21 +2,15 @@
 
 @section('title', 'Nueva Consulta')
 
-@section('content_header')
-@stop
-
 @section('content')
-    <meta name="base-url" content="{{ url('/') }}">
     <input type="hidden" name="route" value="{{ url('/') }}">
-   
+    <meta name="base-url" content="{{ url('/') }}">
     <div id="app">
-        <consulta-form
-            :paciente-id="{{ $pacienteId }}"
-            doctor-nombre="{{ $doctor['nombre'] }}"
-            doctor-cedula="{{ $doctor['cedula'] }}"
-        >
-        </consulta-form>
-        <nuevaconsultamedica :doctor='@json($doctor)'></nuevaconsultamedica>
+        
+        <nuevaconsultamedica
+            :doctor="{{ Js::from($doctor) }}"
+            :paciente-id="{{ Js::from($pacienteId) }}"
+        ></nuevaconsultamedica>
     </div>
 @stop
 

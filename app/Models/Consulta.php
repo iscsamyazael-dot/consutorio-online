@@ -64,4 +64,9 @@ class Consulta extends Model
     {
         return $this->belongsTo(EvaluacionIA::class, 'evaluacion_ia_id');
     }
+
+    public function notaPsoapp()
+    {
+        return $this->hasOne(NotaPsoapp::class);
+    }
 }
