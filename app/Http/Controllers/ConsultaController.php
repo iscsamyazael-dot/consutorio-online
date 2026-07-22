@@ -74,7 +74,7 @@ class ConsultaController extends Controller
             'observaciones' => $request->observaciones,
             'estado' => 'activa',
             'estado_consulta' => 'finalizada'
-        ]);
+        ]); 
 
         NotaPsoapp::create([
 
