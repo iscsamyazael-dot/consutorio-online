@@ -177,7 +177,7 @@ class ConsultaIAController extends Controller
             // porque en Laravel 11 el disco 'local' guarda por defecto en
             // storage/app/private (no storage/app). Storage::path() siempre
             // devuelve la ruta absoluta real sin importar dónde esté configurado.
-            $rutaGuardada = $archivo->store('adjuntos_clinicos', 'local');
+            $rutaGuardada = $archivo->store('archivos_clinicos', 'local');
             $rutaCompleta = \Illuminate\Support\Facades\Storage::disk('local')->path($rutaGuardada);
 
             // Extraemos el texto (pdf/word directo, imagen vía OCR)
