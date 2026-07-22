@@ -13,18 +13,31 @@ use Illuminate\Http\Request;
 
 class CitaController extends Controller
 {
- //muestra todas las citas en la vista.
-    public function index()
+    // Muestra todas las citas en la vista.
+    // NUEVO: ahora acepta filtros opcionales por medico_id y especialidad_id
+    // vía query params (?medico_id=1&especialidad_id=2), que es justo lo que
+    // manda el frontend a través de ApiService.get('citas', { params }).
+    public function index(Request $request)
     {
-        // Obtiene todas las citas junto con
-        // el paciente, médico y especialidad relacionados.
-        return $citas = Cita::with(['paciente', 'medico', 'especialidad'])->get();
+        $query = Cita::with(['paciente', 'medico', 'especialidad']);
 
-        // Envía la información a la vista.
-        //return view('citas.index', compact('citas'));
+        // Si el frontend envía medico_id, filtra por ese médico.
+        if ($request->filled('medico_id')) {
+            $query->where('medico_id', $request->medico_id);
+        }
+
+        // Si el frontend envía especialidad_id, filtra por esa especialidad.
+        if ($request->filled('especialidad_id')) {
+            $query->where('especialidad_id', $request->especialidad_id);
+        }
+
+        return $query->get();
     }
 
-  //devuelve todas las citas en formato JSON para el calendario
+    // Devuelve todas las citas en formato JSON para el calendario
+    // NOTA: si el calendario ahora consume el endpoint de index() con filtros,
+    // este método puede volverse redundante. Se deja intacto por si otra
+    // vista todavía lo usa.
     public function getCitas()
     {
         $citas = Cita::with([

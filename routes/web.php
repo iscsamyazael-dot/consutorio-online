@@ -14,15 +14,14 @@ use App\Http\Controllers\ConsultaIAController; // IA
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\CitaController;
 use App\Http\Controllers\UserRegisterController;
-use App\Http\Controllers\UbicacionController;
 use App\Models\Paciente;
+use App\Http\Controllers\CitaController;//agenda        
+use App\Http\Controllers\UbicacionController;//agenda 
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
-
-use App\Http\Controllers\Api_Ionic\AuthController;
+use App\Http\Controllers\Api_Ionic\AuthController; //Login APP-IONIC
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -32,43 +31,34 @@ Route::middleware('auth')->group(function () {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
         Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
-        Route::get('/api/specialties', [SpecialtyController::class, 'list']);
         //Código para hacer el filtro de un paciente mediante un input //
         //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
         Route::get('/perfil-usuario', [ProfileController::class, 'obtenerPerfil']);
         //ACTUALIZA DATOS DEL PERFIL
-        Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
         Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
-        Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Ruta API que obtiene la lista de especialidades médicas
         Route::post('/usuarios/registro', UserRegisterController::class);
         Route::get('/usuarios', [UserController::class, 'index']);
         Route::delete('usuarios/{id}', [UserController::class, 'destroy']);
         Route::get('/dashboard', function () { return view('dashboard'); })->name('dashboard');
-        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-        Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
-        Route::get('/api/specialties', [SpecialtyController::class, 'list']);
         //Código para hacer el filtro de un paciente mediante un input //
         //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
-        Route::get('/perfil-usuario', [ProfileController::class, 'obtenerPerfil']);
         //ACTUALIZA DATOS DEL PERFIL
         Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
-        Route::post('/cambiar-password', [ProfileController::class, 'updatePassword']);
         // Ruta para procesar el formulario y guardar el registro en las tablas
-        
+        Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Agenda: filtro por especialidad
+    
         //para traer actualizar y eliminar medicos
         // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
         // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
         // Route::delete('eliminarMedico/{id}', [MedicoController::class, 'destroy']);
 
         Route::get('medicoEstadistica', [MedicoController::class, 'obtenerEstadisticas']);
-        Route::get('listaUbicaciones', [UbicacionController::class, 'listar']);
-        Route::get('/api/especialidades', [SpecialtyController::class, 'list']); 
+        Route::get('listaUbicaciones', [UbicacionController::class, 'listar']);// Agenda: filtro por ubicación/sucursal
         Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
         Route::get('/medicos-horarios', [MedicoController::class, 'index']);
         //ruta que filtra los medicos locales de la tabla 
-        Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);
+        Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);// Agenda: filtro por médico
+
         Route::resource('especialidades', SpecialtyController::class);
         Route::resource('pacientes', PacienteController::class);
         Route::resource('consultas', ConsultaController::class);
@@ -103,15 +93,17 @@ Route::middleware('auth')->group(function () {
         Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente'); // IA: genera receta con apoyo de IA
         Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente'); // IA: genera derivación con apoyo de IA
         Route::resource('medicos', MedicoController::class);
-        Route::resource('ubicaciones', UbicacionController::class);
+        Route::resource('ubicaciones', UbicacionController::class);// Agenda: CRUD de ubicaciones/sucursales
         Route::resource('movimientos',MovimientoInventarioController::class);
         Route::resource('triage', TriageController::class);
         Route::resource('archivoclinico', ArchivosClinicosController::class);
         //Route::resource('dashboard/citas', CitaController::class hola);
-        Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);
+        // Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);//COMNTDAAAAA
+        //Route::resource('dashboard/citas', CitaController::class);
+        Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calenda
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
-        Route::resource('citas', CitaController::class);
-        Route::get('/api/citas', [CitaController::class, 'getEventos']);
+        Route::resource('citas', CitaController::class);// Agenda: CRUD de citas
+        Route::get('/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calendario
         // Cambias 'SubirArchivosControlador' por el que ya tengas
         Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
         //Código para hacer el filtro de un paciente mediante un input //
@@ -119,7 +111,7 @@ Route::middleware('auth')->group(function () {
         //Codigo para las vistas y que son usadas en el menú de adminlte"
         //codigo  de las citas //
         //actualiza el estado 
-        Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class, 'actualizarEstado'])->name('citas.estado');
+        Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class, 'actualizarEstado'])->name('citas.estado');// Agenda: cambiar estado de cita
         // api de calendario//
         Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
         //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
