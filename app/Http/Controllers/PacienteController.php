@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
@@ -102,29 +102,38 @@ class PacienteController extends Controller
         $ultimoPaciente = Paciente::latest('id')->first();
         $numero = $ultimoPaciente ? $ultimoPaciente->id + 1 : 1;
         $clave = 'PAC-' . date('Y') . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
+        
+        // Usamos updateOrCreate para actualizar el paciente si ya existe (por nombre y teléfono) o crearlo si no
+        $paciente = Paciente::updateOrCreate(
+            [
+                'nombre' => $request->nombre,
+                'telefono' => $request->telefono,
+            ],
 
-        $paciente = Paciente::create([
-            'paciente_id' => $clave,
-            'nombre' => $request->nombre,
-            'telefono' => $request->telefono,
-            'email' => $request->email,
-            'edad' => $request->edad_anios, // Guardamos la edad en años
-            'sexo' => $request->sexo,
-            'direccion' => $request->direccion,
-            'tipo_sangre' => $request->tipo_sangre,
-            'contacto_emergencia' => $request->contacto_emergencia,
-            'telefono_emergencia' => $request->telefono_emergencia,
-            'curp' => $request->curp,
-            'estado' => $request->estado,
-            'foto' => "null", // Guardamos la ruta de la foto en la base de datos
-            'notas_generales' => $request->notas_generales,
-            'alergias' => $request->alergias,
-            'antecedentes_medicos' => $request->antecedentes,
-            'fecha_nacimiento' => $request->fecha_nacimiento,
-            'whatsapp_id' => null,
-            'consentimiento' => null,
-            'ultima_interaccion' => null,
-        ]);
+            [
+                'paciente_id' => DB::raw("COALESCE(paciente_id, '{$clave}')"), // Mantiene su ID anterior si ya existía
+                'email' => $request->email,
+                'edad' => $request->edad_anios, // Guardamos la edad en años
+                'sexo' => $request->sexo,
+                'direccion' => $request->direccion,
+                'tipo_sangre' => $request->tipo_sangre,
+                'contacto_emergencia' => $request->contacto_emergencia,
+                'telefono_emergencia' => $request->telefono_emergencia,
+                'curp' => $request->curp,
+                'estado' => $request->estado,
+                'foto' => "null", // Guardamos la ruta de la foto en la base de datos
+                'notas_generales' => $request->notas_generales,
+                'alergias' => $request->alergias,
+                'antecedentes_medicos' => $request->antecedentes,
+                'fecha_nacimiento' => $request->fecha_nacimiento,
+                'whatsapp_id' => null,
+                'consentimiento' => null,
+                'ultima_interaccion' => null,
+            ]
+         );
+
+        // Asegurarnos de obtener el paciente fresco con su ID correcto de la BD
+        $paciente = Paciente::where('nombre', $request->nombre)->where('telefono', $request->telefono)->first();
 
         // Generamos el código del triage (TRI-AÑO-0001)
         $ultimoTriage = Triage::latest('id')->first();
