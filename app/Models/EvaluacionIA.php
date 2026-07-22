@@ -10,14 +10,12 @@ class EvaluacionIA extends Model
 
     protected $fillable = [
         'consulta_id',
-        'resultado_general',
-        'nivel_riesgo',
-        'probabilidad_diagnostico',
-        'modelo_ia',
-        'version_modelo',
-        'tiempo_respuesta',
-        'observaciones',
-        'estado'
+        'consulta_folio',
+        'session_uuid',
+        'sintomas_detectados',
+        'diagnostico_probable',
+        'recomendacion',
+        'confianza'
 
     ];
 
