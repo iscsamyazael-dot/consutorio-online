@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Services;
+use App\Services\Terminologia\DiccionarioMedico;
 
 use App\Models\SintomaDetectado;
 use App\Models\EvaluacionIA;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Smalot\PdfParser\Parser as PdfParser;
 use PhpOffice\PhpWord\IOFactory as WordIOFactory;
 use thiagoalessio\TesseractOCR\TesseractOCR;
+
 
 class IAClinicaService
 {
@@ -155,6 +157,34 @@ class IAClinicaService
     }
 
     /**
+     * Arma el bloque de texto con el historial de consultas anteriores y la
+     * última nota PSOAPP, para dar continuidad clínica al prompt. Si no hay
+     * nada de eso disponible, devuelve un texto vacío (no agrega ruido al
+     * prompt cuando es la primera consulta del paciente).
+     */
+    private function bloqueContextoPrevio(string $historialTexto, string $notaAnteriorTexto): string
+    {
+        if (trim($historialTexto) === '' && trim($notaAnteriorTexto) === '') {
+            return '';
+        }
+
+        $bloque = "\n        CONTEXTO PREVIO DEL EXPEDIENTE (para dar continuidad, no para copiar tal cual):\n";
+        $bloque .= "        Este contexto es SOLO para que evalúes evolución/continuidad del padecimiento.\n";
+        $bloque .= "        No lo repitas como si fuera parte de la consulta actual, y no inventes que\n";
+        $bloque .= "        algo mencionado antes sigue vigente si el registro actual no lo confirma.\n";
+
+        if (trim($historialTexto) !== '') {
+            $bloque .= "\n        HISTORIAL DE CONSULTAS ANTERIORES:\n{$historialTexto}\n";
+        }
+
+        if (trim($notaAnteriorTexto) !== '') {
+            $bloque .= "\n        ÚLTIMA NOTA PSOAPP REGISTRADA:{$notaAnteriorTexto}\n";
+        }
+
+        return $bloque;
+    }
+
+    /**
      * Calcula el nivel de riesgo
      */
     private function calcularNivelRiesgo(array $alertas)
@@ -272,6 +302,10 @@ class IAClinicaService
             ? implode(', ', $especialidadesDisponibles)
             : 'No disponible (no se proporcionó catálogo, usa tu mejor criterio clínico general)';
 
+        // Vocabulario de referencia (síntoma coloquial -> término médico),
+        // extraído del Manual de Terminología Médica.
+        $vocabularioSintomas = DiccionarioMedico::textoReferencia();
+
         $prompt = " 
 
         Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE como apoyo para médicos durante consultas PRESENCIALES.
@@ -364,15 +398,10 @@ class IAClinicaService
 
         Genera máximo tres diagnósticos probables utilizando TERMINOLOGÍA MÉDICA PRECISA.
 
-        UTILIZA los nombres técnicos de las enfermedades, por ejemplo:
-        - En lugar de 'dolor de estómago' → 'Gastritis aguda'
-        - En lugar de 'dolor de cabeza' → 'Cefalea tensional'
-        - En lugar de 'infección de garganta' → 'Faringoamigdalitis aguda'
-        - En lugar de 'dolor en las articulaciones' → 'Artralgia'
-        - En lugar de 'presión alta' → 'Hipertensión arterial sistémica'
-        - En lugar de 'azúcar alta' → 'Diabetes mellitus tipo 2'
-        - En lugar de 'dolor de pecho' → 'Dolor torácico atípico'
-        - En lugar de 'gripa' → 'Infección respiratoria aguda viral'
+        Para nombrar correctamente el síntoma o hallazgo referido por el paciente
+        (antes de razonar el diagnóstico probable), usa este vocabulario de referencia
+        (síntoma coloquial -> término médico):
+        $vocabularioSintomas
 
         Ordénalos desde el más probable al menos probable.
 
@@ -665,6 +694,10 @@ PRONÓSTICO ANTERIOR:
 ";
         }
 
+        // Vocabulario de referencia (síntoma coloquial -> término médico),
+        // extraído del Manual de Terminología Médica.
+        $vocabularioSintomas = DiccionarioMedico::textoReferencia();
+
         $prompt = "
 
         Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE como apoyo
@@ -683,19 +716,11 @@ PRONÓSTICO ANTERIOR:
         - UTILIZA TERMINOLOGÍA MÉDICA PRECISA Y PROFESIONAL en TODAS tus respuestas.
         - Los diagnósticos y hallazgos deben expresarse con nombres técnicos de enfermedades.
 
-        Ejemplos de terminología correcta:
-        - 'Dolor abdominal' → 'Dolor abdominal agudo en epigastrio'
-        - 'Dolor de cabeza' → 'Cefalea tensional bilateral'
-        - 'Infección' → 'Proceso infeccioso agudo'
-        - 'Presión alta' → 'Hipertensión arterial sistémica'
-        - 'Azúcar alta' → 'Hiperglucemia'
-        - 'Dificultad para respirar' → 'Disnea de esfuerzo'
-        - 'Fiebre' → 'Pirexia'
-        - 'Dolor de garganta' → 'Odínofagia'
-        - 'Dolor al orinar' → 'Disuria'
-        - 'Sangrado' → 'Hemorragia'
-
-        NOTA MÉDICA DEL PACIENTE:
+        Vocabulario de referencia para nombrar correctamente cada síntoma
+        (síntoma coloquial -> término médico):
+        $vocabularioSintomas
+        {$this->bloqueContextoPrevio($historialTexto, $notaAnteriorTexto)}
+        NOTA MÉDICA DEL PACIENTE (registro actual):
 
         $texto
 
@@ -757,7 +782,8 @@ PRONÓSTICO ANTERIOR:
         =========================================================
 
         Identifica todos los síntomas (o hallazgos clínicos, si el texto es un reporte de estudio)
-        encontrados. UTILIZA NOMBRES TÉCNICOS Y PRECISOS para cada uno.
+        encontrados. UTILIZA NOMBRES TÉCNICOS Y PRECISOS para cada uno, apoyándote en el
+        vocabulario de referencia indicado al inicio del prompt.
 
         Ejemplo (relato de paciente):
 
@@ -788,12 +814,38 @@ PRONÓSTICO ANTERIOR:
         =========================================================
 
         Genera una condición probable basada únicamente en los síntomas o, si aplica, en la
-        impresión diagnóstica del estudio adjunto. UTILIZA EL NOMBRE TÉCNICO COMPLETO.
+        impresión diagnóstica del estudio adjunto. UTILIZA EL NOMBRE TÉCNICO COMPLETO de la
+        entidad clínica.
 
-        Ejemplos válidos:
+        REGLA CRÍTICA - NO INVENTES ETIOLOGÍA NI AGENTE CAUSAL:
 
+        El nombre técnico de la condición NO es lo mismo que su causa específica. Puedes nombrar
+        la entidad clínica (ej. 'Gastritis aguda'), pero NUNCA le agregues un agente causal,
+        microorganismo o etiología específica (ej. 'por Helicobacter pylori', 'estreptocócica',
+        'viral', 'bacteriana') a menos que ese agente venga EXPLÍCITAMENTE confirmado en el texto
+        (por ejemplo, un resultado de laboratorio o cultivo ya reportado). Si el texto es solo el
+        relato de síntomas del paciente, sin estudios que confirmen el agente causal, omite la
+        etiología por completo.
+
+        Incorrecto (etiología inventada, sin respaldo en el texto):
         'Gastritis aguda por Helicobacter pylori'
         'Faringoamigdalitis aguda estreptocócica'
+
+        Correcto (misma entidad clínica, sin inventar el agente causal):
+        'Gastritis aguda'
+        'Faringoamigdalitis aguda'
+
+        Correcto (aquí SÍ es válido nombrar el agente, porque el propio texto reporta el estudio
+        que lo confirma):
+        Si el texto incluye 'cultivo faríngeo positivo para Streptococcus pyogenes' o
+        'prueba de antígeno fecal positiva para H. pylori', entonces sí puedes escribir
+        'Faringoamigdalitis aguda estreptocócica' o 'Gastritis aguda por Helicobacter pylori',
+        porque ahí la etiología no la inventaste tú: viene del estudio ya realizado.
+
+        Ejemplos válidos de nombres técnicos (sin etiología no confirmada):
+
+        'Gastritis aguda'
+        'Faringoamigdalitis aguda'
         'Hipertensión arterial sistémica no controlada'
         'Diabetes mellitus tipo 2 descompensada'
         'Artrosis de rodilla bilateral'
