@@ -64,4 +64,8 @@ class Consulta extends Model
     {
         return $this->belongsTo(EvaluacionIA::class, 'evaluacion_ia_id');
     }
+    public function eventosIA()
+{
+    return $this->hasMany(EventoIA::class, 'consulta_id');
+}
 }

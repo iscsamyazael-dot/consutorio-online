@@ -31,52 +31,117 @@
 
     {{-- TARJETAS SUPERIORES --}}
     <div class="row mb-4">
-
-        <div class="col-md-3">
-            <div class="small-box bg-primary shadow border-0 rounded-4">
-                <div class="inner">
-                    <h3>245</h3>
-                    <p>Total Pacientes</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-users"></i>
-                </div>
+    {{-- Tarjeta 1 --}}
+    <div class="col-md-6">
+        <div class="small-box bg-primary shadow border-0 rounded-4">
+            <div class="inner">
+                <h3 class="h4"> {{ $totalPacientes }} </h3>
+                <p class="mb-0">Total Pacientes</p>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="small-box bg-success shadow border-0 rounded-4">
-                <div class="inner">
-                    <h3>34</h3>
-                    <p>Consultas Hoy</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-stethoscope"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="small-box bg-warning shadow border-0 rounded-4">
-                <div class="inner">
-                    <h3>12</h3>
-                    <p>Urgencias</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-heartbeat"></i>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="small-box bg-danger shadow border-0 rounded-4">
-                <div class="inner">
-                    <h3>5</h3>
-                    <p>pendientes</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-procedures"></i>
-                </div>
+            <div class="icon">
+                <i class="fas fa-users"></i>
             </div>
         </div>
     </div>
+
+    {{-- Tarjeta 2 --}}
+    <div class="col-md-6">
+        <div id="btnVerListaPendientes" class="small-box bg-danger shadow border-0 rounded-4 tarjeta-pendientes">
+    <div class="inner">
+        <h3 class="h4">{{ $totalPendientes }}</h3>
+        <p class="mb-0">Pacientes con datos incompletos</p>
+
+        @if($totalPendientes > 0)
+            <small class="d-block mt-1">
+                <i class="fas fa-hand-pointer"></i>
+                Haz clic para ver la lista
+            </small>
+        @endif
+    </div>
+</div>
+        </div>
+    </div>
+
+    {{-- LISTA DESPLEGABLE DE PACIENTES CON DATOS INCOMPLETOS --}}
+    @if($totalPendientes > 0)
+    <div id="listaPendientes" class="mb-4" style="display:none;">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Pacientes que deben completar sus datos</h6>
+                <ul class="list-group list-group-flush">
+                    @foreach($pacientesPendientes as $p)
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ $p->nombre }}
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-primary rounded-pill"
+                            onclick='completarDatos(@json($p))'>
+                            Completar datos
+                        </button>
+                    </li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
+        </div>
+    </div>
+</div>
+
+    {{-- LISTA DESPLEGABLE DE PACIENTES CON DATOS INCOMPLETOS --}}
+    @if($totalPendientes > 0)
+    <div id="listaPendientes" class="mb-4" style="display:none;">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Pacientes que deben completar sus datos</h6>
+                <ul class="list-group list-group-flush">
+                    @foreach($pacientesPendientes as $p)
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ $p->nombre }}
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-primary rounded-pill"
+                            onclick='completarDatos(@json($p))'>
+                            Completar datos
+                        </button>
+                    </li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script>
+     document.addEventListener('DOMContentLoaded', function () {
+
+    const tarjeta = document.getElementById('btnVerListaPendientes');
+    const lista = document.getElementById('listaPendientes');
+
+    if (!tarjeta || !lista) return;
+
+    tarjeta.addEventListener('click', function () {
+
+        if (lista.style.display === 'block') {
+
+            lista.style.display = 'none';
+
+        } else {
+
+            lista.style.display = 'block';
+
+            lista.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+
+        }
+
+    });
+
+});
+</script>
+    @endif
+
     <div id="app">
         <pacientes-index></pacientes-index>
     </div>
@@ -195,15 +260,74 @@ body{
 
 .small-box{
     border-radius:22px !important;
+    height:120px !important;
+    display:flex;
+    align-items:center;
+    position:relative;
+    overflow:hidden;
+}
+
+
+.small-box .inner{
+    width:100%;
+    z-index:2;
 }
 
 .small-box .icon{
-    top:10px;
+    position:absolute;
+    right:20px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:65px;
+    opacity:.18;
 }
+
 
 .small-box:hover{
     transform:translateY(-5px);
     transition:.3s;
+}
+.tarjeta-pendientes{
+    cursor:pointer;
+    transition:all .30s ease;
+}
+
+.tarjeta-pendientes:hover{
+    transform:translateY(-5px);
+    box-shadow:0 12px 35px rgba(0,0,0,.20);
+}
+
+.tarjeta-pendientes .inner{
+    position:relative;
+    z-index:2;
+}
+
+.tarjeta-pendientes .icon{
+    opacity:.18;
+    transition:.30s;
+}
+
+.tarjeta-pendientes:hover .icon{
+    transform:scale(1.1);
+}
+
+#listaPendientes{
+    display:none;
+    animation:fadeLista .35s ease;
+}
+
+@keyframes fadeLista{
+
+    from{
+        opacity:0;
+        transform:translateY(-10px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+
 }
 </style>
 
@@ -211,4 +335,14 @@ body{
 
 @section('js')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script>
+function completarDatos(paciente) {
+
+    // Guarda el paciente en localStorage
+    localStorage.setItem('pacientePrecargar', JSON.stringify(paciente));
+
+    // Redirige al formulario
+    window.location.href = "{{ url('PacienteNuevo') }}";
+}
+</script>
 @stop
