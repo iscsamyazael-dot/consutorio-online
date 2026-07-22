@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Medico;
+use App\Models\User;
 use App\Models\HorarioMedico;
 use App\Models\ConfiguracionMedicoSucursal; 
 use Illuminate\Http\Request;
@@ -243,5 +244,55 @@ class MedicoController extends Controller
         ]);
     }
 
+    //Api (IONIC) para consultar la informacion del medico
+    public function getPerfilMedico(Request $request) {
+        // Obtenemos el ID del usuario autenticado de forma segura
+        $userId = $request->user()->id; 
+
+        $medico = DB::table('users')
+                    ->join('medicos', 'medicos.user_id', '=', 'users.id')
+                    ->select('medicos.folio', 'medicos.nombre')
+                    ->where('users.id', $userId) // Aquí validamos contra el ID del usuario logueado
+                    ->first();
+        
+        return response()->json($medico);
+    }
+
+    public function getMedicoConfiguracion(Request $request) {
+        // 1. Obtenemos el ID del usuario autenticado
+        $userId = $request->user()->id;
+
+        // 2. Ejecutamos la consulta usando ese ID
+        // Usamos DB::select porque tu consulta tiene un GROUP_CONCAT complejo
+        $agenda = DB::select("
+            SELECT 
+                medicos.user_id,
+                medicos.id,
+                medicos.cedula_profesional as cedula, 
+                medicos.folio, 
+                medicos.nombre, 
+                especialidades.nombre as especialidad,
+                CONCAT(horarios_medicos.hora_inicio, '-', horarios_medicos.hora_fin) AS horarios,
+                GROUP_CONCAT(
+                    CASE horarios_medicos.dia_semana 
+                        WHEN 1 THEN 'Lunes' WHEN 2 THEN 'Martes' WHEN 3 THEN 'Miércoles' 
+                        WHEN 4 THEN 'Jueves' WHEN 5 THEN 'Viernes' WHEN 6 THEN 'Sábado' WHEN 7 THEN 'Domingo'
+                    END 
+                    ORDER BY horarios_medicos.dia_semana ASC SEPARATOR ', '
+                ) AS dias_atencion,
+                ubicaciones.nombre AS lugar, 
+                ubicaciones.direccion AS direccion
+            FROM users 
+            JOIN medicos ON medicos.user_id = users.id
+            JOIN especialidades ON especialidades.id = medicos.especialidad_id 
+            JOIN horarios_medicos ON horarios_medicos.medico_id = medicos.id
+            JOIN ubicaciones ON ubicaciones.id = horarios_medicos.ubicacion_id
+            WHERE users.id = ?
+            GROUP BY medicos.cedula_profesional, medicos.folio, medicos.nombre, especialidades.nombre, horarios, lugar, direccion
+        ", [$userId]); // Pasamos el ID de forma segura como parámetro
+
+        // 3. Retornamos el objeto (o null si no hay datos)
+        return response()->json($agenda);
+    }
 
 }

@@ -22,6 +22,8 @@ use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\Api_Ionic\AuthController;
+
 
 Route::get('/', function () { return view('auth.login'); });
 
@@ -169,5 +171,36 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::view('inicio', 'dashboard');
+
+//Pruebas para las APIS DE IONIC///
+Route::get('MedicoPerfil/{userId}', [MedicoController::class, 'getPerfilMedico']);
+
+// Login: sin autenticación
+Route::prefix('api/ionic')->group(function () {
+
+    Route::post('/login', [AuthController::class, 'login']);
+
+});
+
+
+
+// Rutas protegidas: requieren token Sanctum
+Route::prefix('api/ionic')
+    ->middleware('auth:sanctum')
+    ->group(function () {
+
+        Route::post('/logout', [AuthController::class, 'logout']);
+
+        Route::get('/user', [AuthController::class, 'user']);
+        Route::get('MedicoPerfil', [MedicoController::class, 'getPerfilMedico']);
+        Route::get('MedicoConfiguracion', [MedicoController::class, 'getMedicoConfiguracion']);
+        Route::get('ResumenCitasHoy', [CitaController::class, 'getDashboardStats']);
+        Route::get('CitasDelDia', [CitaController::class, 'getCitasDelDia']);
+        Route::get('ResumenCitas', [CitaController::class, 'getResumenCitas']);
+        Route::get('ListaCitasHoyMañanaSemana', [CitaController::class, 'getListaCitas']);
+        Route::get('CitasPorFecha', [CitaController::class, 'getCitasPorFecha']);
+        Route::get('DetalleCita', [CitaController::class, 'getDetalleCita']);
+        Route::get('HistorialCitas', [CitaController::class, 'getHistorialCitas']);
+    });
 
 require __DIR__.'/auth.php';
