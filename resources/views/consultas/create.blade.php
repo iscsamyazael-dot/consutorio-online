@@ -6,7 +6,6 @@
     <input type="hidden" name="route" value="{{ url('/') }}">
     <meta name="base-url" content="{{ url('/') }}">
     <div id="app">
-        
         <nuevaconsultamedica
             :doctor="{{ Js::from($doctor) }}"
             :paciente-id="{{ Js::from($pacienteId) }}"

@@ -24,8 +24,8 @@ class ConsultaController extends Controller
      * Show the form for creating a new resource.
      */
 
-    //Funcion para obtener datos del doctor de acuerdo a tabla y relacion
-    public function create($id)
+    //Funcion para obtener datos del doctor y paciente para ambas vistas (expediente y nueva consulta)
+    public function create($id = null)
     {
         $user = auth()->user();
         $medico = $user->medico?->load('especialidad');

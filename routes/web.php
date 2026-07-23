@@ -31,8 +31,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/triage', [TriageController::class, 'store'])->name('triage.store');
     Route::get('consultaNormal/{id}', [ConsultaController::class, 'create'])->name('consultas.create');
-    
-    
+
+
+    //Ruta para obtener y buscar datos del paciente
+    Route::get('pacientes/buscar', [PacienteController::class, 'buscar'])->name('pacientes.buscar');
     //Código para hacer el filtro de un paciente mediante un input //
     //Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
     Route::get('/perfil-usuario', [ProfileController::class, 'obtenerPerfil']);
@@ -128,7 +130,8 @@ Route::middleware('auth')->group(function () {
             Route::get('agregar-usuario',function(){ return view('configuracion-sistema.agregar-usuario');});
             Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); })->name('pacientes.expediente');
             Route::get('HistorialConsulta', function() { return view('consultas.consultaIndividual'); })->name('consultas.consultaIndividual');
-            Route::get('NuevaConsulta', function () { return view('consultas.create'); })->name('consultas.create');
+            Route::get('NuevaConsulta', [ConsultaController::class, 'create'])->name('consultas.create');
+            //Route::get('NuevaConsulta', function () { return view('consultas.create'); })->name('consultas.create');
             Route::get('ConsultaInteligenteNueva', function() { 
                 return view('consultas.consulta_inteligente', ['paciente' => null]);
             })->name('consultas.consulta_inteligente.nueva');

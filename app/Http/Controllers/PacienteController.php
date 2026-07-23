@@ -11,6 +11,28 @@ class PacienteController extends Controller
     {
        return Paciente::with(['triages'])->get();
     }
+
+    public function buscar(Request $request)
+    {
+        $texto = $request->texto;
+
+        return Paciente::select(
+                'id',
+                'nombre',
+            )
+            ->where(function ($query) use ($texto) {
+                $query->where('nombre', 'like', "%{$texto}%");
+                    
+            })
+            ->limit(8)
+            ->get()
+            ->map(function ($paciente) {
+                $paciente->nombre_completo = $paciente->nombre;
+
+                return $paciente;
+            });
+    }
+
     
     public function filtrar_paciente(Request $request)
     {
