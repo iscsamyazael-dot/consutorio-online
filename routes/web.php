@@ -22,6 +22,7 @@ use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api_Ionic\AuthController; //Login APP-IONIC
+use App\Http\Controllers\NotificacionController;
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -204,6 +205,9 @@ Route::prefix('api/ionic')
         Route::get('CitasPorFecha', [CitaController::class, 'getCitasPorFecha']);
         Route::get('DetalleCita', [CitaController::class, 'getDetalleCita']);
         Route::get('HistorialCitas', [CitaController::class, 'getHistorialCitas']);
+        Route::get('TotalCitasPorDiayMes', [CitaController::class, 'citasPorMes']);
+        Route::get('notificacionesRecientes', [NotificacionController::class, 'index']);
+        Route::post('notificaciones/{id}/leer', [NotificacionController::class, 'marcarLeida']);
     });
 
 require __DIR__.'/auth.php';

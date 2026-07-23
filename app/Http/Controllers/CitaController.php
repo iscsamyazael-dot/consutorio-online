@@ -555,4 +555,29 @@ class CitaController extends Controller
 
         return response()->json($historial);
     }
+
+    //Función para ver el total de las citas por dia esto servira para definir los puntos que se pintan en el calendario//
+    public function citasPorMes(Request $request)
+    {
+        $anio = $request->input('anio');
+        $mes = $request->input('mes');
+        $medicoId = $request->user()->id;
+
+        $citas = DB::table('citas')
+            ->join('medicos', 'citas.medico_id', '=', 'medicos.id')
+            ->join('users', 'medicos.user_id', '=', 'users.id')
+            ->select(
+                DB::raw("DATE(citas.fecha) as fecha"),
+                DB::raw("GROUP_CONCAT(citas.estado) as estados"),
+                DB::raw("COUNT(*) as total_citas")
+            )
+            ->where('users.id', $medicoId)
+            ->whereYear('citas.fecha', $anio)
+            ->whereMonth('citas.fecha', $mes)
+            ->groupBy(DB::raw("DATE(citas.fecha)"))
+            ->get()
+            ->keyBy('fecha');
+
+        return response()->json($citas);
+    }
 }
