@@ -16,6 +16,7 @@ class Cita extends Model
         'tipo',
         'estado',
         'observaciones',
+        'notificacion_leida',
     ];
 
     protected static function booted()

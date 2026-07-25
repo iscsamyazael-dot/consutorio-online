@@ -6,6 +6,7 @@ use App\Models\Paciente;
 use App\Models\Medico;
 use App\Models\Especialidad;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 
 // Clase para manejar las peticiones HTTP
@@ -315,25 +316,31 @@ class CitaController extends Controller
             ->where('users.id', $userId)
             ->whereDate('citas.fecha', $fechaHoy)
             ->select(
-                DB::raw('count(citas.id) as total_hoy'),
-                DB::raw("SUM(CASE WHEN citas.estado = 'confirmada' THEN 1 ELSE 0 END) as confirmada"),
-                DB::raw("SUM(CASE WHEN citas.estado = 'Agendado' THEN 1 ELSE 0 END) as agendado"),
-                DB::raw("SUM(CASE WHEN citas.estado = 'cancelada' THEN 1 ELSE 0 END) as cancelada")
+               DB::raw('count(citas.id) as total_hoy'),
+                
+                // Pendientes (busca los que están en cola)
+                DB::raw("SUM(CASE WHEN citas.estado IN ('Agendado', 'Confirmado') THEN 1 ELSE 0 END) as pendientes"),
+                
+                // Completadas (usando el valor exacto 'Finalizada' de tu BD)
+                DB::raw("SUM(CASE WHEN citas.estado IN ('Finalizada', 'Completada') THEN 1 ELSE 0 END) as completadas"),
+                
+                // Canceladas (usando el valor exacto 'Cancelado' de tu BD)
+                DB::raw("SUM(CASE WHEN citas.estado IN ('Cancelado', 'Cancelada') THEN 1 ELSE 0 END) as canceladas")
             )
             ->first();
 
         return response()->json([
             'citas_hoy' => $stats->total_hoy ?? 0,
-            'confirmadas' => $stats->confirmada ?? 0,
-            'pendientes' => $stats->agendado ?? 0,
-            'canceladas' => $stats->cancelada ?? 0,
+            'pendientes' => $stats->pendientes ?? 0,
+            'completadas' => $stats->completadas ?? 0,
+            'canceladas' => $stats->canceladas ?? 0,
         ]);
     }
 
     //Función para traer las citas del día//
     public function getCitasDelDia(Request $request) {
         $userId = $request->user()->id;
-        $fechaHoy = date('Y-m-d'); // O date('Y-m-d')
+        $fechaHoy = Carbon::now('America/Mexico_City')->toDateString();
 
         $citas = DB::table('citas')
             ->join('medicos', 'citas.medico_id', '=', 'medicos.id')
@@ -385,16 +392,18 @@ class CitaController extends Controller
 
         $resumen = $query->select(
             DB::raw('count(citas.id) as total'),
-            DB::raw("SUM(CASE WHEN LOWER(citas.estado) = 'confirmada' THEN 1 ELSE 0 END) as confirmada"),
-            DB::raw("SUM(CASE WHEN LOWER(citas.estado) = 'agendado' THEN 1 ELSE 0 END) as agendado"),
-            DB::raw("SUM(CASE WHEN LOWER(citas.estado) = 'cancelada' THEN 1 ELSE 0 END) as cancelada")
+            DB::raw("SUM(CASE WHEN citas.estado = 'Confirmada' THEN 1 ELSE 0 END) as confirmadas"),
+            DB::raw("SUM(CASE WHEN citas.estado = 'Agendado' THEN 1 ELSE 0 END) as agendadas"),
+            DB::raw("SUM(CASE WHEN citas.estado = 'Finalizada' THEN 1 ELSE 0 END) as finalizadas"), // <-- Agregar esta
+            DB::raw("SUM(CASE WHEN citas.estado = 'Cancelado' THEN 1 ELSE 0 END) as canceladas")
         )->first();
 
         return response()->json([
             'citas_total' => $resumen->total ?? 0,
-            'confirmadas' => $resumen->confirmada ?? 0,
-            'pendientes' => $resumen->agendado ?? 0,
-            'canceladas' => $resumen->cancelada ?? 0,
+            'confirmadas' => $resumen->confirmadas ?? 0,
+            'pendientes' => $resumen->agendadas ?? 0,
+            'finalizadas' => $resumen->finalizadas ?? 0, // <-- Agregamos esta propiedad clave
+            'canceladas' => $resumen->canceladas ?? 0,
         ]);
     }
   
@@ -554,5 +563,55 @@ class CitaController extends Controller
                            ->get();
 
         return response()->json($historial);
+    }
+
+    //Función para ver el total de las citas por dia esto servira para definir los puntos que se pintan en el calendario//
+    public function citasPorMes(Request $request)
+    {
+        $anio = $request->input('anio');
+        $mes = $request->input('mes');
+        $medicoId = $request->user()->id;
+
+        $citas = DB::table('citas')
+            ->join('medicos', 'citas.medico_id', '=', 'medicos.id')
+            ->join('users', 'medicos.user_id', '=', 'users.id')
+            ->select(
+                DB::raw("DATE(citas.fecha) as fecha"),
+                DB::raw("GROUP_CONCAT(citas.estado) as estados"),
+                DB::raw("COUNT(*) as total_citas")
+            )
+            ->where('users.id', $medicoId)
+            ->whereYear('citas.fecha', $anio)
+            ->whereMonth('citas.fecha', $mes)
+            ->groupBy(DB::raw("DATE(citas.fecha)"))
+            ->get()
+            ->keyBy('fecha');
+
+        return response()->json($citas);
+    }
+
+    //Funcion para actualizar el estado de la cita a traves de IONIC
+    public function actualizarEstadoCita(Request $request, $id)
+    {
+        $request->validate([
+            'estado' => 'required|string|in:Agendado,Confirmada,Completada,Finalizada,Cancelada',
+        ]);
+        // Preparamos los datos que vamos a actualizar
+        $datosActualizar = [
+            'estado' => $request->estado,
+        ];
+        // Si pasa a un estado final, también actualizamos la notificación en la misma sentencia
+        if (in_array($request->estado, ['Finalizada', 'Completada', 'Cancelada'])) {
+            $datosActualizar['notificacion_leida'] = 1;
+        }
+        // Aquí haces el UPDATE de forma directa y explícita en la tabla 'citas'
+        Cita::where('id', $id)->update($datosActualizar);
+        // Volvemos a consultar la cita actualizada para retornarla en el JSON
+        $cita = Cita::findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'message' => 'Estado de la cita actualizado correctamente',
+            'cita' => $cita
+        ]);
     }
 }

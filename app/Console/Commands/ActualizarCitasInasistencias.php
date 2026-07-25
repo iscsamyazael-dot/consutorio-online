@@ -4,42 +4,35 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Cita;
+use Carbon\Carbon;
 
 class ActualizarCitasInasistencias extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'app:actualizar-citas-inasistencias';
+    protected $description = 'Marca como Inasistencia las citas que ya pasaron de su hora programada';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Command description';
-
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
-        // Usamos 'now()' que es la hora que Laravel tiene configurada
-        $fechaHoy = now()->format('Y-m-d');
-        $horaLimite = now()->subHour()->format('H:i:s');
+        // Forzamos la hora exacta actual de México
+        $ahora = Carbon::now('America/Mexico_City');
+        $fechaHoy = $ahora->format('Y-m-d');
+        
+        // Si quieres darles una tolerancia (ej. 15 o 30 minutos después de su hora), 
+        // puedes usar ->subMinutes(15). Si quieres que sea exactamente al cumplirse la hora, déjalo solo con $ahora->format('H:i:s')
+        $horaActual = $ahora->format('H:i:s');
 
-        $this->info("Hora actual del sistema: " . now()->format('H:i:s'));
-        $this->info("Buscando citas de hoy ($fechaHoy) con hora <= $horaLimite");
+        $this->info("Hora actual de México: " . $horaActual);
+        $this->info("Buscando citas de hoy ($fechaHoy) con hora <= $horaActual");
 
+        // Buscamos citas agendadas de hoy cuya hora ya pasó
         $citas = Cita::where('estado', 'Agendado')
             ->where('fecha', $fechaHoy)
-            ->where('hora', '<=', $horaLimite)
+            ->where('hora', '<=', $horaActual)
             ->get();
 
         if ($citas->isEmpty()) {
             $this->info("No se encontraron citas para actualizar.");
+            return;
         }
 
         foreach ($citas as $cita) {

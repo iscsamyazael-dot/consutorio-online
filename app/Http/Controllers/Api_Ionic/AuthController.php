@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers\Api_Ionic;
-
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -23,7 +22,7 @@ class AuthController extends Controller
 
         if (!$usuario || !Hash::check($credenciales['password'], $usuario->password)) {
             return response()->json([
-                'message' => 'Las credenciales son incorrectas.'
+                'message' => 'Usuario o Contraseña no válidos'
             ], 401);
         }
 
@@ -67,5 +66,29 @@ class AuthController extends Controller
         return response()->json([
             'usuario' => $request->user()
         ]);
+    }
+    
+    //Función para actualizar la contraseña//
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6',
+        ]);
+
+        $usuario = $request->user();
+
+        if (!Hash::check($request->current_password, $usuario->password)) {
+            return response()->json([
+                'message' => 'La contraseña actual es incorrecta.'
+            ], 422);
+        }
+
+        $usuario->password = Hash::make($request->new_password);
+        $usuario->save();
+
+        return response()->json([
+            'message' => 'Contraseña actualizada correctamente.'
+        ], 200);
     }
 }
