@@ -194,7 +194,6 @@ Route::prefix('api/ionic')
     ->group(function () {
 
         Route::post('/logout', [AuthController::class, 'logout']);
-
         Route::get('/user', [AuthController::class, 'user']);
         Route::get('MedicoPerfil', [MedicoController::class, 'getPerfilMedico']);
         Route::get('MedicoConfiguracion', [MedicoController::class, 'getMedicoConfiguracion']);
@@ -208,6 +207,8 @@ Route::prefix('api/ionic')
         Route::get('TotalCitasPorDiayMes', [CitaController::class, 'citasPorMes']);
         Route::get('notificacionesRecientes', [NotificacionController::class, 'index']);
         Route::post('notificaciones/{id}/leer', [NotificacionController::class, 'marcarLeida']);
+        Route::post('actualizarCita/{id}/estado', [CitaController::class, 'actualizarEstadoCita']);
+        Route::put('ActualizarContrasenia', [AuthController::class, 'updatePassword']);
     });
 
 require __DIR__.'/auth.php';

@@ -35,7 +35,7 @@ class NotificacionController extends Controller
             JOIN pacientes ON citas.paciente_id = pacientes.id
             JOIN medicos ON citas.medico_id = medicos.id
             JOIN users ON users.id = medicos.user_id
-            WHERE medicos.user_id = ?
+            WHERE medicos.user_id = ? AND citas.notificacion_leida = 0
             ORDER BY citas.updated_at DESC
             LIMIT 20
         ", [$userId]);
