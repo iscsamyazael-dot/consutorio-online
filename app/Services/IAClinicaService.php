@@ -636,7 +636,7 @@ class IAClinicaService
             $response = Http::withToken(config('services.ai.key'))
                 ->timeout(20)
                 ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-chat',
+                    'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object']
                 ]);
@@ -993,7 +993,7 @@ PRONÓSTICO ANTERIOR:
             $response = Http::withToken(config('services.ai.key'))
                 ->timeout(20)
                 ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-chat',
+                    'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object']
                 ]);
