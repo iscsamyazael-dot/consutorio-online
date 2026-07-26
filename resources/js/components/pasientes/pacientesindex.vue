@@ -37,7 +37,7 @@
                                         class="avatar-circle"
                                         :style="{ background: obtenerColor(paciente.nombre) }"
                                     >
-                                        {{ paciente.nombre.substring(0,2).toUpperCase() }}
+                                        {{ (paciente.nombre || '').substring(0,2).toUpperCase() }}
                                     </div>
                                     <div>
                                         <h6 class="fw-bold mb-0">
@@ -380,6 +380,9 @@ export default {
         // ─── COLORES AVATAR ───────────────────────────────────────────────────────
 
         obtenerColor(nombre) {
+            if(!nombre){
+                return "#1976d2";
+            }
             const colores = [
                 "#1976d2",
                 "#43a047",
