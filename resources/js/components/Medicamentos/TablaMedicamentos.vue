@@ -816,7 +816,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="font-weight-bold">
-                            Stock Actual
+                            Stock Actual 
                         </label>
                         <div class="input-group">
                             <div class="input-group-prepend">

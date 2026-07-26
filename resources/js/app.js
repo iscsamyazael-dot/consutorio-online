@@ -25,11 +25,21 @@ import NuevaConsulta from './components/consultaIA/NuevaConsulta.vue'
 import consultapaciente from './components/consultas/masterindividual.vue'
 import nuevaconsultamedica from './components/consultas/maesternuevaconsulta.vue'
 import centroconsultas from './components/consultas/mastercentro.vue'
+<<<<<<< HEAD
 // Módulo de recetas
 import Historialreceta from './components/recetass/PanelRecetas.vue'
 // Módulo de especialidades
 import Especialidades from './components/Especialidades/Especialidades.vue'
 // Módulo de alta de médicos
+=======
+
+
+import Especialidades from './components/Especialidades/Especialidades.vue'// importa especialidades 
+//Modulo de inventario de medicamentos
+import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
+
+//MODULO DE ALTA MEDICOS
+>>>>>>> feature/configuracionMedica
 import AltaMedicos from './components/medicos-alta/PanelMedicos.vue'
 import RegistroMedico from './components/medicos-alta/PanelRegistro.vue'
 // Módulo de agenda
@@ -38,12 +48,21 @@ import masterprocita from './components/citasmedicas/masterprograma.vue'
 // Módulo de perfil / configuración
 import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
 import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
+<<<<<<< HEAD
 // Módulo de ubicaciones
 import PanelTabla from './components/configuracion-sistema/PanelTabla.vue'
 //Modulo de registro de usuario 
 import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
 
 
+=======
+
+//Modulo de Historial de recetas 
+import Historialreceta from './components/recetass/PanelRecetas.vue'
+//Modulo de registro de usuario 
+import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
+
+>>>>>>> feature/configuracionMedica
 import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
 
 // ------------------------------------------------------
@@ -201,6 +220,15 @@ app.component(
     PanelContraseña
 );
 
+<<<<<<< HEAD
+=======
+
+app.component(
+    'recetass-historial',
+    Historialreceta
+);
+
+>>>>>>> feature/configuracionMedica
 app.component(
      'registro-usuario',
      RegistrarUsuario

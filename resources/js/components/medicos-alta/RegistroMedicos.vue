@@ -197,8 +197,60 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="card card-custom mt-4">
+                    <div class="card-decor-line bg-info-gradient rounded-top"></div>
+
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="icon-shape bg-info-light rounded-circle text-info me-3">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
+                            <h5 class="m-0 font-weight-bold text-dark-blue">
+                                Configuración de Seguridad
+                            </h5>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label-custom">
+                                    Correo Electrónico / Email
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group-custom">
+                                    <i class="fas fa-envelope input-icon"></i>
+                                    <input
+                                        type="email"
+                                        class="form-control-custom"
+                                        placeholder="Ej. medico@consultorio.com"
+                                        v-model="form.email"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label-custom">
+                                    Contraseña
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group-custom">
+                                    <i class="fas fa-key input-icon"></i>
+                                    <input
+                                        type="password"
+                                        class="form-control-custom"
+                                        v-model="form.password"
+                                        placeholder="Ingrese su contraseña"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
+
+                  
             
         
 
@@ -393,10 +445,13 @@ export default {
                 especialidad: '',
                 hora_entrada: '',
                 hora_salida: '',
+                dias_laborales: [],
                 duracion_consulta: '',
                 ubicacion_id: '',       
                 costo_consulta: '',
-                dias_laborales: []
+                email: '',
+                password: ''
+                
                 
 
             },
@@ -783,6 +838,14 @@ export default {
     /* Margen izquierdo extra exclusivo para el input de precio para que no choque con el $ */
     .form-control-price {
         padding-left: 35px !important; 
+    }
+    
+    .bg-info-gradient{
+        background: linear-gradient(90deg, #ff0800f8, #ff0000);
+    }
+
+    .bg-info-light{
+        background: rgba(14,165,233,.12);
     }
 
 
