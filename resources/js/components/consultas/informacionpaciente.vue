@@ -28,12 +28,13 @@
 
                         <!-- Cuando entra desde Nueva Consulta -->
                         <input
-                            v-else
-                            type="text"
-                            class="form-control custom-input with-icon"
-                            placeholder="Buscar paciente..."
-                            v-model="buscarPaciente"
-                            @input="buscarPacientes">
+                          v-else
+                          type="text"
+                          class="form-control custom-input with-icon"
+                          placeholder="Buscar paciente..."
+                          v-model="buscarPaciente"
+                          @input="onInputBuscar"
+                        >
 
                         <div
                             v-if="mostrarResultados && pacientesEncontrados.length"
@@ -441,12 +442,11 @@ export default {
   },
 
   mounted() {
-      console.log('PROP PacienteId:', this.pacienteId)
-      console.log('PROP Doctor:', this.doctor)
+    
 
-      if (this.pacienteId) {
-          this.pacienteSeleccionadoId = this.pacienteId
-      }
+    if (this.pacienteId) {
+        this.pacienteSeleccionadoId = this.pacienteId
+    }
   },
 
   methods: {
@@ -455,7 +455,7 @@ export default {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = setTimeout(() => {
         this.buscarPacientes()
-      }, 300)
+      }, 200)
     },
 
     async obtenerPacientes(id = this.pacienteSeleccionadoId) {
@@ -472,7 +472,7 @@ export default {
     async buscarPacientes() {
       if (this.seleccionandoPaciente) return
 
-      if (this.buscarPaciente.trim().length < 2) {
+      if (this.buscarPaciente.trim().length < 1) {
         this.pacientesEncontrados = []
         this.mostrarResultados = false
         this.pacienteSeleccionadoId = null
