@@ -33,23 +33,6 @@ class PacienteController extends Controller
             });
     }
 
-    
-    public function filtrar_paciente(Request $request)
-    {
-        $buscar = $request->buscar;
-        return Paciente::whereRaw( "CONCAT(nombre,' ',apellido_paterno,' ',apellido_materno) LIKE ?",
-                                    ["%{$buscar}%"])
-               ->orWhere('paciente_id','like',"%{$buscar}%")
-               ->select(
-                    'id',
-                    'paciente_id',
-                    'nombre',
-                    'apellido_paterno',
-                    'apellido_materno'
-                )
-                ->limit(10)
-                ->get();
-    }
     public function create()
     {
         return view('pacientes.create');

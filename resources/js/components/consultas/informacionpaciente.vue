@@ -47,8 +47,7 @@
                                 :key="paciente.id"
                                 @click="seleccionarPaciente(paciente)">
                                 <strong>{{ paciente.nombre_completo }}</strong>
-                                <br>
-                                <small>{{ paciente.telefono }}</small>
+                                
 
                             </button>
                         </div>
@@ -385,144 +384,263 @@ import Swal from 'sweetalert2'
 
 export default {
   name: 'ConsultaForm',
-    props: {
-         pacienteId: {
-        type: [Number, String],
-        default: null
-        },
-        doctor: {
-            type: Object,
-            default: () => ({})
+  props: {
+        pacienteId: {
+      type: [Number, String],
+      default: null
+      },
+      doctor: {
+          type: Object,
+          default: () => ({})
+      }
+  },
+
+  data() {
+      return{
+          seleccionandoPaciente: false,
+          buscarPaciente: '',
+          pacientesEncontrados: [],
+          mostrarResultados: false,
+          infoPacientes: {},
+          pacienteSeleccionadoId: null,
+          searchRequestId: 0,
+          debounceTimer: null,
+          guardando: false,
+          form: {
+              paciente_id:null,
+              fecha: '',
+              hora: '',
+              motivo: '',
+              diagnostico: '',
+              peso: '',
+              presion: '',
+              saturacion: '',
+              temperatura: '',
+              observaciones: '',
+              sintomas: '',
+              presentacion: '',
+              subjetivo: '',
+              objetivo: '',
+              analisis: '',
+              plan: '',
+              pronostico: ''
+          },
+
+          errores: {
+              fecha: '',
+              hora: '',
+              motivo: '',
+              diagnostico: '',
+              peso: '',
+              presion: '',
+              saturacion: '',
+              temperatura: '',
+              sintomas: ''
+          }
+      }
+  },
+
+  mounted() {
+      console.log('PROP PacienteId:', this.pacienteId)
+      console.log('PROP Doctor:', this.doctor)
+
+      if (this.pacienteId) {
+          this.pacienteSeleccionadoId = this.pacienteId
+      }
+  },
+
+  methods: {
+    onInputBuscar() {
+      // evita disparar una petición por cada tecla
+      clearTimeout(this.debounceTimer)
+      this.debounceTimer = setTimeout(() => {
+        this.buscarPacientes()
+      }, 300)
+    },
+
+    async obtenerPacientes(id = this.pacienteSeleccionadoId) {
+        try {
+            const response = await ApiService.get('/ExpedienteDetalle/' + id)
+            this.infoPacientes = response.data
+            this.precargarDatosPaciente()
+        } catch (error) {
+            console.error(error)
+        }
+
+    },
+
+    async buscarPacientes() {
+      if (this.seleccionandoPaciente) return
+
+      if (this.buscarPaciente.trim().length < 2) {
+        this.pacientesEncontrados = []
+        this.mostrarResultados = false
+        this.pacienteSeleccionadoId = null
+        this.infoPacientes = {}
+        this.form.paciente_id = null
+        return
+      }
+
+      const requestId = ++this.searchRequestId   // marca esta petición
+
+      try {
+        const response = await ApiService.get('/pacientes/buscar', {
+          params: { texto: this.buscarPaciente }
+        })
+
+        if (requestId !== this.searchRequestId) return  // 👈 llegó tarde, se ignora
+
+        this.pacientesEncontrados = response.data
+        this.mostrarResultados = response.data.length > 0
+      } catch (error) {
+        console.error(error)
+      }
+    },
+
+
+    async seleccionarPaciente(paciente) {
+      this.searchRequestId++          // 👈 invalida cualquier búsqueda en curso
+      this.seleccionandoPaciente = true
+      this.buscarPaciente = paciente.nombre_completo
+      this.mostrarResultados = false
+      this.pacientesEncontrados = []
+      this.pacienteSeleccionadoId = paciente.id
+
+      await this.$nextTick()
+      this.seleccionandoPaciente = false
+
+      await this.obtenerPacientes(paciente.id)
+    },
+
+
+
+    precargarDatosPaciente() {
+      const p = this.infoPacientes
+      if (!p) return
+
+      p.nombre_completo = [p.nombre, p.apellido_paterno, p.apellido_materno]
+          .filter(Boolean)
+          .join(' ')
+
+      const ultimoTriage = (p.triages && p.triages.length)
+          ? p.triages[p.triages.length - 1]
+          : null
+
+      const ahora = new Date()
+      const fechaHoy = ahora.toISOString().split('T')[0]
+      const horaAhora = ahora.toTimeString().slice(0, 5)
+
+      this.form = {
+          paciente_id: p.id,
+          fecha: fechaHoy,
+          hora: horaAhora,
+          motivo: ultimoTriage?.motivo_consulta || '',
+          diagnostico: '',
+          peso: ultimoTriage?.peso || '',
+          presion: ultimoTriage?.presion || '',
+          saturacion: ultimoTriage?.saturacion || '',
+          temperatura: ultimoTriage?.temperatura || '',
+          observaciones: '',
+          sintomas: ultimoTriage?.sintomas || ''
+      }
+    },
+
+    validarFormulario() {
+      this.errores = {
+        fecha: '',
+        hora: '',
+        motivo: '',
+        diagnostico: '',
+        peso: '',
+        presion: '',
+        saturacion: '',
+        temperatura: '',
+        sintomas: ''
+      }
+      let valido = true
+
+      if (!this.form.fecha) {
+          this.errores.fecha = 'La fecha es obligatoria.'
+          valido = false
+      }
+      if (!this.form.hora) {
+          this.errores.hora = 'La hora es obligatoria.'
+          valido = false
+      }
+      if (!this.form.motivo.trim()) {
+          this.errores.motivo = 'El motivo de consulta es obligatorio.'
+          valido = false
+      }
+      if (!this.form.diagnostico.trim()) {
+          this.errores.diagnostico = 'El diagnóstico es obligatorio.'
+          valido = false
+      }
+      if (this.form.peso && Number(this.form.peso) <= 0) {
+          this.errores.peso = 'El peso debe ser mayor a 0.'
+          valido = false
+      }
+      if (this.form.presion && !/^\d{2,3}\/\d{2,3}$/.test(this.form.presion.trim())) {
+          this.errores.presion = 'Formato esperado: 120/80.'
+          valido = false
+      }
+      if (!this.form.sintomas.trim()) {
+          this.errores.sintomas = 'Describa los síntomas del paciente.'
+          valido = false
+      }
+
+      return valido
+    },
+
+    async guardarConsulta() {
+        if (!this.validarFormulario()) return
+
+        this.guardando = true
+        try {
+            const payload = {
+                ...this.form,
+                paciente_id: this.form.paciente_id,
+                medico_id: this.doctor.id
+            }
+            const response = await ApiService.post('/consultas/', payload)
+            await this.generarPDF()   // ← ahora sí espera a que termine
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Expediente generado',
+                text: 'La consulta fue guardada y el PDF se descargó exitosamente.',
+                confirmButtonText: 'Aceptar'
+            })
+            this.limpiarFormulario()
+        } catch (error) {
+            console.error(error)
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Ocurrió un error al guardar la consulta. El PDF no se generó.',
+                confirmButtonText: 'Aceptar'
+            })
+        } finally {
+            this.guardando = false
         }
     },
 
-    data() {
-        return{
-            buscarPaciente: '',
-            pacientesEncontrados: [],
-            mostrarResultados: false,
-            infoPacientes: {},
-            pacienteSeleccionadoId: null,
-            guardando: false,
-            form: {
-                paciente_id:null,
-                fecha: '',
-                hora: '',
-                motivo: '',
-                diagnostico: '',
-                peso: '',
-                presion: '',
-                saturacion: '',
-                temperatura: '',
-                observaciones: '',
-                sintomas: '',
-                presentacion: '',
-                subjetivo: '',
-                objetivo: '',
-                analisis: '',
-                plan: '',
-                pronostico: ''
-            },
-
-            errores: {
-                fecha: '',
-                hora: '',
-                motivo: '',
-                diagnostico: '',
-                peso: '',
-                presion: '',
-                saturacion: '',
-                temperatura: '',
-                sintomas: ''
-            }
+    limpiarFormulario() {
+        this.form = {
+            fecha: '',
+            hora: '',
+            motivo: '',
+            diagnostico: '',
+            peso: '',
+            presion: '',
+            saturacion: '',
+            temperatura: '',
+            observaciones: '',
+            sintomas: ''
         }
     },
 
-    mounted() {
-        console.log('PROP PacienteId:', this.pacienteId)
-        console.log('PROP Doctor:', this.doctor)
-
-        if (this.pacienteId) {
-            this.pacienteSeleccionadoId = this.pacienteId
-        }
-    },
-
-    methods: {
-
-        async obtenerPacientes(id = this.pacienteSeleccionadoId) {
-            try {
-                const response = await ApiService.get('/ExpedienteDetalle/' + id)
-                this.infoPacientes = response.data
-                this.precargarDatosPaciente()
-            } catch (error) {
-                console.error(error)
-            }
-
-        },
-
-        async buscarPacientes() {
-            if (this.buscarPaciente.length < 2) {
-                this.pacientesEncontrados = []
-                this.mostrarResultados = false
-                return
-            }
-
-            try {
-                const response = await ApiService.get('/pacientes/buscar', {
-                    params: {
-                        texto: this.buscarPaciente
-                    }
-                })
-                this.pacientesEncontrados = response.data
-                this.mostrarResultados = true
-            } catch (error) {
-                console.error(error)
-            }
-        },
-
-
-        async seleccionarPaciente(paciente) {
-
-            this.buscarPaciente = paciente.nombre_completo
-            this.mostrarResultados = false
-            this.pacienteSeleccionadoId = paciente.id
-            await this.obtenerPacientes(paciente.id)
-
-        },
-
-
-        precargarDatosPaciente() {
-            const p = this.infoPacientes
-            if (!p) return
-
-            p.nombre_completo = [p.nombre, p.apellido_paterno, p.apellido_materno]
-                .filter(Boolean)
-                .join(' ')
-
-            const ultimoTriage = (p.triages && p.triages.length)
-                ? p.triages[p.triages.length - 1]
-                : null
-
-            const ahora = new Date()
-            const fechaHoy = ahora.toISOString().split('T')[0]
-            const horaAhora = ahora.toTimeString().slice(0, 5)
-
-            this.form = {
-                paciente_id: p.id,
-                fecha: fechaHoy,
-                hora: horaAhora,
-                motivo: ultimoTriage?.motivo_consulta || '',
-                diagnostico: '',
-                peso: ultimoTriage?.peso || '',
-                presion: ultimoTriage?.presion || '',
-                saturacion: ultimoTriage?.saturacion || '',
-                temperatura: ultimoTriage?.temperatura || '',
-                observaciones: '',
-                sintomas: ultimoTriage?.sintomas || ''
-            }
-        },
-
-        validarFormulario() {
+    cancelarConsulta() {
+        this.limpiarFormulario()
         this.errores = {
             fecha: '',
             hora: '',
@@ -534,293 +652,198 @@ export default {
             temperatura: '',
             sintomas: ''
         }
-        let valido = true
-
-        if (!this.form.fecha) {
-            this.errores.fecha = 'La fecha es obligatoria.'
-            valido = false
-        }
-        if (!this.form.hora) {
-            this.errores.hora = 'La hora es obligatoria.'
-            valido = false
-        }
-        if (!this.form.motivo.trim()) {
-            this.errores.motivo = 'El motivo de consulta es obligatorio.'
-            valido = false
-        }
-        if (!this.form.diagnostico.trim()) {
-            this.errores.diagnostico = 'El diagnóstico es obligatorio.'
-            valido = false
-        }
-        if (this.form.peso && Number(this.form.peso) <= 0) {
-            this.errores.peso = 'El peso debe ser mayor a 0.'
-            valido = false
-        }
-        if (this.form.presion && !/^\d{2,3}\/\d{2,3}$/.test(this.form.presion.trim())) {
-            this.errores.presion = 'Formato esperado: 120/80.'
-            valido = false
-        }
-        if (!this.form.sintomas.trim()) {
-            this.errores.sintomas = 'Describa los síntomas del paciente.'
-            valido = false
-        }
-
-        return valido
-        },
-
-        async guardarConsulta() {
-            if (!this.validarFormulario()) return
-
-            this.guardando = true
-            try {
-                const payload = {
-                    ...this.form,
-                    paciente_id: this.form.paciente_id,
-                    medico_id: this.doctor.id
-                }
-                const response = await ApiService.post('/consultas/', payload)
-                await this.generarPDF()   // ← ahora sí espera a que termine
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Expediente generado',
-                    text: 'La consulta fue guardada y el PDF se descargó exitosamente.',
-                    confirmButtonText: 'Aceptar'
-                })
-                this.limpiarFormulario()
-            } catch (error) {
-                console.error(error)
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Ocurrió un error al guardar la consulta. El PDF no se generó.',
-                    confirmButtonText: 'Aceptar'
-                })
-            } finally {
-                this.guardando = false
-            }
-        },
-
-        limpiarFormulario() {
-            this.form = {
-                fecha: '',
-                hora: '',
-                motivo: '',
-                diagnostico: '',
-                peso: '',
-                presion: '',
-                saturacion: '',
-                temperatura: '',
-                observaciones: '',
-                sintomas: ''
-            }
-        },
-
-        cancelarConsulta() {
-            this.limpiarFormulario()
-            this.errores = {
-                fecha: '',
-                hora: '',
-                motivo: '',
-                diagnostico: '',
-                peso: '',
-                presion: '',
-                saturacion: '',
-                temperatura: '',
-                sintomas: ''
-            }
-            this.$emit('cancelar')
-        },
-
-        // Función auxiliar para cargar imagen de manera síncrona/promesificada
-        cargarImagen(url) {
-            return new Promise((resolve, reject) => {
-                const img = new Image()
-                img.onload = () => resolve(img)
-                img.onerror = (err) => reject(err)
-                img.src = url
-            })
-        },
-
-        async generarPDF() {
-            try {
-                const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-                const margenX = 15
-                const anchoUtil = 180
-                let y = 15
-
-                // ============ LOGO ============
-                try {
-                const logoImg = await this.cargarImagen('/vendor/adminlte/dist/img/logo.png')
-                doc.addImage(logoImg, 'PNG', margenX, y, 25, 25)
-                } catch (error) {
-                console.error('No se pudo cargar el logo:', error)
-                doc.setDrawColor(200, 200, 200)
-                doc.rect(margenX, y, 25, 25)
-                doc.setFontSize(6)
-                doc.setTextColor(180, 180, 180)
-                doc.text('LOGO ERROR', margenX + 12.5, y + 13, { align: 'center' })
-                doc.setTextColor(20, 20, 20)
-                }
-
-            // ============ DATOS DOCTOR ============
-                const centroX = margenX + 30
-
-                const nombreDoctor = this.doctor.nombre || 'Dr(a). Nombre del Doctor'
-                const especialidadDoctor = this.doctor.especialidad || 'Medicina General'
-                const cedulaDoctor = this.doctor.cedula || 'Pendiente'
-
-                doc.setFontSize(14)
-                doc.setFont('helvetica', 'bold')
-                doc.text(nombreDoctor, centroX, y + 6)
-
-                doc.setFontSize(9)
-                doc.setFont('helvetica', 'normal')
-                doc.setTextColor(90, 90, 90)
-
-                doc.text(this.doctor.especialidad || 'Medicina General', centroX, y + 12)
-                doc.text(`Cédula Profesional: ${cedulaDoctor}`, centroX, y + 17)
-                doc.text('Institución: Ultra tech', centroX, y + 22)
-
-                doc.setTextColor(20, 20, 20)
-
-                // Fecha / Hora
-                doc.setFontSize(10)
-                doc.setFont('helvetica', 'bold')
-                doc.text(`Fecha: ${this.form.fecha || '—'}`, margenX + anchoUtil, y + 4, { align: 'right' })
-                doc.setFont('helvetica', 'normal')
-                doc.text(`Hora: ${this.form.hora || '—'}`, margenX + anchoUtil, y + 9, { align: 'right' })
-
-                y += 30
-                doc.setDrawColor(30, 30, 30)
-                doc.setLineWidth(0.4)
-                doc.line(margenX, y, margenX + anchoUtil, y)
-                y += 8
-
-                // ============ SIGNOS VITALES (Derecha) ============
-                const cajaAncho = 45
-                const cajaX = margenX + anchoUtil - cajaAncho
-                const cajaYInicio = y
-                doc.setFontSize(9)
-                doc.setFont('helvetica', 'bold')
-                doc.text('Signos Vitales', cajaX, y)
-                doc.setFont('helvetica', 'normal')
-                doc.setFontSize(8.5)
-                let yCaja = y + 5
-                const signos = [
-                ['Presión arterial', this.form.presion],
-                ['Peso (kg)', this.form.peso],
-                ['Saturación (%)', this.form.saturacion],
-                ['Temperatura (°C)', this.form.temperatura]
-                ]
-                signos.forEach(([etiqueta, valor]) => {
-                const texto = `${etiqueta}: ${valor && String(valor).trim() ? valor : '—'}`
-                doc.text(texto, cajaX, yCaja)
-                yCaja += 5
-                })
-                doc.setDrawColor(210, 210, 210)
-                doc.rect(cajaX - 4, cajaYInicio - 5, cajaAncho + 4, (yCaja - cajaYInicio) + 3)
-
-                // ============ PACIENTE / DIAGNÓSTICO ============
-                const anchoIzquierda = anchoUtil - cajaAncho - 8
-                doc.setFontSize(10)
-                doc.setFont('helvetica', 'bold')
-                doc.text('Paciente:', margenX, y)
-                doc.setFont('helvetica', 'normal')
-                doc.text(this.infoPacientes.nombre_completo || '—', margenX + 20, y)
-
-                y += 7
-                doc.setFont('helvetica', 'bold')
-                doc.text('Diagnóstico:', margenX, y)
-                doc.setFont('helvetica', 'normal')
-                const diagLineas = doc.splitTextToSize(this.form.diagnostico || '—', anchoIzquierda - 24)
-                doc.text(diagLineas, margenX + 24, y)
-
-                y = Math.max(y + diagLineas.length * 5, yCaja) + 8
-                doc.setDrawColor(220, 220, 220)
-                doc.line(margenX, y, margenX + anchoUtil, y)
-                y += 8
-
-                // ============ MOTIVO DE CONSULTA ============
-                doc.setFontSize(10)
-                doc.setFont('helvetica', 'bold')
-                doc.text('Motivo de consulta', margenX, y)
-                y += 5
-                doc.setFont('helvetica', 'normal')
-                doc.setFontSize(9.5)
-                const motivoLineas = doc.splitTextToSize(this.form.motivo || '—', anchoUtil)
-                doc.text(motivoLineas, margenX, y)
-                y += motivoLineas.length * 5 + 6
-
-                // ============ SÍNTOMAS ============
-                doc.setFontSize(10)
-                doc.setFont('helvetica', 'bold')
-                doc.text('Síntomas', margenX, y)
-                y += 6
-                doc.setFont('helvetica', 'normal')
-                doc.setFontSize(9.5)
-                const listaSintomas = (this.form.sintomas || '—')
-                .split('\n')
-                .map(s => s.trim())
-                .filter(Boolean)
-                listaSintomas.forEach((linea, i) => {
-                const envuelto = doc.splitTextToSize(`${i + 1}. ${linea}`, anchoUtil - 4)
-                doc.text(envuelto, margenX, y)
-                y += envuelto.length * 5 + 2
-                })
-                y += 4
-
-                // ============ OBSERVACIONES ============
-                doc.setFontSize(10)
-                doc.setFont('helvetica', 'bold')
-                doc.text('Indicaciones adicionales', margenX, y)
-                y += 6
-                doc.setFont('helvetica', 'normal')
-                doc.setFontSize(9.5)
-                const obsLineas = doc.splitTextToSize(this.form.observaciones || '—', anchoUtil)
-                doc.text(obsLineas, margenX, y)
-                y += obsLineas.length * 5 + 15
-
-                // ============ FIRMA ============
-                const firmaX = margenX + anchoUtil - 60
-                doc.setDrawColor(30, 30, 30)
-                doc.line(firmaX, y, firmaX + 60, y)
-                doc.setFontSize(8.5)
-                doc.setFont('helvetica', 'normal')
-                doc.text('Firma', firmaX + 30, y + 4, { align: 'center' })
-
-                // ============ PIE DE PÁGINA ============
-                doc.setDrawColor(220, 220, 220)
-                doc.line(margenX, 280, margenX + anchoUtil, 280)
-                doc.setFontSize(7.5)
-                doc.setTextColor(140, 140, 140)
-                doc.text('Generado el ' + new Date().toLocaleString('es-MX'), margenX, 285)
-
-                const nombrePaciente = (this.infoPacientes.nombre || 'paciente')
-                .trim()
-                .replace(/\s+/g, '_')
-                .toLowerCase()
-                doc.save(`consulta_${nombrePaciente}.pdf`)
-            } catch (error) {
-                console.error('Error al generar el PDF:', error)
-                throw error
-            }
-        },
+        this.$emit('cancelar')
     },
-    watch: {
-        pacienteId: {
-            immediate: true,
-            handler(id) {
 
-                if (!id) return
-
-                this.pacienteSeleccionadoId = id
-
-                this.obtenerPacientes(id)
-            
-            }
-        }
+    // Función auxiliar para cargar imagen de manera síncrona/promesificada
+    cargarImagen(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image()
+            img.onload = () => resolve(img)
+            img.onerror = (err) => reject(err)
+            img.src = url
+        })
     },
+
+    async generarPDF() {
+      try {
+          const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+          const margenX = 15
+          const anchoUtil = 180
+          let y = 15
+
+          // ============ LOGO ============
+          try {
+          const logoImg = await this.cargarImagen('/vendor/adminlte/dist/img/logo.png')
+          doc.addImage(logoImg, 'PNG', margenX, y, 25, 25)
+          } catch (error) {
+          console.error('No se pudo cargar el logo:', error)
+          doc.setDrawColor(200, 200, 200)
+          doc.rect(margenX, y, 25, 25)
+          doc.setFontSize(6)
+          doc.setTextColor(180, 180, 180)
+          doc.text('LOGO ERROR', margenX + 12.5, y + 13, { align: 'center' })
+          doc.setTextColor(20, 20, 20)
+          }
+
+      // ============ DATOS DOCTOR ============
+          const centroX = margenX + 30
+
+          const nombreDoctor = this.doctor.nombre || 'Dr(a). Nombre del Doctor'
+          const especialidadDoctor = this.doctor.especialidad || 'Medicina General'
+          const cedulaDoctor = this.doctor.cedula || 'Pendiente'
+
+          doc.setFontSize(14)
+          doc.setFont('helvetica', 'bold')
+          doc.text(nombreDoctor, centroX, y + 6)
+
+          doc.setFontSize(9)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(90, 90, 90)
+
+          doc.text(this.doctor.especialidad || 'Medicina General', centroX, y + 12)
+          doc.text(`Cédula Profesional: ${cedulaDoctor}`, centroX, y + 17)
+          doc.text('Institución: Ultra tech', centroX, y + 22)
+
+          doc.setTextColor(20, 20, 20)
+
+          // Fecha / Hora
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.text(`Fecha: ${this.form.fecha || '—'}`, margenX + anchoUtil, y + 4, { align: 'right' })
+          doc.setFont('helvetica', 'normal')
+          doc.text(`Hora: ${this.form.hora || '—'}`, margenX + anchoUtil, y + 9, { align: 'right' })
+
+          y += 30
+          doc.setDrawColor(30, 30, 30)
+          doc.setLineWidth(0.4)
+          doc.line(margenX, y, margenX + anchoUtil, y)
+          y += 8
+
+          // ============ SIGNOS VITALES (Derecha) ============
+          const cajaAncho = 45
+          const cajaX = margenX + anchoUtil - cajaAncho
+          const cajaYInicio = y
+          doc.setFontSize(9)
+          doc.setFont('helvetica', 'bold')
+          doc.text('Signos Vitales', cajaX, y)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(8.5)
+          let yCaja = y + 5
+          const signos = [
+          ['Presión arterial', this.form.presion],
+          ['Peso (kg)', this.form.peso],
+          ['Saturación (%)', this.form.saturacion],
+          ['Temperatura (°C)', this.form.temperatura]
+          ]
+          signos.forEach(([etiqueta, valor]) => {
+          const texto = `${etiqueta}: ${valor && String(valor).trim() ? valor : '—'}`
+          doc.text(texto, cajaX, yCaja)
+          yCaja += 5
+          })
+          doc.setDrawColor(210, 210, 210)
+          doc.rect(cajaX - 4, cajaYInicio - 5, cajaAncho + 4, (yCaja - cajaYInicio) + 3)
+
+          // ============ PACIENTE / DIAGNÓSTICO ============
+          const anchoIzquierda = anchoUtil - cajaAncho - 8
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.text('Paciente:', margenX, y)
+          doc.setFont('helvetica', 'normal')
+          doc.text(this.infoPacientes.nombre_completo || '—', margenX + 20, y)
+
+          y += 7
+          doc.setFont('helvetica', 'bold')
+          doc.text('Diagnóstico:', margenX, y)
+          doc.setFont('helvetica', 'normal')
+          const diagLineas = doc.splitTextToSize(this.form.diagnostico || '—', anchoIzquierda - 24)
+          doc.text(diagLineas, margenX + 24, y)
+
+          y = Math.max(y + diagLineas.length * 5, yCaja) + 8
+          doc.setDrawColor(220, 220, 220)
+          doc.line(margenX, y, margenX + anchoUtil, y)
+          y += 8
+
+          // ============ MOTIVO DE CONSULTA ============
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.text('Motivo de consulta', margenX, y)
+          y += 5
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9.5)
+          const motivoLineas = doc.splitTextToSize(this.form.motivo || '—', anchoUtil)
+          doc.text(motivoLineas, margenX, y)
+          y += motivoLineas.length * 5 + 6
+
+          // ============ SÍNTOMAS ============
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.text('Síntomas', margenX, y)
+          y += 6
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9.5)
+          const listaSintomas = (this.form.sintomas || '—')
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean)
+          listaSintomas.forEach((linea, i) => {
+          const envuelto = doc.splitTextToSize(`${i + 1}. ${linea}`, anchoUtil - 4)
+          doc.text(envuelto, margenX, y)
+          y += envuelto.length * 5 + 2
+          })
+          y += 4
+
+          // ============ OBSERVACIONES ============
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.text('Indicaciones adicionales', margenX, y)
+          y += 6
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(9.5)
+          const obsLineas = doc.splitTextToSize(this.form.observaciones || '—', anchoUtil)
+          doc.text(obsLineas, margenX, y)
+          y += obsLineas.length * 5 + 15
+
+          // ============ FIRMA ============
+          const firmaX = margenX + anchoUtil - 60
+          doc.setDrawColor(30, 30, 30)
+          doc.line(firmaX, y, firmaX + 60, y)
+          doc.setFontSize(8.5)
+          doc.setFont('helvetica', 'normal')
+          doc.text('Firma', firmaX + 30, y + 4, { align: 'center' })
+
+          // ============ PIE DE PÁGINA ============
+          doc.setDrawColor(220, 220, 220)
+          doc.line(margenX, 280, margenX + anchoUtil, 280)
+          doc.setFontSize(7.5)
+          doc.setTextColor(140, 140, 140)
+          doc.text('Generado el ' + new Date().toLocaleString('es-MX'), margenX, 285)
+
+          const nombrePaciente = (this.infoPacientes.nombre || 'paciente')
+          .trim()
+          .replace(/\s+/g, '_')
+          .toLowerCase()
+          doc.save(`consulta_${nombrePaciente}.pdf`)
+      } catch (error) {
+          console.error('Error al generar el PDF:', error)
+          throw error
+      }
+    },
+  },
+  watch: {
+    pacienteId: {
+      immediate: true,
+      handler(id) {
+
+        if (!id) return
+
+        this.pacienteSeleccionadoId = id
+
+        this.obtenerPacientes(id)
+      
+      }
+    }
+  },
 }
 </script>
 
