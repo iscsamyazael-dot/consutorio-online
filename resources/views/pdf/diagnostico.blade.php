@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8"> 
     <style>
         body { font-family: sans-serif; font-size: 12px; color: #1f2937; }
         h1 { font-size: 16px; margin-bottom: 2px; }
@@ -15,7 +15,8 @@
     </style>
 </head>
 <body>
-    <h1>Nota de Evolución Clínica (PSOAPP)</h1>
+    <!-- //27072026 -->
+    <h1>Nota de Evolución Clínica (PSOAPP)</h1> 
     <div class="meta">
         <span><strong>Folio:</strong> {{ $consulta->folio }}</span>
         <span><strong>Paciente:</strong> {{ $consulta->paciente->nombre ?? 'N/D' }}</span>
