@@ -23,7 +23,7 @@ class ArchivoClinico extends Model
         'tipo_estudio', 
         'Estado',
     ];
-
+ 
     public function paciente()
     {
         return $this->belongsTo(Paciente::class, 'paciente_id');

@@ -447,7 +447,7 @@ return [
             'text' => 'Especialidades',
             'url' => 'ConsultarEspecialidades',
             'icon' => 'fas fa-fw fa-user',
-           
+            
             
         ],
        
@@ -455,6 +455,8 @@ return [
             'text' => 'Médicos',
             'url'  => 'MedicosAlta', 
             'icon' => 'fas fa-fw fa-user-md',
+            'can'  => 'ver-admin',
+            
             
             
         ],
@@ -463,6 +465,7 @@ return [
             'text' => 'Sucursales',
             'icon' => 'fas fa-fw fa-map-marker-alt',
             'url' => 'Sucursales',
+            'can'  => 'ver-admin',
             
         ],
 
@@ -477,11 +480,13 @@ return [
         ['header' => 'CONFIGURACIÓN DEL SISTEMA',
          'can'    => 'admin', // 🔒 Oculta el encabezado para Asistente y Médico
         ],
+
         [
             'url'  => 'ConsultarEspecialidades', // O 'admin/specialties' si tu ruta tiene prefijo
             'icon' => 'fas fa-fw fa-user',  
         ],
 
+        
         ['text' => 'Perfil',
             'icon' => 'fas fa-fw fa-user',
             'can'  => 'ver-admin',
@@ -515,7 +520,6 @@ return [
                 
     ],
     
-
     /*
     |--------------------------------------------------------------------------
     | Menu Filters
