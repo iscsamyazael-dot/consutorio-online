@@ -11,11 +11,16 @@ class Receta extends Model
         'consulta_id',
         'paciente_id',
         'user_id',
+        'medicamentos',
         'indicaciones_generales',
         'estado',
         'fecha_inicio',
         'fecha_fin',
         'observaciones'
+    ];
+
+    protected $casts = [
+        'medicamentos' => 'array',
     ];
 
     /*
