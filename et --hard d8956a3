@@ -1,0 +1,288 @@
+[33mb17defd[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/expedienteMedicoIA[m[33m, [m[1;31morigin/feature/expedienteMedicoIA[m[33m)[m HEAD@{0}: commit: regresar a la normalidad
+[33m1e9059c[m HEAD@{1}: commit: Actualiza
+[33md8956a3[m HEAD@{2}: reset: moving to HEAD
+[33md8956a3[m HEAD@{3}: checkout: moving from feature/frontEnd-Agenda to feature/expedienteMedicoIA
+[33m8f7e71e[m[33m ([m[1;31morigin/feature/frontEnd-Agenda[m[33m, [m[1;32mfeature/frontEnd-Agenda[m[33m)[m HEAD@{4}: checkout: moving from feature/expedienteMedicoIA to feature/frontEnd-Agenda
+[33md8956a3[m HEAD@{5}: checkout: moving from feature/frontEnd-Pacientes to feature/expedienteMedicoIA
+[33m924c894[m[33m ([m[1;32mfeature/frontEnd-Pacientes[m[33m)[m HEAD@{6}: checkout: moving from develop to feature/frontEnd-Pacientes
+[33mc302994[m[33m ([m[1;32mdevelop[m[33m)[m HEAD@{7}: reset: moving to HEAD
+[33mc302994[m[33m ([m[1;32mdevelop[m[33m)[m HEAD@{8}: commit (merge): Merge feature/frontEnd-Agenda into develop
+[33m4c729a1[m HEAD@{9}: checkout: moving from feature/expedienteMedicoIA to develop
+[33md8956a3[m HEAD@{10}: commit: agregamos un dicionario medico
+[33mc32db1b[m HEAD@{11}: checkout: moving from feature/frontEnd-Agenda to feature/expedienteMedicoIA
+[33m8f7e71e[m[33m ([m[1;31morigin/feature/frontEnd-Agenda[m[33m, [m[1;32mfeature/frontEnd-Agenda[m[33m)[m HEAD@{12}: commit: comentarios a las rutas
+[33mf76de37[m HEAD@{13}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m924c894[m[33m ([m[1;32mfeature/frontEnd-Pacientes[m[33m)[m HEAD@{14}: pull --rebase origin feature/frontEnd-Pacientes (finish): returning to refs/heads/feature/frontEnd-Pacientes
+[33m924c894[m[33m ([m[1;32mfeature/frontEnd-Pacientes[m[33m)[m HEAD@{15}: pull --rebase origin feature/frontEnd-Pacientes (pick): configuraciones registrar pacientes
+[33m276da9e[m[33m ([m[1;31morigin/feature/frontEnd-Pacientes[m[33m)[m HEAD@{16}: pull --rebase origin feature/frontEnd-Pacientes (start): checkout 276da9e3954cd212bbcd40e4782759c625bd753a
+[33mf96d4c8[m HEAD@{17}: commit: configuraciones registrar pacientes
+[33mfe4da71[m HEAD@{18}: checkout: moving from feature/expedienteMedicoIA to feature/frontEnd-Pacientes
+[33mc32db1b[m HEAD@{19}: commit: agregamos a psoapp
+[33ma80ab04[m HEAD@{20}: checkout: moving from feature/frontEnd-Agenda to feature/expedienteMedicoIA
+[33mf76de37[m HEAD@{21}: commit: modificasiones
+[33m9536cfa[m HEAD@{22}: checkout: moving from feature/expedienteMedicoIA to feature/frontEnd-Agenda
+[33ma80ab04[m HEAD@{23}: commit: configurado
+[33mcd98f28[m HEAD@{24}: checkout: moving from feature/frontEnd-Agenda to feature/expedienteMedicoIA
+[33m9536cfa[m HEAD@{25}: checkout: moving from feature/expedienteMedicoIA to feature/frontEnd-Agenda
+[33mcd98f28[m HEAD@{26}: commit: configurado expediente
+[33m5ccdf4b[m HEAD@{27}: checkout: moving from develop to feature/expedienteMedicoIA
+[33m4c729a1[m HEAD@{28}: checkout: moving from feature/expedienteMedicoIA to develop
+[33m5ccdf4b[m HEAD@{29}: commit: controlador yiaclinicaservise
+[33m55f7491[m HEAD@{30}: checkout: moving from develop to feature/expedienteMedicoIA
+[33m4c729a1[m HEAD@{31}: commit: nueva version de develop
+[33md3ae2c0[m HEAD@{32}: checkout: moving from feature/expedienteMedicoIA to develop
+[33m55f7491[m HEAD@{33}: checkout: moving from develop to feature/expedienteMedicoIA
+[33md3ae2c0[m HEAD@{34}: pull origin develop: Fast-forward
+[33maece00b[m HEAD@{35}: checkout: moving from feature/expedienteMedicoIA to develop
+[33m55f7491[m HEAD@{36}: checkout: moving from develop to feature/expedienteMedicoIA
+[33maece00b[m HEAD@{37}: merge feature/expedienteMedicoIA: Merge made by the 'ort' strategy.
+[33m42624ea[m HEAD@{38}: checkout: moving from feature/expedienteMedicoIA to develop
+[33m55f7491[m HEAD@{39}: commit: Últimos cambios de expedienteMedicoIA
+[33m5f9da1c[m HEAD@{40}: checkout: moving from develop to feature/expedienteMedicoIA
+[33m42624ea[m HEAD@{41}: commit: correciones
+[33m439973c[m HEAD@{42}: checkout: moving from feature/frontEnd-Agenda to develop
+[33m9536cfa[m HEAD@{43}: checkout: moving from develop to feature/frontEnd-Agenda
+[33m439973c[m HEAD@{44}: commit: cambios
+[33m9de60c7[m HEAD@{45}: checkout: moving from feature/frontEnd-Agenda to develop
+[33m9536cfa[m HEAD@{46}: checkout: moving from feature/expedienteMedicoIA to feature/frontEnd-Agenda
+[33m5f9da1c[m HEAD@{47}: checkout: moving from feature/frontEnd-Agenda to feature/expedienteMedicoIA
+[33m9536cfa[m HEAD@{48}: checkout: moving from develop to feature/frontEnd-Agenda
+[33m9de60c7[m HEAD@{49}: commit: erroress
+[33m9080ef8[m HEAD@{50}: checkout: moving from feature/expedienteMedicoIA to develop
+[33m5f9da1c[m HEAD@{51}: commit: Descripción de los cambios
+[33m1c1d32d[m HEAD@{52}: checkout: moving from feature/configuracionMedica to feature/expedienteMedicoIA
+[33m2ec45cc[m[33m ([m[1;32mfeature/configuracionMedica[m[33m)[m HEAD@{53}: checkout: moving from feature/expedienteMedicoIA to feature/configuracionMedica
+[33m1c1d32d[m HEAD@{54}: checkout: moving from feature/expedienteMedicoIA to feature/expedienteMedicoIA
+[33m1c1d32d[m HEAD@{55}: checkout: moving from develop to feature/expedienteMedicoIA
+[33m9080ef8[m HEAD@{56}: merge feature/expedienteMedicoIA: Merge made by the 'ort' strategy.
+[33ma69a6b1[m HEAD@{57}: checkout: moving from feature/expedienteMedicoIA to develop
+[33m1c1d32d[m HEAD@{58}: commit: Mejoras en el módulo de expediente médico IA
+[33m2879c9e[m HEAD@{59}: checkout: moving from develop to feature/expedienteMedicoIA
+[33ma69a6b1[m HEAD@{60}: commit (merge): ia
+[33mb7ae46d[m HEAD@{61}: commit (merge): Merge branch 'develop' of https://github.com/iscsamyazael-dot/consutorio-online into develop
+[33m7037c01[m HEAD@{62}: checkout: moving from Develop to develop
+[33m7037c01[m HEAD@{63}: checkout: moving from feature/expedienteMedicoIA to Develop
+[33m2879c9e[m HEAD@{64}: commit: r
+[33m43ee8a7[m HEAD@{65}: commit (merge): Merge remote-tracking branch 'origin/develop' into feature/expedienteMedicoIA
+[33m841f838[m HEAD@{66}: checkout: moving from feature/configuracionMedica to feature/expedienteMedicoIA
+[33m2ec45cc[m[33m ([m[1;32mfeature/configuracionMedica[m[33m)[m HEAD@{67}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33mfe4da71[m HEAD@{68}: checkout: moving from feature/expedienteMedicoIA to feature/frontEnd-Pacientes
+[33m841f838[m HEAD@{69}: commit: configuracio r
+[33m7037c01[m HEAD@{70}: checkout: moving from Develop to feature/expedienteMedicoIA
+[33m7037c01[m HEAD@{71}: checkout: moving from feature/frontEnd-Agenda to Develop
+[33m9536cfa[m HEAD@{72}: checkout: moving from feature/expedienteMedicoIA to feature/frontEnd-Agenda
+[33m7037c01[m HEAD@{73}: merge Develop: Fast-forward
+[33me2ea1ba[m[33m ([m[1;31morigin/Develop[m[33m)[m HEAD@{74}: pull origin Develop: Fast-forward
+[33me30374f[m[33m ([m[1;31morigin/feature/pacientes[m[33m, [m[1;31morigin/feature/frontEnd-Consultas[m[33m, [m[1;31morigin/feature/consultas[m[33m, [m[1;31morigin/feature/BackEnd-Pacientes[m[33m, [m[1;31morigin/feature/BackEnd-Consultas[m[33m, [m[1;31morigin/feature/BackEnd-AtencionMedica[m[33m, [m[1;31morigin/feature/AtencionMedica[m[33m)[m HEAD@{75}: checkout: moving from feature/BackEnd-ExpedienteMedicoIA to feature/expedienteMedicoIA
+[33mdb4c254[m[33m ([m[1;31morigin/feature/BackEnd-ExpedienteMedicoIA[m[33m, [m[1;32mfeature/BackEnd-ExpedienteMedicoIA[m[33m)[m HEAD@{76}: checkout: moving from feature/configuracionMedica to feature/BackEnd-ExpedienteMedicoIA
+[33m2ec45cc[m[33m ([m[1;32mfeature/configuracionMedica[m[33m)[m HEAD@{77}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33m9536cfa[m HEAD@{78}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mfe4da71[m HEAD@{79}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m9536cfa[m HEAD@{80}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mfe4da71[m HEAD@{81}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m9536cfa[m HEAD@{82}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mfe4da71[m HEAD@{83}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m9536cfa[m HEAD@{84}: commit: Cambio de rutasr
+[33mcdfd95b[m HEAD@{85}: commit: Cambio a ApiServer
+[33m27ff703[m HEAD@{86}: commit (merge): Merge develop into -Agenda
+[33mdc8017f[m HEAD@{87}: commit: WIP: ApiService, calendario y vista de citas en agenda
+[33m746ba84[m HEAD@{88}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mfe4da71[m HEAD@{89}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m746ba84[m HEAD@{90}: checkout: moving from Develop to feature/frontEnd-Agenda
+[33m7037c01[m HEAD@{91}: checkout: moving from feature/frontEnd-Agenda to Develop
+[33m746ba84[m HEAD@{92}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mfe4da71[m HEAD@{93}: checkout: moving from Develop to feature/frontEnd-Pacientes
+[33m7037c01[m HEAD@{94}: commit: configuracio
+[33me2ea1ba[m[33m ([m[1;31morigin/Develop[m[33m)[m HEAD@{95}: commit: configuracion web
+[33m09cc7f8[m HEAD@{96}: checkout: moving from feature/frontEnd-Pacientes to Develop
+[33mfe4da71[m HEAD@{97}: checkout: moving from Develop to feature/frontEnd-Pacientes
+[33m09cc7f8[m HEAD@{98}: commit (merge): Avance del formulario de registro de pacientes
+[33mc82c085[m HEAD@{99}: checkout: moving from feature/frontEnd-Agenda to Develop
+[33m746ba84[m HEAD@{100}: checkout: moving from Develop to feature/frontEnd-Agenda
+[33mc82c085[m HEAD@{101}: checkout: moving from feature/frontEnd-Agenda to Develop
+[33m746ba84[m HEAD@{102}: checkout: moving from develop to feature/frontEnd-Agenda
+[33mc82c085[m HEAD@{103}: reset: moving to HEAD
+[33mc82c085[m HEAD@{104}: checkout: moving from Develop to develop
+[33mc82c085[m HEAD@{105}: checkout: moving from feature/frontEnd-Pacientes to Develop
+[33mfe4da71[m HEAD@{106}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m2ec45cc[m[33m ([m[1;32mfeature/configuracionMedica[m[33m)[m HEAD@{107}: checkout: moving from feature/frontEnd-Ubicaciones to feature/configuracionMedica
+[33ma53099d[m[33m ([m[1;31morigin/feature/frontEnd-Ubicaciones[m[33m, [m[1;32mfeature/frontEnd-Ubicaciones[m[33m)[m HEAD@{108}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Ubicaciones
+[33m746ba84[m HEAD@{109}: commit: cambio de color del voton de volver
+[33m2a04403[m HEAD@{110}: commit: filtrado por nombre y especialidad
+[33mc59cde1[m HEAD@{111}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m2ec45cc[m[33m ([m[1;32mfeature/configuracionMedica[m[33m)[m HEAD@{112}: commit: editar meicos
+[33m9f29d54[m HEAD@{113}: pull origin feature/configuracionMedica: Fast-forward
+[33m1be8a70[m HEAD@{114}: commit: modelo de editar
+[33m4a68808[m HEAD@{115}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33mc59cde1[m HEAD@{116}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m4a68808[m HEAD@{117}: reset: moving to 4a68808
+[33m756f9b9[m HEAD@{118}: checkout: moving from feature/configuracionMedica to feature/configuracionMedica
+[33m756f9b9[m HEAD@{119}: reset: moving to origin/feature/configuracionMedica
+[33m756f9b9[m HEAD@{120}: reset: moving to origin/feature/configuracionMedica
+[33m4a68808[m HEAD@{121}: rebase (abort): returning to refs/heads/feature/configuracionMedica
+[33m0478b3d[m HEAD@{122}: pull origin feature/configuracionMedica --rebase (start): checkout 0478b3d8eaa20a97b7f7aa80a2dd5cb0d2ed9fb5
+[33m4a68808[m HEAD@{123}: commit: Corrige rutas de especialidades
+[33mb82cc90[m HEAD@{124}: commit: Corrige rutas
+[33m835769c[m HEAD@{125}: checkout: moving from feature/frontEnd-Ubicaciones to feature/configuracionMedica
+[33ma53099d[m[33m ([m[1;31morigin/feature/frontEnd-Ubicaciones[m[33m, [m[1;32mfeature/frontEnd-Ubicaciones[m[33m)[m HEAD@{126}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Ubicaciones
+[33m835769c[m HEAD@{127}: checkout: moving from feature/frontEnd-Ubicaciones to feature/configuracionMedica
+[33ma53099d[m[33m ([m[1;31morigin/feature/frontEnd-Ubicaciones[m[33m, [m[1;32mfeature/frontEnd-Ubicaciones[m[33m)[m HEAD@{128}: commit: Corrige rutas de ubicaciones
+[33m98f53d9[m HEAD@{129}: commit: Corrige rutas de ubicaciones y estructura resource
+[33m9e4283b[m HEAD@{130}: commit (merge): Canbio de controlador
+[33m75f8a8d[m HEAD@{131}: commit: CANDIO DE CONTROLADOR AL WEB
+[33m044b9f1[m HEAD@{132}: commit: erro de editar
+[33m132be2e[m HEAD@{133}: commit: nueva rma ubicaciones
+[33mc59cde1[m HEAD@{134}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Ubicaciones
+[33mc59cde1[m HEAD@{135}: checkout: moving from Udicasiones to feature/frontEnd-Agenda
+[33mc59cde1[m HEAD@{136}: checkout: moving from Udicasiones to Udicasiones
+[33mc59cde1[m HEAD@{137}: checkout: moving from feature/frontEnd-Agenda to Udicasiones
+[33mc59cde1[m HEAD@{138}: commit: adminlte estatico
+[33m1c4aebd[m HEAD@{139}: commit: condiciones
+[33m2a1a848[m HEAD@{140}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m835769c[m HEAD@{141}: commit: cambio de axios a api
+[33m10955d0[m HEAD@{142}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33m2a1a848[m HEAD@{143}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mfe4da71[m HEAD@{144}: commit: cambio de interfaz
+[33m7453f36[m HEAD@{145}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m2a1a848[m HEAD@{146}: commit: correciones
+[33md5d6b4b[m HEAD@{147}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m7453f36[m HEAD@{148}: commit: datos completos
+[33mb9bc32a[m HEAD@{149}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33md5d6b4b[m HEAD@{150}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mb9bc32a[m HEAD@{151}: commit: triaje
+[33md6e10ca[m HEAD@{152}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33md5d6b4b[m HEAD@{153}: commit: agrege nuevos campos de validacion
+[33m530d3fc[m HEAD@{154}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33md6e10ca[m HEAD@{155}: commit: nuevos campos
+[33m7ac3d33[m HEAD@{156}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m530d3fc[m HEAD@{157}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m7ac3d33[m HEAD@{158}: commit: nuevos campos de medicion
+[33m49a3231[m HEAD@{159}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m530d3fc[m HEAD@{160}: commit: campos balidados
+[33m2d55a54[m HEAD@{161}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{162}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m2d55a54[m HEAD@{163}: commit: modificacion d controlador
+[33ma2e81fe[m HEAD@{164}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{165}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33ma2e81fe[m HEAD@{166}: commit: modal de canclelar
+[33m01c386a[m HEAD@{167}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{168}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m01c386a[m HEAD@{169}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m10955d0[m HEAD@{170}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33m01c386a[m HEAD@{171}: commit: controler
+[33m0653e42[m HEAD@{172}: commit: Actualiza agenda médica y gestión de citas
+[33m8ba4b8f[m HEAD@{173}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{174}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m8ba4b8f[m HEAD@{175}: commit: estado agendado
+[33macaad78[m HEAD@{176}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{177}: commit: Actualiza
+[33m8031ac7[m HEAD@{178}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33macaad78[m HEAD@{179}: commit: Actualiza calendario de agenda
+[33m965500e[m HEAD@{180}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m8031ac7[m HEAD@{181}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m965500e[m HEAD@{182}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m8031ac7[m HEAD@{183}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m965500e[m HEAD@{184}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m10955d0[m HEAD@{185}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33m965500e[m HEAD@{186}: commit: Se integra médico y especialidad en el módulo de agenda
+[33m428592c[m HEAD@{187}: checkout: moving from develop to feature/frontEnd-Agenda
+[33mc82c085[m HEAD@{188}: checkout: moving from feature/frontEnd-Agenda to develop
+[33m428592c[m HEAD@{189}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m10955d0[m HEAD@{190}: commit: nombre del doctor
+[33m084cd78[m HEAD@{191}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m8031ac7[m HEAD@{192}: commit: Actualiza módulo de pacientes
+[33m359212b[m HEAD@{193}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m084cd78[m HEAD@{194}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m359212b[m HEAD@{195}: commit: Mejora indicador de datos faltantes en pacientes
+[33md147c41[m HEAD@{196}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m084cd78[m HEAD@{197}: commit: Actualización configuración médica y modelo Medico
+[33mef8de23[m HEAD@{198}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33md147c41[m HEAD@{199}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33mef8de23[m HEAD@{200}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33md147c41[m HEAD@{201}: checkout: moving from feature/configuracionSistema to feature/frontEnd-Pacientes
+[33m9ba2065[m[33m ([m[1;32mfeature/configuracionSistema[m[33m)[m HEAD@{202}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionSistema
+[33md147c41[m HEAD@{203}: commit: Actualización del componente pacientes index
+[33m38dbf4e[m HEAD@{204}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33mef8de23[m HEAD@{205}: commit: Corrige modal duplicado en especialidades
+[33mf5d7a4a[m HEAD@{206}: commit: comentario
+[33mf47eae5[m HEAD@{207}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m38dbf4e[m HEAD@{208}: commit: Ajustes en panel de atención y rutas de pacientes
+[33m196506e[m HEAD@{209}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33mf47eae5[m HEAD@{210}: commit: Actualiza módulo de especialidades
+[33m9600c30[m HEAD@{211}: checkout: moving from feature/configuracionSistema to feature/configuracionMedica
+[33m9ba2065[m[33m ([m[1;32mfeature/configuracionSistema[m[33m)[m HEAD@{212}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionSistema
+[33m196506e[m HEAD@{213}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m9600c30[m HEAD@{214}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m196506e[m HEAD@{215}: checkout: moving from Develop to feature/frontEnd-Pacientes
+[33mc82c085[m HEAD@{216}: reset: moving to HEAD
+[33mc82c085[m HEAD@{217}: checkout: moving from feature/configuracionSistema to Develop
+[33m9ba2065[m[33m ([m[1;32mfeature/configuracionSistema[m[33m)[m HEAD@{218}: pull origin feature/configuracionSistema: Fast-forward
+[33m29f36b5[m HEAD@{219}: checkout: moving from Develop to feature/configuracionSistema
+[33mc82c085[m HEAD@{220}: reset: moving to HEAD
+[33mc82c085[m HEAD@{221}: commit (merge): Merge feature/frontEnd-Pacientes: resueltos conflictos en app.js, web.php, create.blade.php
+[33mb6521b7[m HEAD@{222}: checkout: moving from feature/frontEnd-Pacientes to Develop
+[33m196506e[m HEAD@{223}: commit: Elimina el campo de apellidos en pacientes
+[33m34f0238[m HEAD@{224}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m9600c30[m HEAD@{225}: commit: Actualiza módulo de especialidades médicas
+[33m258f451[m HEAD@{226}: commit: Implementa módulo de especialidades médicas
+[33m6a4115a[m HEAD@{227}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m34f0238[m HEAD@{228}: commit: Actualización de componentes del módulo de pacientes
+[33m39703b0[m HEAD@{229}: pull origin feature/frontEnd-Pacientes: Fast-forward
+[33me187ccc[m HEAD@{230}: commit: Actualización de expediente e historial de pacientes
+[33m08d4437[m HEAD@{231}: pull origin feature/frontEnd-Pacientes: Fast-forward
+[33m6793aff[m HEAD@{232}: commit: Se agrego expediente de pacientes y componentes Vue
+[33mffaf850[m HEAD@{233}: commit: Se agrego filtro y mejoras en pacientes
+[33m48eb342[m HEAD@{234}: pull origin feature/frontEnd-Pacientes: Fast-forward
+[33m11019f5[m HEAD@{235}: pull origin feature/frontEnd-Pacientes: Fast-forward
+[33me1d2135[m HEAD@{236}: commit: inicion d bac
+[33mf6534dd[m HEAD@{237}: pull origin feature/frontEnd-Pacientes: Fast-forward
+[33m02c8d28[m HEAD@{238}: reset: moving to HEAD
+[33m02c8d28[m HEAD@{239}: checkout: moving from feature/frontEnd-Medicamento to feature/frontEnd-Pacientes
+[33m494bb01[m[33m ([m[1;32mfeature/frontEnd-Medicamento[m[33m)[m HEAD@{240}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Medicamento
+[33m6a4115a[m HEAD@{241}: checkout: moving from Develop to feature/configuracionMedica
+[33mb6521b7[m HEAD@{242}: pull origin: Merge made by the 'ort' strategy.
+[33m824dc07[m HEAD@{243}: checkout: moving from feature/frontEnd-Pacientes to Develop
+[33m02c8d28[m HEAD@{244}: commit: pacintes
+[33m41d605d[m HEAD@{245}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m428592c[m HEAD@{246}: commit: conponentes vue
+[33m49c874f[m HEAD@{247}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m6a4115a[m HEAD@{248}: pull origin feature/configuracionMedica: Merge made by the 'ort' strategy.
+[33ma76a189[m HEAD@{249}: commit: Actualizar modelo Specialty para usar tabla especialidades
+[33m8c316ce[m HEAD@{250}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m41d605d[m HEAD@{251}: commit: Actualización de consultas y pacientes
+[33mcd0bf0d[m HEAD@{252}: commit: Actualización interfaz de consultas
+[33m095b760[m HEAD@{253}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m8c316ce[m HEAD@{254}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m095b760[m HEAD@{255}: pull --rebase origin feature/frontEnd-Pacientes (finish): returning to refs/heads/feature/frontEnd-Pacientes
+[33m095b760[m HEAD@{256}: pull --rebase origin feature/frontEnd-Pacientes (pick): Descripción barra de bsuqueda actualizaste
+[33m9921216[m HEAD@{257}: pull --rebase origin feature/frontEnd-Pacientes (start): checkout 992121682c388fae567c1e181fc891dc14677bfb
+[33m24b9d10[m HEAD@{258}: commit: Descripción barra de bsuqueda actualizaste
+[33md93cae6[m HEAD@{259}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m8c316ce[m HEAD@{260}: commit: Actualización de configuración médica
+[33mb939155[m HEAD@{261}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33m49c874f[m HEAD@{262}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33md93cae6[m HEAD@{263}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m49c874f[m HEAD@{264}: reset: moving to HEAD
+[33m49c874f[m HEAD@{265}: commit: Nuevo diseño agenda y módulo de citas
+[33me30374f[m[33m ([m[1;31morigin/feature/pacientes[m[33m, [m[1;31morigin/feature/frontEnd-Consultas[m[33m, [m[1;31morigin/feature/consultas[m[33m, [m[1;31morigin/feature/BackEnd-Pacientes[m[33m, [m[1;31morigin/feature/BackEnd-Consultas[m[33m, [m[1;31morigin/feature/BackEnd-AtencionMedica[m[33m, [m[1;31morigin/feature/AtencionMedica[m[33m)[m HEAD@{266}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33md93cae6[m HEAD@{267}: checkout: moving from Develop to feature/frontEnd-Pacientes
+[33m824dc07[m HEAD@{268}: reset: moving to HEAD
+[33m824dc07[m HEAD@{269}: commit (merge): actual
+[33m462f993[m HEAD@{270}: pull origin Develop: Fast-forward
+[33m08fb0dd[m HEAD@{271}: checkout: moving from feature/frontEnd-Pacientes to Develop
+[33md93cae6[m HEAD@{272}: commit: actual
+[33mb569774[m HEAD@{273}: commit: Actualización del sistema de consultas
+[33md155b3e[m HEAD@{274}: checkout: moving from Develop to feature/frontEnd-Pacientes
+[33m08fb0dd[m HEAD@{275}: checkout: moving from feature/frontEnd-Pacientes to Develop
+[33md155b3e[m HEAD@{276}: commit: Actualización
+[33m69e039b[m HEAD@{277}: commit: Actualización
+[33mb678a0e[m HEAD@{278}: commit: Actualización del frontend de pacientes 2
+[33m1c9255e[m HEAD@{279}: commit: Actualización del frontend de pacientes
+[33mb1abc0b[m HEAD@{280}: commit: Actualización del frontend de pacientes y consultas
+[33mf741b85[m HEAD@{281}: commit: interfaces de pacientes y consultas
+[33m8db7302[m HEAD@{282}: commit: Actualizacion frontend pacientes vue
+[33mada00d9[m HEAD@{283}: commit: Actualizacion modulo pacientes con Vue
+[33m92b2627[m HEAD@{284}: commit: Diseño premium pacientes y consultas
+[33me30374f[m[33m ([m[1;31morigin/feature/pacientes[m[33m, [m[1;31morigin/feature/frontEnd-Consultas[m[33m, [m[1;31morigin/feature/consultas[m[33m, [m[1;31morigin/feature/BackEnd-Pacientes[m[33m, [m[1;31morigin/feature/BackEnd-Consultas[m[33m, [m[1;31morigin/feature/BackEnd-AtencionMedica[m[33m, [m[1;31morigin/feature/AtencionMedica[m[33m)[m HEAD@{285}: checkout: moving from main to feature/frontEnd-Pacientes
+[33mb6209db[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{286}: commit: Actualizacion diseño premium login y registro
+[33m0eac015[m HEAD@{287}: clone: from https://github.com/iscsamyazael-dot/consutorio-online
