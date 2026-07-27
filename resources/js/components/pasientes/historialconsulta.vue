@@ -59,33 +59,40 @@
             <small>Registro cronológico de atención médica</small>
           </div>
 
-          <div class="timeline-card">
-            <div class="timeline-dot bg-success"></div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between flex-wrap gap-2">
-                <h6 class="fw-bold mb-0">10 Mayo 2026</h6>
-                <span class="badge bg-success rounded-pill px-3 py-2">
-                  Consulta general
-                </span>
-              </div>
-              <p class="mt-2 mb-1"><strong>Motivo:</strong> Dolor de garganta</p>
-              <p class="text-muted small mb-3">Diagnóstico: Faringitis leve.</p>
-              <a href="/HistorialConsulta" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                Ver consulta completa
-              </a>
-            </div>
+          <div v-if="infoConsultas.length === 0" class="alert alert-info text-center">
+            <i class="fas fa-folder-open mr-2"></i>
+            No se encuentran consultas registradas para este paciente.
           </div>
 
-          <div class="timeline-card">
-            <div class="timeline-dot bg-warning"></div>
+          <div
+            v-else
+            class="timeline-card"
+            v-for="consulta in infoConsultas"
+            :key="consulta.id">
+            <div class="timeline-dot" :class="colorPunto(consulta.tipo_consulta)"></div>
             <div class="flex-grow-1">
               <div class="d-flex justify-content-between flex-wrap gap-2">
-                <h6 class="fw-bold mb-0">02 Abril 2026</h6>
-                <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
-                  Seguimiento
+                <h6 class="fw-bold mb-0">{{ formatearFecha(consulta.fecha) }}</h6>
+                <span
+                  class="badge rounded-pill px-3 py-2"
+                  :class="colorBadge(consulta.tipo_consulta)">
+                  {{ consulta.tipo_consulta }}
                 </span>
               </div>
-              <p class="mt-2 mb-0 text-muted">Control general del paciente.</p>
+
+              <template v-if="consulta.motivo">
+                <p class="mt-2 mb-1"><strong>Motivo:</strong> {{ consulta.motivo }}</p>
+                <p class="text-muted small mb-3" v-if="consulta.diagnostico">
+                  Diagnóstico: {{ consulta.diagnostico }}
+                </p>
+                <a :href="`/HistorialConsulta/${consulta.id}`" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  Ver consulta completa
+                </a>
+              </template>
+
+              <p class="mt-2 mb-0 text-muted" v-else>
+                {{ consulta.descripcion }}
+              </p>
             </div>
           </div>
         </div>
@@ -322,14 +329,76 @@ body {
             return {  
               tabActiva: 'consultas',
               infoArchivos: [],
+              infoConsultas: [],
               archivoSeleccionado:''
             }
         },
         mounted() {
-            //this.obtenerPacientes();
             console.log('PROP PacienteId:', this.pacienteId);
         },
         methods: {
+          async obtenerConsultas(){
+              try {
+                  const response = await ApiService.get('/historialClinico?paciente_id=' + this.pacienteId)
+
+                  const consultas = response.data.consultas || []
+
+                  // Mapeamos la estructura real del backend a lo que pinta la tarjeta:
+                  // - diagnóstico viene de la primera evaluación de IA de esa consulta
+                  // - "descripcion" (tarjeta sin motivo) usa la recomendación de la IA si no hay motivo
+                  this.infoConsultas = consultas.map(consulta => {
+                    const evaluacion = (consulta.evaluaciones && consulta.evaluaciones[0]) || null
+
+                    return {
+                      id: consulta.id,
+                      fecha: consulta.created_at,
+                      tipo_consulta: consulta.estado,
+                      motivo: consulta.motivo_consulta,
+                      diagnostico: evaluacion ? evaluacion.diagnostico_probable : null,
+                      descripcion: evaluacion ? evaluacion.recomendacion : null
+                    }
+                  })
+
+                  console.log('Historial clínico cargado:', this.infoConsultas)
+              } catch(error){
+                  console.error("Error al obtener el historial clínico:", error)
+              }
+          },
+          //Formatea la fecha que llega en created_at (ej: 2026-05-10T14:32:00.000000Z)//
+          formatearFecha(fecha){
+            if(!fecha) return ''
+            const f = new Date(fecha)
+            return f.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
+          },
+          //Colores del punto de la línea de tiempo según el estado real de la consulta//
+          // ⚠️ Ajusta estos valores si tu columna `estado` usa otros textos
+          colorPunto(estado){
+            switch((estado || '').toLowerCase()){
+              case 'finalizada':
+              case 'completada':
+                return 'bg-success'
+              case 'en_proceso':
+                return 'bg-warning'
+              case 'urgencia':
+                return 'bg-danger'
+              default:
+                return 'bg-secondary'
+            }
+          },
+          //Colores del badge según el estado real de la consulta//
+          colorBadge(estado){
+            switch((estado || '').toLowerCase()){
+              case 'finalizada':
+              case 'completada':
+                return 'bg-success'
+              case 'en_proceso':
+                return 'bg-warning text-dark'
+              case 'urgencia':
+                return 'bg-danger'
+              default:
+                return 'bg-secondary'
+            }
+          },
           //Función para obtener los archivos de un paciente mediante su ID//
             async obtenerArchivos(){
                 try {
@@ -393,6 +462,7 @@ body {
                 handler(id){
                     if(id){
                         this.obtenerArchivos();
+                        this.obtenerConsultas();
                     }
                 }
             }

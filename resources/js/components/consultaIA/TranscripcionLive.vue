@@ -13,14 +13,37 @@
 
             </h3>
 
-            <div class="card-tools">
+            <div class="card-tools d-flex align-items-center">
 
                 <!-- Antes siempre visible; ahora refleja el estado real del micrófono -->
-                <span v-if="escuchando" class="badge badge-success">
+                <span v-if="escuchando" class="badge badge-success mr-2">
 
                     🤖 IA escuchando
 
                 </span>
+
+                <!-- Estado final: reemplaza al botón una vez que la conversación se cortó -->
+                <span v-if="consultaFinalizada" class="badge badge-secondary">
+                    <i class="fas fa-lock mr-1"></i> Consulta finalizada
+                </span>
+
+                <!-- Cortar conversación: separado de "Enviar mensaje" a propósito,
+                     para que no se confunda con una acción de envío más. -->
+                <button
+                    v-else
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    title="Finalizar y cortar esta conversación"
+                    :disabled="!consultaId || finalizando"
+                    @click="finalizarConversacion"
+                >
+                    <span v-if="finalizando">
+                        <i class="fas fa-spinner fa-spin"></i> Finalizando...
+                    </span>
+                    <span v-else>
+                        <i class="fas fa-stop-circle"></i> Cortar conversación
+                    </span>
+                </button>
 
             </div>
 
@@ -122,6 +145,16 @@
 
                     </div>
 
+                    <!-- SISTEMA (ej. aviso de conversación finalizada) -->
+                    <div
+                        v-if="msg.tipo === 'sistema'"
+                        class="text-center"
+                    >
+                        <span class="badge badge-secondary" style="font-size:12px;">
+                            {{ msg.texto }}
+                        </span>
+                    </div>
+
                 </div>
 
             </div>
@@ -147,6 +180,16 @@
                     Reintentar
                 </button>
 
+            </div>
+
+            <!-- AVISO: conversación finalizada -->
+            <div
+                v-if="consultaFinalizada"
+                class="alert alert-secondary py-1 px-2 mb-2"
+                style="font-size:13px;"
+            >
+                <i class="fas fa-lock mr-1"></i>
+                Esta conversación ya fue finalizada. No se pueden enviar más mensajes.
             </div>
 
             <!-- PREVIEW DE ARCHIVO SELECCIONADO -->
@@ -179,7 +222,7 @@
                         class="form-control"
                         :placeholder="escuchando ? 'Escuchando...' : 'Simular mensaje...'"
                         v-model="nuevoMensaje"
-                        :disabled="enviando || !consultaId"
+                        :disabled="enviando || !consultaId || consultaFinalizada"
                         @keyup.enter="enviarMensaje"
                     >
 
@@ -192,7 +235,7 @@
                         :class="escuchando ? 'btn-danger' : 'btn-outline-danger'"
                         type="button"
                         :title="escuchando ? 'Detener escucha' : 'Escuchar'"
-                        :disabled="enviando || subiendoArchivo || !consultaId"
+                        :disabled="enviando || subiendoArchivo || !consultaId || consultaFinalizada"
                         @click="toggleEscucha"
                     >
                         <i class="fas fa-microphone-alt"></i>
@@ -214,7 +257,7 @@
                         class="btn btn-outline-secondary btn-block"
                         type="button"
                         title="Adjuntar PDF, Word o imagen"
-                        :disabled="enviando || subiendoArchivo || !consultaId"
+                        :disabled="enviando || subiendoArchivo || !consultaId || consultaFinalizada"
                         @click="$refs.inputArchivo.click()"
                     >
                         <i class="fas fa-paperclip"></i>
@@ -226,7 +269,7 @@
 
                     <button
                         class="btn btn-primary btn-block"
-                        :disabled="enviando || subiendoArchivo || !consultaId || (!nuevoMensaje && !archivoSeleccionado)"
+                        :disabled="enviando || subiendoArchivo || !consultaId || consultaFinalizada || (!nuevoMensaje && !archivoSeleccionado)"
                         @click="archivoSeleccionado ? subirArchivo() : enviarMensaje()"
                     >
 
@@ -321,7 +364,11 @@ export default {
             // --- Reconocimiento de voz ---
             escuchando: false,
             recognition: null,
-            bufferVoz: ''        // texto ya confirmado dictado por voz
+            bufferVoz: '',        // texto ya confirmado dictado por voz
+
+            // --- Cortar conversación ---
+            finalizando: false,
+            consultaFinalizada: false
 
         }
 
@@ -385,7 +432,7 @@ export default {
 
         async enviarMensaje() {
 
-            if(this.nuevoMensaje === '' || !this.consultaId || this.enviando) return
+            if(this.nuevoMensaje === '' || !this.consultaId || this.enviando || this.consultaFinalizada) return
 
             this.enviando = true
 
@@ -601,6 +648,58 @@ export default {
 
         /*
         |--------------------------------------------------------------------
+        | CORTAR CONVERSACIÓN
+        |--------------------------------------------------------------------
+        | Pide confirmación (es una acción destructiva: ya no se puede
+        | seguir escribiendo en esta consulta), detiene el micrófono si
+        | estaba activo, bloquea el input/mic/adjuntar/enviar, y avisa
+        | al padre por si necesita, por ejemplo, generar la nota PSOAPP
+        | final o redirigir a otra vista.
+        |
+        | Si tu backend tiene un endpoint para cerrar la consulta
+        | (ej. PATCH /consultaIA/{id}/finalizar), descomenta y ajusta el
+        | bloque axios de abajo; por ahora el corte es a nivel de UI +
+        | evento al padre, para no asumir una ruta que no existe todavía.
+        */
+        async finalizarConversacion() {
+
+            if (!this.consultaId || this.finalizando || this.consultaFinalizada) return
+
+            const confirmado = window.confirm(
+                '¿Seguro que quieres cortar esta conversación? Ya no podrás enviar más mensajes.'
+            )
+            if (!confirmado) return
+
+            this.finalizando = true
+
+            try {
+
+                // Ejemplo si existe un endpoint de cierre en el backend:
+                // await axios.post(`${urlConsultaIA}/${this.consultaId}/finalizar`)
+
+                this.detenerEscucha()
+                this.consultaFinalizada = true
+
+                this.mensajes.push({
+                    tipo: 'sistema',
+                    texto: 'La conversación fue finalizada por el médico.'
+                })
+                this.scrollBottom()
+
+                this.$emit('conversacionFinalizada', this.consultaId)
+
+            } catch (error) {
+
+                console.error('Error al finalizar la conversación:', error)
+                alert('No se pudo finalizar la conversación. Intentá de nuevo.')
+
+            } finally {
+                this.finalizando = false
+            }
+        },
+
+        /*
+        |--------------------------------------------------------------------
         | RECONOCIMIENTO DE VOZ
         |--------------------------------------------------------------------
         | No duplica nada del pipeline de IA: solo llena `nuevoMensaje` y
@@ -680,7 +779,7 @@ export default {
         },
 
         iniciarEscucha() {
-            if (!this.consultaId) return
+            if (!this.consultaId || this.consultaFinalizada) return
 
             if (!this.soportaReconocimiento()) {
                 alert('Este navegador no soporta reconocimiento de voz. Usa Chrome o Edge.')

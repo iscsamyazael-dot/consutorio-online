@@ -449,6 +449,7 @@ return [
             'icon' => 'fas fa-fw fa-user',
             'can' => 'acceso-medico-admin', // 🔒 Oculto para asistente
             
+            
         ],
        
         [
@@ -481,6 +482,12 @@ return [
          'can'    => 'admin', // 🔒 Oculta el encabezado para Asistente y Médico
         ],
         
+
+        [
+            'url'  => 'ConsultarEspecialidades', // O 'admin/specialties' si tu ruta tiene prefijo
+            'icon' => 'fas fa-fw fa-user',  
+        ],
+
         
         ['text' => 'Perfil',
             'icon' => 'fas fa-fw fa-user',
@@ -512,8 +519,8 @@ return [
             'icon' => 'fas fa-sign-out-alt',
             'can'  => 'ver-admin', // 🔒 Oculta el botón
         ],
-
-    ],
+    ],                   
+    
     /*
     |--------------------------------------------------------------------------
     | Menu Filters

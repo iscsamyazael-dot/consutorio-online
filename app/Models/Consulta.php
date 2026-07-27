@@ -69,4 +69,8 @@ class Consulta extends Model
     {
         return $this->hasOne(NotaPsoapp::class);
     }
+    public function eventosIA()
+{
+    return $this->hasMany(EventoIA::class, 'consulta_id');
+}
 }

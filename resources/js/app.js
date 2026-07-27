@@ -6,7 +6,6 @@ import 'admin-lte';
 import { createApp } from 'vue';
 // Componentes - Medicamentos
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
-import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 // Componentes - Consulta Inteligente
 import ConsultaInteligente from './components/consultaIA/ConsultaInteligente.vue'
 // Componentes - Atención Médica
@@ -29,6 +28,9 @@ import centroconsultas from './components/consultas/mastercentro.vue'
 import Historialreceta from './components/recetass/PanelRecetas.vue'
 // Módulo de especialidades
 import Especialidades from './components/Especialidades/Especialidades.vue'
+//Modulo de inventario de medicamentos
+import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
+
 //MODULO DE ALTA MEDICOS
 import AltaMedicos from './components/medicos-alta/PanelMedicos.vue'
 import RegistroMedico from './components/medicos-alta/PanelRegistro.vue'
@@ -76,10 +78,8 @@ app.component('configuracion-sistema', ConfiSistema);
 app.component('configuracion-sistema-panelcontrasena', PanelContraseña);
 app.component('registro-usuario', RegistrarUsuario);
 app.component('panel-tabla', PanelTabla);
- 
+app.component('recetass-historial',Historialreceta);    
 
-
-    
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 
