@@ -3,7 +3,10 @@
     <!-- HEADER -->
     <div class="card-header">
       <div class="header-left">
-        <h2>📋 Nota PSOAPP</h2>
+        <div class="eyebrow">
+          <span v-for="l in letras" :key="l" class="eyebrow-letter">{{ l }}</span>
+        </div>
+        <h2>Nota PSOAPP</h2>
         <p>Presentación · Subjetivo · Objetivo · Análisis · Plan · Pronóstico</p>
       </div>
       <div class="mode-toggle">
@@ -11,12 +14,18 @@
           type="button"
           :class="['mode-btn', 'ia', { active: modo === 'ia' }]"
           @click="setModo('ia')"
-        >🎙️ IA (voz)</button>
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          IA (voz)
+        </button>
         <button
           type="button"
           :class="['mode-btn', 'manual', { active: modo === 'manual' }]"
           @click="setModo('manual')"
-        >✍️ Manual</button>
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          Manual
+        </button>
       </div>
     </div>
 
@@ -32,6 +41,7 @@
         :key="'p-' + s.key"
         class="progress-seg"
         :class="{ done: estado[s.key].completado }"
+        :title="s.titulo"
       ></div>
     </div>
 
@@ -41,10 +51,16 @@
         v-for="(s, i) in secciones"
         :key="s.key"
         class="item"
-        :class="{ open: abierto === s.key }"
+        :class="{ open: abierto === s.key, done: estado[s.key].completado, last: i === secciones.length - 1 }"
       >
         <div class="item-head" @click="toggleItem(s.key)">
-          <div class="letter">{{ s.letra }}</div>
+          <div class="rail">
+            <div class="letter">
+              <svg v-if="estado[s.key].completado" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span v-else>{{ s.letra }}</span>
+            </div>
+            <div v-if="i !== secciones.length - 1" class="rail-line"></div>
+          </div>
           <div class="item-title">
             <b>{{ s.titulo }}</b>
             <span>{{ s.sub }}</span>
@@ -55,7 +71,7 @@
           >
             {{ estado[s.key].completado ? 'Completado' : (modo === 'ia' ? 'Esperando IA' : 'Pendiente') }}
           </span>
-          <span class="chevron">▾</span>
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
 
         <div class="item-body" v-show="abierto === s.key">
@@ -78,10 +94,12 @@
     <div class="actions">
       <div class="actions-row">
         <button class="btn receta" :disabled="descargando" @click="descargar('receta')">
-          {{ descargando ? '⏳ Generando...' : '🖨️ Descargar receta (PDF)' }}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          {{ descargando ? 'Generando...' : 'Descargar receta (PDF)' }}
         </button>
         <button class="btn diagnostico" :disabled="descargando" @click="descargar('diagnostico')">
-          {{ descargando ? '⏳ Generando...' : '📄 Descargar diagnóstico (PDF)' }}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          {{ descargando ? 'Generando...' : 'Descargar diagnóstico (PDF)' }}
         </button>
       </div>
       <select
@@ -135,6 +153,7 @@ export default {
       toastTimer: null,
       guardando: false,
       descargando: false,
+      letras: ['P', 'S', 'O', 'A', 'P', 'P'],
       secciones: [
         {
           key: 'P1', letra: 'P', titulo: 'Presentación',
@@ -364,14 +383,19 @@ export default {
 
 <style scoped>
 .psoapp-card {
-  --bg: #f3f5f9;
+  /* Paleta alineada a la identidad ya usada en receta/diagnóstico (Ultra Farmacia) */
+  --bg: #f4f7f8;
   --card: #ffffff;
-  --border: #e5e9f0;
-  --blue: #2f6feb;
-  --blue-dark: #1d4ed8;
-  --green: #16a34a;
-  --amber-bg: #fff8e6;
-  --amber-border: #f2d382;
+  --border: #e3e9ea;
+  --teal: #0B7285;
+  --teal-dark: #075463;
+  --teal-tint: #eaf7f8;
+  --amber: #d97706;
+  --amber-bg: #fffbeb;
+  --amber-border: #fde68a;
+  --green: #146c43;
+  --green-bg: #e8f6ee;
+  --green-border: #bfe6cf;
   --text: #1f2937;
   --text-light: #6b7280;
 
@@ -382,85 +406,128 @@ export default {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(16,24,40,.04);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: var(--text);
   position: relative;
   box-sizing: border-box;
 }
+
+/* ---------- Header ---------- */
 .card-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 18px 20px 16px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--teal-tint) 0%, #ffffff 100%);
 }
-.card-header h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--blue-dark); }
-.card-header p { margin: 2px 0 0; font-size: 12px; color: var(--text-light); }
 .header-left { display: flex; flex-direction: column; }
+.eyebrow { display: flex; gap: 3px; margin-bottom: 8px; }
+.eyebrow-letter {
+  width: 18px; height: 18px; border-radius: 4px;
+  background: var(--teal); color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: .2px;
+  display: flex; align-items: center; justify-content: center;
+}
+.eyebrow-letter:nth-child(2) { background: var(--teal-dark); }
+.eyebrow-letter:nth-child(3) { background: var(--teal); }
+.eyebrow-letter:nth-child(4) { background: var(--teal-dark); }
+.eyebrow-letter:nth-child(5) { background: var(--teal); }
+.eyebrow-letter:nth-child(6) { background: var(--teal-dark); }
+.card-header h2 { margin: 0; font-size: 17px; font-weight: 800; color: #111827; letter-spacing: -.2px; }
+.card-header p { margin: 3px 0 0; font-size: 12px; color: var(--text-light); }
 
 .mode-toggle {
-  display: flex; align-items: center; gap: 2px; background: #f2f4f8;
+  display: flex; align-items: center; gap: 2px; background: #ffffff;
   border: 1px solid var(--border); border-radius: 999px; padding: 3px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
 }
 .mode-btn {
-  border: none; background: transparent; padding: 6px 12px; border-radius: 999px;
-  cursor: pointer; color: var(--text-light); font-size: 12px; font-weight: 600; transition: .15s;
+  display: flex; align-items: center; gap: 6px;
+  border: none; background: transparent; padding: 7px 14px; border-radius: 999px;
+  cursor: pointer; color: var(--text-light); font-size: 12.5px; font-weight: 700;
+  transition: background .15s, color .15s;
 }
-.mode-btn.ia.active { background: var(--blue); color: #fff; }
+.mode-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.mode-btn.ia.active { background: var(--teal); color: #fff; }
 .mode-btn.manual.active { background: var(--text); color: #fff; }
 
+/* ---------- Barra de escucha ---------- */
 .listening-bar {
-  display: flex; align-items: center; gap: 8px; padding: 10px 18px;
-  background: #eef7ff; border-bottom: 1px solid var(--border);
-  font-size: 12px; color: var(--blue-dark); font-weight: 600;
+  display: flex; align-items: center; gap: 8px; padding: 10px 20px;
+  background: var(--teal-tint); border-bottom: 1px solid var(--border);
+  font-size: 12.5px; color: var(--teal-dark); font-weight: 700;
 }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: pulse 1.2s infinite; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: pulse 1.2s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) {
+  .dot { animation: none; }
+}
 
-.progress-row { display: flex; gap: 6px; padding: 14px 18px 0; }
-.progress-seg { height: 5px; flex: 1; border-radius: 4px; background: #e5e9f0; }
-.progress-seg.done { background: var(--green); }
+/* ---------- Progreso ---------- */
+.progress-row { display: flex; gap: 6px; padding: 16px 20px 0; }
+.progress-seg { height: 5px; flex: 1; border-radius: 4px; background: #e5e9f0; transition: background .2s; }
+.progress-seg.done { background: var(--teal); }
 
-.accordion { padding: 10px 10px 16px; }
-.item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
-.item-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; background: #fafbfd; }
+/* ---------- Acordeón con línea de secuencia ---------- */
+.accordion { padding: 14px 14px 18px; }
+.item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: #fff; transition: border-color .15s; }
+.item.open { border-color: #cfe4e8; }
+.item-head { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; cursor: pointer; background: #fafbfd; }
+.item.open .item-head { background: #fff; }
+
+.rail { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
 .letter {
-  width: 30px; height: 30px; border-radius: 8px; background: var(--blue); color: #fff;
-  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 8px; background: var(--teal); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13.5px;
+  flex-shrink: 0; transition: background .2s;
 }
-.item-title { flex: 1; }
-.item-title b { font-size: 13.5px; display: block; }
+.item.done .letter { background: var(--green); }
+.rail-line { width: 2px; flex: 1; min-height: 14px; background: var(--border); margin-top: 4px; }
+.item.done .rail-line { background: var(--green-border); }
+
+.item-title { flex: 1; padding-top: 3px; }
+.item-title b { font-size: 13.5px; display: block; color: #111827; }
 .item-title span { font-size: 11.5px; color: var(--text-light); }
-.status-pill { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+
+.status-pill { font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; white-space: nowrap; margin-top: 3px; }
 .status-pill.pending { background: #f1f2f4; color: var(--text-light); }
 .status-pill.ia { background: var(--amber-bg); color: #92700f; border: 1px solid var(--amber-border); }
-.status-pill.done { background: #e8f6ee; color: #146c43; border: 1px solid #bfe8d2; }
-.chevron { font-size: 12px; color: var(--text-light); margin-left: 4px; transition: .2s; }
-.item.open .chevron { transform: rotate(180deg); }
+.status-pill.done { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+
+.chevron { color: var(--text-light); margin-left: 2px; margin-top: 6px; transition: transform .2s; flex-shrink: 0; }
+.item.open .chevron { transform: rotate(180deg); color: var(--teal); }
 
 .item-body { padding: 0 14px 14px 56px; }
 textarea {
   width: 100%; min-height: 74px; resize: vertical; border: 1px solid var(--border); border-radius: 8px;
   padding: 10px; font-size: 13px; font-family: inherit; color: var(--text); background: #fff;
+  transition: border-color .15s, box-shadow .15s;
 }
-textarea:focus { outline: 2px solid #cbdcfd; border-color: var(--blue); }
+textarea:focus-visible { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(11, 114, 133, .12); }
 .hint { font-size: 11px; color: var(--text-light); margin-top: 5px; }
 
-.actions { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-top: 1px solid var(--border); background: #fafbfd; }
+/* ---------- Acciones ---------- */
+.actions { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); background: #fafbfd; }
 .actions-row { display: flex; gap: 10px; }
-.btn { flex: 1; border: none; border-radius: 8px; padding: 11px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
-.btn.receta { background: var(--blue); color: #fff; }
-.btn.diagnostico { background: #fff; color: var(--blue-dark); border: 1px solid var(--blue); }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: 8px; padding: 11px 12px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, border-color .15s; }
+.btn.receta { background: var(--teal); color: #fff; }
+.btn.receta:hover:not(:disabled) { background: var(--teal-dark); }
+.btn.diagnostico { background: #fff; color: var(--teal-dark); border: 1px solid var(--teal); }
+.btn.diagnostico:hover:not(:disabled) { background: var(--teal-tint); }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+.btn:focus-visible { outline: 2px solid var(--teal-dark); outline-offset: 2px; }
+
 .save-select {
   width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
   font-size: 13px; font-weight: 600; color: var(--text); background: #fff;
 }
-.save-select:disabled { opacity: 0.6; cursor: not-allowed; }
+.save-select:disabled { opacity: .6; cursor: not-allowed; }
+.save-select:focus-visible { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(11, 114, 133, .12); }
 
 .toast {
   position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
   background: #111827; color: #fff; padding: 8px 16px; border-radius: 8px;
-  font-size: 12.5px; font-weight: 600;
+  font-size: 12.5px; font-weight: 600; box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
 }
 .fade-enter-active, .fade-leave-active { transition: opacity .2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
