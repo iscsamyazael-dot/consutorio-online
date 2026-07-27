@@ -81,6 +81,7 @@ Route::middleware('auth')->group(function () {
         // (sin el prefijo consultaIA), así que no importa el orden respecto al
         // resource de abajo, pero se deja agrupada aquí por claridad.
         Route::get('historialClinico', [ConsultaIAController::class, 'historialClinico'])->name('consultaIA.historialClinico'); // IA: historial clínico completo generado por el módulo de IA
+        Route::post('consultaIA/{consultaId}/finalizar', [ConsultaIAController::class, 'finalizarConsulta'])->name('consultaIA.finalizarConsulta'); // IA: cierra la consulta y bloquea más mensajes
         Route::resource('consultaIA', ConsultaIAController::class); // IA: CRUD principal del módulo de Consulta Inteligente (IA)
         Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente'); // IA: genera receta con apoyo de IA
         Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente'); // IA: genera derivación con apoyo de IA
