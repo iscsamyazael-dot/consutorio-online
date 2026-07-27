@@ -18,6 +18,16 @@ use thiagoalessio\TesseractOCR\TesseractOCR;
 class IAClinicaService
 {
     /**
+     * Número máximo de tokens de salida que se le permite generar a la IA
+     * en las respuestas JSON de análisis clínico. Los prompts (sobre todo
+     * el de consultarIA, que pide una nota PSOAPP extensa) pueden generar
+     * respuestas largas; si el límite es muy bajo el JSON se corta a la
+     * mitad y json_decode() devuelve null, cayendo en "No se pudo
+     * determinar" aunque el texto de entrada sea perfectamente válido.
+     */
+    private const MAX_TOKENS_ANALISIS = 4000;
+
+    /**
      * Analiza una transcripción médica
      */
     public function analizarTranscripcion(
@@ -38,6 +48,7 @@ class IAClinicaService
                 'diagnostico_probable' => 'No se pudo determinar',
                 'nivel_riesgo' => 'desconocido',
                 'recomendaciones' => ['No se pudo completar el análisis. Intenta nuevamente.'],
+                'indicaciones_medico' => null,
                 'alertas' => [],
                 'nota_psoapp' => null,
             ];
@@ -66,6 +77,7 @@ class IAClinicaService
             'sintomas_detectados' => implode(', ', $data['sintomas'] ?? []),
             'diagnostico_probable' => $data['diagnostico'] ?? 'No disponible',
             'recomendacion' => $data['recomendacion'] ?? 'Sin recomendación',
+            'indicaciones_medico' => $data['indicaciones_medico'] ?? null,
             'confianza' => $data['confianza'] ?? 0
         ]);
 
@@ -149,6 +161,7 @@ class IAClinicaService
             'diagnostico_probable' => $data['diagnostico'] ?? 'No determinado',
             'nivel_riesgo' => $nivelRiesgo,
             'recomendaciones' => [$data['recomendacion'] ?? 'Sin recomendación'],
+            'indicaciones_medico' => $data['indicaciones_medico'] ?? null,
             'confianza' => $data['confianza'] ?? null,
             'sintomas' => $data['sintomas'] ?? [],
             'alertas' => $alertasDetectadas,
@@ -200,6 +213,124 @@ class IAClinicaService
         }
 
         return $maxNivel;
+    }
+
+    /**
+     * Clasifica el nivel de urgencia/triage de un paciente a partir del motivo
+     * de consulta (y opcionalmente los síntomas reportados), usando IA.
+     * Se usa al registrar un paciente nuevo para reemplazar la clasificación
+     * manual/hardcodeada por una evaluación automática.
+     *
+     * Devuelve un arreglo con las DOS columnas reales de la tabla `triage`:
+     * - estado: 'leve' | 'estable' | 'grave' | 'urgente'          (ENUM real de la tabla)
+     * - nivel_urgencia: 'bajo' | 'medio' | 'alto' | 'critico'     (ENUM real de la tabla,
+     *   derivado del 'estado' con un mapeo fijo, para que ambas columnas queden
+     *   siempre consistentes entre sí y nunca truncadas por un valor inválido).
+     *
+     * @return array{estado: string, nivel_urgencia: string}
+     */
+    public function clasificarTriage(?string $motivoConsulta, ?string $sintomas = null): array
+    {
+        $motivoConsulta = trim((string) $motivoConsulta);
+
+        if ($motivoConsulta === '') {
+            // Sin motivo de consulta no hay información suficiente para clasificar,
+            // se deja en 'estable' para que el médico lo revise manualmente.
+            return $this->resultadoTriage('estable');
+        }
+
+        $textoSintomas = trim((string) $sintomas);
+
+        $prompt = "
+        Eres un asistente clínico de Inteligencia Artificial que apoya el proceso de
+        triaje inicial de un consultorio. NO sustituyes el criterio médico, solo das
+        una primera clasificación de urgencia para ordenar la lista de espera.
+
+        Motivo de consulta reportado por el paciente:
+        \"$motivoConsulta\"
+        " . ($textoSintomas !== '' ? "
+
+        Síntomas adicionales reportados:
+        \"$textoSintomas\"
+        " : '') . "
+
+        Clasifica la urgencia del paciente en UNA SOLA de estas cuatro categorías:
+
+        - leve: motivo de consulta de rutina, revisión, seguimiento, trámite o
+          síntomas muy leves sin relevancia clínica urgente.
+        - estable: síntomas molestos que requieren valoración médica pero sin signos
+          de alarma inmediatos (ej. dolor leve-moderado, malestar general, síntomas
+          de días de evolución sin empeorar).
+        - grave: síntomas que sugieren riesgo importante o complicación relevante,
+          requieren atención médica prioritaria (ej. dolor intenso, fiebre alta
+          persistente, sangrado moderado, traumatismo relevante).
+        - urgente: síntomas que sugieren riesgo vital inminente, requieren atención
+          inmediata (ej. dolor torácico, dificultad respiratoria severa, pérdida de
+          conciencia, convulsiones, hemorragia importante).
+
+        Responde EXCLUSIVAMENTE con el siguiente JSON, sin texto adicional ni Markdown:
+
+        {\"nivel\": \"leve|estable|grave|urgente\", \"justificacion\": \"texto breve\"}
+        ";
+
+        try {
+            $response = Http::withToken(config('services.ai.key'))
+                ->timeout(15)
+                ->post('https://api.deepseek.com/chat/completions', [
+                    'model' => 'deepseek-v4-flash',
+                    'messages' => [['role' => 'user', 'content' => $prompt]],
+                    'response_format' => ['type' => 'json_object'],
+                    'max_tokens' => self::MAX_TOKENS_ANALISIS,
+                ]);
+
+            if (!$response->successful()) {
+                Log::error('Error HTTP al clasificar triage con IA', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return $this->resultadoTriage('estable');
+            }
+
+            $data = $this->decodificarJsonRespuesta($response, 'clasificarTriage');
+
+            if (!is_array($data)) {
+                return $this->resultadoTriage('estable');
+            }
+
+            $nivel = strtolower(trim($data['nivel'] ?? ''));
+
+            if (!in_array($nivel, ['leve', 'estable', 'grave', 'urgente'], true)) {
+                Log::warning('IA devolvió un nivel de triage no reconocido', ['respuesta' => $data]);
+                return $this->resultadoTriage('estable');
+            }
+
+            return $this->resultadoTriage($nivel);
+
+        } catch (\Exception $e) {
+            Log::error('Excepción al clasificar triage con IA: ' . $e->getMessage());
+            return $this->resultadoTriage('estable');
+        }
+    }
+
+    /**
+     * Arma el arreglo final de clasificación, derivando 'nivel_urgencia' a partir
+     * de 'estado' con un mapeo fijo (no se le pide a la IA que invente la segunda
+     * escala, para que las dos columnas ENUM de la tabla `triage` sean siempre
+     * consistentes entre sí).
+     */
+    private function resultadoTriage(string $estado): array
+    {
+        $mapaNivelUrgencia = [
+            'leve' => 'bajo',
+            'estable' => 'medio',
+            'grave' => 'alto',
+            'urgente' => 'critico',
+        ];
+
+        return [
+            'estado' => $estado,
+            'nivel_urgencia' => $mapaNivelUrgencia[$estado] ?? 'medio',
+        ];
     }
 
     /**
@@ -493,6 +624,38 @@ class IAClinicaService
         Indica que son sugerencias generales debido a que no existen medicamentos relacionados dentro del inventario.
 
         =========================================================
+        FASE 6B - RECOMENDACIONES GENERALES DE CUIDADO (PARA EL PACIENTE)
+        =========================================================
+
+        Solo si el resultado es \"receta_inteligente\", redacta además un texto breve
+        (2 a 4 frases, en prosa, dirigido al paciente) con recomendaciones generales
+        de cómo tomar los medicamentos y qué cuidados debe seguir. Este texto lo verá
+        el médico y podrá editarlo antes de imprimir la receta.
+
+        PERMITIDO:
+
+        - Indicaciones generales de administración (ej. \"tomar con alimentos para
+          evitar irritación gástrica\", \"aplicar en la zona afectada\", \"mantener en
+          reposo el área lesionada\").
+        - Medidas de cuidado general relacionadas con el padecimiento (hidratación,
+          reposo, alimentación blanda, evitar irritantes, cuidados de la piel/herida,
+          etc.), coherentes con los síntomas y el diagnóstico probable.
+        - Advertir cuándo debe volver a consulta o acudir a urgencias (signos de
+          alarma a vigilar).
+
+        PROHIBIDO (igual que en la Fase 6):
+
+        - NO indiques dosis, frecuencia ni duración de ningún medicamento.
+        - NO indiques vía de administración exacta si no es obvia por el tipo de
+          presentación (ej. no inventes \"aplicar 2 gotas cada 8 horas\").
+        - NO uses lenguaje que suene a instrucción médica definitiva; usa un tono de
+          sugerencia general (\"se recomienda\", \"es aconsejable\").
+
+        Si no hay nada clínicamente relevante que agregar más allá de lo obvio,
+        deja este campo como cadena vacía en vez de inventar contenido genérico
+        sin valor (\"tomar agua\", \"descansar\") que no aporte nada específico al caso.
+
+        =========================================================
         FASE 7 - DERIVACIÓN
         =========================================================
 
@@ -606,6 +769,8 @@ class IAClinicaService
         }
         ],
 
+        \"recomendaciones_generales\":\"\",
+
         \"especialidad\":\"\",
 
         \"motivo_derivacion\":\"\",
@@ -630,6 +795,8 @@ class IAClinicaService
         - Prioriza siempre la seguridad del paciente.
         - Ante signos de alarma importantes, prioriza la derivación sobre la receta inteligente.
         - El diagnóstico siempre es probable y nunca definitivo.
+        - El campo \"recomendaciones_generales\" solo aplica cuando \"tipo\" es
+          \"receta_inteligente\"; si \"tipo\" es \"derivacion\", déjalo como cadena vacía.
 
         ";
 
@@ -637,17 +804,21 @@ class IAClinicaService
             $response = Http::withToken(config('services.ai.key'))
                 ->timeout(20)
                 ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-chat',
+                    'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
-                    'response_format' => ['type' => 'json_object']
+                    'response_format' => ['type' => 'json_object'],
+                    'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
 
             if (!$response->successful()) {
-                Log::error('Error HTTP al consultar sugerencia libre IA', ['status' => $response->status()]);
+                Log::error('Error HTTP al consultar sugerencia libre IA', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
                 return null;
             }
 
-            return json_decode($response->json('choices.0.message.content'), true);
+            return $this->decodificarJsonRespuesta($response, 'sugerirMedicamentoLibre');
 
         } catch (\Exception $e) {
             Log::error('Excepción al consultar sugerencia libre IA: ' . $e->getMessage());
@@ -713,6 +884,12 @@ PRONÓSTICO ANTERIOR:
         - No inventes información que no esté en la nota médica.
         - Si un dato no aparece, escribe 'No disponible' o 'Sin datos suficientes en la
           transcripción' en el apartado correspondiente. Nunca lo rellenes con información inventada.
+        - Sin embargo, si el dato SÍ aparece en el texto (aunque sea mencionado de forma breve o
+          entre otros datos), DEBES extraerlo y transcribirlo de forma completa en el apartado
+          correspondiente. NUNCA resumas ni omitas datos clínicos objetivos reales (signos vitales,
+          hallazgos de exploración física por aparatos y sistemas, resultados de estudios) que el
+          texto sí menciona. Es un error tan grave inventar datos como perder/ignorar datos que sí
+          fueron proporcionados.
         - UTILIZA TERMINOLOGÍA MÉDICA PRECISA Y PROFESIONAL en TODAS tus respuestas.
         - Los diagnósticos y hallazgos deben expresarse con nombres técnicos de enfermedades.
 
@@ -762,20 +939,35 @@ PRONÓSTICO ANTERIOR:
 
         Solo analiza el contenido que tenga relevancia clínica real.
 
+        NOTA: independientemente de si el texto es A o B, si dentro del mismo relato el paciente
+        o el médico también incluyen datos de EXPLORACIÓN FÍSICA (signos vitales, inspección,
+        auscultación, palpación, etc.), esos datos son igual de válidos y DEBEN extraerse con el
+        mismo nivel de detalle que los síntomas — no los descartes por venir mezclados con el
+        relato del paciente.
+
         =========================================================
         FASE 2 - EXTRACCIÓN DE INFORMACIÓN CLÍNICA
         =========================================================
 
-        Extrae del texto ya filtrado:
+        Extrae del texto ya filtrado, de forma EXHAUSTIVA (no omitas ningún dato clínico presente):
 
         - Síntomas actuales (o hallazgos del estudio, según el caso de la Fase 1).
         - Duración de síntomas si existe.
         - Intensidad si está disponible.
         - Zona anatómica afectada.
-        - Antecedentes relevantes.
-        - Medicamentos mencionados.
-        - Alergias mencionadas.
+        - Antecedentes relevantes (enfermedades crónicas, cirugías previas, medicamentos habituales).
+        - Medicamentos mencionados, incluyendo los que el paciente ya tomó por cuenta propia antes
+          de la consulta (ej. automedicación) y con qué resultado.
+        - Alergias mencionadas (o su negación explícita, ej. 'niega alergias').
         - Factores de riesgo.
+        - TODOS los signos vitales mencionados explícitamente: temperatura, frecuencia cardiaca,
+          frecuencia respiratoria, presión arterial, saturación de oxígeno, peso, talla — cada uno
+          con su valor y unidad exactos, tal como aparecen en el texto.
+        - TODOS los hallazgos de exploración física por aparatos y sistemas que se mencionen:
+          estado general/apariencia, cabeza y cuello, orofaringe/amígdalas, ganglios linfáticos,
+          auscultación cardiopulmonar, exploración abdominal, extremidades, piel, neurológico, etc.
+          Extrae cada hallazgo positivo Y cada hallazgo negativo relevante (ej. 'sin sibilancias',
+          'abdomen sin dolor a la palpación') porque ambos son clínicamente informativos.
 
         =========================================================
         FASE 3 - SÍNTOMAS / HALLAZGOS - TERMINOLOGÍA MÉDICA
@@ -891,13 +1083,47 @@ PRONÓSTICO ANTERIOR:
         Las descripciones de las alertas deben usar terminología médica precisa.
 
         =========================================================
-        FASE 7 - RECOMENDACIÓN MÉDICA
+        FASE 7 - RECOMENDACIÓN MÉDICA (PARA EL MÉDICO)
         =========================================================
 
         Genera una recomendación concreta relacionada con los síntomas o hallazgos del estudio,
-        útil para el médico, con terminología médica precisa.
+        útil para el médico (ej. estudios a considerar, puntos a explorar, líneas de manejo a
+        evaluar), con terminología médica precisa.
 
         Evita frases genéricas como 'Tomar líquidos' o 'Descansar'.
+
+        =========================================================
+        FASE 7B - INDICACIONES PARA EL PACIENTE
+        =========================================================
+
+        Redacta ahora un texto breve (2 a 5 frases, en prosa clínica pero comprensible para el
+        paciente) con las indicaciones que el paciente debe seguir tras la consulta. Este texto
+        es lo que el médico revisará/editará y es lo que verá el paciente impreso en su nota.
+
+        NO es lo mismo que la Fase 7: la Fase 7 es una recomendación técnica para el médico;
+        esto es una instrucción práctica para el paciente.
+
+        Incluye, según sea clínicamente relevante para el caso (no agregues puntos que no
+        apliquen):
+
+        - Reposo o restricción de actividad si el cuadro lo amerita.
+        - Dieta, hidratación o cuidados generales coherentes con el diagnóstico probable
+          (ej. dieta blanda y evitar irritantes en cuadros gástricos, evitar carga de peso en
+          lesiones articulares, etc.).
+        - Cuidados locales si aplica (curaciones, higiene de una herida, uso de frío/calor local).
+        - Señales de alarma específicas por las que debe acudir a urgencias de inmediato.
+        - Cuándo debe regresar a consulta o control (ej. 'si no hay mejoría en X días').
+
+        PROHIBIDO:
+
+        - NO indiques dosis, frecuencia ni duración de ningún medicamento (eso va en la receta,
+          no aquí).
+        - NO repitas literalmente el contenido del campo 'recomendacion' de la Fase 7.
+        - NO uses relleno genérico sin relación con el caso ('tome agua', 'descanse') si no hay
+          nada específico que agregar; en ese caso deja el texto breve pero igual anclado al
+          padecimiento reportado, nunca vacío salvo que el texto de origen no tenga información
+          clínica suficiente (en ese caso, escribe 'No disponible - pendiente de valoración
+          presencial').
 
         =========================================================
         FASE 8 - NOTA CLÍNICA POR APARTADOS (PSOAPP)
@@ -905,35 +1131,62 @@ PRONÓSTICO ANTERIOR:
 
         Redacta la nota de evolución en los 6 apartados del formato PSOAPP. Usa ÚNICAMENTE
         información presente en el texto (no inventes signos vitales, hallazgos de exploración
-        física ni estudios que no fueron mencionados). Cada apartado es un párrafo breve en prosa
-        clínica profesional, no una lista.
+        física ni estudios que no fueron mencionados). Cada apartado debe ser un párrafo en prosa
+        clínica profesional, TAN DETALLADO Y COMPLETO COMO LO PERMITA LA INFORMACIÓN DISPONIBLE EN
+        EL TEXTO. Regla general para las 6 secciones: si el texto trae el dato, DEBE aparecer en
+        el apartado correspondiente, con su valor exacto — no lo resumas ni lo generalices, y no
+        lo reemplaces por 'No disponible' si en realidad sí viene en el texto.
 
         - presentacion: Datos demográficos disponibles (edad, sexo, ocupación si se mencionan),
-          motivo de consulta en pocas palabras, y antecedentes de importancia (comorbilidades,
-          alergias, cirugías previas) si se refieren.
+          motivo de consulta, tiempo de evolución del padecimiento actual, y TODOS los
+          antecedentes de importancia mencionados (enfermedades crónicas o su negación, alergias
+          o su negación, cirugías previas, medicamentos de uso habitual).
 
-        - subjetivo: Padecimiento actual narrado cronológicamente (inicio, localización,
-          intensidad, características, agravantes/aliviantes, evolución en el tiempo), síntomas
-          asociados referidos, y tratamientos o medicamentos que el paciente ya tomó antes de la
-          evaluación.
+        - subjetivo: Padecimiento actual narrado cronológicamente de forma completa: inicio,
+          localización, intensidad, características, agravantes y aliviantes, evolución en el
+          tiempo, síntomas asociados referidos (enuméralos todos, no solo los principales), y
+          cualquier tratamiento o medicamento que el paciente ya haya tomado antes de la
+          evaluación, incluyendo si le dio o no mejoría.
 
-        - objetivo: Signos vitales y hallazgos de exploración física o de estudios de
-          laboratorio/imagen SOLO SI aparecen explícitamente en el texto. Si el texto es únicamente
-          un relato del paciente sin exploración física ni estudios, escribe: 'No disponible -
-          pendiente de exploración física y estudios complementarios por el médico tratante'.
+        - objetivo: Esta sección es EXCLUSIVAMENTE para datos objetivos (medidos u observados por
+          el examinador), NUNCA para lo que el paciente narra sentir. Transcribe de forma completa
+          y ordenada TODO lo que el texto reporte de:
+            • Signos vitales: temperatura, frecuencia cardiaca, frecuencia respiratoria, presión
+              arterial, saturación de oxígeno, peso y talla — cada uno con su valor y unidad
+              exactos tal como se mencionan (ej. 'Temperatura 37.8°C, FC 86 lpm, FR 18 rpm, TA
+              118/76 mmHg').
+            • Estado general/apariencia del paciente a la inspección.
+            • Hallazgos de exploración física por regiones/aparatos y sistemas, en el orden en que
+              se mencionen o de forma cefalocaudal: cabeza y cuello, orofaringe/amígdalas, ganglios
+              linfáticos, tórax/auscultación cardiopulmonar, abdomen, extremidades, piel,
+              neurológico, etc. Incluye tanto los hallazgos positivos (anormales) como los
+              negativos relevantes que el examinador haya reportado explícitamente (ej. 'sin
+              sibilancias ni estertores', 'abdomen blando, depresible, sin dolor a la palpación'),
+              ya que descartar hallazgos también es información clínica objetiva válida.
+            • Resultados de estudios de laboratorio o imagen, si se mencionan.
+          Si el texto es ÚNICAMENTE un relato de síntomas sin ningún dato de exploración física ni
+          estudios (es decir, no hay NINGÚN signo vital ni hallazgo de exploración en el texto),
+          entonces sí escribe: 'No disponible - pendiente de exploración física y estudios
+          complementarios por el médico tratante'. Pero si el texto SÍ trae exploración física,
+          usa ese contenido completo — nunca actives este texto de reemplazo si hay datos objetivos
+          reales disponibles.
 
-        - analisis: Razonamiento clínico breve integrando lo subjetivo y lo objetivo, e impresión
-          diagnóstica probable (nunca definitiva). Menciona si las comorbilidades referidas parecen
-          controladas o descompensadas, solo si hay datos para inferirlo.
+        - analisis: Razonamiento clínico integrando lo subjetivo y lo objetivo (haciendo
+          referencia explícita a los signos vitales y hallazgos relevantes de la exploración
+          cuando existan), e impresión diagnóstica probable (nunca definitiva), incluyendo
+          diagnósticos diferenciales si son pertinentes. Menciona si las comorbilidades referidas
+          parecen controladas o descompensadas, solo si hay datos para inferirlo.
 
-        - plan: Sugerencias generales de plan diagnóstico (estudios que podrían solicitarse) y
-          terapéutico/educativo a nivel de apoyo a la decisión, SIN indicar dosis, vía ni
-          frecuencia de medicamentos (eso lo define el médico). Puede incluir vigilancia de signos
-          de alarma.
+        - plan: Sugerencias concretas de plan diagnóstico (estudios que podrían solicitarse,
+          justificando brevemente por qué) y plan terapéutico/educativo a nivel de apoyo a la
+          decisión, SIN indicar dosis, vía ni frecuencia de medicamentos (eso lo define el
+          médico). Incluye vigilancia de signos de alarma específicos relacionados con el
+          diagnóstico probable, y criterios de reevaluación o seguimiento.
 
         - pronostico: Estimación general (reservado/bueno/malo) para la vida y para la función, y
-          los factores de los que dependería la evolución, siempre aclarando que es una estimación
-          preliminar sujeta a valoración médica presencial.
+          los factores concretos de los que dependería la evolución (ej. apego al tratamiento,
+          control de comorbilidades, ausencia de complicaciones), siempre aclarando que es una
+          estimación preliminar sujeta a valoración médica presencial.
 
         =========================================================
         FASE 9 - RESPUESTA
@@ -960,6 +1213,8 @@ PRONÓSTICO ANTERIOR:
 
         \"recomendacion\": \"\",
 
+        \"indicaciones_medico\": \"\",
+
         \"confianza\": 0,
 
         \"nivel_riesgo\": \"bajo\",
@@ -983,10 +1238,16 @@ PRONÓSTICO ANTERIOR:
         - No escribas explicaciones fuera del JSON.
         - No uses Markdown.
         - No inventes síntomas, hallazgos ni antecedentes que no estén en el texto.
+        - Tampoco omitas ni resumas en exceso datos objetivos (signos vitales, hallazgos de
+          exploración física, resultados de estudios) que el texto sí proporcione: deben quedar
+          reflejados de forma completa en el apartado 'objetivo'.
         - Si un dato no aparece, usa 'No disponible' o 'Sin datos suficientes en la transcripción'.
         - El diagnóstico siempre es probable y nunca definitivo.
         - Prioriza siempre la seguridad del paciente al evaluar riesgo y alertas.
         - Nunca inventes alertas: solo genéralas si hay evidencia real en el texto.
+        - El campo \"indicaciones_medico\" nunca debe repetir literalmente el campo
+          \"recomendacion\": uno es técnico para el médico, el otro es la instrucción práctica
+          para el paciente.
 
         ";
 
@@ -994,21 +1255,58 @@ PRONÓSTICO ANTERIOR:
             $response = Http::withToken(config('services.ai.key'))
                 ->timeout(20)
                 ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-chat',
+                    'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
-                    'response_format' => ['type' => 'json_object']
+                    'response_format' => ['type' => 'json_object'],
+                    'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
 
             if (!$response->successful()) {
-                Log::error('Error HTTP al consultar IA clínica', ['status' => $response->status()]);
+                Log::error('Error HTTP al consultar IA clínica', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
                 return null;
             }
 
-            return json_decode($response->json('choices.0.message.content'), true);
+            return $this->decodificarJsonRespuesta($response, 'consultarIA');
 
         } catch (\Exception $e) {
             Log::error('Excepción al consultar IA clínica: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Decodifica de forma segura el contenido JSON devuelto por la IA,
+     * distinguiendo explícitamente entre "la IA respondió y el JSON es
+     * válido" y "la IA respondió pero el JSON viene incompleto/corrupto"
+     * (típicamente porque la respuesta se cortó por límite de tokens).
+     * Loguea el contenido crudo en el segundo caso, para poder diagnosticar
+     * sin tener que reproducir el error a ciegas.
+     */
+    private function decodificarJsonRespuesta($response, string $origen)
+    {
+        $contenido = $response->json('choices.0.message.content');
+
+        if (empty($contenido)) {
+            Log::error("IA devolvió contenido vacío ({$origen})", [
+                'respuesta_completa' => $response->json(),
+            ]);
+            return null;
+        }
+
+        $data = json_decode($contenido, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error("JSON inválido o incompleto devuelto por la IA ({$origen})", [
+                'json_error' => json_last_error_msg(),
+                'longitud_contenido' => strlen($contenido),
+                'contenido_crudo' => $contenido,
+            ]);
+            return null;
+        }
+
+        return $data;
     }
 }
