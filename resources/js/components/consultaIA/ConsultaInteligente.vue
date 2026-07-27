@@ -75,6 +75,7 @@
         <div class="col-lg-3">
             <RecetaInteligente
                 :sintomas="sintomasDetectados"
+                :consulta-id="consultaId"
             />
             <DerivacionClinica
                 :sintomas="sintomasDetectados"
