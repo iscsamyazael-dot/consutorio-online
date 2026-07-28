@@ -78,7 +78,7 @@ app.component('configuracion-sistema', ConfiSistema);
 app.component('configuracion-sistema-panelcontrasena', PanelContraseña);
 app.component('registro-usuario', RegistrarUsuario);
 app.component('panel-tabla', PanelTabla);
-app.component('recetass-historial',Historialreceta);    
+    
 
 // 3. MONTAJE DE LA APP
 app.mount('#app');

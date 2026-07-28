@@ -455,7 +455,7 @@ export default {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = setTimeout(() => {
         this.buscarPacientes()
-      }, 200)
+      }, 300)
     },
 
     async obtenerPacientes(id = this.pacienteSeleccionadoId) {
@@ -472,7 +472,7 @@ export default {
     async buscarPacientes() {
       if (this.seleccionandoPaciente) return
 
-      if (this.buscarPaciente.trim().length < 1) {
+      if (this.buscarPaciente.trim().length < 3) {
         this.pacientesEncontrados = []
         this.mostrarResultados = false
         this.pacienteSeleccionadoId = null
@@ -484,7 +484,7 @@ export default {
       const requestId = ++this.searchRequestId   // marca esta petición
 
       try {
-        const response = await ApiService.get('/pacientes/buscar', {
+        const response = await ApiService.get('pacientes/buscar', {
           params: { texto: this.buscarPaciente }
         })
 
