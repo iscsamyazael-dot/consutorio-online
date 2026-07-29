@@ -1,341 +1,310 @@
+
 <template>
-<div class="container">
-    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
-        <!-- HEADER -->
-        <div class="card-header bg-white border-0 py-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h4 class="fw-bold mb-1">
-                        <i class="fas fa-notes-medical text-primary me-2"></i>
-                        Consultas Médicas
-                    </h4>
-                    <small class="text-muted">
-                        Historial clínico del paciente
-                    </small>
-                </div>
-                <a
-                    href="/consultas/create"
-                    class="btn btn-primary rounded-pill px-4"
-                >
-                    <i class="fas fa-plus me-1"></i>
-                    Nueva Consulta
-                </a>
-            </div>
-        </div>
-        <!-- BODY -->
-        <div class="card-body p-4">
+    <div class="container">
+        <div class="d-flex justify-content-start mb-3">
+    <button
+        type="button"
+        class="btn btn-outline-primary rounded-pill px-4"
+        @click="regresarExpediente"
+    >
+        <i class="fas fa-arrow-left me-2"></i>
+        Regresar al expediente
+    </button>
+</div>
 
-            <div v-if="cargando" class="text-center text-muted py-4">
-                <span class="spinner-border spinner-border-sm me-2"></span>
-                Cargando consulta...
-            </div>
-
-            <div v-else-if="!consulta" class="alert alert-warning">
-                No se encontró información de esta consulta.
-            </div>
-
-            <!-- CARD CONSULTA -->
-            <div v-else class="record-card">
-                <div class="flex-grow-1">
-                    <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
-                        <h6 class="fw-bold mb-0">
-                            {{ formatearFecha(consulta.created_at) }}
-                        </h6>
-                        <span class="badge rounded-pill px-3 py-2" :class="colorBadge(estadoMostrado)">
-                            {{ estadoMostrado }}
-                        </span>
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+            <!-- HEADER -->
+            <div class="card-header bg-white border-0 py-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h4 class="fw-bold mb-1">
+                            <i class="fas fa-notes-medical text-primary me-2"></i>
+                            Consultas Médicas
+                        </h4>
+                        <small class="text-muted">
+                            Historial clínico del paciente
+                        </small>
                     </div>
-                    <p class="mb-1">
-                        <strong>Motivo:</strong>
-                        {{ consulta.motivo_consulta }}
-                    </p>
-                    <p class="text-muted mb-2" v-if="consulta.diagnostico">
-                        Diagnóstico: {{ consulta.diagnostico }}
-                    </p>
-                    <small class="text-muted" v-if="consulta.medico">
-                        Médico: {{ consulta.medico.nombre || consulta.medico.name }}
-                    </small>
+                    <a
+                        href="/consultas/create"
+                        class="btn btn-primary rounded-pill px-4"
+                    >
+                        <i class="fas fa-plus me-1"></i>
+                        Nueva Consulta
+                    </a>
                 </div>
-                <!-- ACCIONES -->
-                <div class="d-flex gap-2 flex-wrap">
-                    <button
-                        class="btn btn-sm btn-outline-info rounded-pill px-3"
-                        data-bs-toggle="modal"
-                        data-bs-target="#detalleConsultaModal"
-                    >
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button
-                        class="btn btn-sm btn-outline-warning rounded-pill px-3"
-                        data-bs-toggle="modal"
-                        data-bs-target="#recetaModal"
-                    >
-                        <i class="fas fa-prescription"></i>
-                    </button>
+            </div>
+            <!-- BODY -->
+            <div class="card-body p-4">
+                <!-- CARGANDO -->
+                <div
+                    v-if="cargando"
+                    class="text-center text-muted py-4"
+                >
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Cargando consulta...
+                </div>
+                <!-- SIN CONSULTA -->
+                <div
+                    v-else-if="!consulta"
+                    class="alert alert-warning"
+                >
+                    No se encontró información de esta consulta.
+                </div>
+                <!-- CARD CONSULTA -->
+                <div
+                    v-else
+                    class="record-card"
+                >
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+                            <h6 class="fw-bold mb-0">
+                                {{ formatearFecha(consulta.created_at) }}
+                            </h6>
+                            <span
+                                class="badge rounded-pill px-3 py-2"
+                                :class="colorBadge(estadoMostrado)"
+                            >
+                                {{ estadoMostrado }}
+                            </span>
+                        </div>
+                        <p class="mb-1">
+                            <strong>Motivo:</strong>
+                            {{ consulta.motivo_consulta || 'Sin motivo registrado' }}
+                        </p>
+                        <p
+                            class="text-muted mb-2"
+                            v-if="consulta.diagnostico"
+                        >
+                            <strong>Diagnóstico:</strong>
+                            {{ consulta.diagnostico }}
+                        </p>
+                        <small
+                            class="text-muted"
+                            v-if="consulta.medico"
+                        >
+                            Médico:
+                            {{ consulta.medico.nombre || consulta.medico.name }}
+                        </small>
+                    </div>
+                    <!-- ÚNICA ACCIÓN: VER -->
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-info rounded-pill px-3"
+                            data-bs-toggle="modal"
+                            data-bs-target="#detalleConsultaModal"
+                            title="Ver detalle de la consulta"
+                        >
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-<!-- MODAL DETALLE -->
-<div class="modal fade" id="detalleConsultaModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 rounded-4">
-            <div class="modal-header bg-primary text-white border-0">
-                <h5 class="modal-title">
-                    <i class="fas fa-notes-medical me-2"></i>
-                    Detalle de la Consulta
-                </h5>
-                <button
-                    type="button"
-                    class="btn-close btn-close-white"
-                    data-bs-dismiss="modal"
-                ></button>
-            </div>
-            <div class="modal-body p-4" v-if="consulta">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <label class="fw-bold">Fecha</label>
-                        <p class="text-muted">{{ formatearFecha(consulta.created_at) }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold">Médico</label>
-                        <p class="text-muted">
-                            {{ consulta.medico ? (consulta.medico.nombre || consulta.medico.name) : 'Sin asignar' }}
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold">Paciente</label>
-                        <p class="text-muted">
-                            {{ consulta.paciente ? consulta.paciente.nombre : '' }}
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold">Folio</label>
-                        <p class="text-muted">
-                            {{ consulta.folio }}
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold">Motivo</label>
-                        <p class="text-muted">
-                            {{ consulta.motivo_consulta }}
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold">Diagnóstico</label>
-                        <p class="text-danger fw-semibold">
-                            {{ consulta.diagnostico || 'Sin diagnóstico registrado' }}
-                        </p>
-                    </div>
-                </div>
-                <hr>
-                <div>
-                    <label class="fw-bold">
-                        Recomendaciones médicas (IA)
-                    </label>
-                    <p class="text-muted mb-0">
-                        {{ consulta.recomendacion_ia || consulta.observaciones || 'Sin recomendaciones registradas.' }}
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- MODAL RECETA -->
-<div class="modal fade" id="recetaModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content border-0 rounded-4">
-            <div class="modal-header bg-success text-white border-0">
-                <h5 class="modal-title">
-                    <i class="fas fa-prescription me-2"></i>
-                    Receta Médica
-                </h5>
-                <button
-                    class="btn-close btn-close-white"
-                    data-bs-dismiss="modal"
-                ></button>
-            </div>
-            <div class="modal-body p-4">
-
-                <!-- DATOS DE LA SUCURSAL Y DEL MÉDICO -->
-                <div class="section-title mb-3">
-                    <h5>Datos de la receta</h5>
-                    <small>
-                        Se imprimen en el encabezado del PDF
-                    </small>
-                </div>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="fw-bold small mb-1">Sucursal</label>
-                        <select class="form-select" v-model="ubicacionSeleccionada">
-                            <option :value="null">Selecciona una sucursal</option>
-                            <option
-                                v-for="ubicacion in ubicaciones"
-                                :key="ubicacion.id"
-                                :value="ubicacion.id"
-                            >
-                                {{ ubicacion.nombre }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold small mb-1">Teléfono de contacto</label>
-                        <input type="text" class="form-control" v-model="telefonoContacto" placeholder="Ej. 999 743 8532">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold small mb-1">Cédula profesional</label>
-                        <input type="text" class="form-control" v-model="cedulaProfesional" placeholder="Ej. 3908953">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold small mb-1">Universidad</label>
-                        <input type="text" class="form-control" v-model="universidad" placeholder="Ej. Universidad Autónoma de Campeche">
-                    </div>
-                </div>
-
-                <!-- SIGNOS VITALES -->
-                <div class="section-title mb-3">
-                    <h5>Signos vitales</h5>
-                    <small>
-                        Captura manual al momento de la receta
-                    </small>
-                </div>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-2">
-                        <label class="fw-bold small mb-1">PA (mmHg)</label>
-                        <input type="text" class="form-control" v-model="signosVitales.pa" placeholder="110/80">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="fw-bold small mb-1">FC (lpm)</label>
-                        <input type="text" class="form-control" v-model="signosVitales.fc" placeholder="78">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="fw-bold small mb-1">FR (rpm)</label>
-                        <input type="text" class="form-control" v-model="signosVitales.fr" placeholder="17">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="fw-bold small mb-1">Glucosa (mg/dl)</label>
-                        <input type="text" class="form-control" v-model="signosVitales.glucosa" placeholder="194">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="fw-bold small mb-1">SpO2 (%)</label>
-                        <input type="text" class="form-control" v-model="signosVitales.spo2" placeholder="95">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="fw-bold small mb-1">Temp. (°C)</label>
-                        <input type="text" class="form-control" v-model="signosVitales.temperatura" placeholder="39">
-                    </div>
-                </div>
-
-                <hr>
-
-                <div class="section-title mb-4">
-                    <h5>Medicamentos</h5>
-                    <small>
-                        Agrega los medicamentos del tratamiento
-                    </small>
-                </div>
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Medicamento</th>
-                                <th>Dosis</th>
-                                <th>Frecuencia</th>
-                                <th>Duración</th>
-                                <th width="120">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="(med, index) in medicamentos"
-                                :key="index"
-                            >
-                                <td>
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        v-model="med.nombre"
-                                    >
-                                </td>
-                                <td>
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        v-model="med.dosis"
-                                    >
-                                </td>
-                                <td>
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        v-model="med.frecuencia"
-                                    >
-                                </td>
-                                <td>
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        v-model="med.duracion"
-                                    >
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <button
-                                            type="button"
-                                            class="btn btn-danger btn-sm"
-                                            @click="eliminarMedicamento(index)"
-                                        >
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="btn btn-success btn-sm"
-                                            @click="guardarReceta"
-                                        >
-                                            <i class="fas fa-save"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <button
-                    type="button"
-                    class="btn btn-outline-primary rounded-pill px-4 mb-4"
-                    @click="agregarMedicamento"
-                >
-                    <i class="fas fa-plus me-1"></i>
-                    Agregar medicamento
-                </button>
-
-                <hr>
-
-                <div class="mb-4">
-                    <label class="fw-bold mb-2">Indicaciones adicionales</label>
-                    <textarea
-                        class="form-control"
-                        rows="5"
-                        v-model="indicacionesAdicionales"
-                        placeholder="Ej. Evitar alimentos irritantes, medidas de higiene, datos de alarma..."
-                    ></textarea>
-                </div>
-
-                <div class="d-flex justify-content-end">
+    <!-- ===================================================== -->
+    <!-- MODAL DETALLE DE LA CONSULTA -->
+    <!-- ===================================================== -->
+    <div
+        class="modal fade"
+        id="detalleConsultaModal"
+        tabindex="-1"
+        aria-hidden="true"
+    >
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 rounded-4">
+                <!-- HEADER DEL MODAL -->
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-notes-medical me-2"></i>
+                        Detalle de la Consulta
+                    </h5>
                     <button
                         type="button"
-                        class="btn btn-primary rounded-pill px-4"
-                        @click="generarPDF"
-                    >
-                        <i class="fas fa-file-pdf me-1"></i>
-                        Generar PDF
-                    </button>
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                    ></button>
+                </div>
+                <!-- BODY DEL MODAL -->
+                <div
+                    class="modal-body p-4"
+                    v-if="consulta"
+                >
+                    <!-- ===================================== -->
+                    <!-- DATOS GENERALES -->
+                    <!-- ===================================== -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Datos de la consulta
+                        </h5>
+                        <div class="row g-4">
+                            <!-- FECHA -->
+                            <div class="col-md-6">
+                                <label class="fw-bold">
+                                    Fecha
+                                </label>
+                                <p class="text-muted mb-0">
+                                    {{ formatearFecha(consulta.created_at) }}
+                                </p>
+                            </div>
+                            <!-- MÉDICO -->
+                            <div class="col-md-6">
+                                <label class="fw-bold">
+                                    Médico
+                                </label>
+                                <p class="text-muted mb-0">
+
+                                    {{
+                                        consulta.medico
+                                            ? (
+                                                consulta.medico.nombre ||
+                                                consulta.medico.name
+                                            )
+                                            : 'Sin asignar'
+                                    }}
+                                </p>
+                            </div>
+                            <!-- PACIENTE -->
+                            <div class="col-md-6">
+                                <label class="fw-bold">
+                                    Paciente
+                                </label>
+                                <p class="text-muted mb-0">
+                                    {{
+                                        consulta.paciente
+                                            ? consulta.paciente.nombre
+                                            : 'Sin paciente registrado'
+                                    }}
+                                </p>
+                            </div>
+                            <!-- FOLIO -->
+                            <div class="col-md-6">
+                                <label class="fw-bold">
+                                    Folio
+                                </label>
+                                <p class="text-muted mb-0">
+                                    {{
+                                        consulta.folio ||
+                                        'Sin folio'
+                                    }}
+                                </p>
+                            </div>
+                            <!-- MOTIVO -->
+                            <div class="col-md-6">
+                                <label class="fw-bold">
+                                    Motivo de consulta
+                                </label>
+                                <p class="text-muted mb-0">
+                                    {{
+                                        consulta.motivo_consulta ||
+                                        'Sin motivo registrado'
+                                    }}
+                                </p>
+                            </div>
+                            <!-- DIAGNÓSTICO -->
+                            <div class="col-md-6">
+                                <label class="fw-bold">
+                                    Diagnóstico
+                                </label>
+                                <p class="text-danger fw-semibold mb-0">
+                                    {{
+                                        consulta.diagnostico ||
+                                        'Sin diagnóstico registrado'
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <!-- ===================================== -->
+                    <!-- NOTA PSOAPP -->
+                    <!-- ===================================== -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-primary mb-3">
+                            <i class="fas fa-file-medical me-2"></i>
+                            Nota PSOAPP
+                        </h5>
+
+                        <div v-if="consulta.nota_psoapp">
+
+                            <!-- PRESENTACIÓN -->
+                            <div class="mb-3">
+                                <h6 class="fw-bold text-dark">
+                                    Presentación
+                                </h6>
+                                <p class="text-muted mb-0">
+                                    {{ consulta.nota_psoapp.presentacion || 'Sin información registrada.' }}
+                                </p>
+                            </div>
+
+                            <!-- SUBJETIVO -->
+                            <div class="mb-3">
+                                <h6 class="fw-bold text-dark">
+                                    Subjetivo
+                                </h6>
+                                <p class="text-muted mb-0">
+                                    {{ consulta.nota_psoapp.subjetivo || 'Sin información registrada.' }}
+                                </p>
+                            </div>
+
+                            <!-- OBJETIVO -->
+                            <div class="mb-3">
+                                <h6 class="fw-bold text-dark">
+                                    Objetivo
+                                </h6>
+                                <p class="text-muted mb-0">
+                                    {{ consulta.nota_psoapp.objetivo || 'Sin información registrada.' }}
+                                </p>
+                            </div>
+
+                            <!-- ANÁLISIS -->
+                            <div class="mb-3">
+                                <h6 class="fw-bold text-dark">
+                                    Análisis
+                                </h6>
+                                <p class="text-muted mb-0">
+                                    {{ consulta.nota_psoapp.analisis || 'Sin información registrada.' }}
+                                </p>
+                            </div>
+
+                            <!-- PLAN -->
+                            <div class="mb-3">
+                                <h6 class="fw-bold text-dark">
+                                    Plan
+                                </h6>
+                                <p class="text-muted mb-0">
+                                    {{ consulta.nota_psoapp.plan || 'Sin información registrada.' }}
+                                </p>
+                            </div>
+
+                            <!-- PRONÓSTICO -->
+                            <div class="mb-3">
+                                <h6 class="fw-bold text-dark">
+                                    Pronóstico
+                                </h6>
+                                <p class="text-muted mb-0">
+                                    {{ consulta.nota_psoapp.pronostico || 'Sin información registrada.' }}
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <!-- SIN NOTA -->
+                        <div
+                            v-else
+                            class="alert alert-light border text-muted mb-0"
+                        >
+                            <i class="fas fa-info-circle me-2"></i>
+                            No se encontró una Nota PSOAPP registrada
+                            para esta consulta.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </template>
 <style scoped>
 .rounded-4 {
@@ -418,10 +387,40 @@ export default {
         // La tabla `consultas` tiene tanto `estado` como `estado_consulta`
         // (según ConsultaController::store). Mostramos estado_consulta si
         // existe (ej. 'finalizada'), si no, caemos a estado (ej. 'en_proceso').
-        estadoMostrado() {
-            if (!this.consulta) return ''
-            return this.consulta.estado_consulta || this.consulta.estado || ''
-        }
+estadoMostrado() {
+    if (!this.consulta) return ''
+
+    const estado = (
+        this.consulta.estado_consulta ||
+        this.consulta.estado ||
+        ''
+    ).toLowerCase()
+
+    // Si la consulta ya está marcada como finalizada
+    if (
+        estado === 'finalizada' ||
+        estado === 'completada'
+    ) {
+        return 'Finalizada'
+    }
+
+    // Si está cancelada
+    if (estado === 'cancelada') {
+        return 'Cancelada'
+    }
+
+    // Si está en proceso pero ya tiene diagnóstico,
+    // consideramos que la consulta terminó
+    if (
+        estado === 'en_proceso' &&
+        this.consulta.diagnostico
+    ) {
+        return 'Finalizada'
+    }
+
+    // Si no tiene diagnóstico, continúa en proceso
+    return 'En proceso'
+},
     },
     mounted() {
         const id = this.consultaId || this.obtenerIdDesdeUrl()
@@ -433,6 +432,13 @@ export default {
         this.cargarUbicaciones()
     },
     methods: {
+        regresarExpediente() {
+    if (this.consulta && this.consulta.paciente) {
+        window.location.href = '/ExpedientePacientes/' + this.consulta.paciente.id
+    } else {
+        console.warn('No se encontró el paciente asociado a la consulta.')
+    }
+},
         // Lee el último segmento de la URL, ej: /HistorialConsulta/285 -> "285"
         obtenerIdDesdeUrl() {
             const partes = window.location.pathname.split('/').filter(Boolean)
@@ -481,6 +487,9 @@ export default {
                     }
                     if (evaluacion.recomendacion) {
                         this.consulta.recomendacion_ia = evaluacion.recomendacion
+                    }
+                    if (evaluacion.nota_psoap) {
+                        this.consulta.nota_psoap = evaluacion.nota_psoap
                     }
                 }
             } catch (error) {

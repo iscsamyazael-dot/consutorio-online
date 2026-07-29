@@ -173,9 +173,17 @@ class PacienteController extends Controller
      * Muestra el detalle de un paciente (expediente) con sus triages y archivos.
      */
     public function show(string $id)
-    {
-        return Paciente::with(['triages', 'archivos'])->find($id);
-    }
+{
+    $paciente = Paciente::with([
+        'triages', 
+        'archivos', 
+        'recetas.detalles', 
+        'recetas.consulta', 
+        'recetas.medico'
+    ])->findOrFail($id);
+
+    return response()->json($paciente);
+}
 
     /**
      * Formulario de edición.
