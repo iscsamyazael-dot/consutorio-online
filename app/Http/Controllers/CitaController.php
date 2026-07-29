@@ -247,13 +247,13 @@ class CitaController extends Controller
         return response()->json($cita);
     }
 
- //Actualiza solo el estado de la cita (Agendado, Finalizada, Cancelada, Inasistencia)
+ //Actualiza solo el estado de la cita (Agendado, Confirmada, Finalizada, Cancelada, Inasistencia)
     public function actualizarEstado(Request $request, $id)
     {
         // Verifica que el estado recibido sea válido.
         $request->validate([
 
-            'estado' => 'required|in:Agendado,Finalizada,Cancelada,Inasistencia'
+            'estado' => 'required|in:Agendado,Confirmada,Finalizada,Cancelada,Inasistencia'
 
         ]);
 

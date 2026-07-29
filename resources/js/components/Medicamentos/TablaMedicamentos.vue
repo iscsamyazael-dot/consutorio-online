@@ -972,17 +972,24 @@ export default {
         medicamento: {
             type: Object,
             default: () => ({})
+        },
+        // NUEVO: array de medicamentos que ahora administra el componente padre
+        // (MedicamentosIndex.vue), única fuente de la verdad compartida con KPI_CARDS.
+        medicamentos: {
+            type: Array,
+            default: () => []
         }
     },
+
+    emits: ['actualizar-inventario'],
+
    data(){
         return{
-            medicamentos:[],
-            medicamentoDetalle:[],
-            stockActual:0,
-            inventario:{
-                stock_actual:0,
-                stock_minimo:0
+            medicamentoDetalle:{
+                inventario:{},
+                ultimo_movimiento:[]
             },
+            stockActual:0,
             movimiento:{
                     // Medicamento
                     medicamento_id:'',
@@ -1004,17 +1011,8 @@ export default {
                     referencia_documento:'',
                     observaciones:''
                 },
-            medicamentoSeleccionado:{},
-
-            medicamentoDetalle:{
-                inventario:{},
-                ultimo_movimiento:[]
-            }
+            medicamentoSeleccionado:{}
         }
-    },
-
-    mounted(){
-        this.obtenerMedicamentos();
     },
 
     watch: {
@@ -1029,18 +1027,6 @@ export default {
     },
 
     methods: {
-        /*//Metodo para traer la lista de los medicamentos //*/
-        async obtenerMedicamentos(){
-            try {
-                const response = await ApiService.get('medicamentos')
-                this.medicamentos = response.data
-                console.log('Medicamentos cargados:',this.medicamentos)
-            }
-            catch(error){
-                console.error("Error al obtner medicamentos:", error)
-            }
-        },
-        /*//Termina el metodo para listar los medicamentos //*/
         //Metodo para obtner el detalle de un solo medicamento//
         async verMedicamento(id){
             console.log('ID del medicamento:',id)
@@ -1056,6 +1042,9 @@ export default {
         guardarMovimiento(){
             console.log(this.movimiento)
             $('#modalMovimientoInventario').modal('hide')
+            // Avisa al padre para que recargue medicamentos y así se
+            // actualicen tanto la tabla como las tarjetas KPI juntas
+            this.$emit('actualizar-inventario')
         },
         ///////////////////////////////////////////////////////////////////////
          //Función para hacer la busqueda de un medicamento mediante su ID dentro de la tabla de inventariod//

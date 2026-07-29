@@ -20,6 +20,7 @@ use App\Models\Paciente;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CimaMedicamentoController;
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -51,9 +52,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/medicos-horarios', [MedicoController::class, 'index']);
         //ruta que filtra los medicos locales de la tabla 
         Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);
+        //metodo de buscara medicamento
+        Route::prefix('cima')->group(function () {
+            Route::get('/buscar', [CimaMedicamentoController::class, 'buscar']);
+            Route::get('/{nregistro}', [CimaMedicamentoController::class, 'detalle']);
+        });
         Route::resource('especialidades', SpecialtyController::class);
         Route::resource('pacientes', PacienteController::class);
         Route::resource('consultas', ConsultaController::class);
+        Route::get('medicamentos/resumen', [MedicamentoController::class, 'resumen']);
+        // rutas nuevas de medicamentoa 
+        Route::resource('medicamentos', MedicamentoController::class);
         Route::resource('medicamentos', MedicamentoController::class);
         Route::resource('recetas', RecetaController::class);
         Route::resource('receta-detalles', RecetaDetalleController::class);

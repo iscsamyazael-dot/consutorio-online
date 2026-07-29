@@ -1002,12 +1002,27 @@ PRONÓSTICO ANTERIOR:
         El arreglo 'sintomas' NUNCA debe quedar vacío si el texto contiene información clínica real.
 
         =========================================================
-        FASE 4 - DIAGNÓSTICO PROBABLE - NOMBRES TÉCNICOS
+        FASE 4 - DIAGNÓSTICO PROBABLE Y DIAGNÓSTICOS DIFERENCIALES - NOMBRES TÉCNICOS
         =========================================================
 
-        Genera una condición probable basada únicamente en los síntomas o, si aplica, en la
-        impresión diagnóstica del estudio adjunto. UTILIZA EL NOMBRE TÉCNICO COMPLETO de la
+        Genera una condición probable PRINCIPAL basada únicamente en los síntomas o, si aplica, en
+        la impresión diagnóstica del estudio adjunto. UTILIZA EL NOMBRE TÉCNICO COMPLETO de la
         entidad clínica.
+
+        Además del diagnóstico principal, construye una lista de HASTA 4 DIAGNÓSTICOS
+        DIFERENCIALES: otras entidades clínicas razonablemente compatibles con el mismo cuadro,
+        que el médico debería considerar y descartar antes de confirmar el diagnóstico principal.
+        Para cada diferencial incluye, en una sola frase, el dato clínico concreto del texto que lo
+        hace plausible y — si aplica — el dato que ayudaría a descartarlo (qué se necesitaría
+        explorar o solicitar). No repitas el diagnóstico principal dentro de los diferenciales. Si
+        el cuadro es tan característico que razonablemente no hay diferenciales relevantes que
+        aportar, devuelve un arreglo vacío; no rellenes con entidades poco plausibles solo para
+        completar la lista.
+
+        Ejemplo de diferencial bien construido (no copiar literal, es solo formato):
+        'Faringoamigdalitis viral: la ausencia de exudado purulento y la tos referida por el
+        paciente son más compatibles con etiología viral que bacteriana; de persistir la fiebre
+        más de 48-72h o aparecer exudado, valorar prueba rápida de estreptococo.'
 
         REGLA CRÍTICA - NO INVENTES ETIOLOGÍA NI AGENTE CAUSAL:
 
@@ -1015,15 +1030,17 @@ PRONÓSTICO ANTERIOR:
         la entidad clínica (ej. 'Gastritis aguda'), pero NUNCA le agregues un agente causal,
         microorganismo o etiología específica (ej. 'por Helicobacter pylori', 'estreptocócica',
         'viral', 'bacteriana') a menos que ese agente venga EXPLÍCITAMENTE confirmado en el texto
-        (por ejemplo, un resultado de laboratorio o cultivo ya reportado). Si el texto es solo el
-        relato de síntomas del paciente, sin estudios que confirmen el agente causal, omite la
-        etiología por completo.
+        (por ejemplo, un resultado de laboratorio o cultivo ya reportado), o que lo estés usando
+        dentro de un diagnóstico DIFERENCIAL como hipótesis a valorar (ahí sí es válido plantear
+        la etiología como posibilidad a descartar, siempre y cuando quede claro que es hipotética
+        y no confirmada). Si el texto es solo el relato de síntomas del paciente, sin estudios que
+        confirmen el agente causal, omite la etiología del diagnóstico PRINCIPAL por completo.
 
-        Incorrecto (etiología inventada, sin respaldo en el texto):
+        Incorrecto (etiología inventada como si fuera un hecho, sin respaldo en el texto):
         'Gastritis aguda por Helicobacter pylori'
         'Faringoamigdalitis aguda estreptocócica'
 
-        Correcto (misma entidad clínica, sin inventar el agente causal):
+        Correcto (misma entidad clínica, sin inventar el agente causal en el diagnóstico principal):
         'Gastritis aguda'
         'Faringoamigdalitis aguda'
 
@@ -1048,7 +1065,31 @@ PRONÓSTICO ANTERIOR:
         No uses términos demasiado generales como: 'Malestar', 'Problema digestivo', 'Dolencia',
         'Infección', 'Problema de salud'.
 
-        Nunca afirmes que el diagnóstico es definitivo.
+        Nunca afirmes que el diagnóstico principal es definitivo.
+
+        =========================================================
+        FASE 4B - INFORMACIÓN CLÍNICA COMPLEMENTARIA (APOYO EDUCATIVO PARA EL MÉDICO)
+        =========================================================
+
+        Redacta un párrafo breve (3 a 6 frases) de contexto clínico general sobre la condición
+        probable principal: qué es, fisiopatología básica relevante, y por qué el cuadro descrito
+        encaja con esa entidad. Este contenido es CONOCIMIENTO MÉDICO GENERAL de tu entrenamiento
+        (no proviene del expediente del paciente) y sirve como apoyo educativo/de referencia para
+        el médico, NUNCA como parte de los hallazgos del paciente.
+
+        REGLA DE SEPARACIÓN OBLIGATORIA:
+        - Este párrafo va en un campo JSON aparte ('informacion_complementaria'), NUNCA mezclado
+          dentro de 'subjetivo', 'objetivo' ni ningún apartado de la nota PSOAPP.
+        - No incluyas aquí ningún dato que aparente ser del paciente (nada de 'el paciente
+          presenta...'); redacta en tercera persona sobre la condición en general
+          (ej. 'La faringoamigdalitis aguda es un proceso inflamatorio...').
+        - No cites fuentes, DOIs, nombres de guías ni estudios específicos: al no tener acceso a
+          búsqueda en tiempo real, cualquier cita de fuente concreta sería una atribución no
+          verificada. Si quieres dar una referencia orientativa de tipo de fuente, usa lenguaje
+          genérico ('de acuerdo con guías clínicas generales para el manejo de...') sin inventar
+          nombres, autores ni años específicos.
+        - Si el diagnóstico principal es 'No disponible' o no hay suficiente certeza clínica para
+          dar contexto útil, deja este campo como cadena vacía en vez de inventar contenido.
 
         =========================================================
         FASE 5 - EVALUACIÓN DE RIESGO CLÍNICO
@@ -1081,6 +1122,23 @@ PRONÓSTICO ANTERIOR:
         Nivel: alto | medio | bajo
 
         Las descripciones de las alertas deben usar terminología médica precisa.
+
+        =========================================================
+        FASE 6B - SIGNOS DE ALARMA A VIGILAR (PROSPECTIVO)
+        =========================================================
+
+        A diferencia de la Fase 6 (que documenta alertas sobre datos YA presentes en el texto),
+        aquí genera una lista corta (máximo 5) de signos de alarma PROSPECTIVOS: manifestaciones
+        que, de aparecer en la evolución del padecimiento actual, ameritarían que el paciente
+        acuda de inmediato a valoración urgente. Deben ser específicos y clínicamente coherentes
+        con el diagnóstico probable principal (no una lista genérica de banderas rojas
+        universales). Cada elemento debe ser una frase corta y accionable en lenguaje claro
+        (ej. 'Fiebre mayor a 39°C que no cede con antipiréticos', 'Dificultad para respirar o
+        dolor torácico de inicio súbito', 'Vómito con sangre o en poso de café').
+
+        Si no hay suficiente información para identificar signos de alarma específicos y
+        relevantes al caso, devuelve un arreglo vacío en vez de rellenar con genéricos sin
+        relación al padecimiento.
 
         =========================================================
         FASE 7 - RECOMENDACIÓN MÉDICA (PARA EL MÉDICO)
@@ -1173,15 +1231,18 @@ PRONÓSTICO ANTERIOR:
 
         - analisis: Razonamiento clínico integrando lo subjetivo y lo objetivo (haciendo
           referencia explícita a los signos vitales y hallazgos relevantes de la exploración
-          cuando existan), e impresión diagnóstica probable (nunca definitiva), incluyendo
-          diagnósticos diferenciales si son pertinentes. Menciona si las comorbilidades referidas
-          parecen controladas o descompensadas, solo si hay datos para inferirlo.
+          cuando existan), e impresión diagnóstica probable (nunca definitiva) del diagnóstico
+          PRINCIPAL, mencionando brevemente que se consideraron diagnósticos diferenciales
+          (sin repetir aquí el detalle completo de cada uno, ya que van en su propio campo).
+          Menciona si las comorbilidades referidas parecen controladas o descompensadas, solo si
+          hay datos para inferirlo.
 
         - plan: Sugerencias concretas de plan diagnóstico (estudios que podrían solicitarse,
-          justificando brevemente por qué) y plan terapéutico/educativo a nivel de apoyo a la
-          decisión, SIN indicar dosis, vía ni frecuencia de medicamentos (eso lo define el
-          médico). Incluye vigilancia de signos de alarma específicos relacionados con el
-          diagnóstico probable, y criterios de reevaluación o seguimiento.
+          justificando brevemente por qué, incluyendo si algún estudio ayudaría a distinguir
+          entre el diagnóstico principal y los diferenciales) y plan terapéutico/educativo a nivel
+          de apoyo a la decisión, SIN indicar dosis, vía ni frecuencia de medicamentos (eso lo
+          define el médico). Incluye vigilancia de signos de alarma específicos relacionados con
+          el diagnóstico probable, y criterios de reevaluación o seguimiento.
 
         - pronostico: Estimación general (reservado/bueno/malo) para la vida y para la función, y
           los factores concretos de los que dependería la evolución (ej. apego al tratamiento,
@@ -1210,6 +1271,16 @@ PRONÓSTICO ANTERIOR:
         ],
 
         \"diagnostico\": \"\",
+
+        \"diagnosticos_diferenciales\": [
+        \"\"
+        ],
+
+        \"informacion_complementaria\": \"\",
+
+        \"signos_alarma_vigilar\": [
+        \"\"
+        ],
 
         \"recomendacion\": \"\",
 
@@ -1248,6 +1319,10 @@ PRONÓSTICO ANTERIOR:
         - El campo \"indicaciones_medico\" nunca debe repetir literalmente el campo
           \"recomendacion\": uno es técnico para el médico, el otro es la instrucción práctica
           para el paciente.
+        - El campo \"informacion_complementaria\" es conocimiento médico general de apoyo, nunca
+          datos del paciente; el campo \"diagnosticos_diferenciales\" nunca debe incluir el mismo
+          texto que el campo \"diagnostico\"; el campo \"signos_alarma_vigilar\" es prospectivo
+          (qué vigilar a futuro), distinto de \"alertas\" (qué ya se detectó en el texto actual).
 
         ";
 

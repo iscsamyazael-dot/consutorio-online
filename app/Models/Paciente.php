@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Receta;
 
 class Paciente extends Model
 {
@@ -69,5 +70,15 @@ class Paciente extends Model
     {
         return $this->hasMany(ArchivoClinico::class);
     }
-
+    public function recetas()
+    {
+    return $this->hasManyThrough(
+        Receta::class,      // modelo destino
+        Consulta::class,    // modelo intermedio
+        'paciente_id',      // FK en 'consultas' que apunta a 'pacientes'
+        'consulta_id',      // FK en 'recetas' que apunta a 'consultas'
+        'id',                // PK local en 'pacientes'
+        'id'                 // PK local en 'consultas'
+    );
+}
 }

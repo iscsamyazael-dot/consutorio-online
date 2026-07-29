@@ -16,7 +16,7 @@ class ConsultaController extends Controller
      */
     public function index()
     {
-        return Consulta::with('paciente', 'medico')->get();
+        return Consulta::with('paciente', 'medico','notaPsoapp')->get();
     }
 
     /**
@@ -90,7 +90,7 @@ class ConsultaController extends Controller
      */
     public function show(string $id)
     {
-        return Consulta::with('paciente', 'medico')->findOrFail($id);
+        return Consulta::with('paciente', 'medico','notaPsoapp')->findOrFail($id);
     }
 
     /**
