@@ -102,34 +102,36 @@
               </h4>
             </div>
             <div class="row g-4">
-              <div class="col-md-6">
+              <div class="col-12">
                 <label class="form-label">Motivo de consulta</label>
-                <div class="input-icon-box">
+                <div class="textarea-icon-box">
                   <i class="fas fa-comment-medical"></i>
-                  <input
+                  <textarea
                     type="text"
-                    class="form-control custom-input with-icon"
+                    class="form-control custom-textarea with-icon"
+                    rows="3"
                     :class="{ 'is-invalid': errores.motivo }"
                     placeholder="Ingrese motivo"
                     v-model="form.motivo"
-                  >
+                  ></textarea>
                 </div>
                 <div class="invalid-feedback" v-if="errores.motivo">
                   {{ errores.motivo }}
                 </div>
               </div>
 
-              <div class="col-md-6">
+              <div class="col-12">
                 <label class="form-label">Diagnóstico</label>
-                <div class="input-icon-box">
+                <div class="textarea-icon-box">
                   <i class="fas fa-stethoscope"></i>
-                  <input
+                  <textarea
                     type="text"
-                    class="form-control custom-input with-icon"
+                    class="form-control custom-textarea with-icon"
+                    rows="3"
                     :class="{ 'is-invalid': errores.diagnostico }"
                     placeholder="Ingrese diagnóstico"
                     v-model="form.diagnostico"
-                  >
+                  ></textarea>
                 </div>
                 <div class="invalid-feedback" v-if="errores.diagnostico">
                   {{ errores.diagnostico }}

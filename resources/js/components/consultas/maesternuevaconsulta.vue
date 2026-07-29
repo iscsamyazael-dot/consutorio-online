@@ -1,8 +1,9 @@
 <template>
     <div class="container-fluid">
         <div class="row g-4">
-            <Consultageneral>
-
+            <Consultageneral
+            :doctor="doctor">
+            
             </Consultageneral>
             <Informacionpaciente 
                 :paciente-id="pacienteId"
