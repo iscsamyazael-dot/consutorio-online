@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api_Ionic\AuthController; //Login APP-IONIC
 use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\CimaMedicamentoController;
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -59,10 +60,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/medicos-horarios', [MedicoController::class, 'index']);
         //ruta que filtra los medicos locales de la tabla 
         Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);// Agenda: filtro por médico
-
+        //metodo de buscara medicamento
+        Route::prefix('cima')->group(function () {
+            Route::get('/buscar', [CimaMedicamentoController::class, 'buscar']);
+            Route::get('/{nregistro}', [CimaMedicamentoController::class, 'detalle']);
+        });
         Route::resource('especialidades', SpecialtyController::class);
         Route::resource('pacientes', PacienteController::class);
         Route::resource('consultas', ConsultaController::class);
+        Route::get('medicamentos/resumen', [MedicamentoController::class, 'resumen']);
+        // rutas nuevas de medicamentoa 
+        Route::resource('medicamentos', MedicamentoController::class);
         Route::resource('medicamentos', MedicamentoController::class);
         Route::resource('recetas', RecetaController::class);
         Route::resource('receta-detalles', RecetaDetalleController::class);
@@ -84,6 +92,7 @@ Route::middleware('auth')->group(function () {
         // resource para que no las intercepte la ruta GET /consultaIA/{consultaIA}.
         Route::post('consultaIA/{consultaId}/psoapp', [ConsultaIAController::class, 'guardarPsoapp'])->name('consultaIA.guardarPsoapp'); // NUEVO // IA: guarda la nota PSOAPP generada/editada
         Route::get('consultaIA/{consultaId}/pdf/{tipo}', [ConsultaIAController::class, 'generarPdf'])->name('consultaIA.generarPdf'); // NUEVO // IA: genera PDF de diagnóstico/receta de la consulta con IA
+        Route::get('consultaIA/{consultaId}/pdf/{tipo}/ver', [ConsultaIAController::class, 'verPdf'])->name('consultaIA.verPdf'); // IA: previsualiza el PDF (inline) en el modal de ExpedienteTabs.vue
         Route::post('consultaIA/{consultaId}/receta', [ConsultaIAController::class, 'guardarReceta'])->name('consultaIA.guardarReceta'); // ← NUEVA: guarda la receta de RecetaInteligente.vu
         // Historial clínico completo de un paciente (todas sus consultas +
         // transcripciones), usado por HistorialClinico.vue. Debe ser una ruta

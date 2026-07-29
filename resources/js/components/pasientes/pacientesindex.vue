@@ -37,7 +37,7 @@
                                         class="avatar-circle"
                                         :style="{ background: obtenerColor(paciente.nombre) }"
                                     >
-                                        {{ (paciente.nombre || '').substring(0,2).toUpperCase() }}
+                                        {{ (paciente.nombre || 'P').substring(0, 2).toUpperCase() }}
                                     </div>
                                     <div>
                                         <h6 class="fw-bold mb-0">
@@ -378,28 +378,29 @@ export default {
             },
 
         // ─── COLORES AVATAR ───────────────────────────────────────────────────────
+       obtenerColor(nombre) {
+    const colores = [
+        "#1976d2",
+        "#43a047",
+        "#7b1fa2",
+        "#ef6c00",
+        "#00897b",
+        "#c2185b",
+        "#5d4037",
+        "#546e7a"
+    ];
 
-        obtenerColor(nombre) {
-            if(!nombre){
-                return "#1976d2";
-            }
-            const colores = [
-                "#1976d2",
-                "#43a047",
-                "#7b1fa2",
-                "#ef6c00",
-                "#00897b",
-                "#c2185b",
-                "#5d4037",
-                "#546e7a"
-            ];
-            let suma = 0;
-            for (let i = 0; i < nombre.length; i++) {
-                suma += nombre.charCodeAt(i);
-            }
-            return colores[suma % colores.length];
-        },
-
+    // Evitar error si nombre es null, undefined o vacío
+    if (!nombre) {
+        return "#6c757d";
+    }
+    nombre = String(nombre);
+    let suma = 0;
+    for (let i = 0; i < nombre.length; i++) {
+        suma += nombre.charCodeAt(i);
+    }
+    return colores[suma % colores.length];
+},
         // ─── FORMULARIO ───────────────────────────────────────────────────────────
 
         limpiarFormulario() {
@@ -457,14 +458,8 @@ export default {
         async obtenerPacientes() {
             try {
                 const response = await ApiService.get('/pacientes');
-                const lista = response.data;
-
-                const detalles = await Promise.all(
-                    lista.map(p => ApiService.get('/pacientes/' + p.id).then(r => r.data))
-                );
-
-                this.pacientes = lista.map((p, i) => ({ ...p, ...detalles[i] }));
-
+                // Asignas directamente la lista que te da el servidor
+                this.pacientes = response.data; 
                 console.log('Pacientes cargados:', this.pacientes);
             } catch (error) {
                 console.error('Error al obtener pacientes:', error);

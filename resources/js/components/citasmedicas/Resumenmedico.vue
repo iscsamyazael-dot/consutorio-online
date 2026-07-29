@@ -17,6 +17,16 @@
         </div>
       </div>
 
+      <div class="stat-item stat-purple">
+        <div class="stat-icon">
+          <i class="fas fa-check-double"></i>
+        </div>
+        <div class="stat-info">
+          <h5>{{ citasConfirmadas }}</h5>
+          <span>Confirmadas</span>
+        </div>
+      </div>
+
       <div class="stat-item stat-green">
         <div class="stat-icon">
           <i class="fas fa-check-circle"></i>
@@ -73,6 +83,10 @@ export default {
   computed: {
     totalCitas() {
       return this.citas.length
+    },
+// Confirmadas: citas con estado "confirmada" o "confirmado"
+    citasConfirmadas() {
+      return this.citas.filter(c => this.normalizarEstado(c.estado).includes('confirmad')).length
     },
 // Completadas: citas con estado "finalizada", "completada" o "atendida"
     citasCompletadas() {
@@ -175,6 +189,17 @@ export default {
 }
 .stat-blue .stat-info h5  { color: #1e40af; }
 .stat-blue .stat-info span { color: #3b82f6; }
+
+/* Morado (Confirmadas) */
+.stat-purple {
+  background: #f5f3ff;
+}
+.stat-purple .stat-icon {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+.stat-purple .stat-info h5  { color: #6d28d9; }
+.stat-purple .stat-info span { color: #8b5cf6; }
 
 /* Verde */
 .stat-green {

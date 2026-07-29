@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\NotaPsoapp;
+
 
 class Consulta extends Model
 {
@@ -72,5 +74,9 @@ class Consulta extends Model
     public function eventosIA()
 {
     return $this->hasMany(EventoIA::class, 'consulta_id');
+}
+public function notaPsoapp()
+{
+    return $this->hasOne(NotaPsoapp::class, 'consulta_id');
 }
 }

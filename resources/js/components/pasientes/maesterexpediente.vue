@@ -2,6 +2,7 @@
 <div class="container-fluid"> 
     
         <Barrasuperior
+            v-if="pacienteId"
             :paciente-id="pacienteId">
         </Barrasuperior>
     

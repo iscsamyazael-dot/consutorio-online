@@ -7,6 +7,7 @@ use App\Models\Medicamento;
 use App\Models\inventario;
 use App\Models\MovimientoInventario;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class MedicamentoController extends Controller
 {
@@ -16,6 +17,50 @@ class MedicamentoController extends Controller
     public function index()
     {
        return Medicamento:: with('inventario','ultimoMovimiento')->get();
+    }
+
+    /**
+     * Resumen de estadísticas para las tarjetas del dashboard de medicamentos:
+     * Stock Total, Medicamentos Críticos, Próximos a Caducar y Sin Existencia.
+     */
+    public function resumen()
+    {
+        $medicamentos = Medicamento::with('inventario')->get();
+
+        $stockTotal = 0;
+        $criticos = 0;
+        $sinExistencia = 0;
+        $proximosCaducar = 0;
+
+        $hoy = now();
+        $limiteCaducidad = now()->addDays(30);
+
+        foreach ($medicamentos as $medicamento) {
+            $inv = $medicamento->inventario;
+            if (!$inv) continue;
+
+            $stockTotal += $inv->stock_actual;
+
+            if ($inv->stock_actual == 0) {
+                $sinExistencia++;
+            } elseif ($inv->stock_actual <= $inv->stock_minimo) {
+                $criticos++;
+            }
+
+            if ($inv->fecha_caducidad) {
+                $fechaCad = Carbon::parse($inv->fecha_caducidad);
+                if ($fechaCad->between($hoy, $limiteCaducidad)) {
+                    $proximosCaducar++;
+                }
+            }
+        }
+
+        return response()->json([
+            'stock_total' => $stockTotal,
+            'criticos' => $criticos,
+            'proximos_caducar' => $proximosCaducar,
+            'sin_existencia' => $sinExistencia,
+        ]);
     }
 
     /**
@@ -52,7 +97,8 @@ class MedicamentoController extends Controller
         'medicamento_id' => $medicamento ->id,
         'stock_actual' => 0,
         'stock_minimo' => 0,
-        'ubicacion' => null
+        'ubicacion' => null,
+        'fecha_caducidad' => $request->fecha_caducidad ?? null
         ]);
 
         return response()->json([

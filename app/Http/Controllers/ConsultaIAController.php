@@ -233,6 +233,20 @@ class ConsultaIAController extends Controller
      *
      * Además registra el archivo en archivos_clinicos para que
      * ArchivosClinicos.vue pueda listarlo y permitir abrirlo.
+     *
+     * NOTA (guardado físico): el archivo se guarda directamente en
+     * public/archivos_clinicos, igual que el flujo manual de
+     * ArchivosClinicosController@archivoclinico, en vez del disco
+     * privado 'local' que se usaba antes. Esto permite verlo como
+     * carpeta física dentro de public/ y reutiliza el mismo lugar de
+     * almacenamiento para ambos flujos de subida.
+     *
+     * NOTA (nombre del archivo): antes el nombre empezaba con
+     * "consulta_{id}_..." usando el ID interno de la consulta. Ahora
+     * empieza con "consultaIA-{numero de 4 dígitos}-...", usando el
+     * mismo consecutivo con el que se arma el folio de la consulta
+     * (CONS-AAAA-NNNN), para que el nombre del archivo sea legible y
+     * fácil de relacionar con la consulta a simple vista.
      */
     public function subirArchivo(Request $request)
     {
@@ -260,13 +274,25 @@ class ConsultaIAController extends Controller
             $nombreOriginal = $archivo->getClientOriginalName();
             $mime = $archivo->getMimeType();
 
-            // Guardamos el archivo físico usando el disco 'local'.
-            // IMPORTANTE: no construir la ruta a mano con storage_path('app/'...),
-            // porque en Laravel 11 el disco 'local' guarda por defecto en
-            // storage/app/private (no storage/app). Storage::path() siempre
-            // devuelve la ruta absoluta real sin importar dónde esté configurado.
-            $rutaGuardada = $archivo->store('archivos_clinicos', 'local');
-            $rutaCompleta = \Illuminate\Support\Facades\Storage::disk('local')->path($rutaGuardada);
+            // Guardamos el archivo físico en public/archivos_clinicos, igual
+            // que el flujo manual de ArchivosClinicos.vue
+            // (ArchivosClinicosController@archivoclinico). Se arma un nombre
+            // único para no pisar archivos existentes.
+            //
+            // Formato: consultaIA-0007-{timestamp}_{random}.ext
+            // El "0007" sale del folio de la consulta (CONS-2026-0007),
+            // tomando solo el consecutivo de 4 dígitos, para que el
+            // nombre del archivo quede alineado con el folio que ya ve
+            // el médico en pantalla.
+           $codigoPaciente = $consulta->paciente->paciente_id ?? ('CONSULTA-' . $consulta->id);
+
+            $nombreArchivo = $codigoPaciente . '_' . time() . '_' . Str::random(6)
+                 . '.' . $archivo->getClientOriginalExtension();
+
+            $archivo->move(public_path('archivos_clinicos'), $nombreArchivo);
+
+            $rutaGuardada = 'archivos_clinicos/' . $nombreArchivo; // relativo a public/, se guarda en BD
+            $rutaCompleta = public_path($rutaGuardada); // ruta absoluta, para el OCR/extracción de texto
 
             // Extraemos el texto (pdf/word directo, imagen vía OCR)
             $textoExtraido = $this->iaClinicaService->extraerTextoDeArchivo($rutaCompleta, $mime);
@@ -363,6 +389,24 @@ class ConsultaIAController extends Controller
     }
 
     /**
+     * Saca el consecutivo de 4 dígitos del folio de la consulta
+     * (ej. de "CONS-2026-0007" devuelve "0007"), para usarlo en el
+     * nombre del archivo subido (consultaIA-0007-...).
+     *
+     * Si por alguna razón la consulta no tiene folio o no sigue el
+     * formato esperado, usamos el id de la consulta como respaldo,
+     * para que subirArchivo() nunca falle por esto.
+     */
+    private function extraerNumeroDeFolio(?string $folio, int $consultaId): string
+    {
+        if ($folio && preg_match('/(\d{4})$/', $folio, $coincidencia)) {
+            return $coincidencia[1];
+        }
+
+        return str_pad((string) $consultaId, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Determina un tipo de archivo simple ('pdf' | 'word' | 'imagen' | 'otro')
      * a partir del mime real detectado por Laravel, para que el frontend
      * pueda mostrar el ícono correcto sin tener que inspeccionar extensiones.
@@ -390,7 +434,8 @@ class ConsultaIAController extends Controller
     /**
      * Lista los archivos clínicos de una consulta, para el componente
      * ArchivosClinicos.vue. Devuelve ya armada la URL de descarga (que
-     * pasa por descargarArchivo(), porque el disco 'local' no es público).
+     * pasa por descargarArchivo(), para mantener un único punto de
+     * entrada aunque el archivo ya viva en un disco público).
      */
     public function listarArchivos($consultaId)
     {
@@ -427,10 +472,14 @@ class ConsultaIAController extends Controller
 
     /**
      * Sirve el archivo físico para abrir/descargar desde el navegador.
-     * El disco 'local' no es público, así que no podemos armar una URL
-     * directa a storage/; esta ruta lee el archivo del disco y lo entrega
-     * con el nombre original, dejando que el navegador decida si lo
-     * muestra inline (PDF/imagen) o lo descarga (Word).
+     *
+     * Los archivos NUEVOS viven en public/archivos_clinicos y se sirven
+     * directo de disco con response()->download().
+     *
+     * Los archivos ANTIGUOS (subidos antes de este cambio) siguen viviendo
+     * en el disco privado 'local' (storage/app/private/adjuntos_clinicos),
+     * así que se mantiene ese camino como respaldo para no romper enlaces
+     * ya guardados en la base de datos.
      */
     public function descargarArchivo($id)
     {
@@ -440,14 +489,21 @@ class ConsultaIAController extends Controller
             abort(404, 'Archivo no encontrado');
         }
 
-        if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($archivo->archivo_url)) {
-            abort(404, 'El archivo ya no existe en el servidor');
+        // Archivos nuevos: viven en public/archivos_clinicos
+        $rutaPublica = public_path($archivo->archivo_url);
+        if (file_exists($rutaPublica)) {
+            return response()->download($rutaPublica, $archivo->descripcion);
         }
 
-        return \Illuminate\Support\Facades\Storage::disk('local')->response(
-            $archivo->archivo_url,
-            $archivo->descripcion
-        );
+        // Compatibilidad con archivos antiguos guardados en el disco 'local'
+        if (\Illuminate\Support\Facades\Storage::disk('local')->exists($archivo->archivo_url)) {
+            return \Illuminate\Support\Facades\Storage::disk('local')->response(
+                $archivo->archivo_url,
+                $archivo->descripcion
+            );
+        }
+
+        abort(404, 'El archivo ya no existe en el servidor');
     }
 
     /**
@@ -611,6 +667,80 @@ class ConsultaIAController extends Controller
     }
 
     /**
+     * Arma el objeto Pdf (dompdf) con todos los datos de la consulta,
+     * para el PDF de tipo 'receta' o 'diagnostico'. Lógica compartida
+     * entre generarPdf() (descarga) y verPdf() (previsualización inline),
+     * para no duplicar la carga de consulta/nota/evaluación/receta/
+     * médico/triage en los dos métodos.
+     */
+    private function armarPdfConsulta($consultaId, $tipo)
+    {
+        if (!in_array($tipo, ['receta', 'diagnostico'])) {
+            abort(404, 'Tipo de PDF no válido.');
+        }
+
+        $consulta = Consulta::with('paciente')->find($consultaId);
+        if (!$consulta) {
+            abort(404, 'Consulta no encontrada.');
+        }
+
+        $nota = NotaPsoapp::where('consulta_id', $consulta->id)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        $evaluacion = EvaluacionIA::where('consulta_id', $consulta->id)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        // Receta guardada desde RecetaInteligente.vue (solo aplica
+        // para el PDF de tipo 'receta', pero no cuesta nada cargarla
+        // siempre por si la vista de diagnóstico también la usa).
+        $receta = Receta::where('consulta_id', $consulta->id)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        // El médico se toma de consultas.user_id (columna que sí
+        // existe y ya se llena en store() con auth()->id() al
+        // iniciar la consulta) — no de recetas, que no tiene esa
+        // columna.
+        $medico = \App\Models\User::find($consulta->user_id);
+
+        // Signos vitales: viven en la tabla triage, ligada por
+        // paciente_id. Tomamos el triage MÁS RECIENTE de ese
+        // paciente, sin filtrar por fecha contra la consulta,
+        // porque en el flujo real el triage puede capturarse
+        // antes o después de haberse creado la consulta.
+        $triage = \App\Models\Triage::where('paciente_id', $consulta->paciente_id)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        $vista = $tipo === 'receta' ? 'pdf.receta' : 'pdf.diagnostico';
+
+        // dompdf necesita la ruta ABSOLUTA de disco de la imagen, no una
+        // URL como '/vendor/adminlte/...': al generar el PDF en el
+        // servidor no hay navegador ni sesión que resuelva esa ruta.
+        // Si el archivo no existe, mandamos null y la vista dibuja un
+        // placeholder (mismo comportamiento que el fallback que tenías
+        // en jsPDF con el "LOGO ERROR").
+        $logoPath = public_path('images/logo.png');
+        $logoPath = file_exists($logoPath) ? $logoPath : null;
+
+        $pdf = Pdf::loadView($vista, [
+            'consulta'   => $consulta,
+            'nota'       => $nota,
+            'evaluacion' => $evaluacion,
+            'receta'     => $receta,
+            'medico'     => $medico,
+            'triage'     => $triage,
+            'logoPath'   => $logoPath,
+        ]);
+
+        $nombreArchivo = ($tipo === 'receta' ? 'receta_' : 'diagnostico_') . $consulta->folio . '.pdf';
+
+        return [$pdf, $nombreArchivo];
+    }
+
+    /**
      * Genera y descarga un PDF ('diagnostico' o 'receta') para una
      * consulta, usado por NotaPSOAPP.vue -> descargar(). Usa la nota
      * PSOAPP, la evaluación IA y (para 'receta') la Receta guardada
@@ -619,67 +749,7 @@ class ConsultaIAController extends Controller
     public function generarPdf($consultaId, $tipo)
     {
         try {
-            if (!in_array($tipo, ['receta', 'diagnostico'])) {
-                abort(404, 'Tipo de PDF no válido.');
-            }
-
-            $consulta = Consulta::with('paciente')->find($consultaId);
-            if (!$consulta) {
-                abort(404, 'Consulta no encontrada.');
-            }
-
-            $nota = NotaPsoapp::where('consulta_id', $consulta->id)
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            $evaluacion = EvaluacionIA::where('consulta_id', $consulta->id)
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            // Receta guardada desde RecetaInteligente.vue (solo aplica
-            // para el PDF de tipo 'receta', pero no cuesta nada cargarla
-            // siempre por si la vista de diagnóstico también la usa).
-            $receta = Receta::where('consulta_id', $consulta->id)
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            // El médico se toma de consultas.user_id (columna que sí
-            // existe y ya se llena en store() con auth()->id() al
-            // iniciar la consulta) — no de recetas, que no tiene esa
-            // columna.
-            $medico = \App\Models\User::find($consulta->user_id);
-
-            // Signos vitales: viven en la tabla triage, ligada por
-            // paciente_id. Tomamos el triage MÁS RECIENTE de ese
-            // paciente, sin filtrar por fecha contra la consulta,
-            // porque en el flujo real el triage puede capturarse
-            // antes o después de haberse creado la consulta.
-            $triage = \App\Models\Triage::where('paciente_id', $consulta->paciente_id)
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            $vista = $tipo === 'receta' ? 'pdf.receta' : 'pdf.diagnostico';
-
-            // dompdf necesita la ruta ABSOLUTA de disco de la imagen, no una
-            // URL como '/vendor/adminlte/...': al generar el PDF en el
-            // servidor no hay navegador ni sesión que resuelva esa ruta.
-            // Si el archivo no existe, mandamos null y la vista dibuja un
-            // placeholder (mismo comportamiento que el fallback que tenías
-            // en jsPDF con el "LOGO ERROR").
-            $logoPath = public_path('images/logo.png');
-            $logoPath = file_exists($logoPath) ? $logoPath : null;
-
-            $pdf = Pdf::loadView($vista, [
-                'consulta'   => $consulta,
-                'nota'       => $nota,
-                'evaluacion' => $evaluacion,
-                'receta'     => $receta,
-                'medico'     => $medico,
-                'triage'     => $triage,
-                'logoPath'   => $logoPath,
-            ]);
-
-            $nombreArchivo = ($tipo === 'receta' ? 'receta_' : 'diagnostico_') . $consulta->folio . '.pdf';
+            [$pdf, $nombreArchivo] = $this->armarPdfConsulta($consultaId, $tipo);
 
             return $pdf->download($nombreArchivo);
 
@@ -689,6 +759,29 @@ class ConsultaIAController extends Controller
             return response()->json([
                 'success' => false,
                 'error'   => 'No se pudo generar el PDF.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Previsualiza el PDF ('diagnostico' o 'receta') en línea (inline),
+     * usado por ArchivosClinicos.vue / ExpedienteTabs.vue para mostrarlo
+     * dentro de un <iframe> o modal, en vez de forzar la descarga como
+     * hace generarPdf().
+     */
+    public function verPdf($consultaId, $tipo)
+    {
+        try {
+            [$pdf, $nombreArchivo] = $this->armarPdfConsulta($consultaId, $tipo);
+
+            return $pdf->stream($nombreArchivo);
+
+        } catch (\Throwable $e) {
+            \Log::error("Error en verPdf: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'error'   => 'No se pudo mostrar el PDF.'
             ], 500);
         }
     }
