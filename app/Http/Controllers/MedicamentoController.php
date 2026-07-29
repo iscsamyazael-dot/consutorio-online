@@ -27,7 +27,7 @@ class MedicamentoController extends Controller
     {
         $medicamentos = Medicamento::with('inventario')->get();
 
-        $stockTotal = 0;
+        $totalMedicamentos = Medicamento::count();
         $criticos = 0;
         $sinExistencia = 0;
         $proximosCaducar = 0;
@@ -39,7 +39,6 @@ class MedicamentoController extends Controller
             $inv = $medicamento->inventario;
             if (!$inv) continue;
 
-            $stockTotal += $inv->stock_actual;
 
             if ($inv->stock_actual == 0) {
                 $sinExistencia++;
@@ -56,11 +55,11 @@ class MedicamentoController extends Controller
         }
 
         return response()->json([
-            'stock_total' => $stockTotal,
-            'criticos' => $criticos,
-            'proximos_caducar' => $proximosCaducar,
-            'sin_existencia' => $sinExistencia,
-        ]);
+        'total_medicamentos' => $totalMedicamentos,
+        'criticos' => $criticos,
+        'proximos_caducar' => $proximosCaducar,
+        'sin_existencia' => $sinExistencia,
+    ]);
     }
 
     /**

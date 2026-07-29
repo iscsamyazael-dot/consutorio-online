@@ -4,7 +4,7 @@
             <div class="small-box bg-primary shadow-sm rounded-4">
                 <div class="inner">
                     <h3>{{ cargando ? '...' : stockTotal }}</h3>
-                    <p>Stock Total</p>
+                    <p>Total de Medicamentos</p>
                 </div>
                 <div class="icon">
                     <i class="fas fa-capsules"></i>
@@ -64,9 +64,9 @@ export default {
 
     computed: {
         stockTotal() {
-            return this.medicamentos.reduce((total, m) => {
-                return total + (m.inventario ? Number(m.inventario.stock_actual) : 0)
-            }, 0)
+            return Array.isArray(this.medicamentos)
+                ? this.medicamentos.length
+                : 0
         },
 
         // Críticos: tiene stock, pero está por debajo o igual al mínimo
