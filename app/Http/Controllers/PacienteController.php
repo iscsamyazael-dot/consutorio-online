@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
 use App\Models\Triage;
-use Illuminate\Support\Facades\DB;
+
 
 class PacienteController extends Controller
 {
