@@ -183,10 +183,10 @@
 
     <button
       class="btn btn-sm btn-outline-primary rounded-pill px-3"
-      @click="verReceta(receta)"
+      @click="verPdfReceta(receta)"
     >
-      <i class="fas fa-eye me-1"></i>
-      Ver receta
+      <i class="fas fa-file-pdf me-1"></i>
+      Ver PDF
     </button>
 
   </div>
@@ -260,6 +260,9 @@
     </div>
   
   <!--Modal para mostrar los archivos a traves de un modal-->
+  <!-- Este mismo modal se reutiliza para: archivos clínicos (pestaña
+       "Archivos") y para el PDF de receta generado por la IA (pestaña
+       "Recetas" -> botón "Ver PDF"), ver verArchivo() y verPdfReceta(). -->
   <div class="modal fade" id="modalArchivo">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
@@ -292,48 +295,6 @@
     </div>
 </div>
 <!--Aqui termina el modal para ver los archivos-->
-
-<!--Modal para mostrar el detalle de la receta-->
-<div class="modal fade" id="modalReceta">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title">Detalle de la receta</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-            </button>
-        </div>
-        <div class="modal-body" v-if="recetaSeleccionada">
-            <p>
-              <strong>Fecha:</strong>
-              {{ formatearFecha(recetaSeleccionada.created_at) }}
-              <span class="text-muted">
-                &middot; {{ formatearHora(recetaSeleccionada.created_at) }}
-              </span>
-            </p>
-
-            <p class="mb-1"><strong>Medicamentos:</strong></p>
-            <ul v-if="medicamentosReceta.length">
-              <li v-for="(med, index) in medicamentosReceta" :key="index">
-                {{ med.nombre }}
-                <span v-if="med.dosis"> - {{ med.dosis }}</span>
-                <span v-if="med.frecuencia"> - {{ med.frecuencia }}</span>
-                <span v-if="med.duracion"> - {{ med.duracion }}</span>
-                <div v-if="med.instrucciones" class="text-muted small">
-                  {{ med.instrucciones }}
-                </div>
-              </li>
-            </ul>
-            <p v-else class="text-muted">No hay medicamentos registrados.</p>
-
-            <p v-if="recetaSeleccionada.indicaciones_generales" class="mt-3">
-              <strong>Indicaciones:</strong>
-              {{ recetaSeleccionada.indicaciones_generales }}
-            </p>
-        </div>
-    </div>
-  </div>
-</div>
-<!--Aqui termina el modal para ver la receta-->
 </template>
 
 <style scoped>
@@ -461,17 +422,11 @@ body {
               infoConsultas: [],
               infoRecetas: [],
               archivoSeleccionado:'',
-              archivoExtension: '',
-              recetaSeleccionada: null
+              archivoExtension: ''
             }
         },
         mounted() {
             console.log('PROP PacienteId:', this.pacienteId);
-        },
-        computed: {
-          medicamentosReceta() {
-            return this.parseMedicamentos(this.recetaSeleccionada?.medicamentos)
-          }
         },
         methods: {
           parseMedicamentos(meds) {
@@ -617,10 +572,6 @@ body {
                         console.error("Error al obtener Archivos:", error)
                 }
             },
-            verReceta(receta) {
-              this.recetaSeleccionada = receta
-              $('#modalReceta').modal('show')
-            },
           //Función para determinar que tipo de archivo se mostrara mediante un modal//
           //  Corrección: los archivos que vienen del chat de Consulta IA tienen
           //  consulta_id y viven en el disco privado 'local' (storage/app/private/...),
@@ -659,6 +610,32 @@ body {
               }
 
               console.log('URL del archivo a mostrar:', this.archivoSeleccionado);
+
+              $('#modalArchivo').modal('show')
+            },
+            //Función para previsualizar el PDF de receta generado por la IA
+            //(pestaña "Recetas" -> botón "Ver PDF"). Reutiliza el mismo
+            //modal/iframe que ya usa verArchivo(), apuntando a la ruta
+            //consultaIA.verPdf, que entrega el PDF inline (no descarga).
+            verPdfReceta(receta){
+              if (!receta || !receta.consulta_id) {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Sin PDF disponible',
+                  text: 'Esta receta no tiene una consulta asociada para generar el PDF.'
+                });
+                return;
+              }
+
+              const baseURL = document
+                .querySelector('meta[name="base-url"]')
+                .getAttribute('content');
+              const base = baseURL.replace(/\/$/, '');
+
+              this.archivoExtension = 'pdf';
+              this.archivoSeleccionado = `${base}/consultaIA/${receta.consulta_id}/pdf/receta/ver`;
+
+              console.log('URL del PDF de receta a mostrar:', this.archivoSeleccionado);
 
               $('#modalArchivo').modal('show')
             },

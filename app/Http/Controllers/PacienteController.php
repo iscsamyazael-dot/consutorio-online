@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use Illuminate\Http\Request;
 use App\Models\Triage;
+use Illuminate\Support\Facades\DB;
 
 class PacienteController extends Controller
 {
@@ -82,99 +83,158 @@ class PacienteController extends Controller
     /**
      * Formulario de alta de paciente.
      */
-   public function create($id = null)
-{
-    $paciente = null;
+    public function create($id = null)
+    {
+        $paciente = null;
 
-    if ($id) {
-        $paciente = Paciente::findOrFail($id);
+        if ($id) {
+            $paciente = Paciente::findOrFail($id);
+        }
+
+        return view('pacientes.create', compact('paciente'));
     }
-
-    return view('pacientes.create', compact('paciente'));
-}
 
     /**
      * Guarda un paciente nuevo junto con su primer triage.
+     *
+     * Los códigos (paciente_id, triage_codigo) se generan dentro de una
+     * transacción con lockForUpdate para que el consecutivo reinicie
+     * correctamente cada año y no se dupliquen si dos altas ocurren
+     * al mismo tiempo (ver generarCodigoConReinicioAnual()).
      */
     public function store(Request $request)
     {
-        // Generamos el código del paciente (PAC-AÑO-0001)
-        $ultimoPaciente = Paciente::latest('id')->first();
-        $numero = $ultimoPaciente ? $ultimoPaciente->id + 1 : 1;
-        $clave = 'PAC-' . date('Y') . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
+        try {
+            $resultado = DB::transaction(function () use ($request) {
 
-        $paciente = Paciente::create([
-            'paciente_id' => $clave,
-            'nombre' => $request->nombre,
-            'telefono' => $request->telefono,
-            'email' => $request->email,
-            'edad' => $request->edad_anios, // Guardamos la edad en años
-            'sexo' => $request->sexo,
-            'direccion' => $request->direccion,
-            'tipo_sangre' => $request->tipo_sangre,
-            'contacto_emergencia' => $request->contacto_emergencia,
-            'telefono_emergencia' => $request->telefono_emergencia,
-            'curp' => $request->curp,
-            'estado' => $request->estado,
-            'foto' => "null", // Guardamos la ruta de la foto en la base de datos
-            'notas_generales' => $request->notas_generales,
-            'alergias' => $request->alergias,
-            'antecedentes_medicos' => $request->antecedentes,
-            'fecha_nacimiento' => $request->fecha_nacimiento,
-            'whatsapp_id' => null,
-            'consentimiento' => null,
-            'ultima_interaccion' => null,
-        ]);
+                // Generamos el código del paciente (PAC-AÑO-0001)
+                $clave = $this->generarCodigoConReinicioAnual(Paciente::class, 'paciente_id', 'PAC');
 
-        // Generamos el código del triage (TRI-AÑO-0001)
-        $ultimoTriage = Triage::latest('id')->first();
-        $numero = $ultimoTriage ? $ultimoTriage->id + 1 : 1;
-        $claveTriage = 'TRI-' . date('Y') . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
+                $paciente = Paciente::create([
+                    'paciente_id' => $clave,
+                    'nombre' => $request->nombre,
+                    'telefono' => $request->telefono,
+                    'email' => $request->email,
+                    'edad' => $request->edad_anios, // Guardamos la edad en años
+                    'sexo' => $request->sexo,
+                    'direccion' => $request->direccion,
+                    'tipo_sangre' => $request->tipo_sangre,
+                    'contacto_emergencia' => $request->contacto_emergencia,
+                    'telefono_emergencia' => $request->telefono_emergencia,
+                    'curp' => $request->curp,
+                    'estado' => $request->estado,
+                    'foto' => "null", // Guardamos la ruta de la foto en la base de datos
+                    'notas_generales' => $request->notas_generales,
+                    'alergias' => $request->alergias,
+                    'antecedentes_medicos' => $request->antecedentes,
+                    'fecha_nacimiento' => $request->fecha_nacimiento,
+                    'whatsapp_id' => null,
+                    'consentimiento' => null,
+                    'ultima_interaccion' => null,
+                ]);
 
-        $triage = Triage::create([
-            'triage_codigo' => $claveTriage,
-            'paciente_id' => $paciente->id,
-            'codigo_paciente' => $paciente->paciente_id,
-            'presion' => $request->presion_arterial,
-            'saturacion' => $request->saturacion,
-            'temperatura' => $request->temperatura,
-            'sintomas' => $request->sintomas,
-            'estado' => 'grave',
-            'nivel_urgencia' => null,
-            'evaluacion_ia' => null,
-            'requiere_medico' => 0,
-            'frecuencia_cardiaca' => $request->frecuencia_cardiaca,
-            'frecuencia_respiratoria' => $request->frecuencia_respiratoria,
-            'peso' => $request->peso,
-            'talla' => $request->talla,
-            'motivo_consulta' => $request->motivo_consulta,
-        ]);
+                // Generamos el código del triage (TRI-AÑO-0001)
+                $claveTriage = $this->generarCodigoConReinicioAnual(Triage::class, 'triage_codigo', 'TRI');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Paciente y triage creados correctamente',
-            'data' => [
-                'Paciente' => $paciente,
-                'Triage' => $triage,
-            ]
-        ]);
+                $triage = Triage::create([
+                    'triage_codigo' => $claveTriage,
+                    'paciente_id' => $paciente->id,
+                    'codigo_paciente' => $paciente->paciente_id,
+                    'presion' => $request->presion_arterial,
+                    'saturacion' => $request->saturacion,
+                    'temperatura' => $request->temperatura,
+                    'sintomas' => $request->sintomas,
+                    'estado' => 'grave',
+                    'nivel_urgencia' => null,
+                    'evaluacion_ia' => null,
+                    'requiere_medico' => 0,
+                    'frecuencia_cardiaca' => $request->frecuencia_cardiaca,
+                    'frecuencia_respiratoria' => $request->frecuencia_respiratoria,
+                    'peso' => $request->peso,
+                    'talla' => $request->talla,
+                    'motivo_consulta' => $request->motivo_consulta,
+                ]);
+
+                return [$paciente, $triage];
+            });
+
+            [$paciente, $triage] = $resultado;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Paciente y triage creados correctamente',
+                'data' => [
+                    'Paciente' => $paciente,
+                    'Triage' => $triage,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error en PacienteController@store: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'error'   => 'No se pudo registrar el paciente.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Genera un código con formato PREFIJO-AAAA-NNNN, donde NNNN es un
+     * consecutivo que se reinicia en 0001 cada vez que cambia el año.
+     *
+     * Reutilizable para cualquier modelo/columna (paciente_id, triage_codigo,
+     * folio de consulta, etc.) — solo cambia el modelo, la columna donde
+     * vive el código y el prefijo.
+     *
+     * IMPORTANTE: debe llamarse dentro de un DB::transaction() (ver store())
+     * junto con lockForUpdate, para que dos altas simultáneas no generen
+     * el mismo número consecutivo.
+     *
+     * @param string $modelo   Clase del modelo, ej. Paciente::class
+     * @param string $columna  Columna donde vive el código, ej. 'paciente_id'
+     * @param string $prefijo  Prefijo del código, ej. 'PAC'
+     */
+    private function generarCodigoConReinicioAnual(string $modelo, string $columna, string $prefijo): string
+    {
+        $anioActual = date('Y');
+
+        // Bloqueamos las filas de este año para que otra petición
+        // concurrente no lea el mismo último número antes de que
+        // esta transacción confirme su INSERT.
+        $ultimoRegistro = $modelo::where($columna, 'LIKE', "{$prefijo}-{$anioActual}-%")
+            ->orderBy('id', 'desc')
+            ->lockForUpdate()
+            ->first();
+
+        if ($ultimoRegistro) {
+            // Extraemos el consecutivo del último código
+            // (ej. de "PAC-2026-0007" tomamos "0007")
+            $ultimoNumero = (int) substr($ultimoRegistro->{$columna}, -4);
+            $numero = $ultimoNumero + 1;
+        } else {
+            // Primer registro de este tipo en el año
+            $numero = 1;
+        }
+
+        return $prefijo . '-' . $anioActual . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
     }
 
     /**
      * Muestra el detalle de un paciente (expediente) con sus triages y archivos.
      */
     public function show(string $id)
-{
-    $paciente = Paciente::with([
-        'triages', 
-        'archivos', 
-        'recetas.detalles', 
-        'recetas.consulta', 
-        'recetas.medico'
-    ])->findOrFail($id);
+    {
+        $paciente = Paciente::with([
+            'triages',
+            'archivos',
+            'recetas.detalles',
+            'recetas.consulta',
+            'recetas.medico'
+        ])->findOrFail($id);
 
-    return response()->json($paciente);
-}
+        return response()->json($paciente);
+    }
 
     /**
      * Formulario de edición.
