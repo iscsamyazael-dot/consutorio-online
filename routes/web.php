@@ -84,6 +84,7 @@ Route::middleware('auth')->group(function () {
         // resource para que no las intercepte la ruta GET /consultaIA/{consultaIA}.
         Route::post('consultaIA/{consultaId}/psoapp', [ConsultaIAController::class, 'guardarPsoapp'])->name('consultaIA.guardarPsoapp'); // NUEVO // IA: guarda la nota PSOAPP generada/editada
         Route::get('consultaIA/{consultaId}/pdf/{tipo}', [ConsultaIAController::class, 'generarPdf'])->name('consultaIA.generarPdf'); // NUEVO // IA: genera PDF de diagnóstico/receta de la consulta con IA
+        Route::get('consultaIA/{consultaId}/pdf/{tipo}/ver', [ConsultaIAController::class, 'verPdf'])->name('consultaIA.verPdf'); // IA: previsualiza el PDF (inline) en el modal de ExpedienteTabs.vue
         Route::post('consultaIA/{consultaId}/receta', [ConsultaIAController::class, 'guardarReceta'])->name('consultaIA.guardarReceta'); // ← NUEVA: guarda la receta de RecetaInteligente.vu
         // Historial clínico completo de un paciente (todas sus consultas +
         // transcripciones), usado por HistorialClinico.vue. Debe ser una ruta
