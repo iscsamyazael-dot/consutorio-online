@@ -534,6 +534,7 @@ export default {
     // Actualiza los datos de una especialidad, reasigna el doctor elegido a esa
     // especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
     actualizar() {
+      console.log("¡El botón disparó la función actualizar!");
       if (!this.validarForm()) {
         this.mostrarToast("⚠ Revisa los campos marcados", "error");
         return;
@@ -542,13 +543,14 @@ export default {
       this.loading.actualizar = true;
       ///ApiService.put(`/especialidades/${this.form.id}`, this.form)
       const { doctorId, doctorNombreActual, ...datosEspecialidad } = this.form;
-
+      alert("ID del doctor detectado:", doctorId);
       ApiService.put(`/especialidades/${this.form.id}`, datosEspecialidad)
         .then(() => {
           if (doctorId) {
             // ⚠️ Ajusta el método/ruta si tu backend espera algo distinto
             // a PUT `${MEDICOS_ENDPOINT}/{id}` con { especialidad_id }.
-            return ApiService.put(`${MEDICOS_ENDPOINT}/${doctorId}`, {
+            console.log("Enviando especialidad_id:", this.form.id);
+            return ApiService.put(`${MEDICOS_ENDPOINT}/${doctorId}/especialidad`, {
               especialidad_id: this.form.id,
             });
           }

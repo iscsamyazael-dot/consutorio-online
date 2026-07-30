@@ -309,4 +309,21 @@ class MedicoController extends Controller
         return response()->json($agenda);
     }
 
+    public function actualizarEspecialidad(Request $request, $id)
+    {
+        $request->validate([
+            'especialidad_id' => 'required|exists:especialidades,id',
+        ]);
+
+        $medico = Medico::findOrFail($id);
+        $medico->especialidad_id = $request->especialidad_id;
+        $medico->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Especialidad del médico actualizada correctamente',
+            'medico' => $medico,
+        ]);
+    }
+
 }
