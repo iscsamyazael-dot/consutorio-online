@@ -48,7 +48,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/perfil-usuario', [ProfileController::class, 'actualizarPerfil']);
         // Ruta para procesar el formulario y guardar el registro en las tablas
         Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Agenda: filtro por especialidad
-        Route::get('pacientes/buscar', [PacienteController::class, 'buscar'])->name('pacientes.buscar');
+        Route::get('pacientes/buscar', [PacienteController::class, 'filtrar_paciente'])->name('pacientes.filtrar_paciente');
         //para traer actualizar y eliminar medicos
         // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
         // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);

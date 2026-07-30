@@ -47,7 +47,7 @@
                                 v-for="paciente in pacientesEncontrados"
                                 :key="paciente.id"
                                 @click="seleccionarPaciente(paciente)">
-                                <strong>{{ paciente.nombre_completo }}</strong>
+                                <strong>{{ paciente.nombre }}</strong>
                                 
 
                             </button>
@@ -486,11 +486,12 @@ export default {
       const requestId = ++this.searchRequestId   // marca esta petición
 
       try {
-        const response = await ApiService.get('pacientes/buscar', {
-          params: { texto: this.buscarPaciente }
+        const response = await ApiService.get('buscarPaciente', {
+          params: { buscar: this.buscarPaciente }
         })
 
         if (requestId !== this.searchRequestId) return  // 👈 llegó tarde, se ignora
+        console.log('Datos recibidos de pacientes:', response.data)
 
         this.pacientesEncontrados = response.data
         this.mostrarResultados = response.data.length > 0

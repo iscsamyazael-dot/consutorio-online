@@ -18,12 +18,13 @@ class PacienteController extends Controller
     {
         // NOTA: Traer TODO sin límite frenará tu app. 
         // Si usas datatables o Vue, se recomienda paginar o seleccionar campos específicos.
-        return Paciente::with(['triages' => function ($q) {
-            $q->latest()->limit(1); // Opcional: solo traer el último triage si no necesitas todo el historial aquí
-        }])
-        ->select('id', 'paciente_id', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono')
-        ->latest('id')
-        ->paginate(15); 
+        // return Paciente::with(['triages' => function ($q) {
+        //     $q->latest()->limit(1); // Opcional: solo traer el último triage si no necesitas todo el historial aquí
+        // }])
+        // ->select('id', 'paciente_id', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono')
+        // ->latest('id')
+        // ->paginate(15); 
+         return Paciente::with(['triages'])->get();
     }
 
     /**
@@ -62,11 +63,9 @@ class PacienteController extends Controller
 
         $match = strlen($buscar) < 3 ? "{$buscar}%" : "%{$buscar}%";
 
-        return Paciente::select('id', 'paciente_id', 'nombre', 'apellido_paterno', 'apellido_materno')
+        return Paciente::select('id', 'paciente_id', 'nombre')
             ->where('paciente_id', 'like', $match)
             ->orWhere('nombre', 'like', $match)
-            ->orWhere('apellido_paterno', 'like', $match)
-            ->orWhere('apellido_materno', 'like', $match)
             ->limit(10)
             ->get();
     }

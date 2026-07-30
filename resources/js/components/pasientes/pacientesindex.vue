@@ -378,6 +378,7 @@ export default {
             },
 
         // ─── COLORES AVATAR ───────────────────────────────────────────────────────
+
        obtenerColor(nombre) {
     const colores = [
         "#1976d2",
@@ -459,7 +460,7 @@ export default {
             try {
                 const response = await ApiService.get('/pacientes');
                 // Asignas directamente la lista que te da el servidor
-                this.pacientes = response.data; 
+                this.pacientes = response.data;
                 console.log('Pacientes cargados:', this.pacientes);
             } catch (error) {
                 console.error('Error al obtener pacientes:', error);

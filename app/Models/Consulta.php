@@ -67,16 +67,14 @@ class Consulta extends Model
         return $this->belongsTo(EvaluacionIA::class, 'evaluacion_ia_id');
     }
 
+    public function eventosIA()
+    {
+        return $this->hasMany(EventoIA::class, 'consulta_id');
+    }
+
     public function notaPsoapp()
     {
-        return $this->hasOne(NotaPsoapp::class);
+        return $this->hasOne(NotaPsoapp::class, 'consulta_id');
+         return $this->hasOne(NotaPsoapp::class);
     }
-    public function eventosIA()
-{
-    return $this->hasMany(EventoIA::class, 'consulta_id');
-}
-public function notaPsoapp()
-{
-    return $this->hasOne(NotaPsoapp::class, 'consulta_id');
-}
 }
