@@ -162,7 +162,7 @@
                                         v-model = "medicamento.presentacion">
                                 </div>
                             </div>
-                            <!-- CONCENTRACION -->
+                            <!-- CONCENTRACION  2026-->
                             <div class="col-md-3 mt-3">
                                 <label class="font-weight-bold">
                                     Concentración
