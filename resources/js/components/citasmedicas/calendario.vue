@@ -198,7 +198,7 @@ export default {
     }
   },
 
-  emits: ['cita-actualizada'],
+  emits: ['cita-actualizada', 'citas-visibles-cambiadas'],
 
   data() {
     return {
@@ -311,7 +311,40 @@ export default {
     },
   },
 
+  watch: {
+    // Cada vez que se entra/sale de la vista de detalle, avisamos al padre
+    // qué conjunto de citas está "activo" para que el resumen se recalcule.
+    vistaDetalle() {
+      this.emitirCitasVisibles()
+    },
+    // Si cambia el día seleccionado estando en detalle, también recalculamos.
+    fechaSeleccionada() {
+      this.emitirCitasVisibles()
+    },
+    // Si el padre actualiza la lista de citas (ej. cambia filtro médico/especialidad
+    // o se refresca tras un PATCH), recalculamos también.
+    citas: {
+      handler() {
+        this.emitirCitasVisibles()
+      },
+      deep: true,
+    },
+  },
+
+  mounted() {
+    // Emitimos el estado inicial (todas las citas, porque arrancamos en vista mes)
+    this.emitirCitasVisibles()
+  },
+
   methods: {
+    // Emite al padre el conjunto de citas que debe usarse para el resumen:
+    // - Si estamos en el detalle de un día -> solo las citas de ese día (puede ser []).
+    // - Si estamos en la vista de calendario -> todas las citas (ya filtradas por el padre).
+    emitirCitasVisibles() {
+      const citasVisibles = this.vistaDetalle ? this.citasDelDia : this.citas
+      this.$emit('citas-visibles-cambiadas', citasVisibles)
+    },
+
     colorPorEstado(estado) {
       const clave = this.normalizarEstado(estado)
       const colores = {

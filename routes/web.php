@@ -96,6 +96,9 @@ Route::middleware('auth')->group(function () {
         Route::get('consultaIA/{consultaId}/pdf/{tipo}', [ConsultaIAController::class, 'generarPdf'])->name('consultaIA.generarPdf'); // NUEVO // IA: genera PDF de diagnóstico/receta de la consulta con IA
         Route::get('consultaIA/{consultaId}/pdf/{tipo}/ver', [ConsultaIAController::class, 'verPdf'])->name('consultaIA.verPdf'); // IA: previsualiza el PDF (inline) en el modal de ExpedienteTabs.vue
         Route::post('consultaIA/{consultaId}/receta', [ConsultaIAController::class, 'guardarReceta'])->name('consultaIA.guardarReceta'); // ← NUEVA: guarda la receta de RecetaInteligente.vu
+        Route::get('medicamentos/prediccion', [MedicamentoController::class, 'prediccion']);// chat de medicamento con IA 
+        Route::post('consultaIA/{consultaId}/derivar', [ConsultaIAController::class, 'guardarDerivacion'])
+        ->name('consultaIA.guardarDerivacion'); // IA: guarda la derivación generada en Derivacion.vue
         // Historial clínico completo de un paciente (todas sus consultas +
         // transcripciones), usado por HistorialClinico.vue. Debe ser una ruta
         // top-level porque el frontend arma la URL como `route + '/historialClinico'`

@@ -12,10 +12,11 @@
             <calendario
                 :citas="citasFiltradas"
                 @cita-actualizada="obtenerCitas"
+                @citas-visibles-cambiadas="onCitasVisiblesCambiadas"
             ></calendario>
         </div>
         <div style="flex: 1;">
-            <resumen-medico :citas="citasFiltradas" :pendientes="citasPendientes"></resumen-medico>
+            <resumen-medico :citas="citasVisibles" :pendientes="citasPendientes"></resumen-medico>
         </div>
     </div>
 </template>
@@ -40,7 +41,12 @@ export default {
             createUrl: 'AgendarCitas',
             citasPendientes: [],
             filtroMedicoId: '',
-            filtroEspecialidadId: ''
+            filtroEspecialidadId: '',
+            // NUEVO: conjunto de citas "activo" para el resumen.
+            // - Si el calendario está en vista mes/semana -> todas las citasFiltradas.
+            // - Si el usuario entró al detalle de un día -> solo las citas de ese día
+            //   (puede ser un array vacío, en cuyo caso el resumen debe mostrar ceros).
+            citasVisibles: []
         }
     },
     computed: {
@@ -72,8 +78,8 @@ export default {
             })
             return Array.from(mapa.values())
         },
-        // NUEVO: citas filtradas por médico/especialidad seleccionados en agenda-medica
-        // Esta es ahora la única fuente de la verdad para calendario y resumen-medico
+        // Citas filtradas por médico/especialidad seleccionados en agenda-medica
+        // Esta sigue siendo la fuente de la verdad que recibe el calendario.
         citasFiltradas() {
             return this.citas.filter(c => {
                 const medicoOk = !this.filtroMedicoId ||
@@ -109,6 +115,11 @@ export default {
         onFiltroCambiado(filtro) {
             this.filtroMedicoId = filtro.medicoId
             this.filtroEspecialidadId = filtro.especialidadId
+        },
+        // NUEVO: recibe desde Calendario.vue el conjunto de citas "activo" según
+        // si el usuario está en vista mes/semana o dentro del detalle de un día.
+        onCitasVisiblesCambiadas(citas) {
+            this.citasVisibles = citas
         }
     }
 }

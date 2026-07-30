@@ -79,6 +79,7 @@
             />
             <DerivacionClinica
                 :sintomas="sintomasDetectados"
+                :consulta-id="consultaId"
             />
         </div>
     </div>
