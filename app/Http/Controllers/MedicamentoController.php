@@ -63,6 +63,73 @@ class MedicamentoController extends Controller
     }
 
     /**
+     * Predicción de reabastecimiento por medicamento.
+     *
+     * Calcula, a partir del historial de salidas de los últimos
+     * $diasHistorial días, un consumo diario promedio. Con ese dato
+     * estima cuántos días de stock quedan y cuánto conviene pedir
+     * para cubrir $diasCobertura días hacia adelante.
+     *
+     * No usa IA/ML todavía: es un cálculo estadístico simple (media
+     * de consumo), pensado como base sólida antes de meter un modelo
+     * más sofisticado si hace falta.
+     */
+    public function prediccion()
+    {
+        $diasHistorial = 30;   // ventana de análisis de consumo
+        $diasCobertura = 30;   // días de stock que queremos tener disponibles
+
+        $fechaInicio = now()->subDays($diasHistorial);
+
+        $medicamentos = Medicamento::with('inventario')->get();
+        $resultado = [];
+
+        foreach ($medicamentos as $medicamento) {
+            $inv = $medicamento->inventario;
+            if (!$inv) continue;
+
+            $totalSalidas = MovimientoInventario::where('medicamento_id', $medicamento->id)
+                ->where('tipo_movimiento', 'salida')
+                ->where('fecha_movimiento', '>=', $fechaInicio)
+                ->sum('cantidad');
+
+            $consumoDiario = $totalSalidas > 0
+                ? round($totalSalidas / $diasHistorial, 2)
+                : 0;
+
+            // null = sin consumo reciente registrado, no se puede estimar
+            $diasRestantes = $consumoDiario > 0
+                ? floor($inv->stock_actual / $consumoDiario)
+                : null;
+
+            $cantidadSugerida = $consumoDiario > 0
+                ? max(0, ceil(($consumoDiario * $diasCobertura) - $inv->stock_actual))
+                : 0;
+
+            $resultado[] = [
+                'medicamento_id'           => $medicamento->id,
+                'codigo'                   => $medicamento->codigo,
+                'nombre'                   => $medicamento->nombre,
+                'concentracion'            => $medicamento->concentracion,
+                'stock_actual'             => $inv->stock_actual,
+                'stock_minimo'             => $inv->stock_minimo,
+                'consumo_diario_promedio'  => $consumoDiario,
+                'dias_restantes_estimados' => $diasRestantes,
+                'cantidad_sugerida_pedir'  => $cantidadSugerida,
+            ];
+        }
+
+        // Primero los que se agotan más pronto; los sin consumo reciente al final
+        usort($resultado, function ($a, $b) {
+            if ($a['dias_restantes_estimados'] === null) return 1;
+            if ($b['dias_restantes_estimados'] === null) return -1;
+            return $a['dias_restantes_estimados'] <=> $b['dias_restantes_estimados'];
+        });
+
+        return response()->json($resultado);
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create()
@@ -129,17 +196,65 @@ class MedicamentoController extends Controller
 
     /**
      * Update the specified resource in storage.
+     *
+     * NOTA: antes este método estaba vacío, por eso el botón "Editar" del
+     * frontend parecía no hacer nada: el PUT respondía 200 pero no guardaba.
      */
     public function update(Request $request, string $id)
     {
-        //
+        $medicamento = Medicamento::with('inventario')->findOrFail($id);
+
+        $medicamento->update([
+            'codigo'                => $request->codigo,
+            'nombre'                => $request->nombre,
+            'nombre_generico'       => $request->nombre_generico,
+            'presentacion'          => $request->presentacion,
+            'concentracion'         => $request->concentracion,
+            'via_administracion'    => $request->via_administracion,
+            'descripcion'           => $request->descripcion,
+            'indicaciones'          => $request->indicaciones,
+            'contraindicaciones'    => $request->contraindicaciones,
+            'efectos_secundarios'   => $request->efectos_secundarios,
+            'precio'                => $request->precio,
+            'requiere_receta'       => $request->requiere_receta,
+            'activo'                => $request->activo,
+        ]);
+
+        // El formulario de edición del frontend también permite ajustar el
+        // stock mínimo, que vive en la tabla de inventario (no en medicamentos).
+        // Viaja como { ..., inventario: { stock_minimo: ... } } en el payload.
+        if ($medicamento->inventario && $request->has('inventario.stock_minimo')) {
+            $medicamento->inventario->update([
+                'stock_minimo' => $request->input('inventario.stock_minimo'),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Medicamento actualizado correctamente',
+            'data' => $medicamento->fresh(['inventario', 'ultimoMovimiento']),
+        ]);
     }
 
     /**
      * Remove the specified resource from storage.
+     *
+     * NOTA: antes este método estaba vacío, por eso el botón "Eliminar" del
+     * frontend parecía no hacer nada: el DELETE respondía 200 pero no borraba.
      */
     public function destroy(string $id)
     {
-        //
+        $medicamento = Medicamento::findOrFail($id);
+
+        // Se borran primero los registros relacionados para evitar errores
+        // de llave foránea (inventario y su historial de movimientos).
+        $medicamento->movimientosInventario()->delete();
+        $medicamento->inventario()->delete();
+        $medicamento->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Medicamento eliminado correctamente',
+        ]);
     }
 }

@@ -124,6 +124,58 @@
               {{ errores.direccion }}
             </span>
           </div>
+          <div class="field">
+            <label for="telefono">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2
+                        19.79 19.79 0 0 1-8.63-3.07
+                        19.5 19.5 0 0 1-6-6
+                        19.79 19.79 0 0 1-3.07-8.67
+                        A2 2 0 0 1 4.11 2h3
+                        a2 2 0 0 1 2 1.72
+                        c.12.89.33 1.76.63 2.6
+                        a2 2 0 0 1-.45 2.11L8.09 9.91
+                        a16 16 0 0 0 6 6
+                        l1.48-1.2a2 2 0 0 1 2.11-.45
+                        c.84.3 1.71.51 2.6.63
+                        A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              Teléfono
+            </label>
+
+            <input
+                id="telefono"
+                v-model="form.telefono"
+                type="tel"
+                maxlength="20"
+                placeholder="999 123 4567"
+                :class="{ 'has-error': errores.telefono }"
+                @input="limpiarError('telefono')"
+            />
+
+            <span class="field-error" v-if="errores.telefono">
+                {{ errores.telefono }}
+            </span>
+          </div>
+
+          <div class="field field-full">
+            <label for="imagen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Logo de la sede
+            </label>
+            <input
+              id="imagen"
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              @change="onImagenSeleccionada"
+            />
+            <img v-if="imagenPreview" :src="imagenPreview" class="logo-preview" alt="Vista previa del logo" />
+          </div>
 
           <div class="field">
             <label for="horario_apertura">
@@ -422,6 +474,23 @@
                 <span class="field-error" v-if="erroresEdicion.direccion">{{ erroresEdicion.direccion }}</span>
               </div>
 
+              <div class="field">
+                <label>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="M21 15l-5-5L5 21" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Logo de la sede
+                </label>
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  @change="onImagenEdicionSeleccionada"
+                />
+                <img v-if="edicionImagenPreview" :src="edicionImagenPreview" class="logo-preview" alt="Vista previa del logo" />
+              </div>
+
               <div class="field-row">
                 <div class="field">
                   <label>
@@ -438,7 +507,21 @@
                   />
                   <span class="field-error" v-if="erroresEdicion.horario_apertura">{{ erroresEdicion.horario_apertura }}</span>
                 </div>
+                  <div class="field">
+                      <label>Teléfono</label>
 
+                      <input
+                        v-model="ubicacionEditando.telefono"
+                        type="tel"
+                        maxlength="20"
+                        :class="{ 'has-error': erroresEdicion.telefono }"
+                        @input="limpiarErrorEdicion('telefono')"
+                      />
+
+                      <span class="field-error" v-if="erroresEdicion.telefono">
+                        {{ erroresEdicion.telefono }}
+                      </span>
+                    </div>
                 <div class="field">
                   <label>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -531,6 +614,7 @@ export default {
       form: {
         nombre: '',
         direccion: '',
+        telefono:'',
         horario_apertura: '',
         horario_cierre: '',
       },
@@ -538,6 +622,12 @@ export default {
       ubicaciones: [],
       cargando: true,
       guardando: false,
+
+      // Imagen (logo) de la sede - registro y edición
+      imagenArchivo: null,
+      imagenPreview: null,
+      edicionImagenArchivo: null,
+      edicionImagenPreview: null,
 
       // Búsqueda y filtros de la tabla
       busqueda: '',
@@ -718,6 +808,27 @@ export default {
         this.erroresEdicion = { ...this.erroresEdicion, [campo]: null };
       }
     },
+
+    // ----- Manejo de imagen (logo) -----
+    onImagenSeleccionada(e) {
+      const archivo = e.target.files[0];
+      if (!archivo) return;
+      this.imagenArchivo = archivo;
+      this.imagenPreview = URL.createObjectURL(archivo);
+    },
+
+    onImagenEdicionSeleccionada(e) {
+      const archivo = e.target.files[0];
+      if (!archivo) return;
+      this.edicionImagenArchivo = archivo;
+      this.edicionImagenPreview = URL.createObjectURL(archivo);
+    },
+
+    // URL pública del logo ya guardado (carpeta public/personalisarperfil)
+    logoUrl(nombreArchivo) {
+      return `/personalisarperfil/${nombreArchivo}`;
+    },
+
     // ----- Carga de ubicaciones desde la API -----
     async cargarUbicaciones() {
       this.cargando = true;
@@ -735,30 +846,37 @@ export default {
     async guardarUbicacion() {
       this.guardando = true;
       this.errores = {};
-// Prepara el payload con los datos del formulario y normaliza los horarios
-      const payload = {
-        ...this.form,
-        horario_apertura: this.normalizarHora(this.form.horario_apertura),// Normaliza los horarios al formato HH:MM
-        horario_cierre: this.normalizarHora(this.form.horario_cierre),// Normaliza los horarios al formato HH:MM
-        folio_sucursal: this.generarFolioSucursal(),// Genera el folio_sucursal automáticamente siguiendo el patrón UBIC-<año>-<correlativo>
-      };
-// Envía la solicitud POST a la API y maneja la respuesta
+
+      const formData = new FormData();
+      formData.append('nombre', this.form.nombre);
+      formData.append('direccion', this.form.direccion);
+      formData.append('telefono', this.form.telefono);
+      formData.append('horario_apertura', this.normalizarHora(this.form.horario_apertura));
+      formData.append('horario_cierre', this.normalizarHora(this.form.horario_cierre));
+      formData.append('folio_sucursal', this.generarFolioSucursal());
+      if (this.imagenArchivo) {
+        formData.append('imagen', this.imagenArchivo);
+      }
+
       try {
-        await ApiService.post('/ubicaciones', payload);
-// Muestra un modal de éxito y reinicia el formulario
+        await ApiService.post('/ubicaciones', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         this.mostrarModalConfirmacion('success', '¡Sucursal agregada!', `"${this.form.nombre}" se guardó correctamente.`);
-        this.form = { nombre: '', direccion: '', horario_apertura: '', horario_cierre: '' };// Reinicia los campos del formulario
-        await this.cargarUbicaciones();// Recarga la lista de ubicaciones para reflejar la nueva ubicación
+        this.form = { nombre: '', direccion: '', horario_apertura: '', horario_cierre: '' };
+        this.imagenArchivo = null;
+        this.imagenPreview = null;
+        await this.cargarUbicaciones();
       } catch (error) {
-        if (error.response && error.response.status === 422) { // Maneja los errores de validación del backend
+        if (error.response && error.response.status === 422) {
           const backendErrores = error.response.data.errors || {};
           this.errores = Object.keys(backendErrores).reduce((acc, key) => {
             acc[key] = backendErrores[key][0];
-            return acc;// Mapea los errores de validación del backend al objeto de errores del formulario
+            return acc;
           }, {});
           this.mostrarModalConfirmacion('error', 'Revisa el formulario', 'Hay campos con errores, corrígelos e intenta de nuevo.');
         } else {
-          console.error('Error al guardar ubicación:', error); // Muestra un modal de error si ocurre un error inesperado
+          console.error('Error al guardar ubicación:', error);
           this.mostrarModalConfirmacion('error', 'No se pudo guardar', 'Ocurrió un error al registrar la sucursal. Intenta de nuevo.');
         }
       } finally {
@@ -767,6 +885,8 @@ export default {
     },
 //----- Edición de ubicación -----
     abrirEdicion(ubicacion) {
+      this.edicionImagenArchivo = null;
+      this.edicionImagenPreview = null;
       this.ubicacionEditando = {
         ...ubicacion,
         horario_apertura: this.normalizarHora(ubicacion.horario_apertura),
@@ -782,35 +902,42 @@ export default {
       this.ubicacionEditando = {};
       this.erroresEdicion = {};
     },
-    // Guarda los cambios de edición de la ubicación, manteniendo los valores originales de nombre, dirección y horario de apertura.
+    // Guarda los cambios de edición de la ubicación
     async guardarEdicion() {
-      this.guardandoEdicion = true;// Reinicia los errores de edición antes de enviar la solicitud
+      this.guardandoEdicion = true;
       this.erroresEdicion = {};
 
-      try {
-        const payload = {
-          nombre: this.ubicacionEditando.nombre,// Mantener el nombre original
-          direccion: this.ubicacionEditando.direccion,// Mantener la dirección original
-          horario_apertura: this.normalizarHora(this.ubicacionEditando.horario_apertura),// Mantener el horario de apertura original
-          horario_cierre: this.normalizarHora(this.ubicacionEditando.horario_cierre),
-          activo: this.ubicacionEditando.activo,// Mantener el estado original
-        };
+      const formData = new FormData();
+      formData.append('_method', 'PUT'); // Laravel spoofing: PUT con archivos no se parsea directo
+      formData.append('nombre', this.ubicacionEditando.nombre);
+      formData.append('direccion', this.ubicacionEditando.direccion);
+      formData.append('telefono', this.ubicacionEditando.telefono);
+      formData.append('horario_apertura', this.normalizarHora(this.ubicacionEditando.horario_apertura));
+      formData.append('horario_cierre', this.normalizarHora(this.ubicacionEditando.horario_cierre));
+      formData.append('activo', this.ubicacionEditando.activo ? '1' : '0');
+      if (this.edicionImagenArchivo) {
+        formData.append('imagen', this.edicionImagenArchivo);
+      }
 
-        await ApiService.put(`/ubicaciones/${this.ubicacionEditando.id}`, payload);// Envía la solicitud PUT a la API para actualizar la ubicación
-         // Cierra el modal de edición y muestra un mensaje de éxito
+      try {
+        await ApiService.post(`/ubicaciones/${this.ubicacionEditando.id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
         this.cerrarEdicion();
-        this.mostrarModalConfirmacion('success', 'Cambios guardados', `"${payload.nombre}" se actualizó correctamente.`);
-        await this.cargarUbicaciones();// Recarga la lista de ubicaciones para reflejar los cambios
+        this.edicionImagenArchivo = null;
+        this.edicionImagenPreview = null;
+        this.mostrarModalConfirmacion('success', 'Cambios guardados', `"${this.ubicacionEditando.nombre}" se actualizó correctamente.`);
+        await this.cargarUbicaciones();
       } catch (error) {
         if (error.response && error.response.status === 422) {
           const backendErrores = error.response.data.errors || {};
           this.erroresEdicion = Object.keys(backendErrores).reduce((acc, key) => {
-            acc[key] = backendErrores[key][0];// Mapea los errores de validación del backend al objeto de errores de edición
+            acc[key] = backendErrores[key][0];
             return acc;
           }, {});
           this.mostrarToast('error', 'Revisa el formulario', 'Hay campos con errores.');
         } else {
-          console.error('Error al editar ubicación:', error);// Muestra un modal de error si ocurre un error inesperado
+          console.error('Error al editar ubicación:', error);
           this.mostrarModalConfirmacion('error', 'No se pudo guardar', 'Ocurrió un error al editar la ubicación. Intenta de nuevo.');
         }
       } finally {
@@ -2072,6 +2199,15 @@ export default {
 .modal-pop-leave-to {
   transform: scale(0.97);
   opacity: 0;
+}
+
+.logo-preview {
+  margin-top: 8px;
+  max-width: 120px;
+  max-height: 120px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  object-fit: cover;
 }
 
 @media (max-width: 640px) {
