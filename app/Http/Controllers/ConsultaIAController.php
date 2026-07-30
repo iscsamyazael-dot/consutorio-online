@@ -14,6 +14,7 @@ use App\Models\ArchivoClinico;
 use App\Models\EvaluacionIA;
 use App\Models\NotaPsoapp;
 use App\Models\Receta;
+use App\Models\Derivacion;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 use App\Services\IAClinicaService;
@@ -662,6 +663,60 @@ class ConsultaIAController extends Controller
             return response()->json([
                 'success' => false,
                 'error'   => 'No se pudo guardar la receta.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Guarda (crea o actualiza) la derivación a especialidad de una
+     * consulta, capturada en Derivacion.vue -> derivarPaciente().
+     *
+     * Usa updateOrCreate por consulta_id, igual que guardarReceta(),
+     * para no duplicar registros si el médico cambia la especialidad
+     * y vuelve a derivar sobre la misma consulta.
+     */
+    public function guardarDerivacion(Request $request, $consultaId)
+    {
+        try {
+            $consulta = Consulta::find($consultaId);
+            if (!$consulta) {
+                return response()->json(['success' => false, 'error' => 'Consulta no encontrada'], 404);
+            }
+
+            $validated = $request->validate([
+                'especialidad_id' => 'required|integer|exists:especialidades,id',
+                'hospital'        => 'nullable|string|max:255',
+                'motivo'          => 'nullable|string',
+            ]);
+
+            $derivacion = Derivacion::updateOrCreate(
+                ['consulta_id' => $consulta->id],
+                [
+                    'especialidad_id' => $validated['especialidad_id'],
+                    'hospital'        => $validated['hospital'] ?? null,
+                    'motivo'          => $validated['motivo'] ?? null,
+                    'estado'          => 'pendiente',
+                ]
+            );
+
+            return response()->json([
+                'success'    => true,
+                'derivacion' => $derivacion->load('especialidad'),
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error'   => 'Datos inválidos.',
+                'detalle' => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            \Log::error("Error en guardarDerivacion: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'error'   => 'No se pudo guardar la derivación.'
             ], 500);
         }
     }
