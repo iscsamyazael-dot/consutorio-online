@@ -1,341 +1,134 @@
 <template>
-    
-    <div class="card shadow-lg">
-        
-            <div class="card-header bg-warning text-white">
-
-        <h5 class="mb-0">
-            Lista de Derivaciones
-        </h5>
-
+  <div class="card border-0 shadow-sm rounded-4 p-4 my-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h5 class="fw-bold mb-0 text-dark">
+        <i class="fas fa-share-square text-primary me-2"></i>
+        Derivaciones Médicas
+      </h5>
+      <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">
+        Consulta ID: {{ consultaId }}
+      </span>
     </div>
 
-    <div class="card-body table-responsive">
-
-        <table class="table table-hover table-bordered">
-
-            <thead class="bg-light">
-
-                <tr>
-
-                    <th>Paciente</th>
-                    <th>Especialidad</th>
-                    <th>Motivo</th>
-                    <th>Prioridad</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                <tr>
-
-                    <td>Juan Pérez</td>
-
-                    <td>Cardiología</td>
-
-                    <td>
-                        Sospecha cardiovascular
-                    </td>
-
-                    <td>
-
-                        <span class="badge badge-danger p-2">
-                            ALTA
-                        </span>
-
-                    </td>
-
-                    <td>
-
-                        <span class="badge badge-warning">
-                            Pendiente
-                        </span>
-
-                    </td>
-
-                    <td>
-
-                            <button
-    class="btn btn-sm btn-info"
-    @click="verDerivacion({
-        paciente: 'Juan Pérez',
-        especialidad: 'Cardiología',
-        estado: 'Urgente',
-        fecha: '2026-05-27',
-        motivo: 'Posible infarto agudo detectado por IA'
-    })"
->
-
-    <i class="fas fa-eye"></i>
-
-</button>
-
-                        </td>
-
-                    </tr>
-
-                </tbody>
-
-            </table>
-
-        </div>
-
+    <!-- Carga -->
+    <div v-if="loading" class="text-center my-4 py-3">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted small mt-2 mb-0">Cargando datos...</p>
     </div>
 
-
-<!-- =========================================
-MODAL VER DERIVACION
-========================================= -->
-
-<div
-    v-if="modalDerivacion"
-    class="modal fade show d-block"
-    tabindex="-1"
-    style="
-        background: rgba(15,23,42,.75);
-        backdrop-filter: blur(6px);
-    "
->
-
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-
-        <div
-            class="modal-content border-0 rounded-5 overflow-hidden shadow-lg"
-        >
-
-            <!-- HEADER -->
-
-            <div
-                class="p-4 text-white"
-                style="
-                    background:
-                    linear-gradient(
-                        135deg,
-                        #0f766e,
-                        #14b8a6
-                    );
-                "
-            >
-
-                <div
-                    class="d-flex justify-content-between align-items-center"
-                >
-
-                    <div class="d-flex align-items-center">
-
-                        <div
-                            class="rounded-circle d-flex justify-content-center align-items-center me-4"
-                            style="
-                                width:80px;
-                                height:80px;
-                                background:rgba(255,255,255,.2);
-                            "
-                        >
-
-                            <i
-                                class="fas fa-ambulance"
-                                style="font-size:35px;"
-                            ></i>
-
-                        </div>
-
-                        <div>
-
-                            <h2 class="fw-bold mb-1">
-
-                                Derivación Médica
-
-                            </h2>
-
-                            <p class="mb-0 opacity-75">
-
-                                Información de traslado clínico
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <button
-                        class="btn btn-light rounded-circle"
-                        @click="modalDerivacion = false"
-                    >
-
-                        <i class="fas fa-times"></i>
-
-                    </button>
-
-                </div>
-
-            </div>
-
-            <!-- BODY -->
-
-            <div
-                class="modal-body p-5"
-                style="background:#f1f5f9;"
-            >
-
-                <div class="row">
-
-                    <div class="col-md-6 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-user me-2 text-primary"></i>
-
-                                Paciente
-
-                            </small>
-
-                            <h5 class="fw-bold mt-3">
-
-                                {{ derivacionSeleccionada.paciente }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-hospital me-2 text-danger"></i>
-
-                                Especialidad
-
-                            </small>
-
-                            <h5 class="fw-bold mt-3">
-
-                                {{ derivacionSeleccionada.especialidad }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-heartbeat me-2 text-success"></i>
-
-                                Estado
-
-                            </small>
-
-                            <h5 class="fw-bold mt-3">
-
-                                {{ derivacionSeleccionada.estado }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-calendar me-2 text-info"></i>
-
-                                Fecha
-
-                            </small>
-
-                            <h5 class="fw-bold mt-3">
-
-                                {{ derivacionSeleccionada.fecha }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-12">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-notes-medical me-2 text-warning"></i>
-
-                                Motivo de Derivación
-
-                            </small>
-
-                            <p class="mt-3 mb-0">
-
-                                {{ derivacionSeleccionada.motivo }}
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
+    <!-- Sin datos -->
+    <div v-else-if="derivaciones.length === 0" class="text-center my-4 py-4 border rounded-4 bg-light">
+      <i class="fas fa-folder-open text-muted fa-2x mb-2"></i>
+      <p class="text-muted mb-0">No se encontraron derivaciones.</p>
     </div>
 
-</div>
+    <!-- Tabla Dinámica -->
+    <div v-else class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col" class="py-3 ps-3">Paciente</th>
+            <th scope="col" class="py-3">Especialidad</th>
+            <th scope="col" class="py-3">Hospital</th>
+            <th scope="col" class="py-3">Motivo</th>
+            <th scope="col" class="py-3 text-center">Prioridad</th>
+            <th scope="col" class="py-3 text-center">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in derivaciones" :key="item.id">
+            <td class="ps-3 fw-semibold text-dark">{{ item.paciente }}</td>
+            
+            <td>
+              <span class="badge bg-info-subtle text-info px-2 py-1 rounded-3">
+                <i class="fas fa-stethoscope me-1"></i>{{ item.especialidad }}
+              </span>
+            </td>
 
+            <td class="text-secondary">{{ item.hospital || 'N/A' }}</td>
 
+            <!-- Motivo limpio sin la frase "triage" -->
+            <td class="text-wrap" style="max-width: 250px;">
+              {{ item.motivo }}
+            </td>
 
+            <!-- Prioridad detectada -->
+            <td class="text-center">
+              <span :class="['badge rounded-pill px-3 py-2', getPrioridadBadge(item.prioridad)]">
+                <i :class="['me-1', getPrioridadIcon(item.prioridad)]"></i>
+                {{ item.prioridad ? item.prioridad.toUpperCase() : 'MEDIA' }}
+              </span>
+            </td>
+
+            <!-- Estado -->
+            <td class="text-center">
+              <span :class="['badge rounded-pill px-3 py-2', getEstadoBadge(item.estado)]">
+                {{ item.estado }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </template>
 
+<script setup>
+import { ref, onMounted } from 'vue'
+import ApiService from '../../services/ApiService.js' 
 
-<script>
+const props = defineProps({
+  consultaId: { type: [Number, String], default: 516 }
+})
 
-export default {
+const derivaciones = ref([])
+const loading = ref(true)
 
-    data() {
-
-        return {
-
-            modalDerivacion: false,
-
-            derivacionSeleccionada: {}
-
-        }
-
-    },
-
-    methods: {
-
-        verDerivacion(data) {
-
-            this.derivacionSeleccionada = data
-
-            this.modalDerivacion = true
-
-        }
-
-    }
-
+const obtenerDerivaciones = async () => {
+  loading.value = true
+  try {
+    // Petición usando tu ApiService
+    const response = await ApiService.get(`derivaciones/consulta/${props.consultaId}`)
+    
+    // Si ApiService retorna la respuesta en .data o directa:
+    derivaciones.value = response.data || response
+  } catch (error) {
+    console.error('Error al cargar derivaciones:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
+// Estilos de Prioridad
+const getPrioridadBadge = (prioridad) => {
+  switch (prioridad) {
+    case 'baja': return 'bg-success-subtle text-success border border-success-subtle'
+    case 'media': return 'bg-warning-subtle text-warning border border-warning-subtle'
+    case 'alta': return 'bg-danger-subtle text-danger border border-danger-subtle'
+    default: return 'bg-secondary-subtle text-secondary'
+  }
+}
+
+const getPrioridadIcon = (prioridad) => {
+  switch (prioridad) {
+    case 'baja': return 'fas fa-arrow-down'
+    case 'media': return 'fas fa-minus'
+    case 'alta': return 'fas fa-exclamation-triangle'
+    default: return 'fas fa-circle'
+  }
+}
+
+// Estilos de Estado
+const getEstadoBadge = (estado) => {
+  switch (estado) {
+    case 'pendiente': return 'bg-warning text-dark'
+    case 'enviado': return 'bg-primary text-white'
+    case 'atendido': return 'bg-success text-white'
+    default: return 'bg-secondary text-white'
+  }
+}
+
+onMounted(() => {
+  obtenerDerivaciones()
+})
 </script>

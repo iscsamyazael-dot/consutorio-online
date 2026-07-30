@@ -235,59 +235,54 @@ MODAL ARCHIVO CLINICO
                                 </p>
                                 <!-- INFO -->
                                 <div class="mt-5">
+                                    
                                     <div
-                                        class="card border-0 text-white rounded-4 mb-3"
+                                        class="card border-0 text-dark rounded-4 mb-3 shadow-sm"
                                         style="
-                                            background:
-                                            rgba(255,255,255,0.15);
-                                            backdrop-filter:
-                                            blur(10px);
+                                            background: rgba(255, 255, 255, 0.65);
+                                            backdrop-filter: blur(10px);
                                         "
                                     >
                                         <div class="card-body d-flex align-items-center">
+                                            <!-- Icono con tono azul suave -->
                                             <div
-                                                class="bg-info rounded-circle d-flex align-items-center justify-content-center me-3"
-                                                style="
-                                                    width:50px;
-                                                    height:50px;
-                                                "
+                                                class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                style="width: 50px; height: 50px; flex-shrink: 0;"
                                             >
-                                                <i class="fas fa-file-pdf"></i>
+                                                <i class="fas fa-file-pdf fa-lg"></i>
                                             </div>
                                             <div>
-                                                <small class="opacity-75">
+                                                <small class="text-muted fw-semibold d-block">
                                                     Formatos
                                                 </small>
-                                                <h6 class="fw-bold mb-0">
+                                                <h6 class="fw-bold mb-0 text-dark">
                                                     PDF · JPG · PNG
                                                 </h6>
                                             </div>
                                         </div>
                                     </div>
+
+                                    <!-- Tarjeta Seguridad -->
                                     <div
-                                        class="card border-0 text-white rounded-4"
+                                        class="card border-0 text-dark rounded-4 shadow-sm"
                                         style="
-                                            background:
-                                            rgba(255,255,255,0.15);
-                                            backdrop-filter:
-                                            blur(10px);
+                                            background: rgba(255, 255, 255, 0.65);
+                                            backdrop-filter: blur(10px);
                                         "
                                     >
                                         <div class="card-body d-flex align-items-center">
+                                            <!-- Icono con tono amarillo/naranja suave -->
                                             <div
-                                                class="bg-warning rounded-circle d-flex align-items-center justify-content-center me-3"
-                                                style="
-                                                    width:50px;
-                                                    height:50px;
-                                                "
+                                                class="bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                style="width: 50px; height: 50px; flex-shrink: 0;"
                                             >
-                                                <i class="fas fa-lock"></i>
+                                                <i class="fas fa-lock fa-lg"></i>
                                             </div>
                                             <div>
-                                                <small class="opacity-75">
+                                                <small class="text-muted fw-semibold d-block">
                                                     Seguridad
                                                 </small>
-                                                <h6 class="fw-bold mb-0">
+                                                <h6 class="fw-bold mb-0 text-dark">
                                                     Protección Clínica
                                                 </h6>
                                             </div>
@@ -342,12 +337,12 @@ MODAL ARCHIVO CLINICO
                                     <select
                                         class="form-select border-0 shadow-sm rounded-4 p-3" 
                                         v-model="form.tipo_archivo" 
-                                        
                                     >
-
-                                        <option value=" Seleccionar...">
-                                            
+                                        <!-- Opción placeholder: oculta y deshabilitada -->
+                                        <option value="" disabled hidden>
+                                            Seleccionar archivo...
                                         </option>
+
                                         <option value="Radiografía">
                                             Radiografía
                                         </option>
@@ -391,8 +386,8 @@ MODAL ARCHIVO CLINICO
                                         v-model="form.estado"
                                     >
 
-                                        <option value="Seleccionar...">
-                                            
+                                        <option value="" disabled hidden>
+                                            Seleccionar Estado...
                                         </option>
                                         <option value="Pendiente">
                                             Pendiente
@@ -575,7 +570,7 @@ MODAL VER ARCHIVO CLINICO
 
                     <div class="col-12">
                         <div class="bg-white rounded-4 shadow-sm p-5 text-center">
-                            //funcion que trae el logo de acuerdo al tipo de documento 
+                             
                             <i
                                 :class="obtenerIcono(detallearchivo?.archivo_url)"
                                 style="font-size:70px;"
@@ -642,7 +637,7 @@ export default {
         return {
 
             // SIRVE PARA VER MODAL
-        modalArchivoClinico: false,
+            modalArchivoClinico: false,
             detallearchivo: [],
             listaArchivos: [],
             filtrar: [],
@@ -659,110 +654,112 @@ export default {
         }
     },
 
-            mounted(){
-        this.ObtenerArchivos()
+    mounted(){
+
+     this.ObtenerArchivos()
+
     },
 
 
     methods: {
-                async buscarPaciente(){
-                            try{
-                                const response = await ApiService.get('/buscarPaciente?buscar=' + this.buscar);
-                                this.filtrar = response.data;
-                            }catch(error){
-                                console.error('No se encuentran resultados'.error)
-                            }
-                },
+        async buscarPaciente(){
+            try{
+                const response = await ApiService.get('/buscarPaciente?buscar=' + this.buscar);
+                this.filtrar = response.data;
+            }catch(error){
+                console.error('No se encuentran resultados'.error)
+            }
+        },
 
-            //Selecciona un paciente que se trae a traves de la input de busqueda//                                           
-                seleccionarPaciente() { 
-                    const paciente = this.filtrar.find(p => 
-                        `${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}` === this.buscar); 
-                    if (paciente) { 
-                        this.form.paciente_id = paciente.id; 
-                        this.form.codigo_paciente = paciente.paciente_id; 
-                        console.log('ID:', paciente.id);
-                        console.log('Código:', paciente.paciente_id); 
-                    } else {
-                        // Un log extra por si la cadena de texto sigue sin coincidir perfectamente
-                        console.log('No se encontró coincidencia exacta para:', this.buscar);
-                    }
-                },
+        //Selecciona un paciente que se trae a traves de la input de busqueda//                                           
+        seleccionarPaciente() { 
+            const paciente = this.filtrar.find(p => 
+                `${p.nombre} ${p.apellido_paterno} ${p.apellido_materno}` === this.buscar); 
+            if (paciente) { 
+                this.form.paciente_id = paciente.id; 
+                this.form.codigo_paciente = paciente.paciente_id; 
+                console.log('ID:', paciente.id);
+                console.log('Código:', paciente.paciente_id); 
+            } else {
+                // Un log extra por si la cadena de texto sigue sin coincidir perfectamente
+                console.log('No se encontró coincidencia exacta para:', this.buscar);
+            }
+        },
 
 
-                //* Metodo para guardar archivos clinicos a la base de datos *//
+        //* Metodo para guardar archivos clinicos a la base de datos *//
         async guardarArchivoClinico() {
 
-                    try {
-                        let data = new FormData();
+            try {
+                let data = new FormData();
 
-                        data.append('paciente_id', this.form.paciente_id);
-                        data.append('codigo_paciente', this.form.codigo_paciente);
-                        data.append('tipo_archivo', this.form.tipo_archivo);
-                        data.append('fecha', this.form.fecha);
-                        data.append('Estado', this.form.estado);
-                        data.append('archivo', this.form.archivo);
+                data.append('paciente_id', this.form.paciente_id);
+                data.append('codigo_paciente', this.form.codigo_paciente);
+                data.append('tipo_archivo', this.form.tipo_archivo);
+                data.append('fecha', this.form.fecha);
+                data.append('Estado', this.form.estado);
+                data.append('archivo', this.form.archivo);
 
-                        console.log('Formulario:', this.form);
+                console.log('Formulario:', this.form);
 
 
-                        const response = await ApiService.post(
-                            '/archivoClinico',
-                            data,
-                            {
-                                headers: {
-                                    'Content-Type': 'multipart/form-data'
-                                }
-                            }
-                        );
-
-                            // Recargar la tabla
-                            await this.ObtenerArchivos();
-
-                            // Cerrar modal Bootstrap
-                            $('#modalArchivoClinico').modal('hide');
-
-                        console.log(response.data);
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Archivo clínico guardado',
-                            text: 'El archivo fue guardado correctamente'
-                        });
-
-                    } catch(error) {
-
-                        console.error(error);
-
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'No se pudo guardar el archivo'
-                        });
-
+                const response = await ApiService.post(
+                    '/archivoClinico',
+                    data,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
                     }
-              },
+                );
+
+                    // Recargar la tabla
+                    await this.ObtenerArchivos();
+
+                    // Cerrar modal Bootstrap
+                    $('#modalArchivoClinico').modal('hide');
+
+                console.log(response.data);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Archivo clínico guardado',
+                    text: 'El archivo fue guardado correctamente'
+                });
+
+            } catch(error) {
+
+                console.error(error);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo guardar el archivo'
+                });
+
+            }
+        },
 
             
-              //AL SELECCIONAR UN ARCHIVO APARECE UN MENSAJE: "ARCHIVO SELECCIONADO"
-                seleccionarArchivo(event) {
-                    this.form.archivo = event.target.files[0];
-                    console.log('Archivo seleccionado:', this.form.archivo);
-                },
+        //AL SELECCIONAR UN ARCHIVO APARECE UN MENSAJE: "ARCHIVO SELECCIONADO"
+        seleccionarArchivo(event) {
+            this.form.archivo = event.target.files[0];
+            console.log('Archivo seleccionado:', this.form.archivo);
+        },
             
 
-                async ObtenerArchivos() {
-                    try {
-                        const response = await ApiService.get('archivoclinico')
-                        this.listaArchivos = response.data
-                        console.log('archivos:', this.listaArchivos)
-                    } catch (error) {
-                        console.error("error al cargar los archivos:", error)
-                    } 
+        async ObtenerArchivos() {
+            try {
+                const response = await ApiService.get('archivoclinico')
+                this.listaArchivos = response.data
+                console.log('archivos:', this.listaArchivos)
+            } catch (error) {
+                console.error("error al cargar los archivos:", error)
+            } 
 
-                },
+        },
 
 
-                 async DatosArchivo(id) {
+        async DatosArchivo(id) {
             try {
                 const response = await ApiService.get('/archivoclinico/' + id)
                 this.detallearchivo = response.data
@@ -775,54 +772,44 @@ export default {
 
         },
 
-            obtenerIcono(ruta){
-                console.log('Ruta recibida:', ruta);
-                if(!ruta){
+        obtenerIcono(ruta){
+            console.log('Ruta recibida:', ruta);
+            if(!ruta){
+                return 'fas fa-file-alt text-secondary';
+            }
+            const extension = ruta.split('.').pop().toLowerCase();
+            switch(extension){
+                case 'pdf':
+                    return 'fas fa-file-pdf text-danger';
+                case 'doc':
+                case 'docx':
+                    return 'fas fa-file-word text-primary';
+                case 'xls':
+                case 'xlsx':
+                    return 'fas fa-file-excel text-success';
+                case 'ppt':
+                case 'pptx':
+                    return 'fas fa-file-powerpoint text-warning';
+                case 'jpg':
+                case 'jpeg':
+                case 'png':
+                case 'gif':
+                case 'webp':
+                    return 'fas fa-file-image text-info';
+                default:
                     return 'fas fa-file-alt text-secondary';
-                }
-                const extension = ruta.split('.').pop().toLowerCase();
-                switch(extension){
-                    case 'pdf':
-                        return 'fas fa-file-pdf text-danger';
-                    case 'doc':
-                    case 'docx':
-                        return 'fas fa-file-word text-primary';
-                    case 'xls':
-                    case 'xlsx':
-                        return 'fas fa-file-excel text-success';
-                    case 'ppt':
-                    case 'pptx':
-                        return 'fas fa-file-powerpoint text-warning';
-                    case 'jpg':
-                    case 'jpeg':
-                    case 'png':
-                    case 'gif':
-                    case 'webp':
-                        return 'fas fa-file-image text-info';
-                    default:
-                        return 'fas fa-file-alt text-secondary';
-                }
-            },
+            }
+        },
 
-            //Función para determinar que tipo de archivo se mostrara mediante un modal//
-            verArchivo(documentos){
-              this.archivoSeleccionado = '/' + documentos.archivo_url
-              $('#modalArchivo').modal('show')
-            },
-            esImagen(ruta){
-                return /\.(jpg|jpeg|png|gif|webp)$/i.test(ruta)
-            },
+        //Función para determinar que tipo de archivo se mostrara mediante un modal//
+        verArchivo(documentos){
+            this.archivoSeleccionado = '/' + documentos.archivo_url
+            $('#modalArchivo').modal('show')
+        },
+        esImagen(ruta){
+            return /\.(jpg|jpeg|png|gif|webp)$/i.test(ruta)
+        },
 
-
-        
-
-
-
-
-
-
-
-        
 
         // =====================================
         // VER ARCHIVO CLINICO

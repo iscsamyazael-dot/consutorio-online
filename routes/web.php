@@ -16,6 +16,7 @@ use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\UbicacionController;
+use App\Http\Controllers\DerivacionController;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
@@ -45,7 +46,11 @@ Route::middleware('auth')->group(function () {
 
 
         ///*** RUTAS PARA LAS APIS Y CONSUMO DE DATOS */
-        // Ruta API que obtiene la lista de especialidades médicas
+        Route::get('/derivaciones/estadisticas', [DerivacionController::class, 'obtenerEstadisticas']);
+        //Ruta API que obtiene las estadisicas de las cartas
+        // Route::get('derivaciones/estadisticas/{consulta_id}', [DerivacionController::class, 'getEstadisticasDerivaciones']);
+        // Ruta API que obtiene la consulta completa de derivaciones
+        Route::get('/derivaciones/consulta/{consulta_id}', [DerivacionController::class, 'getDerivacionesByConsulta']);
         Route::get('medicoEstadistica', [MedicoController::class, 'obtenerEstadisticas']);
         Route::get('listaUbicaciones', [UbicacionController::class, 'listar']);
         Route::get('/api/especialidades', [SpecialtyController::class, 'list']); 

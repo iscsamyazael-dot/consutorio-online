@@ -1,97 +1,99 @@
 <template>
 
+    <div class="d-flex justify-content-between align-items-center">
+    
+        <div>
 
+            <h1 class="font-weight-bold">
+                Derivaciones Médicas
+            </h1>
 
-<div class="d-flex justify-content-between align-items-center">
-  
-    <div>
-
-        <h1 class="font-weight-bold">
-            Derivaciones Médicas
-        </h1>
-
-        <small class="text-muted">
-            Canalización de pacientes
-        </small>
-
-    </div>
-
-    <button class="btn btn-warning btn-lg rounded-pill shadow" 
-        @click="abrirModal">
-            <i class="fas fa-share-alt mr-1">
-                </i> Derivar Paciente
-        </button>
-
-</div>
-
-
-
-<div class="row mb-4">
-
-    <div class="col-lg-4">
-
-        <div class="small-box bg-warning shadow">
-
-            <div class="inner">
-
-                <h3>8</h3>
-                <p>Derivaciones Activas</p>
-
-            </div>
-
-            <div class="icon">
-
-                <i class="fas fa-exchange-alt"></i>
-
-            </div>
+            <small class="text-muted">
+                Canalización de pacientes
+            </small>
 
         </div>
 
+        <button class="btn btn-warning btn-lg rounded-pill shadow" 
+            @click="abrirModal">
+                <i class="fas fa-share-alt mr-1">
+                    </i> Derivar Paciente
+            </button>
+
     </div>
 
-    <div class="col-lg-4">
 
-        <div class="small-box bg-danger shadow">
 
-            <div class="inner">
-
-                <h3>2</h3>
-                <p>Alta Prioridad</p>
-
+    <div class="row g-3 mb-4">
+        <!-- Tarjeta 1: Derivaciones Activas -->
+        <div class="col-md-4">
+            <div 
+                class="card border-0 text-dark rounded-4 shadow-sm h-100"
+                style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
+            >
+                <div class="card-body d-flex align-items-center">
+                <div 
+                    class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center me-3"
+                    style="width: 50px; height: 50px; flex-shrink: 0;"
+                >
+                    <i class="fas fa-share-square fa-lg"></i>
+                </div>
+                <div>
+                    <small class="text-muted fw-semibold d-block">Derivaciones Activas</small>
+                    <h4 class="fw-bold mb-0 text-dark">
+                    {{ estadisticas.total_derivaciones }}
+                    </h4>
+                </div>
+                </div>
             </div>
-
-            <div class="icon">
-
-                <i class="fas fa-heartbeat"></i>
-
-            </div>
-
         </div>
 
-    </div>
-
-    <div class="col-lg-4">
-
-        <div class="small-box bg-success shadow">
-
-            <div class="inner">
-
-                <h3>15</h3>
-                <p>Canalizados</p>
-
+            <!-- Tarjeta 2: Alta Prioridad -->
+            <div class="col-md-4">
+                <div 
+                    class="card border-0 text-dark rounded-4 shadow-sm h-100"
+                    style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
+                >
+                    <div class="card-body d-flex align-items-center">
+                    <div 
+                        class="bg-danger-subtle text-danger rounded-circle d-flex align-items-center justify-content-center me-3"
+                        style="width: 50px; height: 50px; flex-shrink: 0;"
+                    >
+                        <i class="fas fa-exclamation-triangle fa-lg"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted fw-semibold d-block">Alta Prioridad</small>
+                        <h4 class="fw-bold mb-0 text-dark">
+                        {{ estadisticas.alta_prioridad }}
+                        </h4>
+                    </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="icon">
-
-                <i class="fas fa-check-circle"></i>
-
+        <!-- Tarjeta 3: Canalizados -->
+        <div class="col-md-4">
+        <div 
+            class="card border-0 text-dark rounded-4 shadow-sm h-100"
+            style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
+        >
+            <div class="card-body d-flex align-items-center">
+            <div 
+                class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center me-3"
+                style="width: 50px; height: 50px; flex-shrink: 0;"
+            >
+                <i class="fas fa-paper-plane fa-lg"></i>
             </div>
-
+            <div>
+                <small class="text-muted fw-semibold d-block">Canalizados</small>
+                <h4 class="fw-bold mb-0 text-dark">
+                {{ estadisticas.canalizados }}
+                </h4>
+            </div>
+            </div>
         </div>
-
-    </div>
-
-</div>
+        </div>
+  </div>
 
 
 
@@ -360,6 +362,9 @@
 </template>
 
 <script>
+
+import ApiService from '../../services/ApiService.js' 
+
 export default {
     name: 'ModalDerivacion',
 
@@ -371,6 +376,11 @@ export default {
 
     data() {
         return {
+            estadisticas: {
+                total_derivaciones: 0,
+                alta_prioridad: 0,
+                canalizados: 0
+            },
             modalVisible: false,
             pasoActual: 0,
             guardando: false,
@@ -432,7 +442,23 @@ export default {
         }
     },
 
+    mounted(){
+
+        this.obtenerEstadisticas();
+
+    },
+
     methods: {
+
+        // Método que consulta el Backend para traer los números
+        async obtenerEstadisticas() {
+            try {
+                const response = await ApiService.get('/derivaciones/estadisticas');
+                this.estadisticas = response.data;
+            } catch (error) {
+                console.error(error);
+            }
+        },
         abrirModal() {
             if (this.pacienteInicial) this.form.paciente = this.pacienteInicial;
             this.modalVisible = true;
