@@ -760,6 +760,30 @@ class ConsultaIAController extends Controller
         // columna.
         $medico = \App\Models\User::find($consulta->user_id);
 
+        // -----------------------------------------------------------
+        // UBICACIÓN / SUCURSAL / LOGO DEL MÉDICO (dinámico, ya no fijo)
+        // -----------------------------------------------------------
+        // consultas.user_id -> users.id -> medicos.user_id ->
+        // configuracion_medico_sucursal -> ubicaciones
+        //
+        // $medico (arriba) es el modelo User que atendió la consulta.
+        // Para llegar a su sucursal/logo hay que ubicar su fila
+        // correspondiente en el catálogo "medicos" y de ahí su(s)
+        // configuración(es) de sucursal.
+        $ubicacion = null;
+
+        if ($medico) {
+            $medicoCatalogo = \App\Models\Medico::with('configuraciones.ubicacion')
+                ->where('user_id', $medico->id)
+                ->first();
+
+            // Si un médico llegara a tener varias sucursales configuradas,
+            // por ahora se toma la primera. Avisar si se necesita elegir
+            // la sucursal exacta de esa consulta en vez de la primera.
+            $ubicacion = optional(optional($medicoCatalogo)->configuraciones)->first()?->ubicacion
+                ?? null;
+        }
+
         // Signos vitales: viven en la tabla triage, ligada por
         // paciente_id. Tomamos el triage MÁS RECIENTE de ese
         // paciente, sin filtrar por fecha contra la consulta,
@@ -772,13 +796,42 @@ class ConsultaIAController extends Controller
         $vista = $tipo === 'receta' ? 'pdf.receta' : 'pdf.diagnostico';
 
         // dompdf necesita la ruta ABSOLUTA de disco de la imagen, no una
-        // URL como '/vendor/adminlte/...': al generar el PDF en el
-        // servidor no hay navegador ni sesión que resuelva esa ruta.
-        // Si el archivo no existe, mandamos null y la vista dibuja un
-        // placeholder (mismo comportamiento que el fallback que tenías
-        // en jsPDF con el "LOGO ERROR").
-        $logoPath = public_path('images/logo.png');
-        $logoPath = file_exists($logoPath) ? $logoPath : null;
+        // URL: al generar el PDF en el servidor no hay navegador ni
+        // sesión que resuelva esa ruta.
+        //
+        // 1) Se intenta primero el logo propio de la ubicación del
+        //    médico (ubicaciones.imagen), que es el dinámico.
+        // 2) Si no existe, se cae al logo genérico de siempre
+        //    (public/images/logo.png), igual que antes.
+        //
+        // AJUSTAR: si ubicaciones.imagen NO se guarda bajo
+        // storage/app/public (disco 'public' con symlink), cambiar
+        // la línea de $rutaCandidata por la ubicación física real.
+        $logoPath = null;
+
+        if ($ubicacion && !empty($ubicacion->imagen)) {
+            // Las imágenes de logo NO usan el disco 'storage' de Laravel;
+            // viven directo en public/personalisarperfil/ (igual que
+            // archivos_clinicos vive en public/archivos_clinicos).
+            //
+            // ubicaciones.imagen puede venir guardado de dos formas según
+            // cómo se subió el archivo:
+            //   a) solo el nombre:              logo-consultorio-dr-basto-2026.jfif
+            //   b) con la carpeta incluida:      personalisarperfil/logo-....jfif
+            // Se soportan ambos casos sin duplicar la carpeta.
+            $valorImagen = ltrim($ubicacion->imagen, '/');
+
+            $rutaCandidata = str_starts_with($valorImagen, 'personalisarperfil/')
+                ? public_path($valorImagen)
+                : public_path('personalisarperfil/' . $valorImagen);
+
+            $logoPath = file_exists($rutaCandidata) ? $rutaCandidata : null;
+        }
+
+        if (!$logoPath) {
+            $logoGenerico = public_path('images/logo.png');
+            $logoPath = file_exists($logoGenerico) ? $logoGenerico : null;
+        }
 
         $pdf = Pdf::loadView($vista, [
             'consulta'   => $consulta,
@@ -786,6 +839,7 @@ class ConsultaIAController extends Controller
             'evaluacion' => $evaluacion,
             'receta'     => $receta,
             'medico'     => $medico,
+            'ubicacion'  => $ubicacion,
             'triage'     => $triage,
             'logoPath'   => $logoPath,
         ]);

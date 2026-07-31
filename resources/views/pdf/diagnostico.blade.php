@@ -180,6 +180,17 @@
 </head>
 <body>
 
+    @php
+        // Datos del consultorio/sucursal del médico que atendió esta
+        // consulta ($ubicacion viene del controlador, ya resuelto por
+        // medico -> configuracion_medico_sucursal -> ubicaciones).
+        // Si el médico no tiene sucursal configurada, se usa el texto
+        // genérico como respaldo para que el documento no salga vacío.
+        $nombreConsultorio = $ubicacion->nombre ?? 'Ultra Farmacia';
+        $direccionConsultorio = $ubicacion->direccion ?? 'Calle Centro';
+        $telefonoConsultorio = $ubicacion->telefono ?? '988 966 5839';
+    @endphp
+
     <table class="header-table">
         <tr>
             <td style="width: 12%;">
@@ -188,11 +199,11 @@
                 @endif
             </td>
             <td style="width: 48%;">
-                {{-- Datos fijos del consultorio --}}
-                <div class="clinica-nombre">Ultra Farmacia</div>
+                {{-- Datos del consultorio: ahora dinámicos según el médico --}}
+                <div class="clinica-nombre">{{ $nombreConsultorio }}</div>
                 <div class="clinica-sub">
-                    Calle Centro<br>
-                    Tel: 988 966 5839
+                    {{ $direccionConsultorio }}<br>
+                    Tel: {{ $telefonoConsultorio }}
                 </div>
             </td>
             <td style="width: 40%;" class="fecha-box">
@@ -206,6 +217,9 @@
     {{-- Médico que atiende la consulta (consultas.user_id) --}}
     <div class="medico-box">
         <div class="medico-nombre">{{ $medico->name ?? 'Médico no asignado' }}</div>
+        @if(!empty($medico->cedula_profesional))
+            <div class="medico-detalle">Céd. Prof. {{ $medico->cedula_profesional }}</div>
+        @endif
         @if(!empty($medico->rol))
             <div class="medico-detalle">{{ ucfirst($medico->rol) }}</div>
         @endif
@@ -300,7 +314,7 @@
     </div>
 
     <p class="footer-nota">
-        Ultra Farmacia &nbsp;·&nbsp; Calle Centro &nbsp;·&nbsp; Tel: 988 966 5839<br>
+        {{ $nombreConsultorio }} &nbsp;·&nbsp; {{ $direccionConsultorio }} &nbsp;·&nbsp; Tel: {{ $telefonoConsultorio }}<br>
         Documento generado como apoyo clínico. No sustituye el criterio ni la firma del médico tratante.
     </p>
 
