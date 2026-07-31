@@ -13,6 +13,7 @@ class Medico extends Model
 
     // Campos exactos de tu base de datos
     protected $fillable = [
+        'user_id',
         'folio',
         'nombre', 
         'cedula_profesional', 
@@ -21,15 +22,18 @@ class Medico extends Model
     ];
 
     // Un médico pertenece a una especialidad
-
     
     public function especialidad()
     {
         return $this->belongsTo(Specialty::class, 'especialidad_id');
         return $this->belongsTo(Especialidad::class);
     }
-
-
+    //Relacion con usuario
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    
+        }
     // Relación con Horarios
     public function horarios()
     {

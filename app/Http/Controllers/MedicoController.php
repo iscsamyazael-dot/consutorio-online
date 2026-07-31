@@ -1,10 +1,11 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Models\Medico;
+use App\Models\User;
 use App\Models\HorarioMedico;
 use App\Models\ConfiguracionMedicoSucursal; 
+use Illuminate\Support\Facades\Hash; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -34,6 +35,10 @@ class MedicoController extends Controller
             // Campos para la nueva tabla de configuración
             'ubicacion_id'       => 'required|exists:ubicaciones,id',
             'costo_consulta'     => 'required|numeric|min:0',
+
+            // NUEVOS CAMPOS: Credenciales del Médico
+            'email'              => 'required|email|unique:users,email',
+            'password'           => 'required|string|min:8',
         ]);
 
         $mapeoDias = [
@@ -45,8 +50,18 @@ class MedicoController extends Controller
         DB::beginTransaction();
 
         try {
+                // Crear el registro en la tabla `users` primero
+            $user = User::create([
+                'name'     => $request->nombre,
+                'email'    => $request->email,
+                'password' => Hash::make($request->password), // Encripta la contraseña de forma segura
+                'role'     => 'medico', // Rol en enum
+                'rol'      => 'medico', // Rol secundario en string
+                'activo'   => 1,
+            ]);
             // 1. Crear el Médico principal (Genera el folio MEDI-2026-XXX en su booted solo)
             $medico = Medico::create([
+                'user_id'            => $user->id,
                 'nombre'             => $request->nombre,
                 'cedula_profesional' => $request->cedula_profesional,
                 'especialidad_id'    => $request->especialidad, 
@@ -243,5 +258,72 @@ class MedicoController extends Controller
         ]);
     }
 
+    //Api (IONIC) para consultar la informacion del medico
+    public function getPerfilMedico(Request $request) {
+        // Obtenemos el ID del usuario autenticado de forma segura
+        $userId = $request->user()->id; 
+
+        $medico = DB::table('users')
+                    ->join('medicos', 'medicos.user_id', '=', 'users.id')
+                    ->select('medicos.folio', 'medicos.nombre')
+                    ->where('users.id', $userId) // Aquí validamos contra el ID del usuario logueado
+                    ->first();
+        
+        return response()->json($medico);
+    }
+
+    public function getMedicoConfiguracion(Request $request) {
+        // 1. Obtenemos el ID del usuario autenticado
+        $userId = $request->user()->id;
+
+        // 2. Ejecutamos la consulta usando ese ID
+        // Usamos DB::select porque tu consulta tiene un GROUP_CONCAT complejo
+        $agenda = DB::select("
+            SELECT 
+                medicos.user_id,
+                medicos.id,
+                medicos.cedula_profesional as cedula, 
+                medicos.folio, 
+                medicos.nombre, 
+                especialidades.nombre as especialidad,
+                CONCAT(horarios_medicos.hora_inicio, '-', horarios_medicos.hora_fin) AS horarios,
+                GROUP_CONCAT(
+                    CASE horarios_medicos.dia_semana 
+                        WHEN 1 THEN 'Lunes' WHEN 2 THEN 'Martes' WHEN 3 THEN 'Miércoles' 
+                        WHEN 4 THEN 'Jueves' WHEN 5 THEN 'Viernes' WHEN 6 THEN 'Sábado' WHEN 7 THEN 'Domingo'
+                    END 
+                    ORDER BY horarios_medicos.dia_semana ASC SEPARATOR ', '
+                ) AS dias_atencion,
+                ubicaciones.nombre AS lugar, 
+                ubicaciones.direccion AS direccion
+            FROM users 
+            JOIN medicos ON medicos.user_id = users.id
+            JOIN especialidades ON especialidades.id = medicos.especialidad_id 
+            JOIN horarios_medicos ON horarios_medicos.medico_id = medicos.id
+            JOIN ubicaciones ON ubicaciones.id = horarios_medicos.ubicacion_id
+            WHERE users.id = ?
+            GROUP BY medicos.cedula_profesional, medicos.folio, medicos.nombre, especialidades.nombre, horarios, lugar, direccion
+        ", [$userId]); // Pasamos el ID de forma segura como parámetro
+
+        // 3. Retornamos el objeto (o null si no hay datos)
+        return response()->json($agenda);
+    }
+
+    public function actualizarEspecialidad(Request $request, $id)
+    {
+        $request->validate([
+            'especialidad_id' => 'required|exists:especialidades,id',
+        ]);
+
+        $medico = Medico::findOrFail($id);
+        $medico->especialidad_id = $request->especialidad_id;
+        $medico->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Especialidad del médico actualizada correctamente',
+            'medico' => $medico,
+        ]);
+    }
 
 }

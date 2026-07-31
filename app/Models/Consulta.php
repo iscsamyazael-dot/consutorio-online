@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\NotaPsoapp;
+
 
 class Consulta extends Model
 {
@@ -63,5 +65,16 @@ class Consulta extends Model
     public function evaluacionIA()
     {
         return $this->belongsTo(EvaluacionIA::class, 'evaluacion_ia_id');
+    }
+
+    public function eventosIA()
+    {
+        return $this->hasMany(EventoIA::class, 'consulta_id');
+    }
+
+    public function notaPsoapp()
+    {
+        return $this->hasOne(NotaPsoapp::class, 'consulta_id');
+         return $this->hasOne(NotaPsoapp::class);
     }
 }

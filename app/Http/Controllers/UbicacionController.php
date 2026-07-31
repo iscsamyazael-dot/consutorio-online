@@ -11,10 +11,9 @@ class UbicacionController extends Controller
 {
     public function index(): JsonResponse
     {
-      $ubicaciones = Ubicacion::orderBy('folio_sucursal', 'asc')->get();// Obtiene todas las ubicaciones ordenadas por folio_sucursal de manera ascendente
-        return response()->json($ubicaciones);// Devuelve todas las ubicaciones ordenadas por folio_sucursal en formato JSON
+        $ubicaciones = Ubicacion::orderBy('folio_sucursal', 'asc')->get();
+        return response()->json($ubicaciones);
     }
-    
 
     public function listar()
     {
@@ -25,19 +24,28 @@ class UbicacionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'folio_sucursal' => ['required', 'string', 'max:20', 'unique:ubicaciones,folio_sucursal'],// Valida que el folio_sucursal sea único en la tabla ubicaciones
-            'nombre' => ['required', 'string', 'max:100'],// Valida que el nombre sea obligatorio, de tipo string y con un máximo de 100 caracteres
-            'direccion' => ['required', 'string', 'max:255'],// Valida que la dirección sea obligatoria, de tipo string y con un máximo de 255 caracteres
-            'horario_apertura' => ['nullable', 'date_format:H:i'],// Valida que el horario de apertura sea opcional y tenga el formato de hora HH:MM
-            'horario_cierre' => ['nullable', 'date_format:H:i'],// Valida que el horario de cierre sea opcional y tenga el formato de hora HH:MM
-            'activo' => ['nullable', 'boolean'],// Valida que el campo activo sea opcional y de tipo booleano
+            'folio_sucursal' => ['required', 'string', 'max:20', 'unique:ubicaciones,folio_sucursal'],
+            'nombre' => ['required', 'string', 'max:100'],
+            'direccion' => ['required', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'horario_apertura' => ['nullable', 'date_format:H:i'],
+            'horario_cierre' => ['nullable', 'date_format:H:i'],
+            'activo' => ['nullable', 'boolean'],
+            'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
+
+        if ($request->hasFile('imagen')) {
+            $validated['imagen'] = $this->guardarImagenLogo(
+                $request->file('imagen'),
+                $validated['nombre']
+            );
+        }
 
         Ubicacion::create($validated);
 
         return redirect()
-            ->route('ubicaciones.index')// Redirige a la ruta de índice de ubicaciones después de crear una nueva ubicación
-            ->with('exito', 'Ubicación registrada correctamente.');// Agrega un mensaje de éxito a la sesión para mostrarlo en la vista
+            ->route('ubicaciones.index')
+            ->with('exito', 'Ubicación registrada correctamente.');
     }
 
     public function update(Request $request, $id): JsonResponse
@@ -45,18 +53,60 @@ class UbicacionController extends Controller
         $ubicacion = Ubicacion::findOrFail($id);
 
         $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:100'],// Valida que el nombre sea obligatorio, de tipo string y con un máximo de 100 caracteres
-            'direccion' => ['required', 'string', 'max:255'],// Valida que la dirección sea obligatoria, de tipo string y con un máximo de 255 caracteres
-            'horario_apertura' => ['nullable', 'date_format:H:i'],// Valida que el horario de apertura sea opcional y tenga el formato de hora HH:MM
-            'horario_cierre' => ['nullable', 'date_format:H:i'],// Valida que el horario de cierre sea opcional y tenga el formato de hora HH:MM
-            'activo' => ['required', 'boolean'],// Valida que el campo activo sea obligatorio y de tipo booleano
+            'nombre' => ['required', 'string', 'max:100'],
+            'direccion' => ['required', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:20'],
+            'horario_apertura' => ['nullable', 'date_format:H:i'],
+            'horario_cierre' => ['nullable', 'date_format:H:i'],
+            'activo' => ['required', 'boolean'],
+            'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
-        $ubicacion->update($validated);// Actualiza la ubicación con los datos validados del formulario
+        if ($request->hasFile('imagen')) {
+            // Borra el logo anterior del disco, si existía, antes de guardar el nuevo
+            if ($ubicacion->imagen) {
+                $rutaAnterior = public_path('personalisarperfil/' . $ubicacion->imagen);
+                if (file_exists($rutaAnterior)) {
+                    @unlink($rutaAnterior);
+                }
+            }
+
+            $validated['imagen'] = $this->guardarImagenLogo(
+                $request->file('imagen'),
+                $validated['nombre']
+            );
+        }
+
+        $ubicacion->update($validated);
 
         return response()->json([
-            'message' => 'Ubicación actualizada correctamente.',// Devuelve un mensaje de éxito en formato JSON
+            'message' => 'Ubicación actualizada correctamente.',
             'data' => $ubicacion
         ]);
     }
+
+    /**
+     * Guarda el logo subido en public/personalisarperfil con un nombre único
+     * y devuelve solo el nombre del archivo (lo que se guarda en la columna
+     * `imagen` de la tabla ubicaciones).
+     */
+    private function guardarImagenLogo($archivo, string $nombreSucursal): string
+{
+    $destino = public_path('personalisarperfil');
+
+    if (!file_exists($destino)) {
+        mkdir($destino, 0755, true);
+    }
+
+    // Convierte el nombre a un formato seguro
+    $slug = strtolower($nombreSucursal);
+    $slug = preg_replace('/[^a-z0-9]+/i', '-', $slug);
+    $slug = trim($slug, '-');
+
+    $nombreArchivo = 'logo-' . $slug . '-' . date('Y') . '.' . $archivo->getClientOriginalExtension();
+
+    $archivo->move($destino, $nombreArchivo);
+
+    return $nombreArchivo;
+}
 }

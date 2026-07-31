@@ -571,6 +571,7 @@ MODAL VER ARCHIVO CLINICO
                     <div class="col-12">
                         <div class="bg-white rounded-4 shadow-sm p-5 text-center">
                              
+                            <!-- función que trae el ícono de acuerdo al tipo de documento -->
                             <i
                                 :class="obtenerIcono(detallearchivo?.archivo_url)"
                                 style="font-size:70px;"
@@ -600,31 +601,34 @@ MODAL VER ARCHIVO CLINICO
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Vista De Los Arcchivos Clínicos</h5>
+                <h5 class="modal-title">Vista De Los Archivos Clínicos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
             <div class="modal-body">
                 <img
-                    v-if="archivoSeleccionado && esImagen(archivoSeleccionado)"
+                    v-if="archivoSeleccionado && esImagen()"
                     :src="archivoSeleccionado"
                     class="img-fluid">
                 <iframe
-                    v-else
+                    v-else-if="archivoSeleccionado && esPDF()"
                     :src="archivoSeleccionado"
                     width="100%"
                     height="700"
                     frameborder="0"
                 ></iframe>
+                <div v-else-if="archivoSeleccionado" class="text-center p-5">
+                    <i class="fas fa-file-alt text-secondary mb-3" style="font-size:60px;"></i>
+                    <p>Este tipo de archivo no se puede previsualizar en el navegador.</p>
+                    <a :href="archivoSeleccionado" class="btn btn-primary" target="_blank" download>
+                        <i class="fas fa-download me-2"></i>Descargar archivo
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 <!--Aqui termina el modal para ver los archivos-->
-
-
-
-
 
 </template>
 
@@ -642,7 +646,8 @@ export default {
             listaArchivos: [],
             filtrar: [],
             buscar:'', 
-            archivoSeleccionado: {},
+            archivoSeleccionado: '',
+            archivoExtension: '',
             form: {
                 paciente_id: '',
                 codigo_paciente: '',
@@ -817,7 +822,55 @@ export default {
         verArchivoClinico(data) {
             this.archivoSeleccionado = data
             
-        }
+        },
+
+        //Función para determinar que tipo de archivo se mostrara mediante un modal//
+        //  Corrección: los archivos que vienen del chat de Consulta IA tienen
+        //  consulta_id y viven en el disco privado 'local', así que hay que
+        //  pasar por la ruta de descarga del backend (consultaIA.descargarArchivo).
+        //  Los subidos manualmente (sin consulta_id) viven en public/archivos_clinicos
+        //  y se sirven con una URL directa.
+        //  Además: la extensión real se saca de archivo_url (nombre guardado en BD),
+        //  no de la URL final mostrada, porque la ruta de descarga no trae extensión.
+        
+        verArchivo(documentos){
+            if (!documentos || !documentos.archivo_url) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin archivo',
+                    text: 'Este registro no tiene archivo asociado.'
+                });
+                return;
+            }
+
+            const baseURL = document
+                .querySelector('meta[name="base-url"]')
+                .getAttribute('content');
+            const base = baseURL.replace(/\/$/, '');
+
+            this.archivoExtension = documentos.archivo_url.split('.').pop().toLowerCase();
+
+            if (documentos.consulta_id) {
+                // Viene del chat de Consulta IA: disco privado 'local',
+                // hay que pasar por la ruta de descarga del backend.
+                this.archivoSeleccionado = `${base}/consultaIA/archivo/${documentos.id}/descargar`;
+            } else {
+                // Subido manualmente: disco público, URL directa.
+                let ruta = documentos.archivo_url;
+                ruta = ruta.startsWith('/') ? ruta : '/' + ruta;
+                this.archivoSeleccionado = base + ruta;
+            }
+
+            console.log('URL del archivo a mostrar:', this.archivoSeleccionado);
+
+            $('#modalArchivo').modal('show')
+        },
+        esImagen(){
+            return ['jpg','jpeg','png','gif','webp'].includes(this.archivoExtension)
+        },
+        esPDF(){
+            return this.archivoExtension === 'pdf'
+        },
 
     },
 

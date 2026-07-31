@@ -76,6 +76,7 @@
             <select
                 class="form-control"
                 v-model="especialidadSeleccionada"
+                :disabled="guardando"
             >
                 <option
                     v-for="esp in especialidades"
@@ -86,12 +87,27 @@
                 </option>
             </select>
 
+            <div
+                v-if="errorGuardado"
+                class="alert alert-danger py-1 px-2 small mt-2 mb-0"
+            >
+                ⚠️ No se pudo guardar la derivación. Intenta nuevamente.
+            </div>
+
+            <div
+                v-if="derivacionGuardada"
+                class="alert alert-success py-1 px-2 small mt-2 mb-0"
+            >
+                ✅ Derivación guardada correctamente.
+            </div>
+
             <button
                 class="btn btn-warning btn-block mt-3"
-                :disabled="!especialidadSeleccionada"
+                :disabled="!especialidadSeleccionada || guardando || derivacionGuardada"
                 @click="derivarPaciente"
             >
-                Derivar paciente
+                <i v-if="guardando" class="fas fa-spinner fa-spin mr-1"></i>
+                {{ guardando ? 'Guardando...' : 'Derivar paciente' }}
             </button>
 
         </div>
@@ -109,6 +125,17 @@ export default {
         sintomas: {
             type: Array,
             default: () => []
+        },
+        // id de la consulta actual (Consulta.id); requerido para armar
+        // la URL de guardado: consultaIA/{consultaId}/derivar
+        consultaId: {
+            type: [Number, String],
+            required: true
+        },
+        // hospital al que se deriva (opcional, si ya lo manejas en otra parte del flujo)
+        hospital: {
+            type: String,
+            default: null
         }
     },
 
@@ -123,7 +150,12 @@ export default {
             motivoDerivacionIA: null,
             requiereUrgencias: false,
             cargando: false,
-            error: false
+            error: false,
+
+            // estado del guardado
+            guardando: false,
+            errorGuardado: false,
+            derivacionGuardada: false
         }
     },
 
@@ -137,6 +169,26 @@ export default {
                 case 'VERDE': return 'badge-success'
                 default: return 'badge-secondary'
             }
+        },
+
+        // Arma el texto que se guarda en el campo "motivo"
+        motivoParaGuardar() {
+            const partes = []
+
+            if (this.triage && this.triage.nivel) {
+                partes.push(`Triage: ${this.triage.nivel}.`)
+            }
+            if (this.triage && this.triage.justificacion) {
+                partes.push(this.triage.justificacion)
+            }
+            if (this.diagnosticosProbables.length > 0) {
+                partes.push(`Diagnósticos probables (IA): ${this.diagnosticosProbables.join(', ')}.`)
+            }
+            if (this.motivoDerivacionIA) {
+                partes.push(this.motivoDerivacionIA)
+            }
+
+            return partes.join(' ')
         }
     },
 
@@ -186,16 +238,34 @@ export default {
             }
         },
 
-        derivarPaciente() {
-            if (!this.especialidadSeleccionada) return
+        async derivarPaciente() {
+            if (!this.especialidadSeleccionada || this.guardando) return
 
-            const especialidad = this.especialidades.find(
-                e => e.id === this.especialidadSeleccionada
-            )
+            this.guardando = true
+            this.errorGuardado = false
 
-            // Por ahora solo emitimos el evento; falta conectar
-            // al endpoint real de derivación/citas cuando lo tengas definido
-            this.$emit('derivar', especialidad)
+            try {
+                const urlDerivar = `${route}/consultaIA/${this.consultaId}/derivar`
+
+                const response = await axios.post(urlDerivar, {
+                    especialidad_id: this.especialidadSeleccionada,
+                    hospital: this.hospital,
+                    motivo: this.motivoParaGuardar
+                })
+
+                if (response.data.success) {
+                    this.derivacionGuardada = true
+                    this.$emit('derivar', response.data.derivacion)
+                } else {
+                    this.errorGuardado = true
+                }
+
+            } catch (err) {
+                console.error('Error al guardar la derivación:', err)
+                this.errorGuardado = true
+            } finally {
+                this.guardando = false
+            }
         }
     }
 }

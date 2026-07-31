@@ -16,4 +16,21 @@ class Derivacion extends Model
         'prioridad',
         'estado',
     ];
+
+        
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function consulta()
+    {
+        return $this->belongsTo(Consulta::class);
+    }
+
+    public function especialidad()
+    {
+        return $this->belongsTo(Specialty::class, 'especialidad_id');
+    }
 }

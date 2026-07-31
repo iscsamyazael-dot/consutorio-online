@@ -6,7 +6,6 @@ import 'admin-lte';
 import { createApp } from 'vue';
 // Componentes - Medicamentos
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
-import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
 // Componentes - Consulta Inteligente
 import ConsultaInteligente from './components/consultaIA/ConsultaInteligente.vue'
 // Componentes - Atención Médica
@@ -29,7 +28,10 @@ import centroconsultas from './components/consultas/mastercentro.vue'
 import Historialreceta from './components/recetass/PanelRecetas.vue'
 // Módulo de especialidades
 import Especialidades from './components/Especialidades/Especialidades.vue'
-// Módulo de alta de médicos
+//Modulo de inventario de medicamentos
+import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
+
+//MODULO DE ALTA MEDICOS
 import AltaMedicos from './components/medicos-alta/PanelMedicos.vue'
 import RegistroMedico from './components/medicos-alta/PanelRegistro.vue'
 // Módulo de agenda
@@ -39,6 +41,9 @@ import masterprocita from './components/citasmedicas/masterprograma.vue'
 import ConfiSistema from './components/configuracion-sistema/ConfiSistema.vue'
 import PanelContraseña from './components/configuracion-sistema/PanelContraseña.vue'
 // Módulo de ubicaciones
+import PanelTabla from './components/configuracion-sistema/PanelTabla.vue'
+//Modulo de registro de usuario 
+import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
 import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
 
 // ------------------------------------------------------
@@ -71,7 +76,11 @@ app.component('pacientes-index', PacientesIndex);
 app.component('recetass-historial', Historialreceta);
 app.component('configuracion-sistema', ConfiSistema);
 app.component('configuracion-sistema-panelcontrasena', PanelContraseña);
-// Montaje de la app
+app.component('registro-usuario', RegistrarUsuario);
+app.component('panel-tabla', PanelTabla);
+    
+
+// 3. MONTAJE DE LA APP
 app.mount('#app');
 
 // ------------------------------------------------------
