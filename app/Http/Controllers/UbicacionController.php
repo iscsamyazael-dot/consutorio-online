@@ -71,7 +71,10 @@ class UbicacionController extends Controller
                 }
             }
 
-            $validated['imagen'] = $this->guardarImagenLogo($request->file('imagen'));
+            $validated['imagen'] = $this->guardarImagenLogo(
+                $request->file('imagen'),
+                $validated['nombre']
+            );
         }
 
         $ubicacion->update($validated);
