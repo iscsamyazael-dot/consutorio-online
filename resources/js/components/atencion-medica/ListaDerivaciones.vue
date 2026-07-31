@@ -5,9 +5,6 @@
         <i class="fas fa-share-square text-primary me-2"></i>
         Derivaciones Médicas
       </h5>
-      <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">
-        Consulta ID: {{ consultaId }}
-      </span>
     </div>
 
     <!-- Carga -->
@@ -41,15 +38,34 @@
             
             <td>
               <span class="badge bg-info-subtle text-info px-2 py-1 rounded-3">
-                <i class="fas fa-stethoscope me-1"></i>{{ item.especialidad }}
+                <i class="fas fa-stethoscope me-1 p-1"></i>{{ item.especialidad }}
               </span>
             </td>
 
             <td class="text-secondary">{{ item.hospital || 'N/A' }}</td>
 
             <!-- Motivo limpio sin la frase "triage" -->
-            <td class="text-wrap" style="max-width: 250px;">
-              {{ item.motivo }}
+            <td style="max-width:320px;">
+                <div class="motivo-preview">
+                    {{ item.motivo }}
+                </div>
+
+                <button
+                    v-if="item.motivo"
+                    class="btn btn-link btn-sm p-0 mt-1"
+                    @click="verMotivo(item)">
+                    <i class="fas fa-eye me-1"></i> Ver más
+                </button>
+
+                <div
+                    v-else
+                    class="alert alert-danger d-inline-flex align-items-center py-1 px-2 mb-0 small"
+                    role="alert">
+
+                    <i class="fas fa-exclamation-triangle me-2 p-1"></i>
+                    SIN MOTIVO
+
+                </div>
             </td>
 
             <!-- Prioridad detectada -->
@@ -71,64 +87,184 @@
       </table>
     </div>
   </div>
+
+  <!--MODAL VER MOTIVO-->
+    <div
+        class="modal fade"
+        id="modalMotivo"
+        tabindex="-1"
+        aria-labelledby="modalMotivoLabel"
+        aria-hidden="true">
+
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalMotivoLabel">
+                        <i class="fas fa-file-medical me-2"></i>
+                        Motivo de la Derivación
+                    </h5>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <strong>Paciente: </strong>
+                        <span>{{ motivoSeleccionado.paciente }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Especialidad: </strong>
+                        <span>{{ motivoSeleccionado.especialidad }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Prioridad: </strong>
+
+                        <span
+                            :class="['badge rounded-pill px-3 py-2', getPrioridadBadge(motivoSeleccionado.prioridad)]">
+
+                            {{ motivoSeleccionado.prioridad?.toUpperCase() }}
+
+                        </span>
+                    </div>
+
+                    <hr>
+
+                    <label class="fw-bold mb-2">
+                        Motivo
+                    </label>
+
+                    <div
+                        class="border rounded-3 p-3 bg-light"
+                        style="white-space: pre-line; line-height:1.7">
+
+                        {{ motivoSeleccionado.motivo }}
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+
+                        Cerrar
+
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import ApiService from '../../services/ApiService.js' 
+<script>
+import * as bootstrap from 'bootstrap'
+import ApiService from '../../services/ApiService.js'
 
-const props = defineProps({
-  consultaId: { type: [Number, String], default: 516 }
-})
+export default {
+  props: {
+    consultaId: {
+      type: [Number, String],
+      default: 516
+    }
+  },
 
-const derivaciones = ref([])
-const loading = ref(true)
+  data() {
+    return {
+      derivaciones: [],
+      loading: true,
+      motivoSeleccionado: {}
+    }
+  },
 
-const obtenerDerivaciones = async () => {
-  loading.value = true
-  try {
-    // Petición usando tu ApiService
-    const response = await ApiService.get(`derivaciones/consulta/${props.consultaId}`)
-    
-    // Si ApiService retorna la respuesta en .data o directa:
-    derivaciones.value = response.data || response
-  } catch (error) {
-    console.error('Error al cargar derivaciones:', error)
-  } finally {
-    loading.value = false
+  mounted() {
+    this.obtenerDerivaciones()
+  },
+
+  methods: {
+    async obtenerDerivaciones() {
+      this.loading = true
+
+      try {
+        const response = await ApiService.get('/derivaciones')
+        this.derivaciones = response.data
+      } catch (error) {
+        console.error('Error al cargar derivaciones:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    getPrioridadBadge(prioridad) {
+      switch (prioridad) {
+        case 'baja':
+          return 'bg-success-subtle text-success border border-success-subtle'
+        case 'media':
+          return 'bg-warning-subtle text-warning border border-warning-subtle'
+        case 'alta':
+          return 'bg-orange-subtle text-orange border border-orange-subtle' // O 'bg-warning text-dark'
+        case 'critica':
+          return 'bg-danger text-white font-weight-bold shadow-sm'
+        default:
+          return 'bg-secondary-subtle text-secondary'
+      }
+    },
+
+    getPrioridadIcon(prioridad) {
+      switch (prioridad) {
+        case 'baja':
+          return 'fas fa-arrow-down'
+        case 'media':
+          return 'fas fa-minus'
+        case 'alta':
+          return 'fas fa-exclamation-triangle' // Advertencia/Riesgo alto
+        case 'critica':
+          return 'fas fa-radiation' // O 'fas fa-fire' / 'fas fa-skull-crossbones' / 'fas fa-ban'
+        default:
+          return 'fas fa-circle'
+      }
+    },
+
+    getEstadoBadge(estado) {
+      switch (estado) {
+        case 'pendiente':
+          return 'bg-warning text-dark'
+        case 'enviado':
+          return 'bg-primary text-white'
+        case 'atendido':
+          return 'bg-success text-white'
+        default:
+          return 'bg-secondary text-white'
+      }
+    },
+
+    verMotivo(item) {
+
+        this.motivoSeleccionado = item
+
+        const modal = new bootstrap.Modal(
+            document.getElementById('modalMotivo')
+        )
+
+        modal.show()
+
+    },
   }
 }
-
-// Estilos de Prioridad
-const getPrioridadBadge = (prioridad) => {
-  switch (prioridad) {
-    case 'baja': return 'bg-success-subtle text-success border border-success-subtle'
-    case 'media': return 'bg-warning-subtle text-warning border border-warning-subtle'
-    case 'alta': return 'bg-danger-subtle text-danger border border-danger-subtle'
-    default: return 'bg-secondary-subtle text-secondary'
-  }
-}
-
-const getPrioridadIcon = (prioridad) => {
-  switch (prioridad) {
-    case 'baja': return 'fas fa-arrow-down'
-    case 'media': return 'fas fa-minus'
-    case 'alta': return 'fas fa-exclamation-triangle'
-    default: return 'fas fa-circle'
-  }
-}
-
-// Estilos de Estado
-const getEstadoBadge = (estado) => {
-  switch (estado) {
-    case 'pendiente': return 'bg-warning text-dark'
-    case 'enviado': return 'bg-primary text-white'
-    case 'atendido': return 'bg-success text-white'
-    default: return 'bg-secondary text-white'
-  }
-}
-
-onMounted(() => {
-  obtenerDerivaciones()
-})
 </script>
+
+<style>
+.motivo-preview{
+display:-webkit-box;
+-webkit-line-clamp:2;
+-webkit-box-orient:vertical;
+overflow:hidden;
+text-overflow:ellipsis;
+}
+</style>

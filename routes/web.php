@@ -46,11 +46,13 @@ Route::middleware('auth')->group(function () {
 
 
         ///*** RUTAS PARA LAS APIS Y CONSUMO DE DATOS */
+        //Ruta para obtener estadisticas de las cartas de derivacion
         Route::get('/derivaciones/estadisticas', [DerivacionController::class, 'obtenerEstadisticas']);
         //Ruta API que obtiene las estadisicas de las cartas
         // Route::get('derivaciones/estadisticas/{consulta_id}', [DerivacionController::class, 'getEstadisticasDerivaciones']);
         // Ruta API que obtiene la consulta completa de derivaciones
-        Route::get('/derivaciones/consulta/{consulta_id}', [DerivacionController::class, 'getDerivacionesByConsulta']);
+        //RUTA QUE OBTIENE TODAS LAS DERIVACIONES 
+        Route::get('/derivaciones', [DerivacionController::class, 'index']);
         Route::get('medicoEstadistica', [MedicoController::class, 'obtenerEstadisticas']);
         Route::get('listaUbicaciones', [UbicacionController::class, 'listar']);
         Route::get('/api/especialidades', [SpecialtyController::class, 'list']); 

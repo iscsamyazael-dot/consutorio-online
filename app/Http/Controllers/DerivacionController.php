@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\DB;
 
 class DerivacionController extends Controller
 {
-    public function getDerivacionesByConsulta($consulta_id)
+
+   
+    public function index()
     {
         $derivaciones = DB::table('derivaciones')
             ->join('consultas', 'derivaciones.consulta_id', '=', 'consultas.id')
             ->join('pacientes', 'consultas.paciente_id', '=', 'pacientes.id')
             ->join('especialidades', 'derivaciones.especialidad_id', '=', 'especialidades.id')
-            ->where('derivaciones.consulta_id', $consulta_id)
             ->select(
                 'derivaciones.id',
                 'pacientes.nombre as paciente',
@@ -24,24 +25,22 @@ class DerivacionController extends Controller
                 'derivaciones.estado',
                 'derivaciones.created_at'
             )
+            ->orderByDesc('derivaciones.created_at')
             ->get();
 
-        // Mapeamos para limpiar el motivo y asignar la prioridad basada en el texto
         $resultado = $derivaciones->map(function ($item) {
             $motivo = $item->motivo;
-            $prioridadCalculada = $item->prioridad; // Valor por defecto en la BD ('media')
+            $prioridadCalculada = $item->prioridad;
 
-            // Detectamos si contiene algún patrón de triage en el texto (ej: "triage: AMARILLO")
-            if (preg_match('/triage:\s*(VERDE|AMARILLO|ROJO)/i', $motivo, $matches)) {
+            if (preg_match('/triage:\s*(VERDE|AMARILLO|NARANJA|ROJO)/i', $motivo, $matches)) {
                 $color = strtoupper($matches[1]);
 
-                // Asignamos prioridad según el color del triage
                 if ($color === 'VERDE') $prioridadCalculada = 'baja';
                 if ($color === 'AMARILLO') $prioridadCalculada = 'media';
-                if ($color === 'ROJO') $prioridadCalculada = 'alta';
+                if ($color === 'NARANJA') $prioridadCalculada = 'alta';
+                if ($color === 'ROJO') $prioridadCalculada = 'critica';
 
-                // Eliminamos la frase del motivo para que quede limpio
-                $motivo = preg_replace('/triage:\s*(VERDE|AMARILLO|ROJO)[\s,-]*/i', '', $motivo);
+                $motivo = preg_replace('/triage:\s*(VERDE|AMARILLO|NARANJA|ROJO)\s*[\.\:\,\-]?\s*/i','',$motivo);
             }
 
             return [
@@ -49,14 +48,15 @@ class DerivacionController extends Controller
                 'paciente'     => $item->paciente,
                 'especialidad' => $item->especialidad,
                 'hospital'     => $item->hospital,
-                'motivo'       => trim($motivo), // Motivo sin la palabra "triage: ..."
-                'prioridad'    => $prioridadCalculada, // 'baja', 'media' o 'alta'
+                'motivo'       => trim($motivo),
+                'prioridad'    => $prioridadCalculada,
                 'estado'       => $item->estado,
             ];
         });
 
         return response()->json($resultado);
     }
+
 
     public function obtenerEstadisticas()
     {
