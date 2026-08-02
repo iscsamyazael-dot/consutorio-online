@@ -362,10 +362,11 @@
                 <div
                   class="row-avatar"
                   :class="{ 'row-avatar--inactive': !u.activo }"
-                  :style="u.activo ? { background: avatarColor(u.nombre).bg, color: avatarColor(u.nombre).fg } : {}"
+                  :style="!u.imagen && u.activo ? { background: avatarColor(u.nombre).bg, color: avatarColor(u.nombre).fg } : {}"
                   :title="u.nombre"
                 >
-                  {{ inicial(u.nombre) }}
+                  <img v-if="u.imagen" :src="logoUrl(u.imagen)" :alt="u.nombre" class="row-avatar-img" />
+                  <span v-else>{{ inicial(u.nombre) }}</span>
                 </div>
                 <div class="cell-nombre-info">
                   <span class="cell-nombre">{{ u.nombre }}</span>
@@ -488,7 +489,12 @@
                   accept="image/png, image/jpeg, image/webp"
                   @change="onImagenEdicionSeleccionada"
                 />
-                <img v-if="edicionImagenPreview" :src="edicionImagenPreview" class="logo-preview" alt="Vista previa del logo" />
+                <img
+                  v-if="edicionImagenPreview || ubicacionEditando.imagen"
+                  :src="edicionImagenPreview || logoUrl(ubicacionEditando.imagen)"
+                  class="logo-preview"
+                  alt="Vista previa del logo"
+                />
               </div>
 
               <div class="field-row">
@@ -859,9 +865,11 @@ export default {
       }
 
       try {
-        await ApiService.post('/ubicaciones', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        // No se pasa el header 'Content-Type' manualmente: el interceptor de
+        // ApiService detecta el FormData y deja que el navegador arme el
+        // boundary correcto (multipart/form-data; boundary=...). Si se fuerza
+        // el header aquí, Laravel no puede parsear el archivo.
+        await ApiService.post('/ubicaciones', formData);
         this.mostrarModalConfirmacion('success', '¡Sucursal agregada!', `"${this.form.nombre}" se guardó correctamente.`);
         this.form = { nombre: '', direccion: '', horario_apertura: '', horario_cierre: '' };
         this.imagenArchivo = null;
@@ -920,9 +928,10 @@ export default {
       }
 
       try {
-        await ApiService.post(`/ubicaciones/${this.ubicacionEditando.id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        // Igual que en guardarUbicacion: sin forzar 'Content-Type' a mano,
+        // el interceptor de ApiService deja que el navegador ponga el
+        // boundary correcto para que $request->hasFile('imagen') funcione.
+        await ApiService.post(`/ubicaciones/${this.ubicacionEditando.id}`, formData);
         this.cerrarEdicion();
         this.edicionImagenArchivo = null;
         this.edicionImagenPreview = null;
@@ -1806,6 +1815,14 @@ export default {
   font-size: 13px;
   font-weight: 700;
   transition: transform 0.15s ease;
+  overflow: hidden;
+}
+
+.row-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 9px;
+  object-fit: cover;
 }
 
 .ubicaciones-table tbody tr:hover .row-avatar {
