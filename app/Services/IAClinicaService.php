@@ -25,7 +25,7 @@ class IAClinicaService
      * mitad y json_decode() devuelve null, cayendo en "No se pudo
      * determinar" aunque el texto de entrada sea perfectamente válido.
      */
-    private const MAX_TOKENS_ANALISIS = 30000;
+   /*  private const MAX_TOKENS_ANALISIS = 30000; */
     private const MAX_TOKENS_ENTRADA = 20000;
 
     /**
