@@ -26,6 +26,7 @@ class IAClinicaService
      * determinar" aunque el texto de entrada sea perfectamente válido.
      */
     private const MAX_TOKENS_ANALISIS = 30000;
+    private const MAX_TOKENS_ENTRADA = 20000;
 
     /**
      * Analiza una transcripción médica
@@ -36,6 +37,22 @@ class IAClinicaService
         array $historial = [],
         $ultimaNota = null
     ) {
+        // --- CONTROL DE TOKENS DE ENTRADA ---
+        if (!empty($historial)) {
+            // Tomamos los registros más recientes
+            $historial = array_slice($historial, -5);
+            $historialTexto = implode("\n", $historial);
+            
+            // Si el texto acumulado supera el límite seguro de caracteres basados en MAX_TOKENS_ENTRADA 
+            // (aprox 4 caracteres por token), recortamos el exceso.
+            $limiteCaracteres = self::MAX_TOKENS_ENTRADA * 4;
+            if (mb_strlen($historialTexto) > $limiteCaracteres) {
+                // Nos quedamos con los últimos caracteres permitidos
+                $historialTexto = mb_substr($historialTexto, -$limiteCaracteres);
+                // Opcional: reasignamos como un bloque de texto plano limitado
+                $historial = [$historialTexto]; 
+            }
+        }
         $data = $this->consultarIA(
             $texto,
             $historial,
@@ -157,15 +174,29 @@ class IAClinicaService
             $alertasDetectadas = [$alertaBaja];
         }
 
+        // FIX: antes se usaba `$data['recomendacion'] ?? 'Sin recomendación'`.
+        // El operador `??` solo cubre null/clave inexistente, NO cadenas vacías.
+        // Si la IA devolvía 'recomendacion' => '' (string vacío, algo que
+        // ocurre porque el prompt sí permite dejar vacío un campo similar,
+        // 'recomendaciones_generales', en la Fase 6B), el resultado final era
+        // 'recomendaciones' => [''] -> un array con un elemento vacío, que
+        // pasaba la validación del frontend (Array.isArray && length > 0) y
+        // se renderizaba como un <li> en blanco, dejando la caja vacía.
+        // Ahora se valida explícitamente que el texto no esté vacío/solo
+        // espacios antes de usarlo, y si lo está, se usa el fallback.
+        $recomendacionTexto = trim((string) ($data['recomendacion'] ?? ''));
+        $recomendacionFinal = $recomendacionTexto !== '' ? $recomendacionTexto : 'Sin recomendación';
+
         return [
             'diagnostico_probable' => $data['diagnostico'] ?? 'No determinado',
             'nivel_riesgo' => $nivelRiesgo,
-            'recomendaciones' => [$data['recomendacion'] ?? 'Sin recomendación'],
+            'recomendaciones' => [$recomendacionFinal],
             'indicaciones_medico' => $data['indicaciones_medico'] ?? null,
             'confianza' => $data['confianza'] ?? null,
             'sintomas' => $data['sintomas'] ?? [],
             'alertas' => $alertasDetectadas,
             'nota_psoapp' => $notaPsoapp,
+            'debug_usage' => $data['debug_usage'] ?? null,
         ];
     }
 
@@ -230,7 +261,9 @@ class IAClinicaService
      * @return array{estado: string, nivel_urgencia: string}
      */
     public function clasificarTriage(?string $motivoConsulta, ?string $sintomas = null): array
-    {
+    {   
+        // Forzamos el límite de ejecución de PHP para evitar cortes inesperados
+        set_time_limit(300);
         $motivoConsulta = trim((string) $motivoConsulta);
 
         if ($motivoConsulta === '') {
@@ -280,7 +313,7 @@ class IAClinicaService
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
-                    'max_tokens' => self::MAX_TOKENS_ANALISIS,
+                   // 'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
 
             if (!$response->successful()) {
@@ -427,6 +460,7 @@ class IAClinicaService
      */
     public function sugerirMedicamentoLibre(array $sintomas, array $especialidadesDisponibles = [])
     {
+        set_time_limit(300);
         $textoSintomas = implode(', ', $sintomas);
 
         $textoEspecialidades = !empty($especialidadesDisponibles)
@@ -807,7 +841,7 @@ class IAClinicaService
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
-                    'max_tokens' => self::MAX_TOKENS_ANALISIS,
+                    //'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
 
             if (!$response->successful()) {
@@ -833,11 +867,17 @@ class IAClinicaService
         $texto,
         array $historial = [],
         $ultimaNota = null
-    ) {
+    ) 
+    { // Forzamos el límite de ejecución de PHP para evitar cortes inesperados
+        set_time_limit(300);
         $historialTexto = '';
 
         if (!empty($historial)) {
             $historialTexto = implode("\n\n--- REGISTRO ANTERIOR ---\n\n", $historial);
+            // Opcional: Validar longitud de caracteres aproximada si el texto de entrada es masivo
+            if (mb_strlen($historialTexto) > (self::MAX_TOKENS_ENTRADA * 4)) {
+                $historialTexto = mb_substr($historialTexto, -(self::MAX_TOKENS_ENTRADA * 4));
+            }
         }
 
         $notaAnteriorTexto = '';
@@ -1334,7 +1374,7 @@ PRONÓSTICO ANTERIOR:
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
-                    'max_tokens' => self::MAX_TOKENS_ANALISIS,
+                    //'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
 
             if (!$response->successful()) {
@@ -1382,6 +1422,16 @@ PRONÓSTICO ANTERIOR:
             ]);
             return null;
         }
+
+        // FIX: el uso de tokens (prompt/completion/total) viene en el
+        // bloque "usage" de la respuesta HTTP de DeepSeek, NO dentro del
+        // JSON que genera el modelo — nunca se le pidió a la IA que lo
+        // incluyera en su propio JSON de salida (ver esquema de la Fase 8/9
+        // de cada prompt: no existe una clave "debug_usage" ahí). Lo
+        // agregamos aquí para que $data['debug_usage'] exista y viaje
+        // correctamente hasta analizarTranscripcion() -> el controlador
+        // -> el frontend.
+        $data['debug_usage'] = $response->json('usage');
 
         return $data;
     }
