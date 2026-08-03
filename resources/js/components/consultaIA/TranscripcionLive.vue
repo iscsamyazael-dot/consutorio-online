@@ -477,6 +477,7 @@ export default {
                             sintomas: this.sintomas
                         }
                     )
+                    console.log('Uso de tokens IA:', response.data.ia_data?.debug_usage)
 
                     if(response.data.success) {
 
@@ -601,7 +602,7 @@ export default {
                 const response = await axios.post(urlArchivoIA, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 })
-
+                console.log('Uso de tokens IA (archivo):', response.data.ia_data?.debug_usage)
                 if (response.data.success) {
 
                     const sintomasNuevos = response.data.ia_data?.sintomas || []
