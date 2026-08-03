@@ -25,8 +25,8 @@ class IAClinicaService
      * mitad y json_decode() devuelve null, cayendo en "No se pudo
      * determinar" aunque el texto de entrada sea perfectamente válido.
      */
-    private const MAX_TOKENS_ANALISIS = 8000;
-    private const MAX_TOKENS_ENTRADA = 6000;
+    private const MAX_TOKENS_ANALISIS = 30000;
+    private const MAX_TOKENS_ENTRADA = 20000;
 
     /**
      * Analiza una transcripción médica
@@ -54,6 +54,7 @@ class IAClinicaService
             }
         }
         // ------------------------------------
+        
         $data = $this->consultarIA(
             $texto,
             $historial,
@@ -175,15 +176,29 @@ class IAClinicaService
             $alertasDetectadas = [$alertaBaja];
         }
 
+        // FIX: antes se usaba `$data['recomendacion'] ?? 'Sin recomendación'`.
+        // El operador `??` solo cubre null/clave inexistente, NO cadenas vacías.
+        // Si la IA devolvía 'recomendacion' => '' (string vacío, algo que
+        // ocurre porque el prompt sí permite dejar vacío un campo similar,
+        // 'recomendaciones_generales', en la Fase 6B), el resultado final era
+        // 'recomendaciones' => [''] -> un array con un elemento vacío, que
+        // pasaba la validación del frontend (Array.isArray && length > 0) y
+        // se renderizaba como un <li> en blanco, dejando la caja vacía.
+        // Ahora se valida explícitamente que el texto no esté vacío/solo
+        // espacios antes de usarlo, y si lo está, se usa el fallback.
+        $recomendacionTexto = trim((string) ($data['recomendacion'] ?? ''));
+        $recomendacionFinal = $recomendacionTexto !== '' ? $recomendacionTexto : 'Sin recomendación';
+
         return [
             'diagnostico_probable' => $data['diagnostico'] ?? 'No determinado',
             'nivel_riesgo' => $nivelRiesgo,
-            'recomendaciones' => [$data['recomendacion'] ?? 'Sin recomendación'],
+            'recomendaciones' => [$recomendacionFinal],
             'indicaciones_medico' => $data['indicaciones_medico'] ?? null,
             'confianza' => $data['confianza'] ?? null,
             'sintomas' => $data['sintomas'] ?? [],
             'alertas' => $alertasDetectadas,
             'nota_psoapp' => $notaPsoapp,
+            'debug_usage' => $data['debug_usage'] ?? null,
         ];
     }
 
@@ -476,7 +491,7 @@ class IAClinicaService
      * Sugerencia de medicamentos con triage completo - LENGUAJE MÉDICO PROFESIONAL
      */
     public function sugerirMedicamentoLibre(array $sintomas, array $especialidadesDisponibles = [])
-    {   
+    {
         set_time_limit(300);
         $textoSintomas = implode(', ', $sintomas);
 
@@ -907,14 +922,13 @@ class IAClinicaService
         array $historial = [],
         $ultimaNota = null
     ) 
-    {  
-        set_time_limit(300);    
+    { 
+        // Forzamos el límite de ejecución de PHP para evitar cortes inesperados
+        set_time_limit(300);
         $historialTexto = '';
 
         if (!empty($historial)) {
-            $historialRecortado = array_slice($historial, -3);
-            $historialTexto = implode("\n\n--- REGISTRO ANTERIOR ---\n\n", $historialRecortado);
-            
+            $historialTexto = implode("\n\n--- REGISTRO ANTERIOR ---\n\n", $historial);
             // Opcional: Validar longitud de caracteres aproximada si el texto de entrada es masivo
             if (mb_strlen($historialTexto) > (self::MAX_TOKENS_ENTRADA * 4)) {
                 $historialTexto = mb_substr($historialTexto, -(self::MAX_TOKENS_ENTRADA * 4));
@@ -1417,6 +1431,7 @@ class IAClinicaService
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
                     // 'max_tokens' => self::MAX_TOKENS_ANALISIS,
+
                 ]);
             // IMPRESIÓN DIRECTA PARA DEBUG (Se imprime pase lo que pase con el status)
             Log::info('Respuesta cruda de DeepSeek Diagnostico:', [
@@ -1482,6 +1497,16 @@ class IAClinicaService
             ]);
             return null;
         }
+
+        // FIX: el uso de tokens (prompt/completion/total) viene en el
+        // bloque "usage" de la respuesta HTTP de DeepSeek, NO dentro del
+        // JSON que genera el modelo — nunca se le pidió a la IA que lo
+        // incluyera en su propio JSON de salida (ver esquema de la Fase 8/9
+        // de cada prompt: no existe una clave "debug_usage" ahí). Lo
+        // agregamos aquí para que $data['debug_usage'] exista y viaje
+        // correctamente hasta analizarTranscripcion() -> el controlador
+        // -> el frontend.
+        $data['debug_usage'] = $response->json('usage');
 
         return $data;
     }

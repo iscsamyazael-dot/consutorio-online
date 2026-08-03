@@ -96,23 +96,33 @@
                 <th>Medicamento</th>
                 <th>Presentación</th>
                 <th>Lote</th>
-                <th>Stock</th>
+                <th class="sortable-th" @click="ordenarPor('stock_actual')">
+                    Stock
+                    <i class="fas" :class="iconoOrden('stock_actual')"></i>
+                </th>
                 <th>Stock Mínimo</th>
-                <th>Caducidad</th>
+                <th class="sortable-th" @click="ordenarPor('fecha_caducidad')">
+                    Caducidad
+                    <i class="fas" :class="iconoOrden('fecha_caducidad')"></i>
+                </th>
                 <th>Estado</th>
                 <th width="180">Acciones</th>
             </tr>
         </thead>
 
         <tbody>
-            <tr v-if="medicamentosFiltrados.length === 0">
+            <tr v-if="medicamentosPaginados.length === 0">
                 <td colspan="9" class="text-center text-muted py-4">
                     <i class="fas fa-search mr-2"></i>
                     No se encontraron medicamentos con esos filtros.
                 </td>
             </tr>
 
-            <tr v-for="medica in medicamentosFiltrados" :key="medica.id">
+            <tr v-for="medica in medicamentosPaginados" :key="medica.id"
+                class="fila-clicable"
+                @click="verMedicamento(medica.id)"
+                data-toggle="modal"
+                data-target="#modalDetalleMedicamento">
                 <!-- CODIGO -->
                 <td>
                     <span class="font-weight-bold text-primary">
@@ -167,13 +177,6 @@
                 </td>
 
                 <!-- CADUCIDAD -->
-                <!-- FIX: antes leía medica.ultimo_movimiento.fecha_caducidad.
-                     Esa relación es independiente del inventario y puede no
-                     traer la fecha del lote vigente (p.ej. si el último
-                     movimiento fue una salida). Ahora usa siempre
-                     medica.inventario.fecha_caducidad, la misma fuente que
-                     usa el backend (MedicamentoController@resumen) y el
-                     componente de Alertas Críticas. -->
                 <td>
                     <span
                         v-if="medica.inventario?.fecha_caducidad"
@@ -183,6 +186,8 @@
                         }"
                         class="font-weight-bold">
                         {{ medica.inventario.fecha_caducidad }}
+                        <br>
+                        <small class="font-weight-normal">{{ textoDiasRestantes(medica) }}</small>
                     </span>
                     <span
                         v-else
@@ -201,7 +206,7 @@
                 </td>
 
                 <!-- ACCIONES -->
-                <td>
+                <td @click.stop>
                     <div class="btn-group shadow-sm">
 
                         <!-- VER DETALLE -->
@@ -249,6 +254,26 @@
             </tr>
         </tbody>
     </table>
+
+    <!-- PAGINACION -->
+    <div v-if="totalPaginas > 1" class="d-flex justify-content-between align-items-center mt-3 px-2">
+        <small class="text-muted">
+            Mostrando {{ inicioRango }}–{{ finRango }} de {{ medicamentosFiltrados.length }}
+        </small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" :class="{ disabled: paginaActual === 1 }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(paginaActual - 1)">Anterior</a>
+                </li>
+                <li v-for="p in totalPaginas" :key="p" class="page-item" :class="{ active: p === paginaActual }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(p)">{{ p }}</a>
+                </li>
+                <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(paginaActual + 1)">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
 </div>
             </div>
         </div>
@@ -428,6 +453,48 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                <!-- ===================================== -->
+                <!-- HISTORIAL DE MOVIMIENTOS -->
+                <!-- ===================================== -->
+                <div class="card card-outline card-secondary mb-4" v-if="medicamentoDetalle.movimientos_inventario && medicamentoDetalle.movimientos_inventario.length > 0">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-history mr-2"></i>
+                            Historial de Movimientos
+                        </h5>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 260px; overflow-y:auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Lote</th>
+                                    <th>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="mov in medicamentoDetalle.movimientos_inventario.slice().reverse()" :key="mov.id">
+                                    <td>{{ mov.fecha_movimiento ? new Date(mov.fecha_movimiento).toLocaleDateString() : '—' }}</td>
+                                    <td>
+                                        <span class="badge"
+                                            :class="{
+                                                'badge-success': mov.tipo_movimiento === 'entrada',
+                                                'badge-danger': mov.tipo_movimiento === 'salida',
+                                                'badge-secondary': mov.tipo_movimiento === 'ajuste'
+                                            }">
+                                            {{ mov.tipo_movimiento }}
+                                        </span>
+                                    </td>
+                                    <td>{{ mov.cantidad }}</td>
+                                    <td>{{ mov.lote || '—' }}</td>
+                                    <td>{{ mov.motivo_movimiento || '—' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 <!-- ===================================== -->
@@ -765,6 +832,15 @@
                                     <input type="number" class="form-control" v-model="medicamentoSeleccionado.inventario.stock_minimo">
                                 </div>
                             </div>
+                            <!-- FECHA CADUCIDAD -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Fecha de Caducidad
+                                    </label>
+                                    <input type="date" class="form-control" v-model="medicamentoSeleccionado.inventario.fecha_caducidad">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1016,6 +1092,7 @@ import ApiService from '../../services/ApiService.js'
 // Debe coincidir con MedicamentoController@resumen (30 días) y con
 // AlertasCriticas.vue, para que todas las vistas sean consistentes.
 const DIAS_LIMITE_CADUCIDAD = 30
+const MEDICAMENTOS_POR_PAGINA = 10
 
 export default {
     props: {
@@ -1040,6 +1117,15 @@ export default {
                 categoria: 'Todas',
                 caducidad: 'Todas'
             },
+
+            // ── ORDENAMIENTO ──
+            orden: {
+                campo: null,      // 'stock_actual' | 'fecha_caducidad' | null
+                direccion: 'asc'  // 'asc' | 'desc'
+            },
+
+            // ── PAGINACION ──
+            paginaActual: 1,
 
             // ── DETALLE ──
             medicamentoDetalle:{
@@ -1083,12 +1169,23 @@ export default {
         }
     },
 
+    watch: {
+        // Cualquier cambio de filtro regresa a la página 1, para no
+        // quedarse "varado" en una página que ya no tiene resultados.
+        filtros: {
+            deep: true,
+            handler() {
+                this.paginaActual = 1
+            }
+        }
+    },
+
     computed: {
         // Aplica los 4 filtros del panel superior sobre la lista recibida por props.
         medicamentosFiltrados() {
             const termino = this.filtros.busqueda.toLowerCase().trim()
 
-            return this.medicamentos.filter(medica => {
+            const resultado = this.medicamentos.filter(medica => {
                 const coincideTexto = !termino ||
                     (medica.nombre ?? '').toLowerCase().includes(termino) ||
                     (medica.codigo ?? '').toLowerCase().includes(termino) ||
@@ -1109,10 +1206,85 @@ export default {
 
                 return coincideTexto && coincideEstado && coincideCategoria && coincideCaducidad
             })
+
+            return this.aplicarOrden(resultado)
+        },
+
+        totalPaginas() {
+            return Math.max(1, Math.ceil(this.medicamentosFiltrados.length / MEDICAMENTOS_POR_PAGINA))
+        },
+
+        medicamentosPaginados() {
+            const inicio = (this.paginaActual - 1) * MEDICAMENTOS_POR_PAGINA
+            return this.medicamentosFiltrados.slice(inicio, inicio + MEDICAMENTOS_POR_PAGINA)
+        },
+
+        inicioRango() {
+            if (this.medicamentosFiltrados.length === 0) return 0
+            return (this.paginaActual - 1) * MEDICAMENTOS_POR_PAGINA + 1
+        },
+
+        finRango() {
+            return Math.min(this.paginaActual * MEDICAMENTOS_POR_PAGINA, this.medicamentosFiltrados.length)
         }
     },
 
     methods: {
+        // ═══════════════════════════════════════
+        // ORDENAMIENTO
+        // ═══════════════════════════════════════
+        ordenarPor(campo) {
+            if (this.orden.campo === campo) {
+                this.orden.direccion = this.orden.direccion === 'asc' ? 'desc' : 'asc'
+            } else {
+                this.orden.campo = campo
+                this.orden.direccion = 'asc'
+            }
+            this.paginaActual = 1
+        },
+
+        iconoOrden(campo) {
+            if (this.orden.campo !== campo) return 'fa-sort text-muted'
+            return this.orden.direccion === 'asc' ? 'fa-sort-up' : 'fa-sort-down'
+        },
+
+        aplicarOrden(lista) {
+            if (!this.orden.campo) return lista
+
+            const campo = this.orden.campo
+            const factor = this.orden.direccion === 'asc' ? 1 : -1
+
+            return [...lista].sort((a, b) => {
+                let valA, valB
+
+                if (campo === 'stock_actual') {
+                    valA = a.inventario?.stock_actual ?? 0
+                    valB = b.inventario?.stock_actual ?? 0
+                } else if (campo === 'fecha_caducidad') {
+                    // Sin fecha se manda siempre al final, sin importar la dirección.
+                    const fechaA = a.inventario?.fecha_caducidad
+                    const fechaB = b.inventario?.fecha_caducidad
+                    if (!fechaA && !fechaB) return 0
+                    if (!fechaA) return 1
+                    if (!fechaB) return -1
+                    valA = new Date(fechaA).getTime()
+                    valB = new Date(fechaB).getTime()
+                }
+
+                if (valA < valB) return -1 * factor
+                if (valA > valB) return 1 * factor
+                return 0
+            })
+        },
+
+        // ═══════════════════════════════════════
+        // PAGINACION
+        // ═══════════════════════════════════════
+        irAPagina(p) {
+            if (p < 1 || p > this.totalPaginas) return
+            this.paginaActual = p
+        },
+
         // ═══════════════════════════════════════
         // VER DETALLE
         // ═══════════════════════════════════════
@@ -1277,19 +1449,12 @@ export default {
             return colores[estado] ?? 'secondary'
         },
 
-        // FIX: antes leía medica.ultimo_movimiento?.fecha_caducidad.
-        // Ahora usa medica.inventario?.fecha_caducidad, la misma fuente
-        // que usa el backend (MedicamentoController@resumen) y
-        // AlertasCriticas.vue, para que el estado sea consistente en
-        // toda la aplicación.
         estaCaducado(medica){
             const fecha = medica.inventario?.fecha_caducidad
             if (!fecha) return false
             return new Date(fecha) < new Date()
         },
 
-        // NUEVO: determina si el medicamento caduca dentro del umbral
-        // definido (30 días), igual que MedicamentoController@resumen.
         proximoACaducar(medica){
             const fecha = medica.inventario?.fecha_caducidad
             if (!fecha) return false
@@ -1302,10 +1467,28 @@ export default {
             return fechaCad >= hoy && fechaCad <= limite
         },
 
+        // NUEVO: texto auxiliar bajo la fecha de caducidad ("25 días",
+        // "Caducado hace 3 días", etc.) para no obligar al usuario a
+        // calcular mentalmente cuánto falta.
+        textoDiasRestantes(medica){
+            const fecha = medica.inventario?.fecha_caducidad
+            if (!fecha) return ''
+
+            const fechaCad = new Date(fecha)
+            const hoy = new Date()
+            hoy.setHours(0, 0, 0, 0)
+            fechaCad.setHours(0, 0, 0, 0)
+
+            const dias = Math.round((fechaCad - hoy) / (1000 * 60 * 60 * 24))
+
+            if (dias < 0) return `Caducó hace ${Math.abs(dias)} día(s)`
+            if (dias === 0) return 'Caduca hoy'
+            return `${dias} día(s)`
+        },
+
         coincideFiltroCaducidad(medica){
             if (this.filtros.caducidad === 'Todas') return true
 
-            // FIX: antes leía medica.ultimo_movimiento?.fecha_caducidad
             const fecha = medica.inventario?.fecha_caducidad
             if (!fecha) return false
 
@@ -1364,3 +1547,19 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+.sortable-th {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable-th:hover {
+    color: #007bff;
+}
+.fila-clicable {
+    cursor: pointer;
+}
+.fila-clicable:hover {
+    background-color: #f8f9fa;
+}
+</style>

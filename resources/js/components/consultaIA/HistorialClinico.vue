@@ -7,7 +7,7 @@
             </h3>
         </div>
 
-        <div class="card-body p-0" style="height: 350px; overflow-y:auto;">
+        <div class="card-body p-0" style="max-height: 500px; overflow-y:auto;">
 
             <div v-if="cargando" class="text-center text-muted py-3">
                 <i class="fas fa-spinner fa-spin"></i> Cargando historial...
@@ -22,7 +22,7 @@
             </div>
 
             <div v-else class="p-2">
-                <div v-for="(consulta, idx) in consultas" :key="consulta.id" class="card mb-2 shadow-none border">
+                <div v-for="(consulta, idx) in consultasRecientes" :key="consulta.id" class="card mb-2 shadow-none border">
 
                     <div
                         class="card-header p-2"
@@ -103,6 +103,14 @@ export default {
             abiertos: {},
             cargando: false,
             error: false
+        }
+    },
+    computed: {
+        // Solo muestra las 2 consultas más recientes en el historial.
+        // Se asume que el backend ya devuelve `consultas` ordenadas de más
+        // reciente a más antigua (por eso abiertos[0] se abre por defecto).
+        consultasRecientes() {
+            return this.consultas.slice(0, 2)
         }
     },
     watch: {

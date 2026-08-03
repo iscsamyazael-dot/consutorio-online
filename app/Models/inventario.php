@@ -12,7 +12,8 @@ class inventario extends Model
         'medicamento_id',
         'stock_actual',
         'stock_minimo',
-        'ubicacion'
+        'ubicacion',
+        'fecha_caducidad'
     ];
     //RELACIONES//
     public function medicamento()

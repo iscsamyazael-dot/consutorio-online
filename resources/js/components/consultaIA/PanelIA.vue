@@ -49,7 +49,7 @@
                 </h6>
                 <ul class="list-group">
                     <li
-                        class="list-group-item"
+                        class="list-group-item text-dark"
                         v-for="(rec, index) in recomendaciones"
                         :key="rec + '-' + index"
                     >
@@ -116,9 +116,21 @@ export default {
             }
         },
         recomendaciones() {
-            return Array.isArray(this.iaData?.recomendaciones) && this.iaData.recomendaciones.length > 0
-                ? this.iaData.recomendaciones
-                : ['Esperando síntomas clínicos'];
+            // FIX: antes solo se validaba Array.isArray(...) && length > 0.
+            // Eso dejaba pasar arrays como [''] (una recomendación vacía que
+            // el backend arma con `[$data['recomendacion'] ?? '...']`), ya
+            // que el operador `??` no cubre cadenas vacías, solo null/undefined.
+            // Un array [''] tiene length 1 y "pasa" la validación, pero renderiza
+            // un <li> vacío -> el cuadro se ve en blanco.
+            // Ahora filtramos explícitamente strings vacíos o solo espacios,
+            // como defensa adicional aunque el backend ya esté corregido.
+            const recs = Array.isArray(this.iaData?.recomendaciones)
+                ? this.iaData.recomendaciones.filter(
+                    (r) => typeof r === 'string' && r.trim() !== ''
+                  )
+                : [];
+
+            return recs.length > 0 ? recs : ['Esperando síntomas clínicos'];
         }
     }
 }
