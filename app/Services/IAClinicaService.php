@@ -37,7 +37,7 @@ class IAClinicaService
         array $historial = [],
         $ultimaNota = null
     ) {
-       // --- CONTROL DE TOKENS DE ENTRADA ---
+        // --- CONTROL DE TOKENS DE ENTRADA ---
         if (!empty($historial)) {
             // Tomamos los registros más recientes
             $historial = array_slice($historial, -5);
@@ -53,8 +53,6 @@ class IAClinicaService
                 $historial = [$historialTexto]; 
             }
         }
-        // ------------------------------------
-        
         $data = $this->consultarIA(
             $texto,
             $historial,
@@ -315,15 +313,8 @@ class IAClinicaService
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
-                    // 'max_tokens' => self::MAX_TOKENS_ANALISIS,
+                   // 'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
-
-            // IMPRESIÓN DIRECTA PARA DEBUG (Se imprime pase lo que pase con el status)
-            Log::info('Respuesta cruda de DeepSeek Receta Inteligente:', [
-                'status' => $response->status(),
-                'usage' => $response->json('usage'), // Aquí verás exactamente los tokens
-                'body_error' => $response->successful() ? null : $response->body()
-            ]);
 
             if (!$response->successful()) {
                 Log::error('Error HTTP al clasificar triage con IA', [
@@ -335,9 +326,7 @@ class IAClinicaService
 
             $data = $this->decodificarJsonRespuesta($response, 'clasificarTriage');
 
-            // 1. Validamos primero que sea un array válido
             if (!is_array($data)) {
-                Log::warning('La respuesta de la IA no pudo decodificarse como array en clasificarTriage.');
                 return $this->resultadoTriage('estable');
             }
 
@@ -347,23 +336,8 @@ class IAClinicaService
                 Log::warning('IA devolvió un nivel de triage no reconocido', ['respuesta' => $data]);
                 return $this->resultadoTriage('estable');
             }
-            
-            // 2. Generamos el resultado base de triage
-            $resultadoTriage = $this->resultadoTriage($nivel);
-            
-            // 3. Inyectamos de forma segura el uso de tokens al resultado final para que viaje al frontend
-            if (is_array($resultadoTriage)) {
-                $resultadoTriage['debug_usage'] = $response->json('usage');
-            }
 
-            return $resultadoTriage;
-
-            // AQUí AGREGAMOS EL USO PARA QUE VIAJE AL FRONTEND
-            // if (is_array($data)) {
-            //     $data['debug_usage'] = $response->json('usage');
-            // }
-
-            // return $this->resultadoTriage($nivel);
+            return $this->resultadoTriage($nivel);
 
         } catch (\Exception $e) {
             Log::error('Excepción al clasificar triage con IA: ' . $e->getMessage());
@@ -867,16 +841,8 @@ class IAClinicaService
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
-                    // 'max_tokens' => self::MAX_TOKENS_ANALISIS,
+                    //'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
-
-            // IMPRESIÓN DIRECTA PARA DEBUG (Se imprime pase lo que pase con el status)
-            Log::info('Respuesta cruda de DeepSeek Sugerir Medicamentos:', [
-                'status' => $response->status(),
-                'usage' => $response->json('usage'), // Aquí verás exactamente los tokens
-                'body_error' => $response->successful() ? null : $response->body()
-            ]);
-
 
             if (!$response->successful()) {
                 Log::error('Error HTTP al consultar sugerencia libre IA', [
@@ -886,21 +852,7 @@ class IAClinicaService
                 return null;
             }
 
-            // 1. Primero decodificamos la respuesta de la IA en la variable $data
-            $data = $this->decodificarJsonRespuesta($response, 'sugerirMedicamentoLibre');
-            
-            // AQUí AGREGAMOS EL USO PARA QUE VIAJE AL FRONTEND
-            if (!is_array($data)) {
-                Log::warning('La respuesta de la IA no pudo decodificarse como array en sugerirMedicamentoLibre.');
-                return null;
-            }
-            // 3. Inyectamos de forma segura la información de uso de tokens
-            $data['debug_usage'] = $response->json('usage');
-
-            // 4. Retornamos el array completo con el debug incluido
-            return $data;
-
-            // return $this->decodificarJsonRespuesta($response, 'sugerirMedicamentoLibre');
+            return $this->decodificarJsonRespuesta($response, 'sugerirMedicamentoLibre');
 
         } catch (\Exception $e) {
             Log::error('Excepción al consultar sugerencia libre IA: ' . $e->getMessage());
@@ -916,8 +868,7 @@ class IAClinicaService
         array $historial = [],
         $ultimaNota = null
     ) 
-    { 
-        // Forzamos el límite de ejecución de PHP para evitar cortes inesperados
+    { // Forzamos el límite de ejecución de PHP para evitar cortes inesperados
         set_time_limit(300);
         $historialTexto = '';
 
@@ -927,7 +878,6 @@ class IAClinicaService
             if (mb_strlen($historialTexto) > (self::MAX_TOKENS_ENTRADA * 4)) {
                 $historialTexto = mb_substr($historialTexto, -(self::MAX_TOKENS_ENTRADA * 4));
             }
-
         }
 
         $notaAnteriorTexto = '';
@@ -935,24 +885,24 @@ class IAClinicaService
         if ($ultimaNota) {
             $notaAnteriorTexto = "
 
-                PRESENTACIÓN ANTERIOR:
-                {$ultimaNota->presentacion}
+PRESENTACIÓN ANTERIOR:
+{$ultimaNota->presentacion}
 
-                SUBJETIVO ANTERIOR:
-                {$ultimaNota->subjetivo}
+SUBJETIVO ANTERIOR:
+{$ultimaNota->subjetivo}
 
-                OBJETIVO ANTERIOR:
-                {$ultimaNota->objetivo}
+OBJETIVO ANTERIOR:
+{$ultimaNota->objetivo}
 
-                ANÁLISIS ANTERIOR:
-                {$ultimaNota->analisis}
+ANÁLISIS ANTERIOR:
+{$ultimaNota->analisis}
 
-                PLAN ANTERIOR:
-                {$ultimaNota->plan}
+PLAN ANTERIOR:
+{$ultimaNota->plan}
 
-                PRONÓSTICO ANTERIOR:
-                {$ultimaNota->pronostico}
-                ";
+PRONÓSTICO ANTERIOR:
+{$ultimaNota->pronostico}
+";
         }
 
         // Vocabulario de referencia (síntoma coloquial -> término médico),
@@ -1424,15 +1374,8 @@ class IAClinicaService
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
-                    // 'max_tokens' => self::MAX_TOKENS_ANALISIS,
-
+                    //'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
-            // IMPRESIÓN DIRECTA PARA DEBUG (Se imprime pase lo que pase con el status)
-            Log::info('Respuesta cruda de DeepSeek Diagnostico:', [
-                'status' => $response->status(),
-                'usage' => $response->json('usage'), // Aquí verás exactamente los tokens
-                'body_error' => $response->successful() ? null : $response->body()
-            ]);
 
             if (!$response->successful()) {
                 Log::error('Error HTTP al consultar IA clínica', [
@@ -1441,20 +1384,8 @@ class IAClinicaService
                 ]);
                 return null;
             }
-            
-            // 1. Primero decodificamos la respuesta en la variable $data
-            $data = $this->decodificarJsonRespuesta($response, 'consultarIA');
 
-            
-            // AQUí AGREGAMOS EL USO PARA QUE VIAJE AL FRONTEND
-            if (!is_array($data)) {
-                Log::warning('La respuesta de la IA no pudo decodificarse como array en consultarIA.');
-                return null;
-            }
-
-            $data['debug_usage'] = $response->json('usage');
-            return $data;
-            // return $this->decodificarJsonRespuesta($response, 'consultarIA');
+            return $this->decodificarJsonRespuesta($response, 'consultarIA');
 
         } catch (\Exception $e) {
             Log::error('Excepción al consultar IA clínica: ' . $e->getMessage());
@@ -1462,6 +1393,14 @@ class IAClinicaService
         }
     }
 
+    /**
+     * Decodifica de forma segura el contenido JSON devuelto por la IA,
+     * distinguiendo explícitamente entre "la IA respondió y el JSON es
+     * válido" y "la IA respondió pero el JSON viene incompleto/corrupto"
+     * (típicamente porque la respuesta se cortó por límite de tokens).
+     * Loguea el contenido crudo en el segundo caso, para poder diagnosticar
+     * sin tener que reproducir el error a ciegas.
+     */
     private function decodificarJsonRespuesta($response, string $origen)
     {
         $contenido = $response->json('choices.0.message.content');
