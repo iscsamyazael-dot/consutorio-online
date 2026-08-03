@@ -611,6 +611,15 @@ export default {
                     this.$emit('actualizarIaData', response.data.ia_data)
                     this.$emit('actualizarSintomas', this.sintomas)
 
+                // --- IMPRESIÓN DIRECTA EN LA CONSOLA DEL NAVEGADOR ---
+                    if (response.data.debug_usage) {
+                        console.log(
+                            '%c [DeepSeek] Consumo de Tokens:', 
+                            'background: #222; color: #bada55; padding: 2px 5px; border-radius: 3px;',
+                            response.data.debug_usage
+                        );
+                    }
+
                     this.mensajes[idxAnalizando].texto = response.data.ia_data?.diagnostico_probable
                         ? `Diagnóstico probable (según ${nombreArchivo}): ${response.data.ia_data.diagnostico_probable}`
                         : `Archivo "${nombreArchivo}" analizado.`

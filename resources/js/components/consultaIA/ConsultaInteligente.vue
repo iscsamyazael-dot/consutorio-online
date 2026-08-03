@@ -248,6 +248,15 @@ export default {
             'Datos recibidos de la IA:',
             iaData
         );
+        // --- IMPRESIÓN DE TOKENS EN LA CONSOLA DEL NAVEGADOR ---
+        if (iaData && iaData.debug_usage) {
+            console.log(
+                '%c [IA] Consumo de Tokens:', 
+                'background: #222; color: #bada55; padding: 2px 5px; border-radius: 3px;',
+                iaData.debug_usage
+            );
+        }
+        // -------------------------------------------------------
     },
     marcarErrorIa() {
 
