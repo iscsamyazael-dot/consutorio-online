@@ -1,8 +1,8 @@
 <?php
 
 namespace App\Services;
-use App\Models\ConsultaTranscripcion;
 use App\Services\Terminologia\DiccionarioMedico;
+
 use App\Models\SintomaDetectado;
 use App\Models\EvaluacionIA;
 use App\Models\AlertaClinica;
@@ -17,7 +17,7 @@ use thiagoalessio\TesseractOCR\TesseractOCR;
 
 class IAClinicaService
 {
-    /*
+    /**
      * Número máximo de tokens de salida que se le permite generar a la IA
      * en las respuestas JSON de análisis clínico. Los prompts (sobre todo
      * el de consultarIA, que pide una nota PSOAPP extensa) pueden generar
