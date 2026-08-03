@@ -14,6 +14,7 @@ use App\Http\Controllers\ConsultaIAController; // IA
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DerivacionController; 
 use App\Http\Controllers\UserRegisterController;
 use App\Models\Paciente;
 use App\Http\Controllers\CitaController;//agenda        
@@ -56,6 +57,15 @@ Route::middleware('auth')->group(function () {
         // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
         // Route::delete('eliminarMedico/{id}', [MedicoController::class, 'destroy']);
 
+
+
+        ///*** RUTAS PARA LAS APIS Y CONSUMO DE DATOS */
+        //RUTA PARA ACTUALIZAR EL ESTADO DE DERIVACION
+        Route::put('/derivaciones/{id}/estado', [DerivacionController::class, 'actualizarEstado']);
+        //Ruta para obtener estadisticas de las cartas de derivacion
+        Route::get('/derivaciones/estadisticas', [DerivacionController::class, 'obtenerEstadisticas']);
+        //RUTA QUE OBTIENE TODAS LAS DERIVACIONES 
+        Route::get('/derivaciones', [DerivacionController::class, 'index']);
         Route::get('medicoEstadistica', [MedicoController::class, 'obtenerEstadisticas']);
         Route::get('listaUbicaciones', [UbicacionController::class, 'listar']);// Agenda: filtro por ubicación/sucursal
         Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
@@ -134,6 +144,13 @@ Route::middleware('auth')->group(function () {
         //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
         Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
             ->name('ExpedienteDetalle');
+        Route::get('/triage', [TriageController::class, 'index']);
+        // ← NUEVA, debe ir ANTES de /{id}
+        Route::get('/triage/{pacienteId}/analizar-ia', [TriageController::class, 'analizarIA']);
+        Route::get('/triage/{id}', [TriageController::class, 'show']);
+        ///*** AQUI TERMINA LAS RUTAS DE LAS LAS APIS Y CONSUMO DE DATOS */
+
+        //**INICIA LAS RUTAS PARA LAS VISTAS DE ACUERDO AL ACESSO DE CADA USUARIO *//
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO - ASISTENTE ///
         Route::middleware(['auth', 'can:acceso-general'])->group(function() {

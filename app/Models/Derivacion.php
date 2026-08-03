@@ -13,8 +13,11 @@ class Derivacion extends Model
         'especialidad_id',
         'hospital',
         'motivo',
+        'prioridad',
         'estado',
     ];
+
+        
 
     protected $casts = [
         'created_at' => 'datetime',

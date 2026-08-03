@@ -170,9 +170,7 @@ MODAL BOOTSTRAP
                                 </div>
 
                                 <h4 class="fw-bold text-center mb-3">
-
                                     
-
                                     Evaluación IA
 
                                 </h4>
@@ -191,137 +189,88 @@ MODAL BOOTSTRAP
                                 </p>
 
                                 <!-- INFO -->
-
                                 <div class="mt-5">
 
+                                    <!-- Tarjeta 1: Estado Clínico -->
                                     <div
-                                        
-                                             class="card border-0 text-white rounded-4"
-                                                style="
-                                                   background: rgba(255,255,255,0.15);
-                                                    backdrop-filter: blur(10px);"                                                                                      >
-
-                                        <div class="card-body d-flex align-items-center">
-
-                                            <div
-                                                class="bg-success rounded-circle d-flex align-items-center justify-content-center me-3"
-                                                style="
-                                                    width:50px;
-                                                    height:50px;
-                                                "
-                                            >
-
-                                                <i class="fas fa-heartbeat"></i>
-
-                                            </div>
-
-                                            <div>
-
-                                                <small class="opacity-75">
-
-                                                    Estado Clínico
-
-                                                </small>
-
-                                                <h6 class="fw-bold mb-0">
-
-                                                    Monitoreo IA
-
-                                                </h6>
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                    <div
-                                          class="card border-0 text-white rounded-4"
-                                                style="
-                                                   background: rgba(255,255,255,0.15);
-                                                    backdrop-filter: blur(10px);">
-
-                                        <div class="card-body d-flex align-items-center">
-
-                                            <div
-                                                class="bg-warning rounded-circle d-flex align-items-center justify-content-center me-3"
-                                                style="
-                                                    width:50px;
-                                                    height:50px;
-                                                "
-                                            >
-
-                                                <i class="fas fa-exclamation-triangle"></i>
-
-                                            </div>
-
-                                            <div>
-
-                                                <small class="opacity-75">
-
-                                                    Riesgo Detectado
-
-                                                </small>
-
-                                                <h6 class="fw-bold mb-0">
-
-                                                    Análisis Inteligente
-
-                                                </h6>
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                    <div
-                                          class="card border-0 text-white rounded-4"
-                                                style="
-                                                   background: rgba(255,255,255,0.15);
-                                                    backdrop-filter: blur(10px);"
+                                        class="card border-0 text-dark rounded-4 mb-3 shadow-sm"
+                                        style="
+                                            background: rgba(255, 255, 255, 0.65);
+                                            backdrop-filter: blur(10px);
+                                        "
                                     >
-
                                         <div class="card-body d-flex align-items-center">
-
                                             <div
-                                                class="bg-info rounded-circle d-flex align-items-center justify-content-center me-3"
-                                                style="
-                                                    width:50px;
-                                                    height:50px;
-                                                "
+                                                class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                style="width: 50px; height: 50px; flex-shrink: 0;"
                                             >
-
-                                                <i class="fas fa-user-md"></i>
-
+                                                <i class="fas fa-heartbeat fa-lg"></i>
                                             </div>
-
                                             <div>
-
-                                                <small class="opacity-75">
-
-                                                    Diagnóstico IA
-
+                                                <small class="text-muted fw-semibold d-block">
+                                                    Estado Clínico
                                                 </small>
-
-                                                <h6 class="fw-bold mb-0">
-
-                                                    Evaluación Médica
-
+                                                <h6 class="fw-bold mb-0 text-dark">
+                                                    Monitoreo IA
                                                 </h6>
-
                                             </div>
-
                                         </div>
-
                                     </div>
 
+                                    <!-- Tarjeta 2: Riesgo Detectado -->
+                                    <div
+                                        class="card border-0 text-dark rounded-4 mb-3 shadow-sm"
+                                        style="
+                                            background: rgba(255, 255, 255, 0.65);
+                                            backdrop-filter: blur(10px);
+                                        "
+                                    >
+                                        <div class="card-body d-flex align-items-center">
+                                            <div
+                                                class="bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                style="width: 50px; height: 50px; flex-shrink: 0;"
+                                            >
+                                                <i class="fas fa-exclamation-triangle fa-lg"></i>
+                                            </div>
+                                            <div>
+                                                <small class="text-muted fw-semibold d-block">
+                                                    Riesgo Detectado
+                                                </small>
+                                                <h6 class="fw-bold mb-0 text-dark">
+                                                    Análisis Inteligente
+                                                </h6>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tarjeta 3: Diagnóstico IA -->
+                                    <div
+                                        class="card border-0 text-dark rounded-4 shadow-sm"
+                                        style="
+                                            background: rgba(255, 255, 255, 0.65);
+                                            backdrop-filter: blur(10px);
+                                        "
+                                    >
+                                        <div class="card-body d-flex align-items-center">
+                                            <div
+                                                class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                style="width: 50px; height: 50px; flex-shrink: 0;"
+                                            >
+                                                <i class="fas fa-user-md fa-lg"></i>
+                                            </div>
+                                            <div>
+                                                <small class="text-muted fw-semibold d-block">
+                                                    Diagnóstico IA
+                                                </small>
+                                                <h6 class="fw-bold mb-0 text-dark">
+                                                    Evaluación Médica
+                                                </h6>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-
                             </div>
-
                         </div>
-
                     </div>
 
                     <!-- =========================================
