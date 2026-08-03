@@ -120,9 +120,7 @@
 
             <tr v-for="medica in medicamentosPaginados" :key="medica.id"
                 class="fila-clicable"
-                @click="verMedicamento(medica.id)"
-                data-toggle="modal"
-                data-target="#modalDetalleMedicamento">
+                @click="verMedicamento(medica.id)">
                 <!-- CODIGO -->
                 <td>
                     <span class="font-weight-bold text-primary">
@@ -211,9 +209,8 @@
 
                         <!-- VER DETALLE -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-info"
-                            data-toggle="modal"
-                            data-target="#modalDetalleMedicamento"
                             title="Ver Detalle"
                             @click="verMedicamento(medica.id)">
                             <i class="fas fa-eye"></i>
@@ -221,9 +218,8 @@
 
                         <!-- EDITAR -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-primary"
-                            data-toggle="modal"
-                            data-target="#modalEditarMedicamento"
                             title="Editar Medicamento"
                             @click="editarMedicamento(medica)">
                             <i class="fas fa-edit"></i>
@@ -231,9 +227,8 @@
 
                         <!-- MOVIMIENTO -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-warning text-dark"
-                            data-toggle="modal"
-                            data-target="#modalMovimientoInventario"
                             title="Movimiento Inventario"
                             @click="abrirMovimiento(medica)">
                             <i class="fas fa-exchange-alt"></i>
@@ -241,6 +236,7 @@
 
                         <!-- ELIMINAR -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-danger"
                             title="Eliminar"
                             :disabled="eliminandoId === medica.id"
@@ -581,11 +577,9 @@
                     Cerrar
                 </button>
                 <button
+                    type="button"
                     class="btn btn-primary"
-                    data-dismiss="modal"
-                    data-toggle="modal"
-                    data-target="#modalEditarMedicamento"
-                    @click="editarMedicamento(medicamentoDetalle)">
+                    @click="pasarAEditarDesdeDetalle">
                     <i class="fas fa-edit mr-1"></i>
                     Editar Medicamento
                 </button>
@@ -1292,10 +1286,22 @@ export default {
             try{
                 const response = await ApiService.get('/medicamentos/' + id)
                 this.medicamentoDetalle = response.data
+                // Abrimos el modal manualmente en vez de depender de
+                // data-toggle/data-target, porque el @click.stop de la
+                // celda de acciones bloquea la propagación que Bootstrap
+                // necesita para su listener delegado en el document.
+                this.abrirModal('modalDetalleMedicamento')
             }catch(error){
                 console.error(error)
                 this.mostrarMensaje('No se pudo cargar el detalle del medicamento.', 'danger')
             }
+        },
+
+        // Botón "Editar Medicamento" dentro del modal de Detalle: cierra
+        // ese modal y abre el de edición con los datos ya cargados.
+        pasarAEditarDesdeDetalle(){
+            this.editarMedicamento(this.medicamentoDetalle)
+            this.cerrarModal('modalDetalleMedicamento')
         },
 
         // ═══════════════════════════════════════
@@ -1309,6 +1315,7 @@ export default {
                 ...medica,
                 inventario: { ...(medica.inventario || {}) }
             }
+            this.abrirModal('modalEditarMedicamento')
         },
 
         async actualizarMedicamento(){
@@ -1322,7 +1329,7 @@ export default {
                 // Route::resource('medicamentos', MedicamentoController::class) -> update
                 await ApiService.put('/medicamentos/' + this.medicamentoSeleccionado.id, this.medicamentoSeleccionado)
 
-                $('#modalEditarMedicamento').modal('hide')
+                this.cerrarModal('modalEditarMedicamento')
                 this.mostrarMensaje('Medicamento actualizado correctamente.', 'success')
                 this.$emit('actualizar-inventario')
             }catch(error){
@@ -1357,6 +1364,8 @@ export default {
                 referencia_documento: '',
                 observaciones: ''
             }
+
+            this.abrirModal('modalMovimientoInventario')
         },
 
         async guardarMovimiento(){
@@ -1376,7 +1385,7 @@ export default {
                 // por eso el medicamento_id va dentro del payload.
                 await ApiService.post('/movimientos', this.movimiento)
 
-                $('#modalMovimientoInventario').modal('hide')
+                this.cerrarModal('modalMovimientoInventario')
                 this.mostrarMensaje('Movimiento registrado correctamente.', 'success')
                 this.$emit('actualizar-inventario')
             }catch(error){
@@ -1467,7 +1476,7 @@ export default {
             return fechaCad >= hoy && fechaCad <= limite
         },
 
-        // NUEVO: texto auxiliar bajo la fecha de caducidad ("25 días",
+        // Texto auxiliar bajo la fecha de caducidad ("25 días",
         // "Caducado hace 3 días", etc.) para no obligar al usuario a
         // calcular mentalmente cuánto falta.
         textoDiasRestantes(medica){
@@ -1535,6 +1544,39 @@ export default {
             link.download = `inventario_medicamentos_${new Date().toISOString().slice(0,10)}.csv`
             link.click()
             URL.revokeObjectURL(url)
+        },
+
+        // ═══════════════════════════════════════
+        // MODALES (control manual con jQuery/Bootstrap)
+        // ═══════════════════════════════════════
+        // Centralizamos apertura/cierre aquí en vez de usar
+        // data-toggle/data-target, porque el @click.stop en la celda de
+        // acciones impide que el evento llegue al listener delegado que
+        // Bootstrap registra en el document.
+        abrirModal(id){
+            // $nextTick asegura que Vue ya actualizó el DOM con los datos
+            // (medicamentoDetalle, medicamentoSeleccionado, etc.) antes de
+            // mostrar el modal.
+            this.$nextTick(() => {
+                if (window.jQuery) {
+                    $('#' + id).modal('show')
+                } else if (window.bootstrap) {
+                    // Fallback por si el proyecto usa Bootstrap 5 sin jQuery.
+                    const el = document.getElementById(id)
+                    bootstrap.Modal.getOrCreateInstance(el).show()
+                } else {
+                    console.error('No se encontró jQuery ni Bootstrap JS cargado en la página.')
+                }
+            })
+        },
+
+        cerrarModal(id){
+            if (window.jQuery) {
+                $('#' + id).modal('hide')
+            } else if (window.bootstrap) {
+                const el = document.getElementById(id)
+                bootstrap.Modal.getOrCreateInstance(el).hide()
+            }
         },
 
         // ═══════════════════════════════════════
