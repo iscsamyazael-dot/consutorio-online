@@ -14,7 +14,7 @@ use App\Http\Controllers\ConsultaIAController; // IA
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DerivacionController;
+use App\Http\Controllers\DerivacionController; 
 use App\Http\Controllers\UserRegisterController;
 use App\Models\Paciente;
 use App\Http\Controllers\CitaController;//agenda        
