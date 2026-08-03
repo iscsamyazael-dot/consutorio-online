@@ -78,10 +78,48 @@
 
             <!-- Estado -->
             <td class="text-center">
-              <span :class="['badge rounded-pill px-3 py-2', getEstadoBadge(item.estado)]">
-                {{ item.estado }}
-              </span>
-            </td>
+              <div class="dropdown">
+
+                  <button
+                      class="btn btn-sm dropdown-toggle rounded-pill px-3"
+                      :class="getEstadoButton(item.estado)"
+                      type="button"
+                      data-bs-toggle="dropdown">
+                      <i :class="getEstadoIcon(item.estado)" class="me-2"></i>
+                      {{ capitalizar(item.estado) }}
+                  </button>
+
+                  <ul class="dropdown-menu shadow border-0">
+
+                      <li>
+                          <a
+                              class="dropdown-item"
+                              href="#"
+                              @click.prevent="actualizarEstado(item,'pendiente')">
+                              🟡 Pendiente
+                          </a>
+                      </li>
+
+                      <li>
+                          <a
+                              class="dropdown-item"
+                              href="#"
+                              @click.prevent="actualizarEstado(item,'enviado')">
+                              🔵 Enviado
+                          </a>
+                      </li>
+
+                      <li>
+                          <a
+                              class="dropdown-item"
+                              href="#"
+                              @click.prevent="actualizarEstado(item,'atendido')">
+                              🟢 Atendido
+                          </a>
+                      </li>
+                  </ul>
+              </div>
+           </td>
           </tr>
         </tbody>
       </table>
@@ -108,6 +146,15 @@
                 </div>
 
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>Fecha: </strong>
+                        <span>{{ motivoSeleccionado.fecha }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Folio: </strong>
+                        <span>{{ motivoSeleccionado.folio }}</span>
+                    </div>
 
                     <div class="mb-3">
                         <strong>Paciente: </strong>
@@ -204,28 +251,32 @@ export default {
     getPrioridadBadge(prioridad) {
       switch (prioridad) {
         case 'baja':
-          return 'bg-success-subtle text-success border border-success-subtle'
+          return 'bg-success text-white fw-bold shadow-sm'
         case 'media':
-          return 'bg-warning-subtle text-warning border border-warning-subtle'
+          return 'bg-warning text-dark fw-bold shadow-sm'
         case 'alta':
-          return 'bg-orange-subtle text-orange border border-orange-subtle' // O 'bg-warning text-dark'
+          return 'bg-orange text-white fw-bold shadow-sm'
         case 'critica':
-          return 'bg-danger text-white font-weight-bold shadow-sm'
+          return 'bg-danger text-white fw-bold shadow-sm'
         default:
-          return 'bg-secondary-subtle text-secondary'
+          return 'bg-secondary text-white'
       }
     },
 
     getPrioridadIcon(prioridad) {
       switch (prioridad) {
         case 'baja':
-          return 'fas fa-arrow-down'
+          return 'fas fa-check-circle'
+
         case 'media':
-          return 'fas fa-minus'
+          return 'fas fa-minus-circle'
+
         case 'alta':
-          return 'fas fa-exclamation-triangle' // Advertencia/Riesgo alto
+          return 'fas fa-exclamation-circle'
+
         case 'critica':
-          return 'fas fa-radiation' // O 'fas fa-fire' / 'fas fa-skull-crossbones' / 'fas fa-ban'
+          return 'fas fa-radiation'
+
         default:
           return 'fas fa-circle'
       }
@@ -255,6 +306,50 @@ export default {
         modal.show()
 
     },
+
+    async actualizarEstado(item, nuevoEstado){
+      try{
+        await ApiService.put(`/derivaciones/${item.id}/estado`,{
+            estado:nuevoEstado
+        });
+        item.estado = nuevoEstado;
+      }catch(error){
+        console.error(error);
+      }
+    },
+
+    getEstadoButton(estado){
+      switch(estado){
+        case 'pendiente':
+          return 'btn-warning';
+        case 'enviado':
+          return 'btn-primary';
+        case 'atendido':
+          return 'btn-success';
+        default:
+          return 'btn-secondary';
+      }
+    },
+
+    getEstadoIcon(estado){
+      switch(estado){
+        case 'pendiente':
+          return 'fas fa-clock';
+        case 'enviado':
+          return 'fas fa-paper-plane';
+        case 'atendido':
+          return 'fas fa-check-circle';
+        default:
+          return 'fas fa-circle';
+      }
+
+    },
+
+    capitalizar(texto){
+      return texto.charAt(0).toUpperCase() + texto.slice(1);
+    },
+
+
   }
 }
 </script>

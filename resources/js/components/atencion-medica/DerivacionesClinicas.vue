@@ -62,9 +62,9 @@
                         <i class="fas fa-exclamation-triangle fa-lg"></i>
                     </div>
                     <div>
-                        <small class="text-muted fw-semibold d-block">Alta Prioridad</small>
+                        <small class="text-muted fw-semibold d-block">Casos críticos</small>
                         <h4 class="fw-bold mb-0 text-dark">
-                        {{ estadisticas.alta_prioridad }}
+                        {{ estadisticas.casos_criticos }}
                         </h4>
                     </div>
                     </div>
@@ -378,7 +378,7 @@ export default {
         return {
             estadisticas: {
                 total_derivaciones: 0,
-                alta_prioridad: 0,
+                casos_criticos: 0,
                 canalizados: 0
             },
             modalVisible: false,

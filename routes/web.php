@@ -60,6 +60,8 @@ Route::middleware('auth')->group(function () {
 
 
         ///*** RUTAS PARA LAS APIS Y CONSUMO DE DATOS */
+        //RUTA PARA ACTUALIZAR EL ESTADO DE DERIVACION
+        Route::put('/derivaciones/{id}/estado', [DerivacionController::class, 'actualizarEstado']);
         //Ruta para obtener estadisticas de las cartas de derivacion
         Route::get('/derivaciones/estadisticas', [DerivacionController::class, 'obtenerEstadisticas']);
         //RUTA QUE OBTIENE TODAS LAS DERIVACIONES 
