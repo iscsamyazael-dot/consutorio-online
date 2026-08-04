@@ -24,9 +24,9 @@
         {{-- Configured right links --}}
         @each('adminlte::partials.navbar.menu-item', $adminlte->menu('navbar-right'), 'item')
 
-        {{-- 👈 NUEVO: Campanita de notificaciones --}}
-        <li class="nav-item d-flex align-items-center">
-            <div id="notification-bell-app"></div>
+        {{-- 👈 NUEVO: Campanita de notificaciones corregida --}}
+        <li class="nav-item d-flex align-items-center position-relative" style="position: relative;">
+            <div id="notification-bell-app" style="position: relative; display: inline-block;"></div>
         </li>
 
         {{-- User menu link --}}
