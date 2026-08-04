@@ -702,25 +702,60 @@ class IAClinicaService
 
         $textoEspecialidades
 
-        REGLA OBLIGATORIA:
+        ORDEN DE PRIORIDAD (léelo en este orden, no lo inviertas):
 
-        - Si el catálogo anterior tiene especialidades listadas, DEBES elegir
-          el campo \"especialidad\" copiando EXACTAMENTE uno de esos nombres,
-          tal cual aparece escrito. No inventes ni modifiques el nombre.
-        - Si ninguna especialidad del catálogo es clínicamente adecuada para
-          los síntomas del paciente, usa \"Medicina general\" si está en el
-          catálogo, o el nombre más cercano disponible.
-        - Solo si el catálogo dice 'No disponible', sugiere libremente la
-          especialidad médica más apropiada según los ejemplos de abajo.
+        1. La COHERENCIA CLÍNICA es SIEMPRE lo primero. Nunca elijas una especialidad
+           solo porque está en el catálogo si no tiene relación médica real con los
+           síntomas reportados. Enviar a un paciente con la especialidad equivocada
+           es un error clínico grave, más grave que no ceñirte estrictamente al
+           catálogo.
+        2. Si dentro del catálogo SÍ existe una especialidad coherente con los
+           síntomas, cópiala EXACTAMENTE como aparece escrita ahí (no la
+           modifiques ni la abrevies). En este caso \"especialidad_fuera_catalogo\"
+           debe ser false.
+        3. Si el catálogo tiene especialidades pero NINGUNA es coherente con los
+           síntomas reportados, o si el catálogo no incluye ninguna especialidad
+           apropiada para el caso:
+           - Identifica cuál sería la especialidad médicamente ideal para el caso
+             (según los ejemplos de coherencia clínica de abajo) y guárdala en el
+             campo \"especialidad_ideal_no_disponible\" (ej. \"Neumología\").
+           - En el campo \"especialidad\" pon la mejor alternativa disponible en el
+             catálogo para dar un primer manejo (normalmente \"Medicina General\" si
+             existe en el catálogo; si ni siquiera esa existe, usa la especialidad
+             del catálogo más cercana clínicamente, aunque no sea ideal).
+           - Marca \"especialidad_fuera_catalogo\": true.
+           - En \"justificacion\" y en \"motivo_derivacion\" DEBES decirlo de forma
+             explícita y transparente, EN ESTE FORMATO (adaptando los nombres):
+             \"No se cuenta con la especialidad de <especialidad_ideal_no_disponible>
+             en el catálogo de este consultorio; se deriva a <especialidad> para
+             valoración inicial y, de ser necesario, referencia externa a
+             <especialidad_ideal_no_disponible>.\"
+             No lo omitas ni lo dejes implícito: el médico debe poder leer
+             claramente que la especialidad ideal no estaba disponible y cuál era.
+        4. Solo si el catálogo dice \"No disponible\" (no se proporcionó catálogo),
+           sugiere libremente la especialidad médica más apropiada según los
+           ejemplos de abajo, marca \"especialidad_fuera_catalogo\": true, y deja
+           \"especialidad_ideal_no_disponible\" vacío (aquí no aplica el mensaje del
+           punto 3, porque no hay catálogo del que informar una ausencia).
+
+        NUNCA hagas lo siguiente (ejemplo de error real que debes evitar):
+        Síntomas: \"tos\", \"congestión nasal\" -> especialidad elegida: \"Odontología\"
+        o \"Ginecología\" solo porque eran las únicas especialidades en el catálogo.
+        Eso es INCORRECTO: la tos y la congestión nasal no tienen relación con
+        odontología ni ginecología. Lo correcto en ese caso sería \"Neumología\" si
+        está en el catálogo, o \"Medicina General\" si no lo está.
 
         COHERENCIA CLÍNICA OBLIGATORIA (ejemplos de referencia, no exhaustivos):
 
+        - Síntomas respiratorios (tos, congestión nasal, gripe, catarro, dolor de
+          garganta sin causa dental) -> Neumología, Otorrinolaringología o Medicina
+          General; Urgencias si es grave. NUNCA Odontología, Ginecología, Urología
+          ni otra especialidad de otro sistema/órgano no relacionado.
         - Síntomas digestivos (dolor abdominal, diarrea, náuseas, vómito,
           colon irritado, gastritis, reflujo) -> Gastroenterología o Medicina
           General. NUNCA Odontología/Dentista salvo que el síntoma sea
           dental, de encías o de boca explícitamente.
         - Síntomas óseos/articulares/musculares o traumatismos -> Traumatología.
-        - Síntomas respiratorios -> Neumología o Urgencias si es grave.
         - Síntomas cardíacos (dolor torácico, palpitaciones) -> Cardiología.
         - Síntomas neurológicos (convulsiones, pérdida de fuerza, alteración
           de conciencia) -> Neurología o Urgencias si es grave.
@@ -731,12 +766,20 @@ class IAClinicaService
         - Síntomas oculares -> Oftalmología.
         - Síntomas urinarios -> Urología.
         - Ansiedad, depresión, crisis emocional -> Psiquiatría o Psicología.
+        - Síntomas dentales, de encías o de boca -> Odontología.
         - Si el motivo de consulta no calza claramente con ninguna
           especialidad específica -> Medicina General.
 
         La especialidad elegida SIEMPRE debe tener relación médica directa
-        y evidente con los síntomas reportados. Antes de responder, verifica
-        que tu elección sea coherente; si no lo es, corrígela.
+        y evidente con los síntomas reportados.
+
+        AUTOVERIFICACIÓN OBLIGATORIA ANTES DE RESPONDER:
+        Antes de escribir el JSON final, pregúntate: \"¿un médico revisando este
+        caso estaría de acuerdo en que esta especialidad tiene relación directa y
+        obvia con los síntomas descritos?\". Si la respuesta es no, o si dudas,
+        cambia la especialidad a \"Medicina General\" (esté o no en el catálogo)
+        en vez de forzar una especialidad incoherente solo por estar en el
+        catálogo.
 
         Ejemplos genéricos de especialidades (solo como referencia si el
         catálogo no está disponible):
@@ -808,6 +851,10 @@ class IAClinicaService
 
         \"especialidad\":\"\",
 
+        \"especialidad_fuera_catalogo\": false,
+
+        \"especialidad_ideal_no_disponible\":\"\",
+
         \"motivo_derivacion\":\"\",
 
         \"requiere_urgencias\":true,
@@ -824,9 +871,17 @@ class IAClinicaService
         - No escribas explicaciones fuera del JSON.
         - No uses Markdown.
         - No inventes medicamentos si el sistema encontró medicamentos.
-        - No inventes especialidades si el sistema encontró una especialidad.
+        - No inventes especialidades si el sistema encontró una especialidad
+          clínicamente coherente en el catálogo.
         - Si no existen medicamentos en la base de datos, proporciona sugerencias generales con una breve descripción.
-        - Si no existe la especialidad en la base de datos, sugiere la especialidad médica más apropiada.
+        - Si ninguna especialidad del catálogo es clínicamente coherente con los
+          síntomas, sugiere de todas formas la mejor alternativa disponible en el
+          catálogo, marca \"especialidad_fuera_catalogo\": true, indica en
+          \"especialidad_ideal_no_disponible\" cuál sería la especialidad ideal, y
+          dilo explícitamente en \"justificacion\"/\"motivo_derivacion\" (ver FASE 7);
+          nunca fuerces una especialidad no relacionada solo por estar en el
+          catálogo, y nunca omitas mencionar que la especialidad ideal no estaba
+          disponible.
         - Prioriza siempre la seguridad del paciente.
         - Ante signos de alarma importantes, prioriza la derivación sobre la receta inteligente.
         - El diagnóstico siempre es probable y nunca definitivo.
