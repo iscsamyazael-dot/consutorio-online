@@ -54,6 +54,18 @@
                     </ul>
                 </div>
 
+                <!-- AVISO: la especialidad ideal no está en el catálogo del consultorio.
+                     Se muestra ANTES de la sugerencia normal para que quede claro que lo
+                     que sigue es un plan B, no la especialidad médicamente ideal. -->
+                <div
+                    v-if="especialidadFueraCatalogo && especialidadIdealNoDisponible"
+                    class="alert alert-secondary py-1 px-2 small mb-2"
+                >
+                    ℹ️ No se cuenta con la especialidad de
+                    <strong>{{ especialidadIdealNoDisponible }}</strong>
+                    en el catálogo de este consultorio.
+                </div>
+
                 <!-- SUGERENCIA DE ESPECIALIDAD -->
                 <div
                     v-if="especialidadSugerida"
@@ -65,6 +77,12 @@
                         :class="fuente === 'ia_triage' ? 'badge-info' : 'badge-secondary'"
                     >
                         {{ fuente === 'ia_triage' ? 'triage IA' : 'respaldo por palabras clave' }}
+                    </span>
+                    <span
+                        v-if="especialidadFueraCatalogo"
+                        class="badge badge-secondary ml-1"
+                    >
+                        fuera del catálogo ideal
                     </span>
                     <div v-if="motivoDerivacionIA" class="mt-1">
                         {{ motivoDerivacionIA }}
@@ -149,6 +167,12 @@ export default {
             diagnosticosProbables: [],
             motivoDerivacionIA: null,
             requiereUrgencias: false,
+            // Nuevo: cuando la IA no encontró en el catálogo la especialidad
+            // médicamente ideal y tuvo que sugerir la mejor alternativa
+            // disponible (ver IAClinicaService::sugerirMedicamentoLibre,
+            // campos especialidad_fuera_catalogo / especialidad_ideal_no_disponible).
+            especialidadFueraCatalogo: false,
+            especialidadIdealNoDisponible: null,
             cargando: false,
             error: false,
 
@@ -183,6 +207,9 @@ export default {
             }
             if (this.diagnosticosProbables.length > 0) {
                 partes.push(`Diagnósticos probables (IA): ${this.diagnosticosProbables.join(', ')}.`)
+            }
+            if (this.especialidadFueraCatalogo && this.especialidadIdealNoDisponible) {
+                partes.push(`No se contaba con la especialidad de ${this.especialidadIdealNoDisponible} en el catálogo del consultorio.`)
             }
             if (this.motivoDerivacionIA) {
                 partes.push(this.motivoDerivacionIA)
@@ -221,6 +248,8 @@ export default {
                     this.diagnosticosProbables = response.data.diagnosticos_probables || []
                     this.motivoDerivacionIA = response.data.motivo_derivacion_ia || null
                     this.requiereUrgencias = response.data.requiere_urgencias || false
+                    this.especialidadFueraCatalogo = response.data.especialidad_fuera_catalogo || false
+                    this.especialidadIdealNoDisponible = response.data.especialidad_ideal_no_disponible || null
 
                     // Preseleccionamos la sugerida, si existe en la lista
                     if (this.especialidadSugerida) {

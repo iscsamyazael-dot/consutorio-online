@@ -20,7 +20,11 @@
     </template>
 
     <template v-if="vista === 'alertas'">
-        <alerta_farmacia></alerta_farmacia>
+        <alerta_farmacia
+            :medicamentos="medicamentos"
+            :cargando="cargando"
+            @actualizar-inventario="refrescarInventario">
+        </alerta_farmacia>
     </template>
     
 </template>
@@ -57,7 +61,11 @@
                 this.vista = vistaNueva
             },
             // Única fuente de la verdad: se llama al montar la vista y cada
-            // vez que se crea/edita un medicamento o se registra un movimiento
+            // vez que se crea/edita un medicamento o se registra un movimiento.
+            // Como 'medicamentos' se pasa como prop a kpicards, alertasResumen,
+            // inventario y alerta_farmacia, en cuanto este array se reasigna
+            // aquí, Vue vuelve a renderizar TODOS esos componentes hijos de
+            // forma automática y reactiva, sin recargar la página.
             async obtenerMedicamentos(){
                 this.cargando = true
                 try {

@@ -301,15 +301,20 @@
                         </small>
                     </div>
                 </div>
-                <button
-                    type="button"
-                    class="close text-white"
-                    data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalDetalleMedicamento')">
                     <span>&times;</span>
                 </button>
             </div>
             <!-- BODY -->
             <div class="modal-body p-4">
+                <!-- SPINNER DE CARGA -->
+                <div v-if="cargandoDetalle" class="text-center py-5">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="sr-only">Cargando...</span>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Cargando información del medicamento...</p>
+                </div>
+                <div v-else>
                 <!-- ALERTA -->
                 <div class="alert alert-light border-left border-info shadow-sm mb-4">
                     <i class="fas fa-info-circle text-info mr-2"></i>
@@ -569,10 +574,11 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
             <!-- FOOTER -->
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalDetalleMedicamento')">
                     <i class="fas fa-times mr-1"></i>
                     Cerrar
                 </button>
@@ -617,7 +623,7 @@
                         </small>
                     </div>
                 </div>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalEditarMedicamento')">
                     <span>&times;</span>
                 </button>
             </div>
@@ -845,7 +851,7 @@
             <!-- ===================================== -->
 
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalEditarMedicamento')">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
@@ -891,7 +897,7 @@
                         </small>
                     </div>
                 </div>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalMovimientoInventario')">
                     <span>&times;</span>
                 </button>
             </div>
@@ -1061,7 +1067,7 @@
             <!-- FOOTER -->
             <!-- ===================================== -->
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalMovimientoInventario')">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
@@ -1159,7 +1165,8 @@ export default {
             mensaje: null,          // { texto, tipo } - tipo: success | danger | warning
             guardandoEdicion: false,
             guardandoMovimiento: false,
-            eliminandoId: null
+            eliminandoId: null,
+            cargandoDetalle: false
         }
     },
 
@@ -1283,17 +1290,23 @@ export default {
         // VER DETALLE
         // ═══════════════════════════════════════
         async verMedicamento(id){
+            // Abrimos el modal DE INMEDIATO con un estado de carga, en vez
+            // de esperar a que resuelva el fetch. Así el usuario ve
+            // feedback instantáneo aunque el endpoint tarde, en lugar de
+            // sentir que el clic no hizo nada.
+            this.medicamentoDetalle = { inventario: {}, ultimo_movimiento: null }
+            this.cargandoDetalle = true
+            this.abrirModal('modalDetalleMedicamento')
+
             try{
                 const response = await ApiService.get('/medicamentos/' + id)
                 this.medicamentoDetalle = response.data
-                // Abrimos el modal manualmente en vez de depender de
-                // data-toggle/data-target, porque el @click.stop de la
-                // celda de acciones bloquea la propagación que Bootstrap
-                // necesita para su listener delegado en el document.
-                this.abrirModal('modalDetalleMedicamento')
             }catch(error){
                 console.error(error)
                 this.mostrarMensaje('No se pudo cargar el detalle del medicamento.', 'danger')
+                this.cerrarModal('modalDetalleMedicamento')
+            }finally{
+                this.cargandoDetalle = false
             }
         },
 
@@ -1547,23 +1560,32 @@ export default {
         },
 
         // ═══════════════════════════════════════
-        // MODALES (control manual con jQuery/Bootstrap)
+        // MODALES (control manual con jQuery + Bootstrap 4)
         // ═══════════════════════════════════════
         // Centralizamos apertura/cierre aquí en vez de usar
-        // data-toggle/data-target, porque el @click.stop en la celda de
-        // acciones impide que el evento llegue al listener delegado que
+        // data-toggle/data-target, porque el @click.stop en la celda
+        // de acciones impide que el evento llegue al listener delegado que
         // Bootstrap registra en el document.
+        //
+        // IMPORTANTE: este proyecto usa Bootstrap 4 (jQuery presente). El
+        // objeto global `bootstrap` en BS4 SÍ existe pero su clase Modal no
+        // tiene el método estático `getOrCreateInstance` (eso es exclusivo
+        // de Bootstrap 5), por eso se prioriza jQuery aquí.
         abrirModal(id){
             // $nextTick asegura que Vue ya actualizó el DOM con los datos
             // (medicamentoDetalle, medicamentoSeleccionado, etc.) antes de
             // mostrar el modal.
             this.$nextTick(() => {
+                const el = document.getElementById(id)
+                if (!el) {
+                    console.error('No se encontró el modal con id: ' + id)
+                    return
+                }
                 if (window.jQuery) {
                     $('#' + id).modal('show')
-                } else if (window.bootstrap) {
-                    // Fallback por si el proyecto usa Bootstrap 5 sin jQuery.
-                    const el = document.getElementById(id)
-                    bootstrap.Modal.getOrCreateInstance(el).show()
+                } else if (window.bootstrap && window.bootstrap.Modal) {
+                    // Fallback Bootstrap 4/5 sin jQuery: instanciar directamente.
+                    new bootstrap.Modal(el).show()
                 } else {
                     console.error('No se encontró jQuery ni Bootstrap JS cargado en la página.')
                 }
@@ -1571,12 +1593,33 @@ export default {
         },
 
         cerrarModal(id){
+            const el = document.getElementById(id)
+            if (!el) return
+
             if (window.jQuery) {
                 $('#' + id).modal('hide')
-            } else if (window.bootstrap) {
-                const el = document.getElementById(id)
-                bootstrap.Modal.getOrCreateInstance(el).hide()
+            } else if (window.bootstrap && window.bootstrap.Modal) {
+                new bootstrap.Modal(el).hide()
             }
+
+            // Salvaguarda: si por alguna razón el plugin no limpia el
+            // backdrop/clases del <body> (p. ej. porque el listener
+            // data-dismiss no se disparó y solo se ejecutó este @click),
+            // lo forzamos manualmente para que la página no quede bloqueada.
+            setTimeout(() => {
+                el.classList.remove('show')
+                el.style.display = 'none'
+                el.setAttribute('aria-hidden', 'true')
+                el.removeAttribute('aria-modal')
+
+                const siguenAbiertos = document.querySelectorAll('.modal.show').length > 0
+                if (!siguenAbiertos) {
+                    document.body.classList.remove('modal-open')
+                    document.body.style.removeProperty('overflow')
+                    document.body.style.removeProperty('padding-right')
+                    document.querySelectorAll('.modal-backdrop').forEach(bd => bd.remove())
+                }
+            }, 350) // deja correr la transición fade de Bootstrap antes de forzar
         },
 
         // ═══════════════════════════════════════
