@@ -38,8 +38,10 @@
         <table class="table table-hover table-bordered">
             <thead class="bg-light">
                 <tr>
+                    <th>Folio</th>
                     <th>Paciente</th>
                     <th>Tipo</th>
+                    <th>Fecha de consulta</th>
                     <th>Fecha</th>
                     <th>Estado</th>
                     <th>Archivo</th>
@@ -49,39 +51,135 @@
                 <tr
                 v-for="mostrar in listaArchivos" :key="mostrar.id"
                 >
-                    
+                    <td>
+                        {{ mostrar.codigo_paciente }}
+                    </td>
+
                     <td>
                         {{mostrar.paciente?.nombre}}
                     </td>
-                    <td>{{ mostrar.tipo_archivo }}</td>
-                    <td>{{ detallearchivo.fecha_subida?.split(' ')[0] }}</td>
+
                     <td>
-                        <span
-                                class="badge bg-danger"
-                                v-if="mostrar.Estado === 'Cancelado'">
-                                CANCELADO
-                            </span>
-                            <span
-                                class="badge bg-warning"
-                                v-else-if="mostrar.Estado === 'Pendiente'">
-                                PENDIENTE
-                            </span>
-                            <span
-                                class="badge bg-warning"
-                                v-else-if="mostrar.Estado === 'En Revisión'">
-                                EN REVISION
-                            </span>
-                            <span
-                                class="badge bg-success"
-                                v-else-if="mostrar.Estado === 'Completado'">
-                                COMPLETADO
-                            </span>
-                            <span
-                                class="badge bg-danger"
-                                v-else>
-                                NO SE ENCUENTRA
-                            </span>
+                        <div class="dropdown">
+
+                            <button
+                                class="btn btn-sm dropdown-toggle rounded-pill fw-bold shadow-sm"
+                                :class="getTipoBadge(mostrar.tipo_archivo)"
+                                data-bs-toggle="dropdown"
+                            >
+                                {{ getTipoIcon(mostrar.tipo_archivo) }}
+                                {{ mostrar.tipo_archivo }}
+                            </button>
+
+                            <ul class="dropdown-menu shadow border-0">
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="#"
+                                        @click.prevent="actualizarTipo(mostrar,'Radiografía')"
+                                    >
+                                        🩻 Radiografía
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="#"
+                                        @click.prevent="actualizarTipo(mostrar,'Receta Médica')"
+                                    >
+                                        💊 Receta Médica
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="#"
+                                        @click.prevent="actualizarTipo(mostrar,'Análisis Clínico')"
+                                    >
+                                        🧪 Análisis Clínico
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="#"
+                                        @click.prevent="actualizarTipo(mostrar,'Expediente')"
+                                    >
+                                        📁 Expediente
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </td>
+
+                    <td>
+                        {{ mostrar.fecha_consulta?.split(' ')[0] || 'Sin consulta' }}
+                    </td>
+
+                    <td>{{ mostrar.fecha_subida?.split(' ')[0] }}</td>
+                    
+                    <td>
+
+                        <div class="dropdown">
+
+                            <button
+                                class="btn btn-sm dropdown-toggle rounded-pill fw-bold shadow-sm"
+                                :class="getEstadoBadge(mostrar.Estado)"
+                                data-bs-toggle="dropdown"
+                            >
+                                {{ getEstadoIcon(mostrar.Estado) }}
+                                {{ mostrar.Estado }}
+                            </button>
+
+                            <ul class="dropdown-menu shadow border-0">
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="#"
+                                        @click.prevent="actualizarEstado(mostrar,'Pendiente')"
+                                    >
+                                        🟡 Pendiente
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="#"
+                                        @click.prevent="actualizarEstado(mostrar,'En Revisión')"
+                                    >
+                                        🔵 En Revisión
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="#"
+                                        @click.prevent="actualizarEstado(mostrar,'Completado')"
+                                    >
+                                        🟢 Completado
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="#"
+                                        @click.prevent="actualizarEstado(mostrar,'Cancelado')"
+                                    >
+                                        🔴 Cancelado
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+
                     <td>
                             <button
                                 type="button"
@@ -667,6 +765,111 @@ export default {
 
 
     methods: {
+
+        getTipoBadge(tipo) {
+            switch (tipo) {
+                case 'Radiografía':
+                    return 'bg-primary text-white'
+
+                case 'Receta Médica':
+                    return 'bg-success text-white'
+
+                case 'Análisis Clínico':
+                    return 'bg-info text-white'
+
+                case 'Expediente':
+                    return 'bg-secondary text-white'
+
+                default:
+                    return 'bg-light text-dark'
+            }
+        },
+
+        getTipoIcon(tipo) {
+            switch (tipo) {
+                case 'Radiografía':
+                    return '🩻'
+
+                case 'Receta Médica':
+                    return '💊'
+
+                case 'Análisis Clínico':
+                    return '🧪'
+
+                case 'Expediente':
+                    return '📁'
+
+                default:
+                    return '📄'
+            }
+        },
+
+        getEstadoBadge(estado) {
+            switch (estado) {
+                case 'Pendiente':
+                    return 'bg-warning text-dark'
+
+                case 'En Revisión':
+                    return 'bg-primary text-white'
+
+                case 'Completado':
+                    return 'bg-success text-white'
+
+                case 'Cancelado':
+                    return 'bg-danger text-white'
+
+                default:
+                    return 'bg-secondary text-white'
+            }
+        },
+
+        getEstadoIcon(estado) {
+            switch (estado) {
+                case 'Pendiente':
+                    return '🟡'
+
+                case 'En Revisión':
+                    return '🔵'
+
+                case 'Completado':
+                    return '🟢'
+
+                case 'Cancelado':
+                    return '🔴'
+
+                default:
+                    return '⚪'
+            }
+        },
+
+        async actualizarEstado(item, nuevoEstado) {
+            try {
+
+                await ApiService.put(`/archivos-clinicos/${item.id}`, {
+                    Estado: nuevoEstado
+                });
+
+                item.Estado = nuevoEstado;
+
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        
+        async actualizarTipo(item, nuevoTipo) {
+            try {
+
+                await ApiService.put(`/archivos-clinicos/${item.id}`, {
+                    tipo_archivo: nuevoTipo
+                });
+
+                item.tipo_archivo = nuevoTipo;
+
+            } catch (error) {
+                console.error(error);
+            }
+        },
+
         async buscarPaciente(){
             try{
                 const response = await ApiService.get('/buscarPaciente?buscar=' + this.buscar);
