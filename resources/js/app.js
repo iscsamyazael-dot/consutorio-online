@@ -4,6 +4,9 @@ import 'bootstrap';
 import 'admin-lte';
 
 import { createApp } from 'vue';
+import { createPinia } from 'pinia'; // 👈 NUEVO
+import NotificationBell from './components/NotificationBell.vue'; // 👈 NUEVO
+
 // Componentes - Medicamentos
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
 import AlertaFarmacia from './components/Medicamentos/alertasMedicamentos.vue'
@@ -46,6 +49,8 @@ import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
 // ------------------------------------------------------
 const app = createApp({});
 
+app.use(createPinia()); // 👈 NUEVO
+
 app.component('Especialidades', Especialidades);
 app.component('Ubicacionesmaster', Ubicacionesmaster);
 app.component('masterprocita', masterprocita);
@@ -73,6 +78,25 @@ app.component('configuracion-sistema', ConfiSistema);
 app.component('configuracion-sistema-panelcontrasena', PanelContraseña);
 // Montaje de la app
 app.mount('#app');
+
+// ------------------------------------------------------
+// 👈 NUEVO: Campanita de notificaciones (vive en la barra de
+// navegación, fuera del #app de cada página, así que se monta aparte)
+// ------------------------------------------------------
+const pinia = createPinia();
+
+function mountBell(selector) {
+    const el = document.querySelector(selector);
+    if (!el) return; // el contenedor no existe en esta página/breakpoint, se omite
+    const bellApp = createApp(NotificationBell);
+    bellApp.use(pinia);
+    bellApp.mount(el);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    mountBell('#notification-bell-app');
+    mountBell('#notification-bell-app-mobile');
+});
 
 // ------------------------------------------------------
 // Otros complementos
