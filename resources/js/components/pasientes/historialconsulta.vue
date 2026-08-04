@@ -59,52 +59,60 @@
             <small>Registro cronológico de atención médica</small>
           </div>
 
-          <div v-if="infoConsultas.length === 0" class="alert alert-info text-center">
-            <i class="fas fa-folder-open mr-2"></i>
-            No se encuentran consultas registradas para este paciente.
-          </div>
+          <!-- Contenedor con límite de altura: a partir de ~2 consultas
+               visibles, el resto se ve haciendo scroll AQUÍ DENTRO, en vez
+               de que la tarjeta crezca y empuje toda la página. -->
+          <div class="consultas-scroll">
 
-          <div
-            v-else
-            class="timeline-card"
-            v-for="consulta in infoConsultas"
-            :key="consulta.id">
-            <div class="timeline-dot" :class="colorPunto(consulta.tipo_consulta)"></div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between flex-wrap gap-2">
-               <div class="fecha-hora">
-                  <h6 class="fw-bold mb-0">
-                    <i class="fas fa-calendar-alt text-primary me-2"></i>
-                    {{ formatearFecha(consulta.fecha) }}
-                  </h6>
+            <div v-if="infoConsultas.length === 0" class="alert alert-info text-center">
+              <i class="fas fa-folder-open mr-2"></i>
+              No se encuentran consultas registradas para este paciente.
+            </div>
 
-                  <span class="hora-consulta">
-                    <i class="fas fa-clock text-primary me-1"></i>
-                    {{ formatearHora(consulta.fecha) }}
+            <div
+              v-else
+              class="timeline-card"
+              v-for="consulta in infoConsultas"
+              :key="consulta.id">
+              <div class="timeline-dot" :class="colorPunto(consulta.tipo_consulta)"></div>
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between flex-wrap gap-2">
+                 <div class="fecha-hora">
+                    <h6 class="fw-bold mb-0">
+                      <i class="fas fa-calendar-alt text-primary me-2"></i>
+                      {{ formatearFecha(consulta.fecha) }}
+                    </h6>
+
+                    <span class="hora-consulta">
+                      <i class="fas fa-clock text-primary me-1"></i>
+                      {{ formatearHora(consulta.fecha) }}
+                    </span>
+                  </div>
+                  <span
+                    class="badge rounded-pill px-3 py-2"
+                    :class="colorBadge(consulta.tipo_consulta)">
+                    {{ consulta.tipo_consulta }}
                   </span>
                 </div>
-                <span
-                  class="badge rounded-pill px-3 py-2"
-                  :class="colorBadge(consulta.tipo_consulta)">
-                  {{ consulta.tipo_consulta }}
-                </span>
-              </div>
 
-              <template v-if="consulta.motivo">
-                <p class="mt-2 mb-1"><strong>Motivo:</strong> {{ consulta.motivo }}</p>
-                <p class="text-muted small mb-3" v-if="consulta.diagnostico">
-                  Diagnóstico: {{ consulta.diagnostico }}
+                <template v-if="consulta.motivo">
+                  <p class="mt-2 mb-1"><strong>Motivo:</strong> {{ consulta.motivo }}</p>
+                  <p class="text-muted small mb-3" v-if="consulta.diagnostico">
+                    Diagnóstico: {{ consulta.diagnostico }}
+                  </p>
+                  <a :href="`/HistorialConsulta/${consulta.id}`" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                    Ver consulta completa
+                  </a>
+                </template>
+
+                <p class="mt-2 mb-0 text-muted" v-else>
+                  {{ consulta.descripcion }}
                 </p>
-                <a :href="`/HistorialConsulta/${consulta.id}`" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                  Ver consulta completa
-                </a>
-              </template>
-
-              <p class="mt-2 mb-0 text-muted" v-else>
-                {{ consulta.descripcion }}
-              </p>
+              </div>
             </div>
+
           </div>
+          <!-- fin .consultas-scroll -->
         </div>
 
           <!-- RECETAS -->
@@ -115,81 +123,88 @@
     <small>Tratamientos indicados al paciente</small>
   </div>
 
-  <!-- SIN RECETAS -->
-  <div
-    v-if="infoRecetas.length === 0"
-    class="alert alert-info text-center"
-  >
-    <i class="fas fa-prescription me-2"></i>
-    No se encuentran recetas registradas para este paciente.
-  </div>
+  <!-- Igual que en Consultas: a partir de ~2 recetas visibles, el resto
+       se ve con scroll AQUÍ DENTRO, sin empujar el resto de la página. -->
+  <div class="recetas-scroll">
 
-  <!-- RECETAS -->
-  <div
-    v-else
-    v-for="receta in infoRecetas"
-    :key="receta.id"
-    class="record-card"
-  >
+    <!-- SIN RECETAS -->
+    <div
+      v-if="infoRecetas.length === 0"
+      class="alert alert-info text-center"
+    >
+      <i class="fas fa-prescription me-2"></i>
+      No se encuentran recetas registradas para este paciente.
+    </div>
 
-    <div>
+    <!-- RECETAS -->
+    <div
+      v-else
+      v-for="receta in infoRecetas"
+      :key="receta.id"
+      class="record-card"
+    >
 
-      <h6 class="fw-bold mb-1">
-        <i class="fas fa-calendar-alt text-primary me-2"></i>
+      <div>
 
-        {{ formatearFecha(receta.created_at) }}
-        <span class="text-muted fw-normal">
-          &middot; {{ formatearHora(receta.created_at) }}
-        </span>
-      </h6>
+        <h6 class="fw-bold mb-1">
+          <i class="fas fa-calendar-alt text-primary me-2"></i>
 
-      <p class="mb-1">
-        <strong>Medicamentos:</strong>
-      </p>
+          {{ formatearFecha(receta.created_at) }}
+          <span class="text-muted fw-normal">
+            &middot; {{ formatearHora(receta.created_at) }}
+          </span>
+        </h6>
 
-      <ul
-        v-if="parseMedicamentos(receta.medicamentos).length"
-        class="mb-2"
-      >
-        <li
-          v-for="(med, index) in parseMedicamentos(receta.medicamentos)"
-          :key="index"
+        <p class="mb-1">
+          <strong>Medicamentos:</strong>
+        </p>
+
+        <ul
+          v-if="parseMedicamentos(receta.medicamentos).length"
+          class="mb-2"
         >
-          {{ med.nombre }}
+          <li
+            v-for="(med, index) in parseMedicamentos(receta.medicamentos)"
+            :key="index"
+          >
+            {{ med.nombre }}
 
-          <span v-if="med.dosis">
-            - {{ med.dosis }}
-          </span>
+            <span v-if="med.dosis">
+              - {{ med.dosis }}
+            </span>
 
-          <span v-if="med.frecuencia">
-            - {{ med.frecuencia }}
-          </span>
+            <span v-if="med.frecuencia">
+              - {{ med.frecuencia }}
+            </span>
 
-          <span v-if="med.duracion">
-            - {{ med.duracion }}
-          </span>
-        </li>
-      </ul>
+            <span v-if="med.duracion">
+              - {{ med.duracion }}
+            </span>
+          </li>
+        </ul>
 
-      <p
-        v-if="receta.indicaciones_generales"
-        class="mb-0 text-muted"
+        <p
+          v-if="receta.indicaciones_generales"
+          class="mb-0 text-muted"
+        >
+          <strong>Indicaciones:</strong>
+          {{ receta.indicaciones_generales }}
+        </p>
+
+      </div>
+
+      <button
+        class="btn btn-sm btn-outline-primary rounded-pill px-3"
+        @click="verPdfReceta(receta)"
       >
-        <strong>Indicaciones:</strong>
-        {{ receta.indicaciones_generales }}
-      </p>
+        <i class="fas fa-file-pdf me-1"></i>
+        Ver PDF
+      </button>
 
     </div>
 
-    <button
-      class="btn btn-sm btn-outline-primary rounded-pill px-3"
-      @click="verPdfReceta(receta)"
-    >
-      <i class="fas fa-file-pdf me-1"></i>
-      Ver PDF
-    </button>
-
   </div>
+  <!-- fin .recetas-scroll -->
 
 </div>
         </div>
@@ -346,6 +361,51 @@ body {
   color: #6c757d;
 }
 
+/* Límite de altura para el historial de consultas: a partir de ~2
+   tarjetas visibles, el resto se ve con scroll DENTRO de esta caja,
+   sin empujar el resto de la página hacia abajo. Ajusta max-height
+   según cuántas tarjetas quieras mostrar de entrada. */
+.consultas-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.consultas-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.consultas-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+.consultas-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Mismo tratamiento que .consultas-scroll pero para el historial de
+   recetas: a partir de ~2 recetas visibles, el resto se ve con scroll
+   DENTRO de esta caja. */
+.recetas-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.recetas-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recetas-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+.recetas-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .timeline-card,
 .record-card,
 .note-card {
@@ -449,22 +509,30 @@ body {
                   // Mapeamos la estructura real del backend a lo que pinta la tarjeta:
                   // - diagnóstico viene de la primera evaluación de IA de esa consulta
                   // - "descripcion" (tarjeta sin motivo) usa la recomendación de la IA si no hay motivo
-                  this.infoConsultas = consultas.map((consulta, index) => {
-                    const evaluacion = (consulta.evaluaciones && consulta.evaluaciones[0]) || null
+                  this.infoConsultas = consultas
+                    .map((consulta, index) => {
+                      const evaluacion = (consulta.evaluaciones && consulta.evaluaciones[0]) || null
 
-                   return {
-                      id: consulta.id,
-                      fecha: consulta.created_at,
+                     return {
+                        id: consulta.id,
+                        fecha: consulta.created_at,
 
-                      // La primera consulta está en proceso
-                      // Las demás se consideran finalizadas
-                      tipo_consulta: index === 0 ? 'En proceso' : 'Finalizada',
+                        // La primera consulta está en proceso
+                        // Las demás se consideran finalizadas
+                        tipo_consulta: index === 0 ? 'En proceso' : 'Finalizada',
 
-                      motivo: consulta.motivo_consulta,
-                      diagnostico: evaluacion ? evaluacion.diagnostico_probable : null,
-                      descripcion: evaluacion ? evaluacion.recomendacion : null
-                    }
-                  })
+                        motivo: consulta.motivo_consulta,
+                        diagnostico: evaluacion ? evaluacion.diagnostico_probable : null,
+                        descripcion: evaluacion ? evaluacion.recomendacion : null
+                      }
+                    })
+                    // Solo mostramos consultas que ya tengan evaluación real de la
+                    // IA (diagnóstico o recomendación). El motivo por sí solo NO
+                    // cuenta como contenido: en las consultas de IA siempre llega
+                    // un motivo genérico ("Consulta Inteligente") aunque la consulta
+                    // no haya avanzado, así que basarnos en motivo dejaba pasar
+                    // consultas "vacías" como esa.
+                    .filter(consulta => !!(consulta.diagnostico || consulta.descripcion))
 
                   console.log('Historial clínico cargado:', this.infoConsultas)
               } catch(error){
@@ -511,7 +579,9 @@ body {
               }
             },
 
-            // Colores del punto
+            // Colores del punto de la línea de tiempo según el estado real
+            // de la consulta.
+            // ⚠️ Ajusta estos valores si tu columna `estado` usa otros textos
             colorPunto(estado){
               switch((estado || '').toLowerCase()){
                 case 'finalizada':
@@ -528,22 +598,6 @@ body {
                   return 'bg-secondary'
               }
             },
-          //Colores del punto de la línea de tiempo según el estado real de la consulta//
-          // ⚠️ Ajusta estos valores si tu columna `estado` usa otros textos
-          colorPunto(estado){
-            switch((estado || '').toLowerCase()){
-              case 'finalizada':
-              case 'completada':
-                return 'bg-success'
-              case 'en_proceso':
-                return 'bg-warning'
-              case 'urgencia':
-                return 'bg-danger'
-              default:
-                return 'bg-secondary'
-            }
-            
-          },
           //Colores del badge según el estado real de la consulta//
           colorBadge(estado){
             switch((estado || '').toLowerCase()){
