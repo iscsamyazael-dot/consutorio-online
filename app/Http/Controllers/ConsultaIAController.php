@@ -939,14 +939,18 @@ class ConsultaIAController extends Controller
             //    signos de alarma), no buscamos medicamentos.
             if (($respuestaIA['tipo'] ?? null) === 'derivacion') {
                 return response()->json([
-                    'success'                  => true,
-                    'tipo'                     => 'derivacion',
-                    'triage'                   => $respuestaIA['triage'] ?? null,
-                    'diagnosticos_probables'   => $respuestaIA['diagnosticos_probables'] ?? [],
-                    'especialidad_sugerida_ia' => $respuestaIA['especialidad'] ?? null,
-                    'motivo_derivacion'        => $respuestaIA['motivo_derivacion'] ?? null,
-                    'requiere_urgencias'       => $respuestaIA['requiere_urgencias'] ?? false,
-                    'justificacion'            => $respuestaIA['justificacion'] ?? null,
+                    'success'                          => true,
+                    'tipo'                             => 'derivacion',
+                    'triage'                           => $respuestaIA['triage'] ?? null,
+                    'diagnosticos_probables'           => $respuestaIA['diagnosticos_probables'] ?? [],
+                    'especialidad_sugerida_ia'         => $respuestaIA['especialidad'] ?? null,
+                    'motivo_derivacion'                => $respuestaIA['motivo_derivacion'] ?? null,
+                    'requiere_urgencias'               => $respuestaIA['requiere_urgencias'] ?? false,
+                    'justificacion'                    => $respuestaIA['justificacion'] ?? null,
+                    // NUEVO: transparencia cuando la especialidad ideal no
+                    // está en el catálogo de este consultorio.
+                    'especialidad_fuera_catalogo'      => $respuestaIA['especialidad_fuera_catalogo'] ?? false,
+                    'especialidad_ideal_no_disponible' => $respuestaIA['especialidad_ideal_no_disponible'] ?? null,
                 ]);
             }
 
@@ -1031,6 +1035,16 @@ class ConsultaIAController extends Controller
      * institucionales (no listas de síntomas), por lo que el respaldo
      * usa un mapa de palabras clave en vez de un LIKE directo contra
      * la columna descripcion.
+     *
+     * NOTA (transparencia de especialidad ideal): cuando la IA detecta
+     * que la especialidad clínicamente ideal para el caso no existe en
+     * el catálogo activo, lo señala mediante 'especialidad_fuera_catalogo'
+     * (true/false) y 'especialidad_ideal_no_disponible' (el nombre de esa
+     * especialidad ideal, ej. "Neumología"), mientras que 'especialidad'
+     * sigue trayendo la mejor alternativa disponible (ej. "Medicina
+     * general"). Estos dos campos solo vienen poblados cuando la fuente
+     * es 'ia_triage'; el mapa de respaldo no tiene esa información, así
+     * que en 'mapa_respaldo' quedan en false/null.
      */
     public function derivacionInteligente(Request $request)
     {
@@ -1061,11 +1075,21 @@ class ConsultaIAController extends Controller
             $especialidad = null;
             $fuente = null;
 
+            // NUEVO: bandera + nombre de la especialidad ideal cuando no
+            // está en el catálogo. Solo se poblarán si la fuente termina
+            // siendo 'ia_triage'.
+            $especialidadFueraCatalogo = false;
+            $especialidadIdealNoDisponible = null;
+
             if ($respuestaIA && ($respuestaIA['tipo'] ?? null) === 'derivacion') {
                 $triage = $respuestaIA['triage'] ?? null;
                 $diagnosticosProbables = $respuestaIA['diagnosticos_probables'] ?? [];
                 $motivoDerivacionIA = $respuestaIA['motivo_derivacion'] ?? null;
                 $requiereUrgencias = $respuestaIA['requiere_urgencias'] ?? false;
+
+                // NUEVO: tomamos directo de la respuesta de la IA
+                $especialidadFueraCatalogo = $respuestaIA['especialidad_fuera_catalogo'] ?? false;
+                $especialidadIdealNoDisponible = $respuestaIA['especialidad_ideal_no_disponible'] ?? null;
 
                 $nombreSugeridoIA = trim((string) ($respuestaIA['especialidad'] ?? ''));
 
@@ -1090,17 +1114,27 @@ class ConsultaIAController extends Controller
             if (!$especialidad) {
                 $especialidad = $this->buscarEspecialidadPorMapaDeRespaldo($sintomas);
                 $fuente = 'mapa_respaldo';
+
+                // NUEVO: si terminamos usando el mapa de respaldo, no hay
+                // forma de saber si la especialidad ideal existía o no en
+                // el catálogo, así que se resetean para no mostrar un
+                // aviso inventado en el frontend.
+                $especialidadFueraCatalogo = false;
+                $especialidadIdealNoDisponible = null;
             }
 
             return response()->json([
-                'success'                => true,
-                'especialidad_sugerida'  => $especialidad,
-                'especialidades'         => $todasLasEspecialidades,
-                'fuente'                 => $fuente,
-                'triage'                 => $triage,
-                'diagnosticos_probables' => $diagnosticosProbables,
-                'motivo_derivacion_ia'   => $motivoDerivacionIA,
-                'requiere_urgencias'     => $requiereUrgencias,
+                'success'                          => true,
+                'especialidad_sugerida'            => $especialidad,
+                'especialidades'                   => $todasLasEspecialidades,
+                'fuente'                           => $fuente,
+                'triage'                           => $triage,
+                'diagnosticos_probables'           => $diagnosticosProbables,
+                'motivo_derivacion_ia'             => $motivoDerivacionIA,
+                'requiere_urgencias'               => $requiereUrgencias,
+                // NUEVO
+                'especialidad_fuera_catalogo'      => $especialidadFueraCatalogo,
+                'especialidad_ideal_no_disponible' => $especialidadIdealNoDisponible,
             ]);
 
         } catch (\Exception $e) {
