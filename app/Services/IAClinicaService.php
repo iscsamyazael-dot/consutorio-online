@@ -25,8 +25,8 @@ class IAClinicaService
      * mitad y json_decode() devuelve null, cayendo en "No se pudo
      * determinar" aunque el texto de entrada sea perfectamente válido.
      */
-   /*  private const MAX_TOKENS_ANALISIS = 30000; */
-    private const MAX_TOKENS_ENTRADA = 20000;
+    // private const MAX_TOKENS_ANALISIS = 30000;
+    private const MAX_TOKENS_ENTRADA = 6000;
 
     /**
      * Analiza una transcripción médica
@@ -313,6 +313,7 @@ class IAClinicaService
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
+                    'reasoning_effort' => 'low',
                    // 'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
 
@@ -1374,6 +1375,7 @@ PRONÓSTICO ANTERIOR:
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
+                    //'reasoning_effort' => 'low',
                     //'max_tokens' => self::MAX_TOKENS_ANALISIS,
                 ]);
 
