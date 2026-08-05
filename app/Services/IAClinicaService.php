@@ -825,10 +825,10 @@ class IAClinicaService
         \"signos_alarma\":[]
         },
 
-        \"diagnosticos_probables\":[
-        \"\",
-        \"\",
-        \"\"
+      \"diagnosticos_probables\":[
+        {\"diagnostico\":\"\", \"porcentaje\":0},
+        {\"diagnostico\":\"\", \"porcentaje\":0},
+        {\"diagnostico\":\"\", \"porcentaje\":0}
         ],
 
         \"tipo\":\"receta_inteligente|derivacion\",
@@ -886,6 +886,9 @@ class IAClinicaService
         - El diagnóstico siempre es probable y nunca definitivo.
         - El campo \"recomendaciones_generales\" solo aplica cuando \"tipo\" es
           \"receta_inteligente\"; si \"tipo\" es \"derivacion\", déjalo como cadena vacía.
+          - En \"diagnosticos_probables\", los porcentajes de todos los diagnósticos
+          listados deben sumar exactamente 100, en números enteros, y el orden debe
+          ir del más alto al más bajo.
 
         ";
 
@@ -1096,72 +1099,45 @@ PRONÓSTICO ANTERIOR:
 
         El arreglo 'sintomas' NUNCA debe quedar vacío si el texto contiene información clínica real.
 
-        =========================================================
-        FASE 4 - DIAGNÓSTICO PROBABLE Y DIAGNÓSTICOS DIFERENCIALES - NOMBRES TÉCNICOS
-        =========================================================
+      =========================================================
+FASE 4 - DIAGNÓSTICOS PROBABLES (LENGUAJE MÉDICO PROFESIONAL)
+=========================================================
 
-        Genera una condición probable PRINCIPAL basada únicamente en los síntomas o, si aplica, en
-        la impresión diagnóstica del estudio adjunto. UTILIZA EL NOMBRE TÉCNICO COMPLETO de la
-        entidad clínica.
+Genera un máximo de tres diagnósticos probables utilizando terminología médica precisa.
 
-        Además del diagnóstico principal, construye una lista de HASTA 4 DIAGNÓSTICOS
-        DIFERENCIALES: otras entidades clínicas razonablemente compatibles con el mismo cuadro,
-        que el médico debería considerar y descartar antes de confirmar el diagnóstico principal.
-        Para cada diferencial incluye, en una sola frase, el dato clínico concreto del texto que lo
-        hace plausible y — si aplica — el dato que ayudaría a descartarlo (qué se necesitaría
-        explorar o solicitar). No repitas el diagnóstico principal dentro de los diferenciales. Si
-        el cuadro es tan característico que razonablemente no hay diferenciales relevantes que
-        aportar, devuelve un arreglo vacío; no rellenes con entidades poco plausibles solo para
-        completar la lista.
+Para nombrar correctamente el síntoma o hallazgo referido por el paciente
+(antes de razonar el diagnóstico probable), utiliza el siguiente vocabulario
+de referencia:
 
-        Ejemplo de diferencial bien construido (no copiar literal, es solo formato):
-        'Faringoamigdalitis viral: la ausencia de exudado purulento y la tos referida por el
-        paciente son más compatibles con etiología viral que bacteriana; de persistir la fiebre
-        más de 48-72h o aparecer exudado, valorar prueba rápida de estreptococo.'
+$vocabularioSintomas
 
-        REGLA CRÍTICA - NO INVENTES ETIOLOGÍA NI AGENTE CAUSAL:
+Ordena los diagnósticos desde el más probable hasta el menos probable.
 
-        El nombre técnico de la condición NO es lo mismo que su causa específica. Puedes nombrar
-        la entidad clínica (ej. 'Gastritis aguda'), pero NUNCA le agregues un agente causal,
-        microorganismo o etiología específica (ej. 'por Helicobacter pylori', 'estreptocócica',
-        'viral', 'bacteriana') a menos que ese agente venga EXPLÍCITAMENTE confirmado en el texto
-        (por ejemplo, un resultado de laboratorio o cultivo ya reportado), o que lo estés usando
-        dentro de un diagnóstico DIFERENCIAL como hipótesis a valorar (ahí sí es válido plantear
-        la etiología como posibilidad a descartar, siempre y cuando quede claro que es hipotética
-        y no confirmada). Si el texto es solo el relato de síntomas del paciente, sin estudios que
-        confirmen el agente causal, omite la etiología del diagnóstico PRINCIPAL por completo.
+Asigna a cada diagnóstico un porcentaje de probabilidad clínica relativa
+(0-100) de acuerdo con la evidencia clínica disponible.
 
-        Incorrecto (etiología inventada como si fuera un hecho, sin respaldo en el texto):
-        'Gastritis aguda por Helicobacter pylori'
-        'Faringoamigdalitis aguda estreptocócica'
+REGLAS OBLIGATORIAS
 
-        Correcto (misma entidad clínica, sin inventar el agente causal en el diagnóstico principal):
-        'Gastritis aguda'
-        'Faringoamigdalitis aguda'
+- La suma de todos los porcentajes debe ser exactamente 100.
+- Utiliza únicamente números enteros.
+- El primer diagnóstico debe tener el porcentaje más alto.
+- Si existe un solo diagnóstico probable, asígnale 100%.
+- Si existen dos diagnósticos, ambos deben sumar 100.
+- Si existen tres diagnósticos, los tres deben sumar 100.
+- Evita repartir porcentajes iguales salvo que la evidencia clínica sea equivalente.
+- El porcentaje representa únicamente una estimación clínica orientativa.
+- Nunca afirmes que el diagnóstico está confirmado.
 
-        Correcto (aquí SÍ es válido nombrar el agente, porque el propio texto reporta el estudio
-        que lo confirma):
-        Si el texto incluye 'cultivo faríngeo positivo para Streptococcus pyogenes' o
-        'prueba de antígeno fecal positiva para H. pylori', entonces sí puedes escribir
-        'Faringoamigdalitis aguda estreptocócica' o 'Gastritis aguda por Helicobacter pylori',
-        porque ahí la etiología no la inventaste tú: viene del estudio ya realizado.
+FORMATO
 
-        Ejemplos válidos de nombres técnicos (sin etiología no confirmada):
+Genera únicamente una lista de diagnósticos con su porcentaje de probabilidad.
 
-        'Gastritis aguda'
-        'Faringoamigdalitis aguda'
-        'Hipertensión arterial sistémica no controlada'
-        'Diabetes mellitus tipo 2 descompensada'
-        'Artrosis de rodilla bilateral'
-        'Cefalea tensional crónica'
-        'Infección de vías urinarias bajas'
-        'Bronquitis aguda'
+Cada diagnóstico debe contener únicamente:
 
-        No uses términos demasiado generales como: 'Malestar', 'Problema digestivo', 'Dolencia',
-        'Infección', 'Problema de salud'.
+- diagnostico
+- porcentaje
 
-        Nunca afirmes que el diagnóstico principal es definitivo.
-
+El formato exacto del JSON será el definido en la FASE 9.
         =========================================================
         FASE 4B - INFORMACIÓN CLÍNICA COMPLEMENTARIA (APOYO EDUCATIVO PARA EL MÉDICO)
         =========================================================
@@ -1344,57 +1320,64 @@ PRONÓSTICO ANTERIOR:
           control de comorbilidades, ausencia de complicaciones), siempre aclarando que es una
           estimación preliminar sujeta a valoración médica presencial.
 
-        =========================================================
-        FASE 9 - RESPUESTA
-        =========================================================
+      =========================================================
+FASE 9 - RESPUESTA
+=========================================================
 
-        Devuelve EXCLUSIVAMENTE el siguiente JSON.
+Devuelve EXCLUSIVAMENTE el siguiente JSON.
 
-        {
+{
 
-        \"nota_psoapp\": {
-        \"presentacion\": \"\",
-        \"subjetivo\": \"\",
-        \"objetivo\": \"\",
-        \"analisis\": \"\",
-        \"plan\": \"\",
-        \"pronostico\": \"\"
-        },
+\"nota_psoapp\": {
+\"presentacion\": \"\",
+\"subjetivo\": \"\",
+\"objetivo\": \"\",
+\"analisis\": \"\",
+\"plan\": \"\",
+\"pronostico\": \"\"
+},
 
-        \"sintomas\": [
-        \"\"
-        ],
+\"sintomas\": [
+\"\"
+],
 
-        \"diagnostico\": \"\",
+\"diagnostico\": \"\",
 
-        \"diagnosticos_diferenciales\": [
-        \"\"
-        ],
+\"diagnosticos_probables\": [
+{
+\"diagnostico\": \"\",
+\"porcentaje\": 0
+}
+],
 
-        \"informacion_complementaria\": \"\",
+\"diagnosticos_diferenciales\": [
+\"\"
+],
 
-        \"signos_alarma_vigilar\": [
-        \"\"
-        ],
+\"informacion_complementaria\": \"\",
 
-        \"recomendacion\": \"\",
+\"signos_alarma_vigilar\": [
+\"\"
+],
 
-        \"indicaciones_medico\": \"\",
+\"recomendacion\": \"\",
 
-        \"confianza\": 0,
+\"indicaciones_medico\": \"\",
 
-        \"nivel_riesgo\": \"bajo\",
+\"confianza\": 0,
 
-        \"alertas\": [
-        {
-        \"tipo\": \"alergia|gravedad|respiratoria|cardiaca|neurologica|otro\",
-        \"titulo\": \"\",
-        \"descripcion\": \"\",
-        \"nivel\": \"alto|medio|bajo\"
-        }
-        ]
+\"nivel_riesgo\": \"bajo\",
 
-        }
+\"alertas\": [
+{
+\"tipo\": \"alergia|gravedad|respiratoria|cardiaca|neurologica|otro\",
+\"titulo\": \"\",
+\"descripcion\": \"\",
+\"nivel\": \"alto|medio|bajo\"
+}
+]
+
+}
 
         =========================================================
         REGLAS IMPORTANTES
