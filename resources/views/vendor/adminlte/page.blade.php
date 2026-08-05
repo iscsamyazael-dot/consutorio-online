@@ -2,6 +2,8 @@
 @inject('layoutHelper', 'JeroenNoten\LaravelAdminLte\Helpers\LayoutHelper')
 @inject('preloaderHelper', 'JeroenNoten\LaravelAdminLte\Helpers\PreloaderHelper')
 @section('adminlte_css')
+    <meta name="base-url" content="{{ url('/') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/css/app.css'])
     @stack('css')
     @yield('css')
@@ -10,6 +12,7 @@
 @section('body_data', $layoutHelper->makeBodyData())
 @section('body')
     <div class="wrapper">
+        <input type="hidden" name="route" value="{{ url('/') }}">
         @if($preloaderHelper->isPreloaderEnabled())
             @include('adminlte::partials.common.preloader')
         @endif
