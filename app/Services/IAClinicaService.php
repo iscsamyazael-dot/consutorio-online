@@ -1413,7 +1413,7 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
         // de cada prompt: no existe una clave "debug_usage" ahí). Lo
         // agregamos aquí para que $data['debug_usage'] exista y viaje
         // correctamente hasta analizarTranscripcion() -> el controlador
-        // -> el frontend.
+        // -> el frontend04082026=9.00.
         $data['debug_usage'] = $response->json('usage');
 
         return $data;
