@@ -3,16 +3,19 @@
         <div class="container-fluid">
 
             <!-- ===================================== -->
-            <!-- MENSAJE / TOAST DE FEEDBACK -->
+            <!-- MENSAJES / TOASTS DE FEEDBACK (APILABLES) -->
             <!-- ===================================== -->
-            <div v-if="mensaje"
-                 class="alert alert-dismissible fade show shadow position-fixed"
-                 :class="'alert-' + mensaje.tipo"
-                 style="top:20px; right:20px; z-index:9999; min-width:300px;">
-                {{ mensaje.texto }}
-                <button type="button" class="close" @click="mensaje = null">
-                    <span>&times;</span>
-                </button>
+            <div class="position-fixed d-flex flex-column"
+                 style="top:20px; right:20px; z-index:9999; gap:10px; max-width:320px;">
+                <div v-for="msg in mensajes" :key="msg.id"
+                     class="alert alert-dismissible fade show shadow"
+                     :class="'alert-' + msg.tipo"
+                     style="min-width:300px; margin-bottom:0;">
+                    {{ msg.texto }}
+                    <button type="button" class="close" @click="cerrarMensaje(msg.id)">
+                        <span>&times;</span>
+                    </button>
+                </div>
             </div>
 
             <div class="card shadow-sm border-0 rounded-4 mt-4">
@@ -160,9 +163,11 @@
                     </span>
                 </td>
 
-                <!-- STOCK -->
+                <!-- STOCK (color dinámico según urgencia real, igual que la columna Estado) -->
                 <td>
-                    <span class="badge badge-success px-3 py-2">
+                    <span
+                        class="badge px-3 py-2"
+                        :class="'badge-' + colorEstadoStock(estadoStock(medica))">
                         {{ medica.inventario?.stock_actual ?? 0 }}
                     </span>
                 </td>
@@ -212,6 +217,7 @@
                             type="button"
                             class="btn btn-sm btn-info"
                             title="Ver Detalle"
+                            aria-label="Ver detalle del medicamento"
                             @click="verMedicamento(medica.id)">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -221,6 +227,7 @@
                             type="button"
                             class="btn btn-sm btn-primary"
                             title="Editar Medicamento"
+                            aria-label="Editar medicamento"
                             @click="editarMedicamento(medica)">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -230,6 +237,7 @@
                             type="button"
                             class="btn btn-sm btn-warning text-dark"
                             title="Movimiento Inventario"
+                            aria-label="Registrar movimiento de inventario"
                             @click="abrirMovimiento(medica)">
                             <i class="fas fa-exchange-alt"></i>
                         </button>
@@ -239,10 +247,9 @@
                             type="button"
                             class="btn btn-sm btn-danger"
                             title="Eliminar"
-                            :disabled="eliminandoId === medica.id"
-                            @click="eliminarMedicamento(medica)">
-                            <i class="fas fa-spinner fa-spin" v-if="eliminandoId === medica.id"></i>
-                            <i class="fas fa-trash" v-else></i>
+                            aria-label="Eliminar medicamento"
+                            @click="confirmarEliminar(medica)">
+                            <i class="fas fa-trash"></i>
                         </button>
 
                     </div>
@@ -429,7 +436,9 @@
                                 <label class="font-weight-bold text-muted">
                                     Stock Actual
                                 </label>
-                                <div class="h4 text-success font-weight-bold">
+                                <!-- Color dinámico: refleja el mismo estado que la columna "Estado Inventario" -->
+                                <div class="h4 font-weight-bold"
+                                     :class="'text-' + colorEstadoStock(estadoStock(medicamentoDetalle))">
                                     {{ medicamentoDetalle.inventario?.stock_actual ?? 0 }}
                                 </div>
                             </div>
@@ -1083,6 +1092,57 @@
         </div>
     </div>
 </div>
+
+<!-- ============================================= -->
+<!-- MODAL CONFIRMAR ELIMINACIÓN (reemplaza window.confirm) -->
+<!-- ============================================= -->
+<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white border-0" style="background:linear-gradient(135deg,#dc3545,#b02a37);">
+                <div class="d-flex align-items-center">
+                    <div class="mr-3 d-flex justify-content-center align-items-center"
+                        style="
+                            width:45px;
+                            height:45px;
+                            border-radius:50%;
+                            background:rgba(255,255,255,.15);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5 class="mb-0 font-weight-bold">
+                        Confirmar Eliminación
+                    </h5>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalConfirmarEliminar')">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0">
+                    ¿Eliminar el medicamento
+                    <strong>{{ medicamentoAEliminar?.nombre }}</strong>?
+                </p>
+                <p class="text-muted small mt-2 mb-0">
+                    Esta acción no se puede deshacer.
+                </p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalConfirmarEliminar')">
+                    <i class="fas fa-times mr-1"></i>
+                    Cancelar
+                </button>
+                <button
+                    class="btn btn-danger"
+                    :disabled="eliminandoId === medicamentoAEliminar?.id"
+                    @click="ejecutarEliminacion">
+                    <i class="fas fa-spinner fa-spin mr-1" v-if="eliminandoId === medicamentoAEliminar?.id"></i>
+                    <i class="fas fa-trash mr-1" v-else></i>
+                    {{ eliminandoId === medicamentoAEliminar?.id ? 'Eliminando...' : 'Eliminar' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 </template>
 
 <script>
@@ -1161,8 +1221,14 @@ export default {
                     observaciones:''
                 },
 
+            // ── ELIMINACION ──
+            // Medicamento pendiente de confirmar en modalConfirmarEliminar.
+            medicamentoAEliminar: null,
+
             // ── FEEDBACK VISUAL ──
-            mensaje: null,          // { texto, tipo } - tipo: success | danger | warning
+            // Array de { id, texto, tipo } - permite mostrar varios toasts
+            // apilados en vez de que uno pise al anterior.
+            mensajes: [],
             guardandoEdicion: false,
             guardandoMovimiento: false,
             eliminandoId: null,
@@ -1412,17 +1478,23 @@ export default {
         // ═══════════════════════════════════════
         // ELIMINAR
         // ═══════════════════════════════════════
-        async eliminarMedicamento(medica){
-            const confirmado = window.confirm(
-                `¿Eliminar el medicamento "${medica.nombre}"? Esta acción no se puede deshacer.`
-            )
-            if (!confirmado) return
+        // Ya no usamos window.confirm(): abrimos un modal propio,
+        // estilizado igual que el resto de la app y con estado de
+        // "Eliminando..." mientras corre la petición.
+        confirmarEliminar(medica){
+            this.medicamentoAEliminar = medica
+            this.abrirModal('modalConfirmarEliminar')
+        },
 
-            this.eliminandoId = medica.id
+        async ejecutarEliminacion(){
+            if (!this.medicamentoAEliminar) return
+
+            this.eliminandoId = this.medicamentoAEliminar.id
             try{
                 // Route::resource('medicamentos', MedicamentoController::class) -> destroy
-                await ApiService.delete('/medicamentos/' + medica.id)
+                await ApiService.delete('/medicamentos/' + this.medicamentoAEliminar.id)
 
+                this.cerrarModal('modalConfirmarEliminar')
                 this.mostrarMensaje('Medicamento eliminado correctamente.', 'success')
                 this.$emit('actualizar-inventario')
             }catch(error){
@@ -1430,6 +1502,7 @@ export default {
                 this.mostrarMensaje('No se pudo eliminar el medicamento.', 'danger')
             }finally{
                 this.eliminandoId = null
+                this.medicamentoAEliminar = null
             }
         },
 
@@ -1625,9 +1698,19 @@ export default {
         // ═══════════════════════════════════════
         // FEEDBACK VISUAL
         // ═══════════════════════════════════════
+        // Cada llamada agrega un toast independiente al array 'mensajes',
+        // con un id único, y se autoelimina solo a sí mismo tras 3.5s.
+        // Así varios mensajes seguidos se apilan en vez de pisarse.
         mostrarMensaje(texto, tipo = 'success'){
-            this.mensaje = { texto, tipo }
-            setTimeout(() => { this.mensaje = null }, 3500)
+            const id = Date.now() + Math.random()
+            this.mensajes.push({ id, texto, tipo })
+            setTimeout(() => {
+                this.mensajes = this.mensajes.filter(m => m.id !== id)
+            }, 3500)
+        },
+
+        cerrarMensaje(id){
+            this.mensajes = this.mensajes.filter(m => m.id !== id)
         }
     }
 }

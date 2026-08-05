@@ -47,12 +47,26 @@
                 </div>
 
                 <!-- DIAGNÓSTICOS PROBABLES -->
-                <div v-if="diagnosticosProbables.length > 0" class="small mb-2">
-                    <strong>Diagnósticos probables (IA):</strong>
-                    <ul class="mb-0 pl-3">
-                        <li v-for="(dx, idx) in diagnosticosProbables" :key="idx">{{ dx }}</li>
-                    </ul>
-                </div>
+                    <div v-if="diagnosticosProbables.length > 0" class="mb-3">
+                        <strong class="d-block mb-2">
+                            Diagnósticos probables (IA):
+                        </strong>
+
+                        <div
+                            v-for="(dx, idx) in diagnosticosProbables"
+                            :key="idx"
+                            class="d-flex justify-content-between align-items-center border rounded px-3 py-2 mb-2 bg-light"
+                        >
+                            <div>
+                                <strong>{{ idx + 1 }}.</strong>
+                                {{ dx.diagnostico }}
+                            </div>
+
+                            <span class="badge badge-primary">
+                                {{ dx.porcentaje }}%
+                            </span>
+                        </div>
+                    </div>
 
                 <!-- AVISO: la especialidad ideal no está en el catálogo del consultorio.
                      Se muestra ANTES de la sugerencia normal para que quede claro que lo
@@ -205,8 +219,15 @@ export default {
             if (this.triage && this.triage.justificacion) {
                 partes.push(this.triage.justificacion)
             }
-            if (this.diagnosticosProbables.length > 0) {
-                partes.push(`Diagnósticos probables (IA): ${this.diagnosticosProbables.join(', ')}.`)
+                        if (this.diagnosticosProbables.length > 0) {
+                    partes.push(
+                        'Diagnósticos probables (IA): ' +
+                        this.diagnosticosProbables
+                            .map(dx => `${dx.diagnostico} (${dx.porcentaje}%)`)
+                            .join(', ') +
+                        '.'
+                    )
+                
             }
             if (this.especialidadFueraCatalogo && this.especialidadIdealNoDisponible) {
                 partes.push(`No se contaba con la especialidad de ${this.especialidadIdealNoDisponible} en el catálogo del consultorio.`)
