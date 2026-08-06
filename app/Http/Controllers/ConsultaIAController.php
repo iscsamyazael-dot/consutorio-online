@@ -308,6 +308,63 @@ class ConsultaIAController extends Controller
                 ], 422);
             }
 
+            // --- AQUÍ DECIDIMOS EL CAMINO SEGÚN EL TIPO DE ARCHIVO ---
+            if (trim($textoExtraido) === '[DOCUMENTO_ESCANEADO_O_IMAGEN]') {
+                // 1. Llamamos a Gemini para que lea la imagen usando la clave de API que generaste
+                $textoVisionGemini = $this->iaClinicaService->analizarArchivoConVisionGemini(
+                    $rutaCompleta, 
+                    $mime, 
+                    "Analiza esta imagen o estudio médico adjunto para la nota clínica."
+                );
+                
+                if (!empty($textoVisionGemini)) {
+                    // 2. Obtenemos el historial para mantener el contexto de continuidad
+                    $historial = ConsultaTranscripcion::where('consulta_id', $consulta->id)
+                        ->where('analizado_ia', 1)
+                        ->orderBy('created_at', 'asc')
+                        ->pluck('mensaje')
+                        ->toArray();
+
+                    $ultimaNota = NotaPsoapp::where('consulta_id', $consulta->id)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+
+                    // 3. Pasamos el análisis de la imagen por tu flujo normal de transcripción/análisis
+                    $iaData = $this->iaClinicaService->analizarTranscripcion(
+                        "[Documento visual analizado por Gemini]\n" . $textoVisionGemini,
+                        $consulta,
+                        $historial,
+                        $ultimaNota
+                    );
+
+                    // Actualizamos la variable para que guarde el texto analizado en la BD
+                    $textoExtraido = $textoVisionGemini;
+                } else {
+                    $iaData = [];
+                }
+
+            } else {
+                // Si es un PDF con texto normal o Word, seguimos usando tu flujo habitual con historial
+                $historial = ConsultaTranscripcion::where('consulta_id', $consulta->id)
+                    ->where('analizado_ia', 1)
+                    ->orderBy('created_at', 'asc')
+                    ->pluck('mensaje')
+                    ->toArray();
+
+                $ultimaNota = NotaPsoapp::where('consulta_id', $consulta->id)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                $iaData = $this->iaClinicaService->analizarTranscripcion(
+                    $textoExtraido,
+                    $consulta,
+                    $historial,
+                    $ultimaNota
+                );
+            }
+
+            
+
             // Guardamos como una transcripción más, dejando rastro de que vino de un archivo
             $transcripcion = ConsultaTranscripcion::create([
                 'consulta_id'    => $consulta->id,

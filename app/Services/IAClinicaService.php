@@ -381,7 +381,15 @@ class IAClinicaService
             if ($mime === 'application/pdf') {
                 $parser = new PdfParser();
                 $pdf = $parser->parseFile($rutaCompleta);
-                return trim($pdf->getText());
+                $textoPdf = trim($pdf->getText());
+
+                if (mb_strlen($textoPdf) > 20) {
+                    return trim($pdf->getText());
+                }
+
+                // Si es un PDF escaneado (sin texto digital interno), 
+                // devolvemos una etiqueta para que el controlador sepa que debe enviarlo como imagen a la IA.
+                return '[DOCUMENTO_ESCANEADO_O_IMAGEN]';
             }
 
             // --- Word (.docx / .doc) ---
@@ -410,12 +418,14 @@ class IAClinicaService
 
             // --- Imágenes (OCR) ---
             if (str_starts_with($mime, 'image/')) {
-                return trim(
-                    (new TesseractOCR($rutaCompleta))
-                        ->executable(config('services.tesseract.path', 'C:\Users\Usuario\Desktop\llave de ultrafarmacia\tesseract.exe'))
-                        ->lang('spa', 'eng')
-                        ->run()
-                );
+                Log::info('El archivo es una imagen, devolviendo etiqueta de visión.');
+                return '[DOCUMENTO_ESCANEADO_O_IMAGEN]';
+                // return trim(
+                //     (new TesseractOCR($rutaCompleta))
+                //         ->executable(config('services.tesseract.path', 'C:\Users\Usuario\Desktop\llave de ultrafarmacia\tesseract.exe'))
+                //         ->lang('spa', 'eng')
+                //         ->run()
+                // );
             }
 
             Log::warning('Tipo de archivo no soportado', ['mime' => $mime]);
@@ -435,8 +445,35 @@ class IAClinicaService
      * Analiza un archivo adjunto
      */
     public function analizarArchivoAdjunto(string $rutaCompleta, string $mime, $consulta)
-    {
+    {   
+        // LOG DE DEPURACIÓN INICIAL
+        Log::info('analizarArchivoAdjunto llamado con:', [
+            'ruta' => $rutaCompleta,
+            'mime' => $mime
+        ]);
+
+
         $textoExtraido = $this->extraerTextoDeArchivo($rutaCompleta, $mime);
+       
+        // Log para verificar qué se obtuvo
+        Log::info('Texto extraído del archivo', ['texto' => $textoExtraido]);
+        // Caso 1: El archivo es una imagen (RX) o un PDF escaneado
+        if ($textoExtraido === '[DOCUMENTO_ESCANEADO_O_IMAGEN]') {
+            //Ver si entra aquí
+            Log::info('¡Entró a la condición de Visión Artificial!'); 
+            // Llamamos a la función que conecta con la API multimodal de DeepSeek enviando la imagen/PDF
+            $resultado = $this->analizarArchivoConVisionDeepSeek($rutaCompleta, $mime, $consulta);
+            Log::info('<<< Regresó de analizarArchivoConVisionDeepSeek con resultado:', ['resultado' => is_array($resultado) ? 'Array OK' : 'Null/Válido']);
+            
+            return [
+                'texto_extraido' => '[Archivo visual / PDF escaneado analizado por IA]',
+                'resultado' => $resultado,
+                'error' => null,
+            ];
+        } else {
+        Log::warning('NO entró a la condición de Visión. El texto extraído fue:', ['texto' => $textoExtraido]);
+        }
+
 
         if (empty($textoExtraido)) {
             return [
@@ -455,6 +492,226 @@ class IAClinicaService
         ];
     }
 
+    public function analizarArchivoConVisionGemini(string $rutaCompleta, string $mime, $consulta)
+    { 
+        set_time_limit(300);
+        $imagenesTemporales = [];
+
+        try {
+            if (!file_exists($rutaCompleta)) {
+                Log::error("Archivo no encontrado para análisis: {$rutaCompleta}");
+                return null;
+            }
+
+            $vocabularioSintomas = DiccionarioMedico::textoReferencia();
+            
+            $promptClinico = "
+            Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE como apoyo
+            para el médico dentro de un expediente médico digital. Tu función es identificar
+            síntomas, condiciones probables, riesgos y alertas clínicas a partir de la información proporcionada,
+            y organizar la información clínica de forma clara y profesional.
+
+            INSTRUCCIÓN ADICIONAL DEL MÉDICO:
+            {$consulta}
+
+            IMPORTANTE:
+            - No reemplazas al médico ni sustituyes su criterio clínico.
+            - No emites diagnósticos definitivos, únicamente probabilidades clínicas.
+            - No inventes información que no esté visible en el documento.
+            - Si un dato no aparece, escribe 'No disponible' o 'Sin datos suficientes'.
+            - UTILIZA TERMINOLOGÍA MÉDICA PRECISA Y PROFESIONAL.
+
+            Vocabulario de referencia (síntoma coloquial -> término médico):
+            $vocabularioSintomas
+            ";
+
+            $textoNativo = "";
+
+            // ==========================================
+            // PASO 1: INTENTAR EXTRAER TEXTO NATIVO (PDF de texto / Word)
+            // ==========================================
+            if ($mime === 'application/pdf') {
+                try {
+                    $parser = new PdfParser();
+                    $pdf = $parser->parseFile($rutaCompleta);
+                    $textoNativo = trim($pdf->getText());
+                } catch (\Exception $e) {
+                    Log::warning('No se pudo extraer texto nativo del PDF, se tratará como escaneado.');
+                }
+            }
+
+            // ==========================================
+            // PASO 2: BIFURCACIÓN INTELIGENTE (TEXTO -> DEEPSEEK | IMAGEN/ESCANEADO -> GROQ)
+            // ==========================================
+            
+            // Si el PDF contiene texto plano válido, lo mandamos directo a DeepSeek
+            if (!empty($textoNativo) && mb_strlen($textoNativo) > 40) {
+                Log::info('El PDF contiene texto nativo. Derivando a DeepSeek...');
+                
+                $response = Http::withToken(config('services.ai.key')) // Asegúrate de tener tu variable o token de DeepSeek
+                    ->timeout(300)
+                    ->post('https://api.deepseek.com/v1/chat/completions', [
+                        'model' => 'deepseek-v4-flash',
+                        'messages' => [
+                            ['role' => 'system', 'content' => $promptClinico],
+                            ['role' => 'user', 'content' => "Analiza el siguiente texto clínico extraído del documento:\n\n" . $textoNativo]
+                        ],
+                        'temperature' => 0.1
+                    ]);
+
+                if ($response->successful()) {
+                    $resultadoTexto = $response->json('choices.0.message.content');
+                    Log::info('DeepSeek - Análisis de texto plano exitoso.');
+                    return trim($resultadoTexto);
+                } else {
+                    Log::error('Error en API de DeepSeek, recurriendo a respaldo de visión.');
+                }
+            }
+
+            // Si es una imagen o un PDF escaneado (sin texto nativo), procesamos con Groq Vision por lotes
+            Log::info('El archivo es una imagen o PDF escaneado. Procesando con Groq Vision por lotes...');
+
+            if ($mime === 'application/pdf') {
+                $pdf = (new PdfParser())->parseFile($rutaCompleta);
+                $objects = $pdf->getObjects();
+                $contadorPagina = 0;
+
+                // Buscar por Subtype /Image
+                foreach ($objects as $object) {
+                    $details = $object->getDetails();
+                    if (isset($details['Subtype']) && $details['Subtype'] === '/Image') {
+                        $contadorPagina++;
+                        $imagenBinaria = $object->getContent();
+                        if (!empty($imagenBinaria)) {
+                            $archivoTemporal = sys_get_temp_dir() . '/' . uniqid("pdf_camscanner_{$contadorPagina}_", true) . '.jpg';
+                            file_put_contents($archivoTemporal, $imagenBinaria);
+                            $imagenesTemporales[] = $archivoTemporal;
+                        }
+                    }
+                }
+
+                // Respaldo de flujos binarios JPEG si no encontró por Subtype
+                if (empty($imagenesTemporales)) {
+                    foreach ($objects as $object) {
+                        $content = $object->getContent();
+                        if (str_starts_with($content, "\xFF\xD8\xFF")) {
+                            $contadorPagina++;
+                            $archivoTemporal = sys_get_temp_dir() . '/' . uniqid("pdf_stream_{$contadorPagina}_", true) . '.jpg';
+                            file_put_contents($archivoTemporal, $content);
+                            $imagenesTemporales[] = $archivoTemporal;
+                        }
+                    }
+                }
+            } else {
+                $imagenesTemporales[] = $rutaCompleta;
+            }
+
+            if (empty($imagenesTemporales)) {
+                Log::error('No se pudieron extraer imágenes o contenido válido del archivo.');
+                return null;
+            }
+
+            // ==========================================
+            // PROCESAMIENTO POR LOTES CON GROQ VISION
+            // ==========================================
+            $bloquesDeImagens = array_chunk($imagenesTemporales, 1);
+            $analisisCompletoFinal = "";
+
+            foreach ($bloquesDeImagens as $index => $grupoImagenes) {
+                Log::info("Enviando página " . ($index + 1) . " de " . count($bloquesDeImagens) . " a Groq Vision...");
+
+                $contenidoMensaje = [
+                    [
+                        'type' => 'text',
+                        'text' => $promptClinico . " (Nota: Analizando página " . ($index + 1) . " de " . count($bloquesDeImagens) . " del documento)"
+                    ]
+                ];
+
+                foreach ($grupoImagenes as $rutaImg) {
+                    // Optimización y compresión para reducir consumo de tokens por minuto (TPM)
+                    $imagenOriginal = imagecreatefromjpeg($rutaImg);
+                    $anchoOriginal = imagesx($imagenOriginal);
+                    $altoOriginal = imagesy($imagenOriginal);
+                    
+                    $anchoNuevo = 1200;
+                    $altoNuevo = floor($altoOriginal * ($anchoNuevo / $anchoOriginal));
+                    $imagenModificada = imagecreatetruecolor($anchoNuevo, $altoNuevo);
+                    imagecopyresampled($imagenModificada, $imagenOriginal, 0, 0, 0, 0, $anchoNuevo, $altoNuevo, $anchoOriginal, $altoOriginal);
+                    
+                    ob_start();
+                    imagejpeg($imagenModificada, null, 75);
+                    $binarioComprimido = ob_get_clean();
+                    
+                    imagedestroy($imagenOriginal);
+                    imagedestroy($imagenModificada);
+
+                    $base64File = base64_encode($binarioComprimido);
+                    
+                    $contenidoMensaje[] = [
+                        'type' => 'image_url',
+                        'image_url' => [
+                            'url' => "data:image/jpeg;base64,{$base64File}"
+                        ]
+                    ];
+                }
+
+                $response = Http::withToken(env('GEMINI_API_KEY'))
+                    ->timeout(300)
+                    ->post('https://api.groq.com/openai/v1/chat/completions', [
+                        'model' => 'qwen/qwen3.6-27b',
+                        'messages' => [
+                            [
+                                'role' => 'user',
+                                'content' => $contenidoMensaje
+                            ]
+                        ],
+                        'temperature' => 0.1
+                    ]);
+
+                if (!$response->successful()) {
+                    Log::error('Error HTTP en API de Groq Vision (Página ' . ($index + 1) . ')', ['response' => $response->body()]);
+                    continue; 
+                }
+
+                $textoParcial = $response->json('choices.0.message.content');
+
+                if (!empty($textoParcial)) {
+                    $textoParcial = preg_replace('/<think>.*?<\/think>/s', '', $textoParcial);
+                    $analisisCompletoFinal .= "\n\n--- PÁGINA " . ($index + 1) . " ---\n" . trim($textoParcial);
+                }
+
+                // Pausa de 15 segundos para cumplir con la cuota de TPM en Groq
+                if (($index + 1) < count($bloquesDeImagens)) {
+                    sleep(15);
+                }
+            }
+
+            $analisisCompletoFinal = trim($analisisCompletoFinal);
+
+            if (empty($analisisCompletoFinal)) {
+                Log::error('Groq devolvió una respuesta vacía para el documento.');
+                return null;
+            }
+
+            Log::info('Groq Vision - Documento completo analizado y unificado exitosamente.');
+            return $analisisCompletoFinal;
+
+        } catch (\Throwable $e) {
+            Log::error('Excepción al procesar archivo clínico', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return null;
+        } finally {
+            // Limpiar archivos temporales de imágenes generadas
+            foreach ($imagenesTemporales ?? [] as $tempFile) {
+                if ($tempFile !== $rutaCompleta && file_exists($tempFile)) {
+                    @unlink($tempFile);
+                }
+            }
+        }
+    }
     /**
      * Sugerencia de medicamentos con triage completo - LENGUAJE MÉDICO PROFESIONAL
      */
