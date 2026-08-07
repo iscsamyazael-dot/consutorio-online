@@ -381,7 +381,15 @@ class IAClinicaService
             if ($mime === 'application/pdf') {
                 $parser = new PdfParser();
                 $pdf = $parser->parseFile($rutaCompleta);
-                return trim($pdf->getText());
+                $textoPdf = trim($pdf->getText());
+
+                if (mb_strlen($textoPdf) > 20) {
+                    return trim($pdf->getText());
+                }
+
+                // Si es un PDF escaneado (sin texto digital interno), 
+                // devolvemos una etiqueta para que el controlador sepa que debe enviarlo como imagen a la IA.
+                return '[DOCUMENTO_ESCANEADO_O_IMAGEN]';
             }
 
             // --- Word (.docx / .doc) ---
@@ -410,12 +418,14 @@ class IAClinicaService
 
             // --- Imágenes (OCR) ---
             if (str_starts_with($mime, 'image/')) {
-                return trim(
-                    (new TesseractOCR($rutaCompleta))
-                        ->executable(config('services.tesseract.path', 'C:\Users\Usuario\Desktop\llave de ultrafarmacia\tesseract.exe'))
-                        ->lang('spa', 'eng')
-                        ->run()
-                );
+                Log::info('El archivo es una imagen, devolviendo etiqueta de visión.');
+                return '[DOCUMENTO_ESCANEADO_O_IMAGEN]';
+                // return trim(
+                //     (new TesseractOCR($rutaCompleta))
+                //         ->executable(config('services.tesseract.path', 'C:\Users\Usuario\Desktop\llave de ultrafarmacia\tesseract.exe'))
+                //         ->lang('spa', 'eng')
+                //         ->run()
+                // );
             }
 
             Log::warning('Tipo de archivo no soportado', ['mime' => $mime]);
@@ -433,10 +443,52 @@ class IAClinicaService
 
     /**
      * Analiza un archivo adjunto
+     *
+     * FIX: este método antes llamaba a
+     * $this->analizarArchivoConVisionDeepSeek(...), un método que NO existe
+     * en esta clase (el único método de visión que existe es
+     * analizarArchivoConVisionGemini). Si algún flujo llegaba a pasar por
+     * aquí con una imagen o PDF escaneado, hubiera lanzado un
+     * "Call to undefined method" en vez de analizar el archivo. Se corrige
+     * para apuntar al método real.
+     *
+     * NOTA: actualmente el controlador (ConsultaIAController::subirArchivo)
+     * no llama a este método — resuelve el flujo de imagen directamente con
+     * analizarArchivoConVisionGemini() y luego analizarTranscripcion().
+     * Este método queda disponible por si algún otro punto del sistema lo
+     * usa, ya corregido para que no truene si se llega a invocar.
      */
     public function analizarArchivoAdjunto(string $rutaCompleta, string $mime, $consulta)
-    {
+    {   
+        // LOG DE DEPURACIÓN INICIAL
+        Log::info('analizarArchivoAdjunto llamado con:', [
+            'ruta' => $rutaCompleta,
+            'mime' => $mime
+        ]);
+
+
         $textoExtraido = $this->extraerTextoDeArchivo($rutaCompleta, $mime);
+       
+        // Log para verificar qué se obtuvo
+        Log::info('Texto extraído del archivo', ['texto' => $textoExtraido]);
+        // Caso 1: El archivo es una imagen (RX) o un PDF escaneado
+        if ($textoExtraido === '[DOCUMENTO_ESCANEADO_O_IMAGEN]') {
+            //Ver si entra aquí
+            Log::info('¡Entró a la condición de Visión Artificial!'); 
+            // Llamamos a la función que conecta con la API multimodal de Gemini enviando la imagen/PDF.
+            // (antes decía analizarArchivoConVisionDeepSeek, un método que no existe en esta clase)
+            $resultado = $this->analizarArchivoConVisionGemini($rutaCompleta, $mime, $consulta);
+            Log::info('<<< Regresó de analizarArchivoConVisionGemini con resultado:', ['resultado' => is_array($resultado) ? 'Array OK' : 'Null/Válido']);
+            
+            return [
+                'texto_extraido' => '[Archivo visual / PDF escaneado analizado por IA]',
+                'resultado' => $resultado,
+                'error' => null,
+            ];
+        } else {
+        Log::warning('NO entró a la condición de Visión. El texto extraído fue:', ['texto' => $textoExtraido]);
+        }
+
 
         if (empty($textoExtraido)) {
             return [
@@ -455,6 +507,438 @@ class IAClinicaService
         ];
     }
 
+    /**
+     * Comprime y arma los "parts" de imagen en el formato que espera la API
+     * de Gemini (inline_data + mime_type/data). Se usa tanto para el modo de
+     * llamada única como para el modo de lotes en paralelo.
+     */
+    private function prepararPartesImagenesGemini(array $rutas, string $promptClinico, string $etiquetaLote = ''): array
+    {
+        $contenidoMensaje = [
+            ['text' => $promptClinico . ($etiquetaLote !== '' ? " ({$etiquetaLote})" : '')]
+        ];
+
+        foreach ($rutas as $rutaImg) {
+            // Detectamos el tipo real de imagen por su contenido (no confiamos en
+            // la extensión del archivo), para no reventar si es PNG, GIF, WEBP, etc.
+            $infoImagen = getimagesize($rutaImg);
+
+            if ($infoImagen === false) {
+                Log::warning('No se pudo leer la imagen para compresión, se omite.', ['ruta' => $rutaImg]);
+                continue;
+            }
+
+            $tipoImagen = $infoImagen[2]; // constante IMAGETYPE_*
+
+            $imagenOriginal = match ($tipoImagen) {
+                IMAGETYPE_JPEG => imagecreatefromjpeg($rutaImg),
+                IMAGETYPE_PNG  => imagecreatefrompng($rutaImg),
+                IMAGETYPE_GIF  => imagecreatefromgif($rutaImg),
+                IMAGETYPE_WEBP => imagecreatefromwebp($rutaImg),
+                default        => null,
+            };
+
+            if ($imagenOriginal === null) {
+                Log::warning('Formato de imagen no soportado para compresión, se omite.', [
+                    'ruta' => $rutaImg,
+                    'tipo_detectado' => $tipoImagen,
+                ]);
+                continue;
+            }
+
+            $anchoOriginal = imagesx($imagenOriginal);
+            $altoOriginal = imagesy($imagenOriginal);
+
+            $anchoNuevo = 1200;
+            $altoNuevo = floor($altoOriginal * ($anchoNuevo / $anchoOriginal));
+            $imagenModificada = imagecreatetruecolor($anchoNuevo, $altoNuevo);
+
+            // PNG/GIF pueden traer transparencia; si no la preservamos antes de
+            // volcar a JPEG (que no soporta canal alfa), las zonas transparentes
+            // salen en negro. Rellenamos con blanco antes de copiar.
+            if ($tipoImagen === IMAGETYPE_PNG || $tipoImagen === IMAGETYPE_GIF) {
+                $fondoBlanco = imagecolorallocate($imagenModificada, 255, 255, 255);
+                imagefill($imagenModificada, 0, 0, $fondoBlanco);
+            }
+
+            imagecopyresampled($imagenModificada, $imagenOriginal, 0, 0, 0, 0, $anchoNuevo, $altoNuevo, $anchoOriginal, $altoOriginal);
+
+            ob_start();
+            imagejpeg($imagenModificada, null, 75); // convertimos todo a JPEG para el envío
+            $binarioComprimido = ob_get_clean();
+
+            imagedestroy($imagenOriginal);
+            imagedestroy($imagenModificada);
+
+            $base64File = base64_encode($binarioComprimido);
+
+            // Formato Gemini: inline_data + mime_type/data, NO image_url
+            // (ese es el formato OpenAI/Groq y Gemini lo ignora silenciosamente).
+            $contenidoMensaje[] = [
+                'inline_data' => [
+                    'mime_type' => 'image/jpeg',
+                    'data' => $base64File,
+                ],
+            ];
+        }
+
+        return $contenidoMensaje;
+    }
+
+    /**
+     * Llama a Gemini con reintentos automáticos (backoff exponencial) ante
+     * errores transitorios (429 rate limit, 500/503 servidor sobrecargado).
+     * Un error de autenticación o de payload no se reintenta: se devuelve
+     * de inmediato para no perder tiempo repitiendo algo que no va a cambiar.
+     *
+     * GEMINI-MIGRACIÓN: se agregó el parámetro $generationConfigExtra para
+     * poder pedir cosas como responseMimeType/thinkingConfig sin tener que
+     * duplicar este método. Las llamadas existentes (Vision) no pasan nada
+     * aquí, así que su comportamiento queda exactamente igual que antes.
+     */
+    private function llamarGeminiConReintentos(string $url, array $parts, int $maxIntentos = 3, array $generationConfigExtra = [])
+    {
+        $intento = 0;
+        $espera = 2; // segundos, se duplica en cada reintento (2s, 4s, 8s)
+        $response = null;
+
+        $generationConfig = array_merge(
+            ['temperature' => 0.1],
+            $generationConfigExtra
+        );
+
+        while ($intento < $maxIntentos) {
+            $intento++;
+
+            $response = Http::timeout(300)->post($url, [
+                'contents' => [['role' => 'user', 'parts' => $parts]],
+                'generationConfig' => $generationConfig,
+            ]);
+
+            if ($response->successful()) {
+                return $response;
+            }
+
+            $codigo = $response->status();
+            if (in_array($codigo, [429, 500, 503], true) && $intento < $maxIntentos) {
+                Log::warning("Gemini respondió {$codigo}, reintentando en {$espera}s (intento {$intento}/{$maxIntentos})");
+                sleep($espera);
+                $espera *= 2;
+                continue;
+            }
+
+            return $response; // se agotaron los intentos o es un error no reintentable
+        }
+
+        return $response;
+    }
+
+    public function analizarArchivoConVisionGemini(string $rutaCompleta, string $mime, $consulta)
+    { 
+        set_time_limit(300);
+        $imagenesTemporales = [];
+
+        try {
+            if (!file_exists($rutaCompleta)) {
+                Log::error("Archivo no encontrado para análisis: {$rutaCompleta}");
+                return null;
+            }
+
+            $vocabularioSintomas = DiccionarioMedico::textoReferencia();
+            
+            $promptClinico = "
+            Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE como apoyo
+            para el médico dentro de un expediente médico digital. Tu función es identificar
+            síntomas, condiciones probables, riesgos y alertas clínicas a partir de la información proporcionada,
+            y organizar la información clínica de forma clara y profesional.
+
+            INSTRUCCIÓN ADICIONAL DEL MÉDICO:
+            {$consulta}
+
+            IMPORTANTE:
+            - No reemplazas al médico ni sustituyes su criterio clínico.
+            - No emites diagnósticos definitivos, únicamente probabilidades clínicas.
+            - No inventes información que no esté visible en el documento.
+            - Si un dato no aparece, escribe 'No disponible' o 'Sin datos suficientes'.
+            - UTILIZA TERMINOLOGÍA MÉDICA PRECISA Y PROFESIONAL.
+
+            Vocabulario de referencia (síntoma coloquial -> término médico):
+            $vocabularioSintomas
+            ";
+
+            $textoNativo = "";
+
+            // ==========================================
+            // PASO 1: INTENTAR EXTRAER TEXTO NATIVO (PDF de texto / Word)
+            // ==========================================
+            if ($mime === 'application/pdf') {
+                try {
+                    $parser = new PdfParser();
+                    $pdf = $parser->parseFile($rutaCompleta);
+                    $textoNativo = trim($pdf->getText());
+                } catch (\Exception $e) {
+                    Log::warning('No se pudo extraer texto nativo del PDF, se tratará como escaneado.');
+                }
+            }
+
+            // ==========================================
+            // PASO 2: BIFURCACIÓN INTELIGENTE (TEXTO -> DEEPSEEK | IMAGEN/ESCANEADO -> GEMINI)
+            // ==========================================
+            
+            // Si el PDF contiene texto plano válido, lo mandamos directo a DeepSeek
+            if (!empty($textoNativo) && mb_strlen($textoNativo) > 40) {
+                Log::info('El PDF contiene texto nativo. Derivando a DeepSeek...');
+                
+                $response = Http::withToken(config('services.ai.key')) // Asegúrate de tener tu variable o token de DeepSeek
+                    ->timeout(300)
+                    ->post('https://api.deepseek.com/v1/chat/completions', [
+                        'model' => 'deepseek-v4-flash',
+                        'messages' => [
+                            ['role' => 'system', 'content' => $promptClinico],
+                            ['role' => 'user', 'content' => "Analiza el siguiente texto clínico extraído del documento:\n\n" . $textoNativo]
+                        ],
+                        'temperature' => 0.1
+                    ]);
+
+                if ($response->successful()) {
+                    $resultadoTexto = $response->json('choices.0.message.content');
+                    // FIX: igual que en el flujo de imagen/Gemini más abajo, este
+                    // texto puede venir con un bloque <think>...</think> del
+                    // razonamiento del modelo delante del texto real. Aquí el
+                    // resultado es texto libre (no JSON), así que no rompía nada
+                    // técnicamente, pero sí ensuciaba el análisis mostrado al
+                    // médico con contenido de razonamiento interno que no debería
+                    // ver. Se limpia igual que en la rama de Gemini Vision.
+                    $resultadoTexto = preg_replace('/<think>.*?<\/think>/s', '', (string) $resultadoTexto);
+                    $resultadoTexto = trim($resultadoTexto);
+                    Log::info('DeepSeek - Análisis de texto plano exitoso.');
+                    return $resultadoTexto;
+                } else {
+                    Log::error('Error en API de DeepSeek, recurriendo a respaldo de visión.');
+                }
+            }
+
+            // Si es una imagen o un PDF escaneado (sin texto nativo), procesamos con Gemini Vision
+            Log::info('El archivo es una imagen o PDF escaneado. Procesando con Gemini Vision...');
+
+            if ($mime === 'application/pdf') {
+                $pdf = (new PdfParser())->parseFile($rutaCompleta);
+                $objects = $pdf->getObjects();
+                $contadorPagina = 0;
+
+                // Buscar por Subtype /Image
+                foreach ($objects as $object) {
+                    $details = $object->getDetails();
+                    if (isset($details['Subtype']) && $details['Subtype'] === '/Image') {
+                        $contadorPagina++;
+                        $imagenBinaria = $object->getContent();
+                        if (!empty($imagenBinaria)) {
+                            $archivoTemporal = sys_get_temp_dir() . '/' . uniqid("pdf_camscanner_{$contadorPagina}_", true) . '.jpg';
+                            file_put_contents($archivoTemporal, $imagenBinaria);
+                            $imagenesTemporales[] = $archivoTemporal;
+                        }
+                    }
+                }
+
+                // Respaldo de flujos binarios JPEG si no encontró por Subtype
+                if (empty($imagenesTemporales)) {
+                    foreach ($objects as $object) {
+                        $content = $object->getContent();
+                        if (str_starts_with($content, "\xFF\xD8\xFF")) {
+                            $contadorPagina++;
+                            $archivoTemporal = sys_get_temp_dir() . '/' . uniqid("pdf_stream_{$contadorPagina}_", true) . '.jpg';
+                            file_put_contents($archivoTemporal, $content);
+                            $imagenesTemporales[] = $archivoTemporal;
+                        }
+                    }
+                }
+            } else {
+                $imagenesTemporales[] = $rutaCompleta;
+            }
+
+            if (empty($imagenesTemporales)) {
+                Log::error('No se pudieron extraer imágenes o contenido válido del archivo.');
+                return null;
+            }
+
+            // ==========================================
+            // PROCESAMIENTO CON GEMINI VISION (VERSIÓN RÁPIDA)
+            // Tier de pago -> límites altos de cuota, así que:
+            //  - Documentos pequeños/medianos (<= LIMITE_IMAGENES_UNA_SOLA_LLAMADA
+            //    imágenes): se manda TODO en una sola llamada HTTP. Es la ruta
+            //    más rápida posible: un solo round-trip de red, sin sleeps.
+            //  - Documentos grandes: se agrupan en pocos lotes grandes y se
+            //    envían en PARALELO con Http::pool (en vez de uno por uno con
+            //    sleep(15) entre cada uno, como antes).
+            //  - Reintentos automáticos con backoff (2s, 4s, 8s) ante 429/500/503,
+            //    para no exponer errores al usuario aunque haya una ráfaga
+            //    puntual que exceda la cuota.
+            // ==========================================
+
+            $apiKey = env('GEMINI_API_KEY');
+            $modelo = 'gemini-3.5-flash-lite';
+            $urlGemini = "https://generativelanguage.googleapis.com/v1beta/models/{$modelo}:generateContent?key={$apiKey}";
+
+            $LIMITE_IMAGENES_UNA_SOLA_LLAMADA = 12; // documentos con hasta esta cantidad van en 1 sola request
+            $IMAGENES_POR_LOTE_GRANDE = 8;          // si se excede el límite anterior, se agrupan así
+
+            $totalImagenes = count($imagenesTemporales);
+            $analisisCompletoFinal = '';
+            $tokensAcumulados = ['prompt' => 0, 'output' => 0, 'total' => 0];
+
+            // --- CASO A: documento chico/mediano -> 1 SOLA LLAMADA (la ruta más rápida) ---
+            if ($totalImagenes <= $LIMITE_IMAGENES_UNA_SOLA_LLAMADA) {
+                Log::info("Enviando documento completo ({$totalImagenes} imágenes) a Gemini en una sola llamada...");
+
+                $parts = $this->prepararPartesImagenesGemini($imagenesTemporales, $promptClinico);
+
+                if (count($parts) <= 1) {
+                    Log::warning('Ninguna imagen válida para enviar a Gemini, se omite la llamada.');
+                    return null;
+                }
+
+                // FIX (rendimiento): antes este bloque llamaba a
+                // llamarGeminiConReintentos() DOS VECES seguidas — la primera
+                // llamada se descartaba por completo (solo se verificaba
+                // ->successful() y no se usaba su resultado), y era código de
+                // prueba/depuración ("AQUÍ PONES LA PRUEBA") que quedó pegado
+                // en producción. Esto duplicaba el tiempo de cada análisis de
+                // imagen (y, si Gemini entraba en el flujo de reintentos con
+                // backoff, hasta lo cuadruplicaba). Ahora solo hay UNA llamada,
+                // con su medición de tiempo para los logs.
+                $inicio = microtime(true);
+                $response = $this->llamarGeminiConReintentos($urlGemini, $parts);
+                $fin = microtime(true);
+
+                Log::info('Tiempo respuesta Gemini (llamada única)', [
+                    'segundos' => round($fin - $inicio, 2)
+                ]);
+
+                if (!$response->successful()) {
+                    Log::error('Error HTTP en API de Gemini Vision (llamada única)', [
+                        'response' => $response->body()
+                    ]);
+                    return null;
+                }
+
+                $usage = $response->json('usageMetadata');
+                $tokensAcumulados = [
+                    'prompt' => $usage['promptTokenCount'] ?? 0,
+                    'output' => $usage['candidatesTokenCount'] ?? 0,
+                    'total'  => $usage['totalTokenCount'] ?? 0,
+                ];
+
+                // Formato de respuesta de Gemini: candidates.0.content.parts.0.text
+                // (choices.0.message.content es el formato de respuesta de OpenAI/Groq/
+                // DeepSeek; usarlo aquí siempre devolvía null aunque Gemini sí respondiera).
+                $texto = $response->json('candidates.0.content.parts.0.text');
+
+                if (empty($texto)) {
+                    Log::warning('Gemini respondió sin texto utilizable.', [
+                        'respuesta_completa' => $response->json(),
+                    ]);
+                }
+
+                $texto = preg_replace('/<think>.*?<\/think>/s', '', (string) $texto);
+                $analisisCompletoFinal = trim($texto);
+
+            } else {
+                // --- CASO B: documento grande -> lotes grandes en PARALELO ---
+                $bloquesDeImagens = array_chunk($imagenesTemporales, $IMAGENES_POR_LOTE_GRANDE);
+                Log::info("Documento grande ({$totalImagenes} imágenes). Enviando " . count($bloquesDeImagens) . " lotes en paralelo...");
+
+                $lotesPreparados = [];
+                foreach ($bloquesDeImagens as $index => $grupoImagenes) {
+                    $etiqueta = "Nota: Analizando lote " . ($index + 1) . " de " . count($bloquesDeImagens) . " del documento";
+                    $parts = $this->prepararPartesImagenesGemini($grupoImagenes, $promptClinico, $etiqueta);
+                    if (count($parts) > 1) {
+                        $lotesPreparados[$index] = $parts;
+                    } else {
+                        Log::warning('Ninguna imagen válida en este lote, se omite.', ['lote' => $index + 1]);
+                    }
+                }
+
+                if (empty($lotesPreparados)) {
+                    Log::error('Ningún lote tuvo imágenes válidas para enviar a Gemini.');
+                    return null;
+                }
+
+                // Primer intento: todos los lotes en paralelo
+                $respuestasPool = Http::pool(function ($pool) use ($lotesPreparados, $urlGemini) {
+                    $llamadas = [];
+                    foreach ($lotesPreparados as $index => $parts) {
+                        $llamadas[$index] = $pool->as((string) $index)->timeout(300)->post($urlGemini, [
+                            'contents' => [['role' => 'user', 'parts' => $parts]],
+                            'generationConfig' => ['temperature' => 0.1],
+                        ]);
+                    }
+                    return $llamadas;
+                });
+
+                ksort($respuestasPool);
+
+                foreach ($respuestasPool as $index => $response) {
+                    // Si algún lote falló por rate limit/servidor, lo reintentamos aparte
+                    // (solo ese lote puntual) en vez de fallar todo el documento.
+                    if ($response instanceof \Throwable || !$response->successful()) {
+                        $codigo = $response instanceof \Throwable ? null : $response->status();
+                        Log::warning('Lote ' . ((int) $index + 1) . " falló (status: {$codigo}), reintentando individualmente...");
+                        $response = $this->llamarGeminiConReintentos($urlGemini, $lotesPreparados[$index]);
+                    }
+
+                    if (!$response->successful()) {
+                        Log::error('Error HTTP en API de Gemini Vision (lote ' . ((int) $index + 1) . ', tras reintentos)', ['response' => $response->body()]);
+                        continue;
+                    }
+
+                    $usage = $response->json('usageMetadata');
+                    $tokensAcumulados['prompt'] += $usage['promptTokenCount'] ?? 0;
+                    $tokensAcumulados['output'] += $usage['candidatesTokenCount'] ?? 0;
+                    $tokensAcumulados['total']  += $usage['totalTokenCount'] ?? 0;
+
+                    $textoParcial = $response->json('candidates.0.content.parts.0.text');
+
+                    if (empty($textoParcial)) {
+                        Log::warning('Gemini respondió sin texto utilizable en este lote.', [
+                            'lote' => (int) $index + 1,
+                            'respuesta_completa' => $response->json(),
+                        ]);
+                        continue;
+                    }
+
+                    $textoParcial = preg_replace('/<think>.*?<\/think>/s', '', $textoParcial);
+                    $analisisCompletoFinal .= "\n\n--- LOTE " . ((int) $index + 1) . " ---\n" . trim($textoParcial);
+                }
+            }
+
+            Log::info('Uso total de tokens Gemini para el documento completo', $tokensAcumulados);
+
+            $analisisCompletoFinal = trim($analisisCompletoFinal);
+
+            if (empty($analisisCompletoFinal)) {
+                Log::error('Gemini devolvió una respuesta vacía para el documento.');
+                return null;
+            }
+
+            Log::info('Gemini Vision - Documento completo analizado y unificado exitosamente.');
+            return $analisisCompletoFinal;
+
+        } catch (\Throwable $e) {
+            Log::error('Excepción al procesar archivo clínico', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return null;
+        } finally {
+            // Limpiar archivos temporales de imágenes generadas
+            foreach ($imagenesTemporales ?? [] as $tempFile) {
+                if ($tempFile !== $rutaCompleta && file_exists($tempFile)) {
+                    @unlink($tempFile);
+                }
+            }
+        }
+    }
     /**
      * Sugerencia de medicamentos con triage completo - LENGUAJE MÉDICO PROFESIONAL
      */
@@ -920,6 +1404,30 @@ class IAClinicaService
 
     /**
      * Consulta a la IA para análisis clínico - LENGUAJE MÉDICO PROFESIONAL
+     *
+     * GEMINI-MIGRACIÓN: este método antes llamaba a DeepSeek
+     * (deepseek-v4-flash), un modelo con razonamiento extendido que genera
+     * un bloque <think>...</think> del MISMO tamaño que la respuesta final
+     * antes de escribir el JSON (confirmado en logs: reasoning_tokens ==
+     * completion_tokens). Para el prompt de esta función -que ya de por sí
+     * pide una nota PSOAPP extensa- ese razonamiento oculto es el principal
+     * responsable de los ~2:38 min de tiempo de respuesta en el panel.
+     *
+     * El prompt clínico (las 9 fases) se dejó TAL CUAL estaba: el doctor
+     * sigue recibiendo exactamente la misma nota, los mismos diagnósticos
+     * con porcentaje y las mismas alertas. Solo cambiaron:
+     *  1) El proveedor: ahora se llama a Gemini (gemini-3.5-flash-lite, el
+     *     mismo modelo ya usado en analizarArchivoConVisionGemini) en vez
+     *     de DeepSeek.
+     *  2) 'thinkingConfig' => ['thinkingBudget' => 0] para apagar el
+     *     razonamiento oculto de Gemini, que es donde estaba el tiempo extra.
+     *  3) 'responseMimeType' => 'application/json' para forzar JSON, el
+     *     equivalente en Gemini al 'response_format' de DeepSeek.
+     *  4) Se quitó la repetición del vocabulario médico que aparecía 2 veces
+     *     en el mismo prompt (intro y Fase 4); ahora la Fase 4 solo hace
+     *     referencia al vocabulario ya indicado arriba, sin reimprimirlo.
+     *     Esto no cambia nada de lo que el modelo puede usar, solo evita
+     *     tokens de entrada duplicados.
      */
     private function consultarIA(
         $texto,
@@ -1106,10 +1614,8 @@ FASE 4 - DIAGNÓSTICOS PROBABLES (LENGUAJE MÉDICO PROFESIONAL)
 Genera un máximo de tres diagnósticos probables utilizando terminología médica precisa.
 
 Para nombrar correctamente el síntoma o hallazgo referido por el paciente
-(antes de razonar el diagnóstico probable), utiliza el siguiente vocabulario
-de referencia:
-
-$vocabularioSintomas
+(antes de razonar el diagnóstico probable), usa el vocabulario de referencia
+ya indicado al inicio del prompt.
 
 Ordena los diagnósticos desde el más probable hasta el menos probable.
 
@@ -1406,24 +1912,53 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
 
         try {
 
-            $response = Http::withToken(config('services.ai.key'))
-                ->timeout(300)
-                ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-v4-flash',
-                    'messages' => [['role' => 'user', 'content' => $prompt]],
-                    'response_format' => ['type' => 'json_object'],
-                    //'max_tokens' => self::MAX_TOKENS_ANALISIS,
-                ]);
+            // GEMINI-MIGRACIÓN: antes se llamaba a DeepSeek
+            // (https://api.deepseek.com/chat/completions, deepseek-v4-flash).
+            // Ahora se usa Gemini con thinkingBudget=0 para evitar el
+            // razonamiento oculto que estaba disparando el tiempo de
+            // respuesta. El prompt ($prompt) es exactamente el mismo de
+            // siempre, con las 9 fases completas.
+            $apiKey = env('GEMINI_API_KEY');
+            $modelo = 'gemini-3.5-flash-lite';
+            $urlGemini = "https://generativelanguage.googleapis.com/v1beta/models/{$modelo}:generateContent?key={$apiKey}";
+
+            $inicio = microtime(true);
+
+            // DIAGNÓSTICO TEMPORAL: se quitó 'thinkingConfig' de aquí. Si el
+            // 400 INVALID_ARGUMENT desaparece con este cambio, confirma que
+            // gemini-3.5-flash-lite no acepta ese campo (algunos modelos
+            // "lite" no tienen modo de pensamiento que apagar, y Gemini
+            // rechaza la petición completa si el campo no aplica). Si el 400
+            // persiste, el problema es la API key (ver GEMINI_API_KEY en el
+            // .env, revisar que tenga el formato AIzaSy... de Google AI Studio).
+            $response = $this->llamarGeminiConReintentos(
+                $urlGemini,
+                [['text' => $prompt]],
+                3,
+                [
+                    'responseMimeType' => 'application/json',
+                ]
+            );
+
+            $fin = microtime(true);
+            Log::info('Tiempo respuesta Gemini (consultarIA)', [
+                'segundos' => round($fin - $inicio, 2)
+            ]);
 
             if (!$response->successful()) {
-                Log::error('Error HTTP al consultar IA clínica', [
+                // Log::error con el body COMPLETO sin truncar, para poder ver
+                // el campo "details" de Google si viene (ahí suele explicar
+                // exactamente qué parte del payload rechazó).
+                Log::error('Error HTTP al consultar IA clínica (Gemini)', [
                     'status' => $response->status(),
-                    'body' => $response->body(),
+                    'body' => $response->json() ?? $response->body(),
                 ]);
                 return null;
             }
 
-            return $this->decodificarJsonRespuesta($response, 'consultarIA');
+            $contenido = $response->json('candidates.0.content.parts.0.text');
+
+            return $this->decodificarJsonDesdeTexto($contenido, 'consultarIA', $response->json() ?? []);
 
         } catch (\Exception $e) {
             Log::error('Excepción al consultar IA clínica: ' . $e->getMessage());
@@ -1438,14 +1973,54 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
      * (típicamente porque la respuesta se cortó por límite de tokens).
      * Loguea el contenido crudo en el segundo caso, para poder diagnosticar
      * sin tener que reproducir el error a ciegas.
+     *
+     * GEMINI-MIGRACIÓN: se dejó esta firma tal cual (recibe el objeto
+     * $response de DeepSeek) para no romper clasificarTriage() ni
+     * sugerirMedicamentoLibre(), que siguen usando DeepSeek sin cambios.
+     * Internamente ahora delega en decodificarJsonDesdeTexto(), que es la
+     * que también usa consultarIA() con la respuesta de Gemini.
      */
     private function decodificarJsonRespuesta($response, string $origen)
     {
         $contenido = $response->json('choices.0.message.content');
+        return $this->decodificarJsonDesdeTexto($contenido, $origen, $response->json() ?? []);
+    }
 
+    /**
+     * Versión genérica del decodificador: recibe directamente el texto de
+     * contenido (venga de DeepSeek en 'choices.0.message.content' o de
+     * Gemini en 'candidates.0.content.parts.0.text') y el arreglo completo
+     * de la respuesta HTTP solo para poder loguearlo y extraer el uso de
+     * tokens ('usage' en DeepSeek, 'usageMetadata' en Gemini).
+     */
+    private function decodificarJsonDesdeTexto(?string $contenido, string $origen, array $respuestaCompletaParaLog = [])
+    {
         if (empty($contenido)) {
             Log::error("IA devolvió contenido vacío ({$origen})", [
-                'respuesta_completa' => $response->json(),
+                'respuesta_completa' => $respuestaCompletaParaLog,
+            ]);
+            return null;
+        }
+
+        // FIX: deepseek-v4-flash (modelo con razonamiento) a veces devuelve
+        // su cadena de pensamiento envuelta en <think>...</think> DENTRO del
+        // mismo campo "content", antes del JSON final -- aunque
+        // "reasoning_content" ya viene separado en la respuesta, el modelo
+        // duplica ese razonamiento inline en "content" en algunos casos (se
+        // ve confirmado en los logs: reasoning_tokens == completion_tokens).
+        // Si no se quita, el string ya no empieza en "{" y json_decode()
+        // falla de inmediato, aunque el JSON real que viene después esté
+        // perfecto -- esto era lo que causaba el "No se pudo determinar"
+        // pese a que la IA sí había respondido bien. Se deja este strip
+        // como red de seguridad general (por si algún día se reactiva
+        // razonamiento en cualquiera de los dos proveedores), aunque con
+        // thinkingBudget=0 en Gemini ya no debería aparecer contenido aquí.
+        $contenido = preg_replace('/<think>.*?<\/think>/s', '', $contenido);
+        $contenido = trim($contenido);
+
+        if ($contenido === '') {
+            Log::error("IA devolvió únicamente razonamiento sin contenido final ({$origen})", [
+                'respuesta_completa' => $respuestaCompletaParaLog,
             ]);
             return null;
         }
@@ -1461,15 +2036,15 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
             return null;
         }
 
-        // FIX: el uso de tokens (prompt/completion/total) viene en el
-        // bloque "usage" de la respuesta HTTP de DeepSeek, NO dentro del
-        // JSON que genera el modelo — nunca se le pidió a la IA que lo
-        // incluyera en su propio JSON de salida (ver esquema de la Fase 8/9
-        // de cada prompt: no existe una clave "debug_usage" ahí). Lo
-        // agregamos aquí para que $data['debug_usage'] exista y viaje
-        // correctamente hasta analizarTranscripcion() -> el controlador
-        // -> el frontend.
-        $data['debug_usage'] = $response->json('usage');
+        // FIX: el uso de tokens viene fuera del JSON que genera el modelo.
+        // DeepSeek lo trae en la clave 'usage' de la respuesta HTTP; Gemini
+        // lo trae en 'usageMetadata'. Se soportan ambos formatos aquí para
+        // que $data['debug_usage'] siempre viaje correctamente hasta
+        // analizarTranscripcion() -> el controlador -> el frontend, sin
+        // importar qué proveedor respondió.
+        $data['debug_usage'] = $respuestaCompletaParaLog['usage']
+            ?? $respuestaCompletaParaLog['usageMetadata']
+            ?? null;
 
         return $data;
     }

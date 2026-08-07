@@ -248,6 +248,19 @@ class ConsultaIAController extends Controller
      * mismo consecutivo con el que se arma el folio de la consulta
      * (CONS-AAAA-NNNN), para que el nombre del archivo sea legible y
      * fácil de relacionar con la consulta a simple vista.
+     *
+     * FIX (rendimiento): antes esta función llamaba a
+     * IAClinicaService::analizarTranscripcion() DOS VECES para archivos
+     * de imagen: una vez dentro del bloque de Gemini Vision (cuyo
+     * resultado se descartaba por completo, solo se usaba para obtener
+     * $textoExtraido) y otra vez más abajo, en el "mismo pipeline de
+     * análisis que ya usas con texto hablado". Cada llamada a
+     * analizarTranscripcion() dispara internamente una llamada pesada a
+     * DeepSeek (~60-90s), así que el archivo se analizaba dos veces sin
+     * necesidad, duplicando el tiempo total de espera del usuario
+     * (~3 minutos). Ahora solo hay UNA llamada a analizarTranscripcion(),
+     * hecha después de resolver el texto final (ya sea de Gemini Vision
+     * o de extracción directa) y de guardar la transcripción.
      */
     public function subirArchivo(Request $request)
     {
@@ -308,6 +321,31 @@ class ConsultaIAController extends Controller
                 ], 422);
             }
 
+            // --- AQUÍ DECIDIMOS EL CAMINO SEGÚN EL TIPO DE ARCHIVO ---
+            // (Solo resolvemos el texto final. El análisis con IA se hace
+            // UNA SOLA VEZ, más abajo, ya con la transcripción guardada.)
+            if (trim($textoExtraido) === '[DOCUMENTO_ESCANEADO_O_IMAGEN]') {
+                // Llamamos a Gemini para que lea la imagen usando la clave de API que generaste
+                $textoVisionGemini = $this->iaClinicaService->analizarArchivoConVisionGemini(
+                    $rutaCompleta, 
+                    $mime, 
+                    "Analiza esta imagen o estudio médico adjunto para la nota clínica."
+                );
+
+                if (empty($textoVisionGemini)) {
+                    return response()->json([
+                        'success' => false,
+                        'error'   => 'No se pudo analizar la imagen con IA. Intenta nuevamente con otra imagen o mejor calidad.'
+                    ], 422);
+                }
+
+                // Este es el texto final: lo que se guarda en la transcripción
+                // y lo que se manda al pipeline de análisis (más abajo).
+                $textoExtraido = "[Documento visual analizado por Gemini]\n" . $textoVisionGemini;
+            }
+            // Si NO es imagen (PDF con texto normal o Word), $textoExtraido ya
+            // viene listo desde extraerTextoDeArchivo() y no se toca aquí.
+
             // Guardamos como una transcripción más, dejando rastro de que vino de un archivo
             $transcripcion = ConsultaTranscripcion::create([
                 'consulta_id'    => $consulta->id,
@@ -316,7 +354,9 @@ class ConsultaIAController extends Controller
                 'tipo_usuario'   => 'paciente',
             ]);
 
-            // Mismo contexto de continuidad que en store()
+            // Contexto de continuidad: mensajes anteriores de ESTA misma
+            // consulta (ya guardados y analizados) y la última nota PSOAPP
+            // registrada.
             $historial = ConsultaTranscripcion::where('consulta_id', $consulta->id)
                 ->where('id', '!=', $transcripcion->id)
                 ->where('analizado_ia', 1)
@@ -328,7 +368,9 @@ class ConsultaIAController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            // Mismo pipeline de análisis que ya usas con texto hablado
+            // ÚNICA llamada al pipeline de análisis IA (antes se llamaba
+            // dos veces: una dentro del bloque de imagen, cuyo resultado se
+            // descartaba, y otra aquí).
             $iaData = $this->iaClinicaService->analizarTranscripcion(
                 $textoExtraido,
                 $consulta,
@@ -1281,4 +1323,5 @@ class ConsultaIAController extends Controller
             ], 500);
         }
     }
+    
 }
