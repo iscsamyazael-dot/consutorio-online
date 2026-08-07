@@ -18,7 +18,7 @@
     :folio="folioSeleccionado"
     @volver="volverATabla"
   />
-</template>
+</template> 
 
 <script>
 import EvaluacionesInteligentes from './EvaluacionesInteligentes.vue';
