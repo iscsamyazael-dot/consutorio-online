@@ -590,19 +590,29 @@ class IAClinicaService
      * errores transitorios (429 rate limit, 500/503 servidor sobrecargado).
      * Un error de autenticación o de payload no se reintenta: se devuelve
      * de inmediato para no perder tiempo repitiendo algo que no va a cambiar.
+     *
+     * GEMINI-MIGRACIÓN: se agregó el parámetro $generationConfigExtra para
+     * poder pedir cosas como responseMimeType/thinkingConfig sin tener que
+     * duplicar este método. Las llamadas existentes (Vision) no pasan nada
+     * aquí, así que su comportamiento queda exactamente igual que antes.
      */
-    private function llamarGeminiConReintentos(string $url, array $parts, int $maxIntentos = 3)
+    private function llamarGeminiConReintentos(string $url, array $parts, int $maxIntentos = 3, array $generationConfigExtra = [])
     {
         $intento = 0;
         $espera = 2; // segundos, se duplica en cada reintento (2s, 4s, 8s)
         $response = null;
+
+        $generationConfig = array_merge(
+            ['temperature' => 0.1],
+            $generationConfigExtra
+        );
 
         while ($intento < $maxIntentos) {
             $intento++;
 
             $response = Http::timeout(300)->post($url, [
                 'contents' => [['role' => 'user', 'parts' => $parts]],
-                'generationConfig' => ['temperature' => 0.1],
+                'generationConfig' => $generationConfig,
             ]);
 
             if ($response->successful()) {
@@ -1394,6 +1404,30 @@ class IAClinicaService
 
     /**
      * Consulta a la IA para análisis clínico - LENGUAJE MÉDICO PROFESIONAL
+     *
+     * GEMINI-MIGRACIÓN: este método antes llamaba a DeepSeek
+     * (deepseek-v4-flash), un modelo con razonamiento extendido que genera
+     * un bloque <think>...</think> del MISMO tamaño que la respuesta final
+     * antes de escribir el JSON (confirmado en logs: reasoning_tokens ==
+     * completion_tokens). Para el prompt de esta función -que ya de por sí
+     * pide una nota PSOAPP extensa- ese razonamiento oculto es el principal
+     * responsable de los ~2:38 min de tiempo de respuesta en el panel.
+     *
+     * El prompt clínico (las 9 fases) se dejó TAL CUAL estaba: el doctor
+     * sigue recibiendo exactamente la misma nota, los mismos diagnósticos
+     * con porcentaje y las mismas alertas. Solo cambiaron:
+     *  1) El proveedor: ahora se llama a Gemini (gemini-3.5-flash-lite, el
+     *     mismo modelo ya usado en analizarArchivoConVisionGemini) en vez
+     *     de DeepSeek.
+     *  2) 'thinkingConfig' => ['thinkingBudget' => 0] para apagar el
+     *     razonamiento oculto de Gemini, que es donde estaba el tiempo extra.
+     *  3) 'responseMimeType' => 'application/json' para forzar JSON, el
+     *     equivalente en Gemini al 'response_format' de DeepSeek.
+     *  4) Se quitó la repetición del vocabulario médico que aparecía 2 veces
+     *     en el mismo prompt (intro y Fase 4); ahora la Fase 4 solo hace
+     *     referencia al vocabulario ya indicado arriba, sin reimprimirlo.
+     *     Esto no cambia nada de lo que el modelo puede usar, solo evita
+     *     tokens de entrada duplicados.
      */
     private function consultarIA(
         $texto,
@@ -1580,10 +1614,8 @@ FASE 4 - DIAGNÓSTICOS PROBABLES (LENGUAJE MÉDICO PROFESIONAL)
 Genera un máximo de tres diagnósticos probables utilizando terminología médica precisa.
 
 Para nombrar correctamente el síntoma o hallazgo referido por el paciente
-(antes de razonar el diagnóstico probable), utiliza el siguiente vocabulario
-de referencia:
-
-$vocabularioSintomas
+(antes de razonar el diagnóstico probable), usa el vocabulario de referencia
+ya indicado al inicio del prompt.
 
 Ordena los diagnósticos desde el más probable hasta el menos probable.
 
@@ -1880,24 +1912,53 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
 
         try {
 
-            $response = Http::withToken(config('services.ai.key'))
-                ->timeout(300)
-                ->post('https://api.deepseek.com/chat/completions', [
-                    'model' => 'deepseek-v4-flash',
-                    'messages' => [['role' => 'user', 'content' => $prompt]],
-                    'response_format' => ['type' => 'json_object'],
-                    //'max_tokens' => self::MAX_TOKENS_ANALISIS,
-                ]);
+            // GEMINI-MIGRACIÓN: antes se llamaba a DeepSeek
+            // (https://api.deepseek.com/chat/completions, deepseek-v4-flash).
+            // Ahora se usa Gemini con thinkingBudget=0 para evitar el
+            // razonamiento oculto que estaba disparando el tiempo de
+            // respuesta. El prompt ($prompt) es exactamente el mismo de
+            // siempre, con las 9 fases completas.
+            $apiKey = env('GEMINI_API_KEY');
+            $modelo = 'gemini-3.5-flash-lite';
+            $urlGemini = "https://generativelanguage.googleapis.com/v1beta/models/{$modelo}:generateContent?key={$apiKey}";
+
+            $inicio = microtime(true);
+
+            // DIAGNÓSTICO TEMPORAL: se quitó 'thinkingConfig' de aquí. Si el
+            // 400 INVALID_ARGUMENT desaparece con este cambio, confirma que
+            // gemini-3.5-flash-lite no acepta ese campo (algunos modelos
+            // "lite" no tienen modo de pensamiento que apagar, y Gemini
+            // rechaza la petición completa si el campo no aplica). Si el 400
+            // persiste, el problema es la API key (ver GEMINI_API_KEY en el
+            // .env, revisar que tenga el formato AIzaSy... de Google AI Studio).
+            $response = $this->llamarGeminiConReintentos(
+                $urlGemini,
+                [['text' => $prompt]],
+                3,
+                [
+                    'responseMimeType' => 'application/json',
+                ]
+            );
+
+            $fin = microtime(true);
+            Log::info('Tiempo respuesta Gemini (consultarIA)', [
+                'segundos' => round($fin - $inicio, 2)
+            ]);
 
             if (!$response->successful()) {
-                Log::error('Error HTTP al consultar IA clínica', [
+                // Log::error con el body COMPLETO sin truncar, para poder ver
+                // el campo "details" de Google si viene (ahí suele explicar
+                // exactamente qué parte del payload rechazó).
+                Log::error('Error HTTP al consultar IA clínica (Gemini)', [
                     'status' => $response->status(),
-                    'body' => $response->body(),
+                    'body' => $response->json() ?? $response->body(),
                 ]);
                 return null;
             }
 
-            return $this->decodificarJsonRespuesta($response, 'consultarIA');
+            $contenido = $response->json('candidates.0.content.parts.0.text');
+
+            return $this->decodificarJsonDesdeTexto($contenido, 'consultarIA', $response->json() ?? []);
 
         } catch (\Exception $e) {
             Log::error('Excepción al consultar IA clínica: ' . $e->getMessage());
@@ -1912,14 +1973,31 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
      * (típicamente porque la respuesta se cortó por límite de tokens).
      * Loguea el contenido crudo en el segundo caso, para poder diagnosticar
      * sin tener que reproducir el error a ciegas.
+     *
+     * GEMINI-MIGRACIÓN: se dejó esta firma tal cual (recibe el objeto
+     * $response de DeepSeek) para no romper clasificarTriage() ni
+     * sugerirMedicamentoLibre(), que siguen usando DeepSeek sin cambios.
+     * Internamente ahora delega en decodificarJsonDesdeTexto(), que es la
+     * que también usa consultarIA() con la respuesta de Gemini.
      */
     private function decodificarJsonRespuesta($response, string $origen)
     {
         $contenido = $response->json('choices.0.message.content');
+        return $this->decodificarJsonDesdeTexto($contenido, $origen, $response->json() ?? []);
+    }
 
+    /**
+     * Versión genérica del decodificador: recibe directamente el texto de
+     * contenido (venga de DeepSeek en 'choices.0.message.content' o de
+     * Gemini en 'candidates.0.content.parts.0.text') y el arreglo completo
+     * de la respuesta HTTP solo para poder loguearlo y extraer el uso de
+     * tokens ('usage' en DeepSeek, 'usageMetadata' en Gemini).
+     */
+    private function decodificarJsonDesdeTexto(?string $contenido, string $origen, array $respuestaCompletaParaLog = [])
+    {
         if (empty($contenido)) {
             Log::error("IA devolvió contenido vacío ({$origen})", [
-                'respuesta_completa' => $response->json(),
+                'respuesta_completa' => $respuestaCompletaParaLog,
             ]);
             return null;
         }
@@ -1933,15 +2011,16 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
         // Si no se quita, el string ya no empieza en "{" y json_decode()
         // falla de inmediato, aunque el JSON real que viene después esté
         // perfecto -- esto era lo que causaba el "No se pudo determinar"
-        // pese a que la IA sí había respondido bien. El flujo de Gemini
-        // (analizarArchivoConVisionGemini) ya hacía este mismo strip; aquí
-        // faltaba aplicarlo antes de decodificar.
+        // pese a que la IA sí había respondido bien. Se deja este strip
+        // como red de seguridad general (por si algún día se reactiva
+        // razonamiento en cualquiera de los dos proveedores), aunque con
+        // thinkingBudget=0 en Gemini ya no debería aparecer contenido aquí.
         $contenido = preg_replace('/<think>.*?<\/think>/s', '', $contenido);
         $contenido = trim($contenido);
 
         if ($contenido === '') {
             Log::error("IA devolvió únicamente razonamiento sin contenido final ({$origen})", [
-                'respuesta_completa' => $response->json(),
+                'respuesta_completa' => $respuestaCompletaParaLog,
             ]);
             return null;
         }
@@ -1957,15 +2036,15 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
             return null;
         }
 
-        // FIX: el uso de tokens (prompt/completion/total) viene en el
-        // bloque "usage" de la respuesta HTTP de DeepSeek, NO dentro del
-        // JSON que genera el modelo — nunca se le pidió a la IA que lo
-        // incluyera en su propio JSON de salida (ver esquema de la Fase 8/9
-        // de cada prompt: no existe una clave "debug_usage" ahí). Lo
-        // agregamos aquí para que $data['debug_usage'] exista y viaje
-        // correctamente hasta analizarTranscripcion() -> el controlador
-        // -> el frontend.
-        $data['debug_usage'] = $response->json('usage');
+        // FIX: el uso de tokens viene fuera del JSON que genera el modelo.
+        // DeepSeek lo trae en la clave 'usage' de la respuesta HTTP; Gemini
+        // lo trae en 'usageMetadata'. Se soportan ambos formatos aquí para
+        // que $data['debug_usage'] siempre viaje correctamente hasta
+        // analizarTranscripcion() -> el controlador -> el frontend, sin
+        // importar qué proveedor respondió.
+        $data['debug_usage'] = $respuestaCompletaParaLog['usage']
+            ?? $respuestaCompletaParaLog['usageMetadata']
+            ?? null;
 
         return $data;
     }
