@@ -19,12 +19,14 @@ use App\Http\Controllers\UserRegisterController;
 use App\Models\Paciente;
 use App\Http\Controllers\CitaController;//agenda        
 use App\Http\Controllers\UbicacionController;//agenda 
-use App\Services\WhatsAppService;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api_Ionic\AuthController; //Login APP-IONIC
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\CimaMedicamentoController;
+use App\Http\Controllers\EvaluacionesIAController;
+use App\Services\WhatsAppService;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
+
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -52,6 +54,7 @@ Route::middleware('auth')->group(function () {
         // Ruta para procesar el formulario y guardar el registro en las tablas
         Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Agenda: filtro por especialidad
         Route::get('pacientes/buscar', [PacienteController::class, 'filtrar_paciente'])->name('pacientes.filtrar_paciente');
+       
         //para traer actualizar y eliminar medicos
         // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
         // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
@@ -60,6 +63,19 @@ Route::middleware('auth')->group(function () {
 
 
         ///*** RUTAS PARA LAS APIS Y CONSUMO DE DATOS */
+        // Vista principal (Blade)
+    
+
+        // Endpoints consumidos por el API Service
+       Route::prefix('api')->group(function () {
+            Route::get('/evaluaciones-ia', [EvaluacionesIAController::class, 'api'])->name('api.evaluaciones-ia.index');
+            Route::get('/evaluaciones-ia-opciones', [EvaluacionesIAController::class, 'opcionesFiltros']);
+            Route::get('/evaluaciones-ia/indicadores', [EvaluacionesIAController::class, 'indicadores'])->name('api.evaluaciones-ia.indicadores');
+            Route::get('/evaluaciones-ia/{folio}', [EvaluacionesIAController::class, 'show'])->name('api.evaluaciones-ia.show');
+        });
+        
+        //RUTA PARA ACTUALIZAR TIPO Y ESTADO DE ARCHIVO
+        Route::put('/archivos-clinicos/{id}', [ArchivosClinicosController::class, 'update']);
         //RUTA PARA ACTUALIZAR EL ESTADO DE DERIVACION
         Route::put('/derivaciones/{id}/estado', [DerivacionController::class, 'actualizarEstado']);
         //Ruta para obtener estadisticas de las cartas de derivacion
@@ -182,7 +198,7 @@ Route::middleware('auth')->group(function () {
             Route::get('MedicosAlta',function(){return view('medicos.altamedicos'); })->name('medicos.altamedicos');
             Route::get('HistorialRecetas',function(){ return view('recetas.historial-recetas');})->name('recetas.historial-recetas');
             Route::get('TRIAGES', function() { return view('atencion-medica.triage'); })->name('atencion-medica.triage');
-            Route::get('EvaluacionIa', function() { return view('atencion-medica.evaluacion-ia'); })->name('atencion-medica.evaluacion-ia'); // IA: vista de Evaluación con IA
+            Route::get('EvaluacionIa', [EvaluacionesIAController::class, 'index'])->name('atencion-medica.evaluacion-ia');
             Route::get('ArchivosClinicos', function() { return view('atencion-medica.archivos-clinicos'); })->name('atencion-medica.archivos-clinicos');
             Route::get('Derivaciones', function() { return view('atencion-medica.derivaciones'); })->name('atencion-medica.derivaciones');
             Route::get('ListaConsultas', function () { return view('consultas.index'); })->name('consultas.index');

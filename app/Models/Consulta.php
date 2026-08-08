@@ -39,7 +39,7 @@ class Consulta extends Model
 
     public function medico()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(Medico::class, 'user_id');
     }
 
     public function sintomas()
@@ -54,7 +54,26 @@ class Consulta extends Model
 
     public function recetas()
     {
-        return $this->hasMany(Receta::class);
+        return $this->hasMany(Receta::class, 'consulta_id');
+    }
+
+    public function derivaciones()
+    {
+        return $this->hasMany(Derivacion::class, 'consulta_id');
+    }
+
+    public function alertasClinicas()
+    {
+        return $this->hasMany(AlertaClinica::class, 'consulta_id');
+    }
+
+    public function especialidad()
+    {
+        // Opción A: Si usas una relación BelongsTo directa con clave foránea especialidad_id
+        return $this->belongsTo(Especialidad::class, 'especialidad_id');
+
+        // Opción B: Si guardas el ID o Slug en especialidad_sugerida
+         //return $this->belongsTo(Especialidad::class, 'especialidad_sugerida');
     }
 
     public function archivos()
