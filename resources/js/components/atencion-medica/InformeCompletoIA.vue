@@ -74,8 +74,14 @@
                 </div>
                 <div class="col-6">
                   <span class="d-block text-muted small">Confianza IA:</span>
-                  <span class="font-weight-bold text-primary" style="font-size: 1.1rem;">
-                    {{ detalle.confianza }}%
+
+                  <span
+                    v-for="(confianza, index) in detalle.confianzas"
+                    :key="index"
+                    class="font-weight-bold text-primary mr-2"
+                    style="font-size: 1.1rem;"
+                  >
+                    {{ confianza }}%
                   </span>
                 </div>
               </div>

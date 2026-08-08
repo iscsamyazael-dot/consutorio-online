@@ -35,7 +35,7 @@
           </tr>
 
           <!-- Filas -->
-          <tr v-else v-for="eva in evaluaciones" :key="eva.folio">
+          <tr v-else v-for="eva in evaluaciones":key="eva.consulta_id">
             <td><span class="font-weight-bold">{{ eva.folio }}</span></td>
             <td>{{ eva.paciente }}</td>
             <td>{{ eva.consulta }}</td>
@@ -45,12 +45,17 @@
                 {{ eva.riesgo }}
               </span>
             </td>
-            <td style="min-width: 140px;">
-              <div class="d-flex align-items-center">
-                <div class="progress progress-sm flex-grow-1 mr-2">
-                  <div class="progress-bar bg-primary" :style="{ width: eva.confianza + '%' }"></div>
-                </div>
-                <span class="small">{{ eva.confianza }}%</span>
+            <td style="min-width: 160px;">
+              <div class="d-flex flex-wrap gap-1">
+
+                <span
+                  v-for="(confianza, index) in eva.confianzas"
+                  :key="index"
+                  class="badge badge-primary mr-1"
+                >
+                  {{ confianza }}%
+                </span>
+
               </div>
             </td>
             <td>
