@@ -8,7 +8,8 @@ class Medicamento extends Model
 {
      protected $table = 'medicamentos';
 
-    protected $fillable = [
+     protected $fillable = [
+        'codigo',
         'nombre',
         'nombre_generico',
         'presentacion',
@@ -18,20 +19,37 @@ class Medicamento extends Model
         'indicaciones',
         'contraindicaciones',
         'efectos_secundarios',
-        'estado'
+        'precio',
+        'requiere_receta',
+        'activo'
+        ];
 
-    ];
-
-    /*
+     /*
     |--------------------------------------------------------------------------
     | RELACIONES
     |--------------------------------------------------------------------------
     */
 
-    // DETALLES DE RECETA
+    // RECETAS
     public function recetaDetalles()
     {
         return $this->hasMany(RecetaDetalle::class);
     }
 
+    // INVENTARIO
+    public function inventario()
+    {
+        return $this->hasOne(inventario::class,'medicamento_id','id');
+    }
+
+    // MOVIMIENTOS
+    public function movimientosInventario()
+    {
+        return $this->hasMany(MovimientoInventario::class, 'medicamento_id','id');
+    }
+    //ULTOMO MOVIMIENTO
+    public function ultimoMovimiento()
+    {
+        return $this->hasOne(MovimientoInventario::class,'medicamento_id','id')->latestOfMany();
+    }
 }

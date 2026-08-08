@@ -1,14 +1,20 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
 @import "admin-lte/dist/css/adminlte.min.css";
 
-
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* 👈 NUEVO: Asegurar el contenedor y la flotación del menú de alertas en cualquier vista */
+#notification-bell-app {
+    position: relative;
+    display: inline-block;
+}
 
-
-
-
-
+#notification-bell-app .dropdown-menu,
+.dropdown-alertas-medicamentos {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 1050; /* Mantiene el menú por encima de los elementos de AdminLTE */
+}

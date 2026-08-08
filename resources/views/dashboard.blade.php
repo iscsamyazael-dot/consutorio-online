@@ -10,10 +10,12 @@
     <p>Seguimiento de Pacientes y farmacia</p>
 @stop
 
-@section('css')
+{{-- 👇 Usamos @push en lugar de @section para no romper el stack global de estilos --}}
+@push('css')
     {{-- <link rel="stylesheet" href="/css/admin_custom.css"> --}}
-@stop
+@endpush
 
-@section('js')
+{{-- 👇 Igual con los scripts: @push agrega al stack sin sobreescribir --}}
+@push('js')
     <script> console.log('Hi!'); </script>
-@stop
+@endpush

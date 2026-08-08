@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\NotaPsoapp;
+
 
 class Consulta extends Model
 {
@@ -37,7 +39,7 @@ class Consulta extends Model
 
     public function medico()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(Medico::class, 'user_id');
     }
 
     public function sintomas()
@@ -49,12 +51,31 @@ class Consulta extends Model
     {
         return $this->hasMany(ConsultaTranscripcion::class);
     }
-    
+
     public function recetas()
     {
-        return $this->hasMany(Receta::class);
+        return $this->hasMany(Receta::class, 'consulta_id');
     }
-    
+
+    public function derivaciones()
+    {
+        return $this->hasMany(Derivacion::class, 'consulta_id');
+    }
+
+    public function alertasClinicas()
+    {
+        return $this->hasMany(AlertaClinica::class, 'consulta_id');
+    }
+
+    public function especialidad()
+    {
+        // Opción A: Si usas una relación BelongsTo directa con clave foránea especialidad_id
+        return $this->belongsTo(Especialidad::class, 'especialidad_id');
+
+        // Opción B: Si guardas el ID o Slug en especialidad_sugerida
+         //return $this->belongsTo(Especialidad::class, 'especialidad_sugerida');
+    }
+
     public function archivos()
     {
         return $this->hasMany(ArchivoClinico::class);
@@ -62,7 +83,17 @@ class Consulta extends Model
 
     public function evaluacionIA()
     {
-        return $this->belongsTo(EvaluacionIA::class,'evaluacion_ia_id');
+        return $this->belongsTo(EvaluacionIA::class, 'evaluacion_ia_id');
     }
 
+    public function eventosIA()
+    {
+        return $this->hasMany(EventoIA::class, 'consulta_id');
+    }
+
+    public function notaPsoapp()
+    {
+        return $this->hasOne(NotaPsoapp::class, 'consulta_id');
+         return $this->hasOne(NotaPsoapp::class);
+    }
 }

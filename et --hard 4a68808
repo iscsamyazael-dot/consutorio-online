@@ -1,0 +1,82 @@
+[33m756f9b9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/configuracionMedica[m[33m, [m[1;31morigin/feature/configuracionMedica[m[33m)[m HEAD@{0}: reset: moving to origin/feature/configuracionMedica
+[33m756f9b9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/configuracionMedica[m[33m, [m[1;31morigin/feature/configuracionMedica[m[33m)[m HEAD@{1}: reset: moving to origin/feature/configuracionMedica
+[33m4a68808[m HEAD@{2}: rebase (abort): returning to refs/heads/feature/configuracionMedica
+[33m0478b3d[m HEAD@{3}: pull origin feature/configuracionMedica --rebase (start): checkout 0478b3d8eaa20a97b7f7aa80a2dd5cb0d2ed9fb5
+[33m4a68808[m HEAD@{4}: commit: Corrige rutas de especialidades
+[33mb82cc90[m HEAD@{5}: commit: Corrige rutas
+[33m835769c[m HEAD@{6}: checkout: moving from feature/frontEnd-Ubicaciones to feature/configuracionMedica
+[33ma53099d[m[33m ([m[1;31morigin/feature/frontEnd-Ubicaciones[m[33m, [m[1;32mfeature/frontEnd-Ubicaciones[m[33m)[m HEAD@{7}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Ubicaciones
+[33m835769c[m HEAD@{8}: checkout: moving from feature/frontEnd-Ubicaciones to feature/configuracionMedica
+[33ma53099d[m[33m ([m[1;31morigin/feature/frontEnd-Ubicaciones[m[33m, [m[1;32mfeature/frontEnd-Ubicaciones[m[33m)[m HEAD@{9}: commit: Corrige rutas de ubicaciones
+[33m98f53d9[m HEAD@{10}: commit: Corrige rutas de ubicaciones y estructura resource
+[33m9e4283b[m HEAD@{11}: commit (merge): Canbio de controlador
+[33m75f8a8d[m HEAD@{12}: commit: CANDIO DE CONTROLADOR AL WEB
+[33m044b9f1[m HEAD@{13}: commit: erro de editar
+[33m132be2e[m HEAD@{14}: commit: nueva rma ubicaciones
+[33mc59cde1[m[33m ([m[1;31morigin/feature/frontEnd-Agenda[m[33m, [m[1;32mfeature/frontEnd-Agenda[m[33m)[m HEAD@{15}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Ubicaciones
+[33mc59cde1[m[33m ([m[1;31morigin/feature/frontEnd-Agenda[m[33m, [m[1;32mfeature/frontEnd-Agenda[m[33m)[m HEAD@{16}: checkout: moving from Udicasiones to feature/frontEnd-Agenda
+[33mc59cde1[m[33m ([m[1;31morigin/feature/frontEnd-Agenda[m[33m, [m[1;32mfeature/frontEnd-Agenda[m[33m)[m HEAD@{17}: checkout: moving from Udicasiones to Udicasiones
+[33mc59cde1[m[33m ([m[1;31morigin/feature/frontEnd-Agenda[m[33m, [m[1;32mfeature/frontEnd-Agenda[m[33m)[m HEAD@{18}: checkout: moving from feature/frontEnd-Agenda to Udicasiones
+[33mc59cde1[m[33m ([m[1;31morigin/feature/frontEnd-Agenda[m[33m, [m[1;32mfeature/frontEnd-Agenda[m[33m)[m HEAD@{19}: commit: adminlte estatico
+[33m1c4aebd[m HEAD@{20}: commit: condiciones
+[33m2a1a848[m HEAD@{21}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m835769c[m HEAD@{22}: commit: cambio de axios a api
+[33m10955d0[m HEAD@{23}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33m2a1a848[m HEAD@{24}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mfe4da71[m[33m ([m[1;31morigin/feature/frontEnd-Pacientes[m[33m, [m[1;32mfeature/frontEnd-Pacientes[m[33m)[m HEAD@{25}: commit: cambio de interfaz
+[33m7453f36[m HEAD@{26}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m2a1a848[m HEAD@{27}: commit: correciones
+[33md5d6b4b[m HEAD@{28}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m7453f36[m HEAD@{29}: commit: datos completos
+[33mb9bc32a[m HEAD@{30}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33md5d6b4b[m HEAD@{31}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33mb9bc32a[m HEAD@{32}: commit: triaje
+[33md6e10ca[m HEAD@{33}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33md5d6b4b[m HEAD@{34}: commit: agrege nuevos campos de validacion
+[33m530d3fc[m HEAD@{35}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33md6e10ca[m HEAD@{36}: commit: nuevos campos
+[33m7ac3d33[m HEAD@{37}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m530d3fc[m HEAD@{38}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m7ac3d33[m HEAD@{39}: commit: nuevos campos de medicion
+[33m49a3231[m HEAD@{40}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m530d3fc[m HEAD@{41}: commit: campos balidados
+[33m2d55a54[m HEAD@{42}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{43}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m2d55a54[m HEAD@{44}: commit: modificacion d controlador
+[33ma2e81fe[m HEAD@{45}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{46}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33ma2e81fe[m HEAD@{47}: commit: modal de canclelar
+[33m01c386a[m HEAD@{48}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{49}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m01c386a[m HEAD@{50}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m10955d0[m HEAD@{51}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33m01c386a[m HEAD@{52}: commit: controler
+[33m0653e42[m HEAD@{53}: commit: Actualiza agenda médica y gestión de citas
+[33m8ba4b8f[m HEAD@{54}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{55}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m8ba4b8f[m HEAD@{56}: commit: estado agendado
+[33macaad78[m HEAD@{57}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m49a3231[m HEAD@{58}: commit: Actualiza
+[33m8031ac7[m HEAD@{59}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33macaad78[m HEAD@{60}: commit: Actualiza calendario de agenda
+[33m965500e[m HEAD@{61}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m8031ac7[m HEAD@{62}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m965500e[m HEAD@{63}: checkout: moving from feature/frontEnd-Pacientes to feature/frontEnd-Agenda
+[33m8031ac7[m HEAD@{64}: checkout: moving from feature/frontEnd-Agenda to feature/frontEnd-Pacientes
+[33m965500e[m HEAD@{65}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m10955d0[m HEAD@{66}: checkout: moving from feature/frontEnd-Agenda to feature/configuracionMedica
+[33m965500e[m HEAD@{67}: commit: Se integra médico y especialidad en el módulo de agenda
+[33m428592c[m HEAD@{68}: checkout: moving from develop to feature/frontEnd-Agenda
+[33mc82c085[m[33m ([m[1;32mDevelop[m[33m)[m HEAD@{69}: checkout: moving from feature/frontEnd-Agenda to develop
+[33m428592c[m HEAD@{70}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Agenda
+[33m10955d0[m HEAD@{71}: commit: nombre del doctor
+[33m084cd78[m HEAD@{72}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m8031ac7[m HEAD@{73}: commit: Actualiza módulo de pacientes
+[33m359212b[m HEAD@{74}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m084cd78[m HEAD@{75}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33m359212b[m HEAD@{76}: commit: Mejora indicador de datos faltantes en pacientes
+[33md147c41[m HEAD@{77}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33m084cd78[m HEAD@{78}: commit: Actualización configuración médica y modelo Medico
+[33mef8de23[m HEAD@{79}: checkout: moving from feature/frontEnd-Pacientes to feature/configuracionMedica
+[33md147c41[m HEAD@{80}: checkout: moving from feature/configuracionMedica to feature/frontEnd-Pacientes
+[33mef8de23[m HEAD@{81}: checkout: moving from feature/frontEnd-Pacientes to feature/configurac

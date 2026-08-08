@@ -22,3 +22,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+/storage/framework/cache/*
+/storage/framework/views/*
+/storage/logs/*
+
+/public/mix-manifest.json
+/public/hot
+/public/storage
+/public/archivos_clinicos
