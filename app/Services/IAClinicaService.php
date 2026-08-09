@@ -71,6 +71,33 @@ class IAClinicaService
             ];
         }
 
+        // ============================================================
+        // VALIDACIÓN DE ANCLAJE DE SÍNTOMAS (capa de seguridad opcional)
+        // ------------------------------------------------------------
+        // Esto es una segunda barrera de bajo costo (regex/str_contains
+        // locales, sin llamadas a red, impacto en tiempo ~0ms) para
+        // detectar síntomas que la IA generó pero que no tienen ninguna
+        // coincidencia léxica razonable con el texto original (ej. "edema
+        // de miembros inferiores" agregado por asociación clínica con
+        // disnea/taquicardia, sin que el paciente lo haya mencionado).
+        //
+        // No sustituye el fix real, que es el ajuste del prompt en
+        // consultarIA() (ver FASE 3 y FASE 4 más abajo). Es solo una red
+        // de detección/logging adicional. Es una heurística conservadora:
+        // solo descarta un síntoma si NO encuentra ninguna coincidencia
+        // parcial, así que el riesgo de que descarte un síntoma válido
+        // por un sinónimo no compartido (ej. "panza" vs "abdomen") existe,
+        // pero prioriza no perder datos reales: si tienes dudas, revisa
+        // los logs de "Síntoma descartado por falta de anclaje" antes de
+        // confiar en que este filtro no está siendo demasiado agresivo.
+        //
+        // Si por ahora solo quieres el fix del prompt (recomendado como
+        // primer paso) y no esta capa extra, comenta la llamada de abajo.
+        // ============================================================
+        if (!empty($data['sintomas'])) {
+            $data['sintomas'] = $this->validarAnclajeSintomas($data['sintomas'], $texto, $consulta);
+        }
+
         // Guardar síntomas
         if (!empty($data['sintomas'])) {
             foreach ($data['sintomas'] as $sintoma) {
@@ -198,6 +225,48 @@ class IAClinicaService
             'nota_psoapp' => $notaPsoapp,
             'debug_usage' => $data['debug_usage'] ?? null,
         ];
+    }
+
+    /**
+     * Descarta síntomas que la IA generó pero que no tienen ninguna
+     * coincidencia léxica razonable con el texto original (transcripción o
+     * reporte de estudio). Ver el comentario extenso en el punto donde se
+     * llama, dentro de analizarTranscripcion(), para el detalle de por qué
+     * existe esta capa y sus limitaciones (heurística de subcadenas, no
+     * análisis semántico completo).
+     */
+    private function validarAnclajeSintomas(array $sintomas, string $textoOriginal, $consulta): array
+    {
+        $textoNormalizado = mb_strtolower($textoOriginal);
+        $sintomasValidados = [];
+
+        foreach ($sintomas as $sintoma) {
+            $palabrasClave = preg_split('/[\s,\/()\-]+/', mb_strtolower($sintoma));
+            $palabrasClave = array_filter($palabrasClave, fn($p) => mb_strlen($p) > 4);
+
+            // Si no quedan palabras "significativas" (todo el término es corto),
+            // no filtramos: preferimos dejarlo pasar antes que descartar por
+            // un falso negativo de la heurística.
+            $tieneCoincidencia = empty($palabrasClave);
+
+            foreach ($palabrasClave as $palabra) {
+                if (str_contains($textoNormalizado, mb_substr($palabra, 0, 5))) {
+                    $tieneCoincidencia = true;
+                    break;
+                }
+            }
+
+            if ($tieneCoincidencia) {
+                $sintomasValidados[] = $sintoma;
+            } else {
+                Log::warning('Síntoma descartado por falta de anclaje en el texto original', [
+                    'sintoma' => $sintoma,
+                    'consulta_id' => $consulta->id ?? null,
+                ]);
+            }
+        }
+
+        return $sintomasValidados;
     }
 
     /**
@@ -1039,6 +1108,16 @@ class IAClinicaService
         Emergencia médica.
         Requiere atención inmediata.
 
+            REGLA DE COHERENCIA OBLIGATORIA (triage ROJO -> derivación a Urgencias):
+        Si el nivel de triage resultante es ROJO, la especialidad de derivación
+        (ver FASE 7) DEBE ser \"Urgencias\" cuando esa especialidad exista, escrita
+        tal cual, dentro del catálogo disponible. Nunca derives un caso ROJO a
+        Medicina General ni a una especialidad de consulta externa si \"Urgencias\"
+        está disponible en el catálogo — un caso de emergencia médica no puede
+        resolverse con manejo ambulatorio de rutina. Solo si \"Urgencias\" NO existe
+        en el catálogo, usa la mejor alternativa disponible y decláralo
+        explícitamente como limitación en \"justificacion\" y \"motivo_derivacion\"
+
         Justifica siempre el nivel de triage.
 
         =========================================================
@@ -1055,6 +1134,15 @@ class IAClinicaService
         Ordénalos desde el más probable al menos probable.
 
         Nunca afirmes que el diagnóstico es definitivo.
+
+        AUTOVERIFICACIÓN OBLIGATORIA ANTES DE ASIGNAR PORCENTAJES:
+        Para cada diagnóstico probable, revisa que TODOS los síntomas o hallazgos
+        que usas como soporte estén EXPLÍCITAMENTE presentes en la lista de síntomas
+        recibida al inicio de este prompt (\"$textoSintomas\"). Nunca justifiques un
+        diagnóstico con un síntoma que no fue reportado, aunque sea típico de esa
+        condición (ej. no asumas \"edema\" solo porque el cuadro sugiere un problema
+        cardiaco, si nadie lo reportó). Si un diagnóstico solo se sostiene con
+        síntomas no reportados, bájale el porcentaje o elimínalo del listado.
 
         =========================================================
         FASE 5 - DECISIÓN CLÍNICA
@@ -1221,6 +1309,11 @@ class IAClinicaService
            \"especialidad_ideal_no_disponible\" vacío (aquí no aplica el mensaje del
            punto 3, porque no hay catálogo del que informar una ausencia).
 
+        RECORDATORIO: si el TRIAGE de la FASE 3 fue ROJO, este paso ya está sujeto
+        a la regla de coherencia obligatoria definida ahí (derivar a \"Urgencias\" si
+        existe en el catálogo). Ese requisito tiene prioridad sobre cualquier otra
+        alternativa \"más cercana\" del catálogo.
+
         NUNCA hagas lo siguiente (ejemplo de error real que debes evitar):
         Síntomas: \"tos\", \"congestión nasal\" -> especialidad elegida: \"Odontología\"
         o \"Ginecología\" solo porque eran las únicas especialidades en el catálogo.
@@ -1262,7 +1355,9 @@ class IAClinicaService
         obvia con los síntomas descritos?\". Si la respuesta es no, o si dudas,
         cambia la especialidad a \"Medicina General\" (esté o no en el catálogo)
         en vez de forzar una especialidad incoherente solo por estar en el
-        catálogo.
+        catálogo. Adicionalmente, si el triage fue ROJO, verifica que la
+        especialidad elegida sea \"Urgencias\" (si existe en catálogo) antes de
+        responder.
 
         Ejemplos genéricos de especialidades (solo como referencia si el
         catálogo no está disponible):
@@ -1373,6 +1468,8 @@ class IAClinicaService
           - En \"diagnosticos_probables\", los porcentajes de todos los diagnósticos
           listados deben sumar exactamente 100, en números enteros, y el orden debe
           ir del más alto al más bajo.
+        - Si el triage es ROJO, la especialidad DEBE ser \"Urgencias\" cuando exista
+          en el catálogo (ver regla de coherencia en FASE 3 y FASE 7).
 
         ";
 
@@ -1428,6 +1525,16 @@ class IAClinicaService
      *     referencia al vocabulario ya indicado arriba, sin reimprimirlo.
      *     Esto no cambia nada de lo que el modelo puede usar, solo evita
      *     tokens de entrada duplicados.
+     *
+     * FIX ANCLAJE CLÍNICO (síntomas inventados por asociación): se detectó
+     * un caso real donde la IA agregó "edema de miembros inferiores" a la
+     * lista de síntomas sin que el paciente lo hubiera mencionado en
+     * ningún momento de la transcripción, y luego usó ese mismo síntoma
+     * inventado para sustentar un diagnóstico diferencial de insuficiencia
+     * cardíaca descompensada (30%). Se agregó una advertencia explícita en
+     * la FASE 3 y una autoverificación cruzada en la FASE 4 para reducir
+     * este tipo de "alucinación por asociación clínica". Esto es texto de
+     * prompt (tokens de entrada), no afecta el tiempo de respuesta.
      */
     private function consultarIA(
         $texto,
@@ -1607,6 +1714,18 @@ PRONÓSTICO ANTERIOR:
 
         El arreglo 'sintomas' NUNCA debe quedar vacío si el texto contiene información clínica real.
 
+        ADVERTENCIA CRÍTICA - FALSOS POSITIVOS POR ASOCIACIÓN CLÍNICA:
+        Nunca agregues un síntoma o hallazgo solo porque suele acompañar al cuadro que
+        sospechas, aunque sea clínicamente típico de ese diagnóstico. Ejemplo de error
+        real a evitar: si el paciente reporta disnea, taquicardia e hipertensión, NO
+        agregues 'edema de miembros inferiores' a menos que el texto lo mencione
+        explícitamente — aunque ese hallazgo sea típico de insuficiencia cardíaca,
+        agregarlo sin que el paciente/estudio lo haya reportado es INVENTAR un dato
+        clínico, algo estrictamente prohibido y tan grave como omitir uno real.
+        Antes de escribir cada síntoma, pregúntate: \"¿esta palabra o su significado
+        aparece literalmente en el texto de origen, o la estoy infiriendo porque
+        'suele ir junto' con lo demás?\". Si es lo segundo, NO lo incluyas.
+
       =========================================================
 FASE 4 - DIAGNÓSTICOS PROBABLES (LENGUAJE MÉDICO PROFESIONAL)
 =========================================================
@@ -1633,6 +1752,15 @@ REGLAS OBLIGATORIAS
 - Evita repartir porcentajes iguales salvo que la evidencia clínica sea equivalente.
 - El porcentaje representa únicamente una estimación clínica orientativa.
 - Nunca afirmes que el diagnóstico está confirmado.
+
+AUTOVERIFICACIÓN OBLIGATORIA ANTES DE ASIGNAR PORCENTAJES:
+Para cada diagnóstico en \"diagnosticos_probables\", revisa que TODOS los
+síntomas/hallazgos que usas como soporte estén también presentes, tal cual,
+en el arreglo \"sintomas\" que tú mismo generaste en la FASE 3 (y que a su vez
+debe venir del texto real, no de una asociación clínica). Si vas a justificar
+un diagnóstico con un hallazgo que no está en tu propio arreglo de síntomas,
+ese diagnóstico está mal fundamentado: bájale el porcentaje o elimínalo, no lo
+sostengas con datos que no existen en el caso.
 
 FORMATO
 
@@ -1907,6 +2035,9 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
           datos del paciente; el campo \"diagnosticos_diferenciales\" nunca debe incluir el mismo
           texto que el campo \"diagnostico\"; el campo \"signos_alarma_vigilar\" es prospectivo
           (qué vigilar a futuro), distinto de \"alertas\" (qué ya se detectó en el texto actual).
+        - Ningún síntoma, hallazgo o dato usado para justificar un diagnóstico puede provenir de
+          asociación clínica; debe estar anclado literalmente en el texto de origen (ver
+          advertencia de la FASE 3 y la autoverificación de la FASE 4).
 
         ";
 
