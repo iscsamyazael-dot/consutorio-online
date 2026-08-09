@@ -50,21 +50,38 @@ export default {
         }
     },
     computed: {
-        // Lista única de médicos a partir de las citas ya cargadas
+        // Lista única de médicos a partir de las citas ya cargadas.
+        // IMPORTANTE: un médico puede aparecer en citas de varias especialidades,
+        // así que guardamos TODAS las especialidades que le hemos visto atender
+        // (especialidadIds), no solo la primera que se encuentra al recorrer el array.
         medicosDisponibles() {
             const mapa = new Map()
+
             this.citas.forEach(c => {
                 if (!c.medico) return
+
                 const id = c.medico.id ?? c.medico.nombre
+                const espId = c.especialidad
+                    ? (c.especialidad.id ?? c.especialidad.nombre)
+                    : ''
+
                 if (!mapa.has(id)) {
                     mapa.set(id, {
                         id,
                         nombre: c.medico.nombre,
-                        especialidadId: c.especialidad ? (c.especialidad.id ?? c.especialidad.nombre) : ''
+                        especialidadIds: new Set(espId ? [espId] : [])
                     })
+                } else if (espId) {
+                    mapa.get(id).especialidadIds.add(espId)
                 }
             })
-            return Array.from(mapa.values())
+
+            // Convertimos cada Set a Array para que sea más fácil de consumir
+            // en el componente hijo (agendamedica.vue)
+            return Array.from(mapa.values()).map(m => ({
+                ...m,
+                especialidadIds: Array.from(m.especialidadIds)
+            }))
         },
         // Lista única de especialidades a partir de las citas ya cargadas
         especialidadesDisponibles() {

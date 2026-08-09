@@ -69,10 +69,18 @@ export default {
     }
   },
   computed: {
-    // Si se eligió especialidad, solo muestra médicos de esa especialidad
+    // Si se eligió especialidad, solo muestra médicos que atienden esa especialidad.
+    // IMPORTANTE: cada médico ahora trae `especialidadIds` (array), porque un mismo
+    // médico puede atender varias especialidades. Antes se comparaba contra
+    // `especialidadId` (un solo valor), lo que hacía que médicos con más de una
+    // especialidad desaparecieran del filtro si esa no era la primera que se
+    // les había registrado.
     medicosFiltrados() {
       if (!this.especialidadSeleccionada) return this.medicos
-      return this.medicos.filter(m => m.especialidadId === this.especialidadSeleccionada)
+      return this.medicos.filter(m =>
+        Array.isArray(m.especialidadIds) &&
+        m.especialidadIds.includes(this.especialidadSeleccionada)
+      )
     }
   },
   mounted() {

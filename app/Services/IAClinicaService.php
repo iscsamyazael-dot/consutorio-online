@@ -1,5 +1,5 @@
 <?php
-
+// cSpell:disable
 namespace App\Services;
 use App\Models\ConsultaTranscripcion;
 use App\Services\Terminologia\DiccionarioMedico;
