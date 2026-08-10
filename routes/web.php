@@ -261,4 +261,5 @@ Route::prefix('api/ionic')
         Route::put('ActualizarContrasenia', [AuthController::class, 'updatePassword']);
     });
 
+
 require __DIR__.'/auth.php';

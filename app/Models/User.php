@@ -18,6 +18,10 @@ class User extends Authenticatable
      *
      * @var list<string>
      */ 
+    
+   
+
+    // protected $connection = 'tenant';
     protected $fillable = [
     'user_id',
     'name',
@@ -26,6 +30,8 @@ class User extends Authenticatable
     'rol',    // varchar — el que usa el frontend
     'activo',
     ];
+
+    
 
     public function consultas()
     {
@@ -62,9 +68,6 @@ class User extends Authenticatable
             'activo' => 'boolean',
         ];
     }
-
-
-    
 
     
 }
