@@ -117,7 +117,7 @@
                             <p class="mb-0 mt-2">No hay consultas programadas para hoy.</p>
                         </div>
 
-                        <div v-else key="list">
+                        <div v-else key="list" class="lista-scroll">
                             <div class="consulta-item stagger-item" v-for="(c, i) in proximasConsultas" :key="c.id" :style="{ '--i': i }">
                                 <div class="hora">{{ c.hora }}</div>
                                 <div class="flex-grow-1">
@@ -295,16 +295,22 @@
                     Accesos rápidos
                 </h6>
             </div>
-            <div class="row g-3">
-                <div class="col-md-4 col-lg-2" v-for="(acc, i) in accesosRapidos" :key="i">
-                    <a :href="acc.url" class="acceso-rapido stagger-item" :class="'acceso-' + acc.color" :style="{ '--i': i }">
-                        <i :class="acc.icono"></i>
-                        <div>
-                            <h6 class="mb-0">{{ acc.titulo }}</h6>
-                            <small class="text-muted">{{ acc.subtitulo }}</small>
-                        </div>
-                    </a>
-                </div>
+
+            <!-- Layout flexible: reparte el espacio sobrante entre las tarjetas
+                 en vez de dejar un hueco vacío al final de la fila -->
+            <div class="accesos-grid">
+                <a v-for="(acc, i) in accesosRapidos"
+                   :key="i"
+                   :href="acc.url"
+                   class="acceso-rapido stagger-item"
+                   :class="'acceso-' + acc.color"
+                   :style="{ '--i': i }">
+                    <i :class="acc.icono"></i>
+                    <div>
+                        <h6 class="mb-0">{{ acc.titulo }}</h6>
+                        <small class="text-muted">{{ acc.subtitulo }}</small>
+                    </div>
+                </a>
             </div>
         </div>
 
@@ -481,27 +487,16 @@ export default {
             this.proximasConsultas = consultas
                 .filter(c => this.esHoy(c.fecha || c.created_at))
                 .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
-                .slice(0, 5)
-                .map(c => ({
+                .slice(0, 10)
+                .map((c, i) => ({
                     id: c.id,
                     hora: c.hora || '--:--',
                     paciente: c.paciente ? c.paciente.nombre : (c.paciente_nombre || 'Paciente'),
                     tipo: c.motivo_consulta || 'Consulta general',
-                    estado: this.etiquetaEstado(c.estado_consulta || c.estado)
+                    // Regla simple: solo la primera de la lista dice
+                    // "En proceso", todas las demás dicen "Finalizada".
+                    estado: i === 0 ? 'En proceso' : 'Finalizada'
                 }));
-        },
-
-        etiquetaEstado(estado) {
-            switch ((estado || '').toLowerCase()) {
-                case 'finalizada':
-                case 'completada':
-                    return 'Finalizada';
-                case 'cancelada':
-                    return 'Cancelada';
-                case 'en_proceso':
-                default:
-                    return 'En proceso';
-            }
         },
 
         // ─── ALERTAS CLINICAS ───────────────────────────────────────────
@@ -827,7 +822,7 @@ export default {
     background: white;
     border-radius: 20px;
     padding: 20px;
-    box-shadow: 0 3px 12px rgba(0,0,0,.06);
+    box-shadow: 0 2px 10px rgba(15,23,42,.05);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -888,7 +883,7 @@ export default {
     background: white;
     border-radius: 20px;
     padding: 20px;
-    box-shadow: 0 3px 12px rgba(0,0,0,.06);
+    box-shadow: 0 2px 10px rgba(15,23,42,.05);
     height: 100%;
 }
 
@@ -896,7 +891,34 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+}
+
+/* Contenedor con altura fija: muestra ~3 consultas y el resto
+   queda accesible con scroll interno, sin que el panel crezca. */
+.lista-scroll {
+    max-height: 232px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+}
+
+.lista-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.lista-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.lista-scroll::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 10px;
+}
+
+.lista-scroll::-webkit-scrollbar-thumb:hover {
+    background: #b3b8c1;
 }
 
 .consulta-item {
@@ -1188,8 +1210,18 @@ export default {
 .dot-inicio { background: #10b981; }
 
 /* ─── ACCESOS RAPIDOS ────────────────────────────────────────────── */
+/* Grid flexible: el espacio libre se reparte entre todas las tarjetas
+   en vez de dejar un hueco vacío al final de la fila. */
+
+.accesos-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+}
 
 .acceso-rapido {
+    flex: 1 1 180px;
+    max-width: 230px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1198,8 +1230,8 @@ export default {
     background: #f8f9fa;
     text-decoration: none;
     color: inherit;
+    border-left: 3px solid transparent;
     transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease, background .25s ease;
-    height: 100%;
 }
 
 .acceso-rapido:hover {
@@ -1224,10 +1256,19 @@ export default {
     transform: scale(1.15) rotate(8deg);
 }
 
+.acceso-primary { border-left-color: #1d4ed8; }
 .acceso-primary i { background: #dbeafe; color: #1d4ed8; }
+
+.acceso-success { border-left-color: #059669; }
 .acceso-success i { background: #d1fae5; color: #059669; }
+
+.acceso-purple { border-left-color: #7b1fa2; }
 .acceso-purple i { background: #f1e6fb; color: #7b1fa2; }
+
+.acceso-warning { border-left-color: #b45309; }
 .acceso-warning i { background: #fef3c7; color: #b45309; }
+
+.acceso-danger { border-left-color: #dc2626; }
 .acceso-danger i { background: #fee2e2; color: #dc2626; }
 
 /* Respeta preferencia del sistema por menos movimiento */

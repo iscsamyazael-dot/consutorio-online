@@ -43,6 +43,12 @@
     </div>
     <!-- Con paciente seleccionado: consulta normal -->
    <template v-else>
+    <!-- SIGNOS VITALES DEL TRIAGE -->
+    <div class="row">
+        <div class="col-12">
+            <SignosVitales :paciente="paciente" />
+        </div>
+    </div>
     <!-- FILA PRINCIPAL -->
     <div class="row">
         <div class="col-lg-3">
@@ -105,6 +111,7 @@ import ArchivosClinicos from './ArchivosClinicos.vue'
 import DerivacionClinica from './DerivacionClinica.vue'
 import RecetaInteligente from './RecetaInteligente.vue'
 import NotaPSOAPP from './NotaPSOAPP.vue'
+import SignosVitales from './SignosVitales.vue'
 export default {
     components: {
         TranscripcionLive,
@@ -114,7 +121,8 @@ export default {
         ArchivosClinicos,
         DerivacionClinica,
         RecetaInteligente,
-        NotaPSOAPP
+        NotaPSOAPP,
+        SignosVitales
     },
     props:{
         pacienteId:{

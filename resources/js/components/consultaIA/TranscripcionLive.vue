@@ -37,10 +37,10 @@
                 <button
                     v-else
                     type="button"
-                    class="btn btn-sm btn-outline-danger"
+                    class="btn-cortar"
                     title="Finalizar y cortar esta conversación"
                     :disabled="!consultaId || finalizando"
-                    @click="finalizarConversacion"
+                    @click="abrirModalFinalizar"
                 >
                     <span v-if="finalizando">
                         <i class="fas fa-spinner fa-spin"></i> Finalizando...
@@ -310,6 +310,54 @@
 
         </div>
 
+        <!-- MODAL DE CONFIRMACIÓN: CORTAR CONVERSACIÓN -->
+        <transition name="modal-fade">
+            <div v-if="mostrarModalFinalizar" class="modal-overlay" @click.self="cerrarModalFinalizar">
+                <div class="modal-confirm">
+
+                    <div class="modal-confirm-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+
+                    <h5 class="modal-confirm-title">¿Finalizar la conversación?</h5>
+                    <p class="modal-confirm-text">
+                        Al cortar la conversación ya no podrás enviar más mensajes
+                        ni adjuntar archivos en esta consulta. Esta acción no se puede deshacer.
+                    </p>
+
+                    <div v-if="errorFinalizar" class="modal-confirm-error">
+                        <i class="fas fa-times-circle mr-1"></i>
+                        {{ errorFinalizar }}
+                    </div>
+
+                    <div class="modal-confirm-actions">
+                        <button
+                            type="button"
+                            class="btn-modal btn-modal-secundario"
+                            :disabled="finalizando"
+                            @click="cerrarModalFinalizar"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-modal btn-modal-peligro"
+                            :disabled="finalizando"
+                            @click="finalizarConversacion"
+                        >
+                            <span v-if="finalizando">
+                                <i class="fas fa-spinner fa-spin"></i> Finalizando...
+                            </span>
+                            <span v-else>
+                                <i class="fas fa-stop-circle"></i> Sí, finalizar
+                            </span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </transition>
+
     </div>
 
 </template>
@@ -320,6 +368,11 @@ var route = document.querySelector("[name=route]").value //Esta linea sirve para
 
 var urlConsultaIA = route + '/consultaIA'; //Se consume la ruta de la API que se encuentra en el archivo web//
 var urlArchivoIA = route + '/consultaIA/archivo'; //Endpoint de subida de archivos - mismo prefijo que urlConsultaIA//
+
+// Endpoint para persistir el cierre de la consulta. Sigue el mismo
+// patrón que el resto del sistema (estado_consulta: 'finalizada',
+// visto en Home.vue). AJUSTA esta ruta si tu backend usa otra distinta.
+var urlFinalizarConsulta = route + '/consultas';
 
 const FORMATOS_PERMITIDOS = [
     'application/pdf',
@@ -360,8 +413,10 @@ export default {
             bufferVoz: '',        // texto ya confirmado dictado por voz
 
             // --- Cortar conversación ---
+            mostrarModalFinalizar: false,
             finalizando: false,
-            consultaFinalizada: false
+            consultaFinalizada: false,
+            errorFinalizar: ''
 
         }
 
@@ -894,35 +949,45 @@ export default {
         |--------------------------------------------------------------------
         | CORTAR CONVERSACIÓN
         |--------------------------------------------------------------------
-        | Pide confirmación (es una acción destructiva: ya no se puede
-        | seguir escribiendo en esta consulta), detiene el micrófono si
-        | estaba activo, bloquea el input/mic/adjuntar/enviar, y avisa
-        | al padre por si necesita, por ejemplo, generar la nota PSOAPP
-        | final o redirigir a otra vista.
+        | Ya no usa window.confirm(): abre un modal propio, estilizado,
+        | dentro del componente. El modal pide confirmación explícita
+        | ("Sí, finalizar" / "Cancelar") antes de ejecutar la acción, que
+        | es destructiva (ya no se puede seguir escribiendo).
         |
-        | Si tu backend tiene un endpoint para cerrar la consulta
-        | (ej. PATCH /consultaIA/{id}/finalizar), descomenta y ajusta el
-        | bloque axios de abajo; por ahora el corte es a nivel de UI +
-        | evento al padre, para no asumir una ruta que no existe todavía.
+        | Al confirmar: se detiene el micrófono si estaba activo, se
+        | PERSISTE el cierre en el backend (PATCH a /consultas/{id} con
+        | estado_consulta: 'finalizada' — AJUSTA urlFinalizarConsulta y/o
+        | el payload si tu ruta real es distinta), se bloquea el
+        | input/mic/adjuntar/enviar, y se avisa al padre.
         */
+        abrirModalFinalizar() {
+            if (!this.consultaId || this.finalizando || this.consultaFinalizada) return
+            this.errorFinalizar = ''
+            this.mostrarModalFinalizar = true
+        },
+
+        cerrarModalFinalizar() {
+            if (this.finalizando) return // no se cierra a media petición
+            this.mostrarModalFinalizar = false
+        },
+
         async finalizarConversacion() {
 
             if (!this.consultaId || this.finalizando || this.consultaFinalizada) return
 
-            const confirmado = window.confirm(
-                '¿Seguro que quieres cortar esta conversación? Ya no podrás enviar más mensajes.'
-            )
-            if (!confirmado) return
-
             this.finalizando = true
+            this.errorFinalizar = ''
 
             try {
 
-                // Ejemplo si existe un endpoint de cierre en el backend:
-                // await axios.post(`${urlConsultaIA}/${this.consultaId}/finalizar`)
+                // Persistimos el cierre en el backend.
+                await axios.patch(`${urlFinalizarConsulta}/${this.consultaId}`, {
+                    estado_consulta: 'finalizada'
+                })
 
                 this.detenerEscucha()
                 this.consultaFinalizada = true
+                this.mostrarModalFinalizar = false
 
                 this.mensajes.push({
                     tipo: 'sistema',
@@ -935,7 +1000,9 @@ export default {
             } catch (error) {
 
                 console.error('Error al finalizar la conversación:', error)
-                alert('No se pudo finalizar la conversación. Intentá de nuevo.')
+
+                this.errorFinalizar = error.response?.data?.error
+                    || 'No se pudo finalizar la conversación. Intentá de nuevo.'
 
             } finally {
                 this.finalizando = false
@@ -1145,5 +1212,163 @@ export default {
 .mensaje-whatsapp::-webkit-scrollbar-thumb {
     border-radius: 10px;
     background: #ccc;
+}
+
+/* ─── BOTÓN "CORTAR CONVERSACIÓN" ─────────────────────────────────── */
+/* Antes usaba las clases genéricas de Bootstrap (btn-outline-danger)
+   sin ningún estilo propio. Ahora tiene identidad visual clara. */
+
+.btn-cortar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1.5px solid #dc3545;
+    background: #fff;
+    color: #dc3545;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .12s ease;
+}
+
+.btn-cortar:hover:not(:disabled) {
+    background: #dc3545;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(220,53,69,.28);
+}
+
+.btn-cortar:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn-cortar:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+/* ─── MODAL DE CONFIRMACIÓN ──────────────────────────────────────── */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    padding: 16px;
+}
+
+.modal-confirm {
+    background: #fff;
+    border-radius: 18px;
+    padding: 28px 26px 22px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,.25);
+    animation: modalPop .25s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(.92) translateY(6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-confirm-icon {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: #fdecea;
+    color: #dc3545;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.modal-confirm-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.modal-confirm-text {
+    font-size: .87rem;
+    color: #6b7280;
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+
+.modal-confirm-error {
+    background: #fdecea;
+    color: #b31414;
+    font-size: .8rem;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+}
+
+.modal-confirm-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-modal {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-weight: 700;
+    font-size: .86rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background .18s ease, transform .12s ease, box-shadow .18s ease;
+}
+
+.btn-modal:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn-modal:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.btn-modal-secundario {
+    background: #f1f3f5;
+    color: #495057;
+}
+
+.btn-modal-secundario:hover:not(:disabled) {
+    background: #e5e7eb;
+}
+
+.btn-modal-peligro {
+    background: #dc3545;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(220,53,69,.3);
+}
+
+.btn-modal-peligro:hover:not(:disabled) {
+    background: #c82333;
+}
+
+/* Transición de entrada/salida del overlay */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity .2s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
 }
 </style>

@@ -132,39 +132,59 @@
       <!-- Buscador por nombre o folio -->
       <div class="cc-table-search">
         <i class="ti ti-search" aria-hidden="true"></i>
-        <input type="text" v-model="busqueda" placeholder="Buscar por nombre o folio…" />
+        <input type="text" v-model="busqueda" placeholder="Buscar por nombre o folio… (busca en todos los pacientes)" />
       </div>
 
-      <!-- Filtros: especialidad, médico y solo hoy (cruzando con /api/citas) -->
-      <div class="cc-table-filtros">
-        <select v-model="especialidadSeleccionada" class="cc-filtro-select" @change="onEspecialidadChange">
+      <!-- Filtros: especialidad, médico y fecha con calendario (cruzando con /api/citas) -->
+      <!-- Estos filtros se ignoran automáticamente mientras haya texto en el buscador de arriba -->
+      <div class="cc-table-filtros" :class="{ 'cc-table-filtros--inactivos': busquedaActiva }">
+        <select v-model="especialidadSeleccionada" class="cc-filtro-select" @change="onEspecialidadChange" :disabled="busquedaActiva">
           <option value="">Todas las especialidades</option>
           <option v-for="esp in especialidadesDisponibles" :key="esp.id" :value="esp.id">
             {{ esp.nombre }}
           </option>
         </select>
 
-        <select v-model="medicoSeleccionado" class="cc-filtro-select">
+        <select v-model="medicoSeleccionado" class="cc-filtro-select" :disabled="busquedaActiva">
           <option value="">Todos los médicos</option>
           <option v-for="med in medicosFiltrados" :key="med.id" :value="med.id">
             {{ med.nombre }}
           </option>
         </select>
 
+        <!-- Selector de fecha con calendario nativo del navegador -->
+        <label class="cc-filtro-fecha">
+          <i class="ti ti-calendar" aria-hidden="true"></i>
+          <input
+            type="date"
+            v-model="fechaFiltro"
+            class="cc-filtro-fecha-input"
+            :disabled="busquedaActiva"
+          />
+        </label>
+
+        <!-- Solo aparece cuando hay una fecha activa; la quita para ver todas -->
         <button
+          v-if="fechaFiltro"
           type="button"
           class="cc-filtro-toggle"
-          :class="{ 'cc-filtro-toggle--activo': soloHoy }"
-          @click="soloHoy = !soloHoy"
+          :disabled="busquedaActiva"
+          @click="fechaFiltro = ''"
         >
-          <i class="ti ti-calendar" aria-hidden="true"></i> Solo hoy
+          <i class="ti ti-x" aria-hidden="true"></i> Ver todas las fechas
         </button>
       </div>
 
-      <!-- Aviso de cómo seleccionar un paciente para nueva consulta -->
+      <!-- Aviso de cómo seleccionar un paciente para nueva consulta / estado del filtro actual -->
       <div class="cc-hint">
         <i class="ti ti-info-circle" aria-hidden="true"></i>
-        Doble clic sobre un paciente para seleccionarlo y usarlo en <strong>Nueva consulta</strong>.
+        <span v-if="busquedaActiva">
+          Buscando "<strong>{{ busqueda }}</strong>" en todos los pacientes, sin importar fecha, médico o especialidad.
+        </span>
+        <span v-else>
+          Doble clic sobre un paciente para seleccionarlo y usarlo en <strong>Nueva consulta</strong>.
+          <template v-if="fechaFiltro"> · Mostrando citas del <strong>{{ formatearFecha(fechaFiltro) }}</strong></template>
+        </span>
       </div>
 
       <div class="cc-table-wrap">
@@ -644,6 +664,18 @@ import axios from 'axios'
 // Clave usada en localStorage para el paciente seleccionado para "Nueva consulta"
 const CLAVE_PACIENTE_SELECCIONADO = 'pacienteSeleccionado'
 
+// Fecha de hoy en formato YYYY-MM-DD (mismo formato que cita.fecha y que
+// el input type="date"), calculada en hora local para no desfasarse por UTC.
+// Se define fuera del componente porque se usa como valor por defecto en
+// data(), antes de que el resto del componente esté disponible.
+function obtenerFechaHoyISO() {
+  const hoy = new Date()
+  const y = hoy.getFullYear()
+  const m = String(hoy.getMonth() + 1).padStart(2, '0')
+  const d = String(hoy.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export default {
   name: 'ConsultaClinica',
 
@@ -659,13 +691,17 @@ export default {
       // Paciente mostrado en el panel izquierdo
       pacienteActivo: null,
 
-      // Texto escrito en el buscador (filtra por nombre o folio)
+      // Texto escrito en el buscador (filtra por nombre o folio, EN TODOS
+      // los pacientes, ignorando especialidad/médico/fecha mientras haya texto)
       busqueda: '',
 
-      // Filtros de la tabla de espera (mismo patrón que agendamedica.vue)
+      // Filtros de la tabla de espera.
+      // fechaFiltro empieza en el día de hoy para que la lista de espera
+      // muestre automáticamente las citas de hoy en cuanto se entra a la vista.
+      // Se deja vacío ('') para "ver todas las fechas".
       especialidadSeleccionada: '',
       medicoSeleccionado: '',
-      soloHoy: false,
+      fechaFiltro: obtenerFechaHoyISO(),
 
       // Controla si el panel izquierdo está en modo edición
       editMode: false,
@@ -792,28 +828,39 @@ export default {
       return mapa
     },
 
-    // Filtra la lista de pacientes según el buscador y, si están activos,
-    // los filtros de especialidad/médico/solo-hoy (cruzando contra sus citas)
+    // Indica si el buscador tiene texto. Mientras esto sea true, los
+    // filtros de especialidad/médico/fecha quedan visualmente desactivados
+    // y se ignoran por completo en pacientesFiltrados.
+    busquedaActiva() {
+      return this.busqueda.trim().length > 0
+    },
+
+    // Filtra la lista de pacientes.
+    // - Si hay texto en el buscador: busca por nombre/folio en TODOS los
+    //   pacientes, sin importar especialidad/médico/fecha.
+    // - Si no hay texto: aplica los filtros de especialidad/médico/fecha
+    //   (cruzando contra las citas de cada paciente).
     pacientesFiltrados() {
       const q = this.busqueda.trim().toLowerCase()
-      const hoy = this.soloHoy ? this.fechaHoyISO() : null
-      const hayFiltroDeCitas = !!(this.especialidadSeleccionada || this.medicoSeleccionado || hoy)
 
-      return this.pacientes.filter(p => {
-        const textoOk = !q ||
+      if (q) {
+        return this.pacientes.filter(p =>
           (p.nombre || '').toLowerCase().includes(q) ||
           (p.paciente_id || '').toLowerCase().includes(q)
-        if (!textoOk) return false
+        )
+      }
 
-        if (!hayFiltroDeCitas) return true
+      const hayFiltroDeCitas = !!(this.especialidadSeleccionada || this.medicoSeleccionado || this.fechaFiltro)
+      if (!hayFiltroDeCitas) return this.pacientes
 
+      return this.pacientes.filter(p => {
         const citasDelPaciente = this.citasPorPacienteId.get(p.id) || []
         return citasDelPaciente.some(c => {
           const medicoOk = !this.medicoSeleccionado ||
             (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoSeleccionado)
           const especialidadOk = !this.especialidadSeleccionada ||
             (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadSeleccionada)
-          const fechaOk = !hoy || c.fecha === hoy
+          const fechaOk = !this.fechaFiltro || c.fecha === this.fechaFiltro
           return medicoOk && especialidadOk && fechaOk
         })
       })
@@ -943,16 +990,6 @@ export default {
         const sigueSiendoValido = this.medicosFiltrados.some(m => m.id === this.medicoSeleccionado)
         if (!sigueSiendoValido) this.medicoSeleccionado = ''
       }
-    },
-
-    // Fecha de hoy en formato YYYY-MM-DD (mismo formato que cita.fecha),
-    // calculada en hora local para no desfasarse por UTC.
-    fechaHoyISO() {
-      const hoy = new Date()
-      const y = hoy.getFullYear()
-      const m = String(hoy.getMonth() + 1).padStart(2, '0')
-      const d = String(hoy.getDate()).padStart(2, '0')
-      return `${y}-${m}-${d}`
     },
 
     // ──────────────────────────────────────────
@@ -1563,7 +1600,7 @@ export default {
 }
 .cc-table-search input::placeholder { color: #9ca3af; }
 
-/* Fila de filtros: especialidad, médico y toggle "solo hoy" */
+/* Fila de filtros: especialidad, médico, fecha (calendario) */
 .cc-table-filtros {
   display: flex;
   align-items: center;
@@ -1572,6 +1609,12 @@ export default {
   padding: 12px 24px;
   border-bottom: 1px solid #f0f2f5;
   background: #fafbfc;
+  transition: opacity 0.15s;
+}
+/* Mientras hay texto en el buscador, los filtros se ven atenuados
+   (además de estar deshabilitados vía :disabled en el template) */
+.cc-table-filtros--inactivos {
+  opacity: 0.5;
 }
 
 .cc-filtro-select {
@@ -1591,6 +1634,44 @@ export default {
 .cc-filtro-select:hover,
 .cc-filtro-select:focus {
   border-color: #185FA5;
+}
+.cc-filtro-select:disabled {
+  cursor: not-allowed;
+}
+
+/* Selector de fecha con ícono de calendario (usa el date picker nativo del navegador) */
+.cc-filtro-fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #185FA5;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.cc-filtro-fecha:hover {
+  border-color: #185FA5;
+}
+.cc-filtro-fecha i {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.cc-filtro-fecha-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #185FA5;
+  cursor: pointer;
+}
+.cc-filtro-fecha-input:disabled {
+  cursor: not-allowed;
 }
 
 .cc-filtro-toggle {
@@ -1619,8 +1700,11 @@ export default {
   border-color: #185FA5;
   color: #fff;
 }
+.cc-filtro-toggle:disabled {
+  cursor: not-allowed;
+}
 
-/* Aviso de "doble clic para seleccionar" */
+/* Aviso de "doble clic para seleccionar" / estado del filtro actual */
 .cc-hint {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 24px;
