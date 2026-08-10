@@ -1,0 +1,1241 @@
+<template>
+    <div class="dashboard-home">
+
+        <!-- ENCABEZADO -->
+        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2 fade-in-up">
+            <div>
+                <h2 class="fw-bold mb-1">Panel de administración Médico Online</h2>
+                <p class="text-muted mb-0">Resumen de la actividad del consultorio</p>
+            </div>
+            <div class="fecha-box">
+                <i class="far fa-calendar me-2"></i>{{ fechaHoy }}
+            </div>
+        </div>
+
+        <!-- TARJETAS DE ESTADISTICAS -->
+        <div class="row g-3 mb-4">
+
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card fade-in-up delay-1">
+                    <div class="stat-icon bg-primary-subtle text-primary">
+                        <i class="fas fa-user-friends"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h6 class="mb-0">Pacientes registrados</h6>
+                        <h3 class="fw-bold mb-0 counter-number">{{ resumen.pacientesRegistrados }}</h3>
+                        <small class="text-muted">Total de pacientes</small>
+                    </div>
+                    <a href="/ListaPacientes" class="stat-link text-primary">
+                        Ver pacientes <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card fade-in-up delay-2">
+                    <div class="stat-icon bg-success-subtle text-success">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h6 class="mb-0">Triage de hoy</h6>
+                        <h3 class="fw-bold mb-0 counter-number">{{ resumen.triageHoy }}</h3>
+                        <small class="text-muted">Triages realizados</small>
+                    </div>
+                    <a href="/TRIAGES" class="stat-link text-success">
+                        Ver triages <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card fade-in-up delay-3">
+                    <div class="stat-icon bg-purple-subtle text-purple">
+                        <i class="fas fa-notes-medical"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h6 class="mb-0">Consultas de hoy</h6>
+                        <h3 class="fw-bold mb-0 counter-number">{{ resumen.consultasHoy }}</h3>
+                        <small class="text-muted">Consultas programadas</small>
+                    </div>
+                    <a href="/ListaConsultas" class="stat-link text-purple">
+                        Ver consultas <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="stat-card fade-in-up delay-4">
+                    <div class="stat-icon bg-warning-subtle text-warning">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h6 class="mb-0">Pendientes de atención</h6>
+                        <h3 class="fw-bold mb-0 counter-number">{{ resumen.pendientes }}</h3>
+                        <small class="text-muted">Pacientes pendientes</small>
+                    </div>
+                    <a href="/ListaConsultas" class="stat-link text-warning">
+                        Ver pendientes <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- PROXIMAS CONSULTAS + ALERTAS CLINICAS -->
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6">
+                <div class="panel-card fade-in-up delay-2">
+                    <div class="panel-header">
+                        <h6 class="fw-bold mb-0">
+                            <i class="far fa-calendar-alt me-2 text-primary"></i>
+                            Próximas consultas de hoy
+                        </h6>
+                        <a href="/Agenda" class="small">Ver agenda completa</a>
+                    </div>
+
+                    <transition name="fade" mode="out-in">
+                        <div v-if="cargandoConsultas" key="loading">
+                            <div class="skeleton-row" v-for="n in 3" :key="n">
+                                <div class="skeleton skeleton-hora"></div>
+                                <div class="flex-grow-1">
+                                    <div class="skeleton skeleton-line skeleton-line-title"></div>
+                                    <div class="skeleton skeleton-line skeleton-line-sub"></div>
+                                </div>
+                                <div class="skeleton skeleton-badge"></div>
+                            </div>
+                        </div>
+
+                        <div v-else-if="proximasConsultas.length === 0" key="empty" class="text-center text-muted py-4 empty-state">
+                            <svg class="empty-illustration" width="92" height="92" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="20" y="28" width="80" height="72" rx="10" fill="#eaf3ff"/>
+                                <rect x="20" y="28" width="80" height="20" rx="10" fill="#74c0fc"/>
+                                <rect x="34" y="16" width="8" height="20" rx="4" fill="#1976d2"/>
+                                <rect x="78" y="16" width="8" height="20" rx="4" fill="#1976d2"/>
+                                <circle cx="60" cy="72" r="22" fill="#ffffff" stroke="#74c0fc" stroke-width="3"/>
+                                <path d="M50 72 L57 79 L71 63" stroke="#1976d2" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <p class="mb-0 mt-2">No hay consultas programadas para hoy.</p>
+                        </div>
+
+                        <div v-else key="list">
+                            <div class="consulta-item stagger-item" v-for="(c, i) in proximasConsultas" :key="c.id" :style="{ '--i': i }">
+                                <div class="hora">{{ c.hora }}</div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0">{{ c.paciente }}</h6>
+                                    <small class="text-muted">{{ c.tipo }}</small>
+                                </div>
+                                <span :class="'badge estado-' + c.estado.toLowerCase().replace(' ', '-')">
+                                    {{ c.estado }}
+                                </span>
+                            </div>
+                        </div>
+                    </transition>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="panel-card fade-in-up delay-3">
+                    <div class="panel-header">
+                        <h6 class="fw-bold mb-0 d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
+                            Alertas clínicas
+                            <transition name="fade">
+                                <span v-if="notificacionNueva" class="badge-nueva ms-2">Nueva</span>
+                            </transition>
+                        </h6>
+                        <a href="/TRIAGES" class="small">Ver todas</a>
+                    </div>
+
+                    <transition name="fade" mode="out-in">
+                        <div v-if="cargandoAlertas" key="loading">
+                            <div class="skeleton-alert" v-for="n in 2" :key="n">
+                                <div class="skeleton skeleton-circle"></div>
+                                <div class="flex-grow-1">
+                                    <div class="skeleton skeleton-line skeleton-line-title"></div>
+                                    <div class="skeleton skeleton-line skeleton-line-sub" style="width:75%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else-if="alertasClinicas.length === 0" key="empty" class="text-center text-muted py-4 empty-state">
+                            <svg class="empty-illustration" width="92" height="92" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M60 14 L96 26 V54 C96 80 80 98 60 106 C40 98 24 80 24 54 V26 Z" fill="#e6f9ef" stroke="#40c057" stroke-width="3"/>
+                                <path d="M46 60 L56 70 L76 46" stroke="#2f9e44" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <p class="mb-0 mt-2">Sin alertas por ahora.</p>
+                        </div>
+
+                        <div v-else key="list">
+                            <div
+                                class="alerta-item stagger-item"
+                                v-for="(a, i) in alertasClinicas"
+                                :key="i"
+                                :class="'alerta-' + a.nivel"
+                                :style="{ '--i': i }"
+                            >
+                                <span class="alerta-icon-wrap">
+                                    <i :class="a.icono"></i>
+                                </span>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0">{{ a.titulo }}</h6>
+                                    <small class="text-muted">{{ a.descripcion }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUJO DE ATENCION + ACTIVIDAD RECIENTE -->
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6">
+                <div class="panel-card fade-in-up delay-3">
+                    <div class="panel-header">
+                        <h6 class="fw-bold mb-0">
+                            <i class="fas fa-chart-line me-2 text-primary"></i>
+                            Flujo de atención del día
+                        </h6>
+                    </div>
+
+                    <div class="flujo-row">
+                        <div class="flujo-paso">
+                            <div class="flujo-icon flujo-icon-registro" :class="{ 'flujo-activo': flujo.registrados > 0 }">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <small class="text-muted d-block mt-2">Registrados</small>
+                            <h4 class="fw-bold mb-0">{{ flujo.registrados }}</h4>
+                        </div>
+                        <div class="flujo-linea"><span class="flujo-linea-progreso" :style="{ width: (flujo.registrados ? Math.min(100, (flujo.triageRealizado / flujo.registrados) * 100) : 0) + '%' }"></span></div>
+                        <div class="flujo-paso">
+                            <div class="flujo-icon flujo-icon-triage" :class="{ 'flujo-activo': flujo.triageRealizado > 0 }">
+                                <i class="fas fa-heartbeat"></i>
+                            </div>
+                            <small class="text-muted d-block mt-2">Triage realizado</small>
+                            <h4 class="fw-bold mb-0">{{ flujo.triageRealizado }}</h4>
+                        </div>
+                        <div class="flujo-linea"><span class="flujo-linea-progreso" :style="{ width: (flujo.triageRealizado ? Math.min(100, (flujo.enConsulta / flujo.triageRealizado) * 100) : 0) + '%' }"></span></div>
+                        <div class="flujo-paso">
+                            <div class="flujo-icon flujo-icon-consulta" :class="{ 'flujo-activo': flujo.enConsulta > 0 }">
+                                <i class="fas fa-stethoscope"></i>
+                            </div>
+                            <small class="text-muted d-block mt-2">En consulta</small>
+                            <h4 class="fw-bold mb-0">{{ flujo.enConsulta }}</h4>
+                        </div>
+                        <div class="flujo-linea"><span class="flujo-linea-progreso" :style="{ width: (flujo.enConsulta ? Math.min(100, (flujo.finalizados / flujo.enConsulta) * 100) : 0) + '%' }"></span></div>
+                        <div class="flujo-paso">
+                            <div class="flujo-icon flujo-icon-final" :class="{ 'flujo-activo': flujo.finalizados > 0 }">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <small class="text-muted d-block mt-2">Finalizados</small>
+                            <h4 class="fw-bold mb-0">{{ flujo.finalizados }}</h4>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="text-muted">Progreso general del día</small>
+                            <small class="fw-bold">{{ flujo.progreso }}%</small>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" :style="{ width: flujo.progreso + '%' }">
+                                <span class="progress-shine"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="panel-card fade-in-up delay-4">
+                    <div class="panel-header">
+                        <h6 class="fw-bold mb-0">
+                            <i class="far fa-clock me-2 text-primary"></i>
+                            Actividad reciente
+                        </h6>
+                    </div>
+
+                    <transition name="fade" mode="out-in">
+                        <div v-if="cargandoActividad" key="loading">
+                            <div class="skeleton-row" v-for="n in 4" :key="n">
+                                <div class="skeleton skeleton-dot"></div>
+                                <div class="flex-grow-1">
+                                    <div class="skeleton skeleton-line skeleton-line-title"></div>
+                                    <div class="skeleton skeleton-line skeleton-line-sub"></div>
+                                </div>
+                                <div class="skeleton skeleton-time"></div>
+                            </div>
+                        </div>
+
+                        <div v-else-if="actividadReciente.length === 0" key="empty" class="text-center text-muted py-4">
+                            <i class="far fa-clock d-block mb-2 empty-icon"></i>
+                            Sin actividad registrada hoy.
+                        </div>
+
+                        <div v-else key="list">
+                            <div class="timeline-item stagger-item" v-for="(act, i) in actividadReciente" :key="i" :style="{ '--i': i }">
+                                <span class="timeline-dot" :class="'dot-' + act.tipo"></span>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0">{{ act.titulo }}</h6>
+                                    <small class="text-muted">{{ act.detalle }}</small>
+                                </div>
+                                <small class="text-muted">{{ act.hora }}</small>
+                            </div>
+                        </div>
+                    </transition>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACCESOS RAPIDOS -->
+        <div class="panel-card fade-in-up delay-4">
+            <div class="panel-header">
+                <h6 class="fw-bold mb-0">
+                    <i class="fas fa-bolt me-2 text-warning"></i>
+                    Accesos rápidos
+                </h6>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4 col-lg-2" v-for="(acc, i) in accesosRapidos" :key="i">
+                    <a :href="acc.url" class="acceso-rapido stagger-item" :class="'acceso-' + acc.color" :style="{ '--i': i }">
+                        <i :class="acc.icono"></i>
+                        <div>
+                            <h6 class="mb-0">{{ acc.titulo }}</h6>
+                            <small class="text-muted">{{ acc.subtitulo }}</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</template>
+
+<script>
+import ApiService from '../../services/ApiService.js'
+
+export default {
+    name: 'Home',
+
+    data() {
+        return {
+            // Contadores de las 4 tarjetas de arriba
+            resumen: {
+                pacientesRegistrados: 0,
+                triageHoy: 0,
+                consultasHoy: 0,
+                pendientes: 0
+            },
+            proximasConsultas: [],
+            cargandoConsultas: true,
+
+            alertasClinicas: [],
+            cargandoAlertas: true,
+            alertaAltaPrevias: 0,
+            primeraCargaAlertas: true,
+            notificacionNueva: false,
+
+            flujo: {
+                registrados: 0,
+                triageRealizado: 0,
+                enConsulta: 0,
+                finalizados: 0,
+                progreso: 0
+            },
+
+            actividadReciente: [],
+            cargandoActividad: true,
+
+            // Rutas reales, confirmadas contra tu web.php
+            accesosRapidos: [
+                { titulo: 'Registrar paciente', subtitulo: 'Nuevo paciente', icono: 'fas fa-user-plus', url: '/PacienteNuevo', color: 'primary' },
+                { titulo: 'Nuevo triage', subtitulo: 'Triage rápido', icono: 'fas fa-heartbeat', url: '/TRIAGES', color: 'success' },
+                { titulo: 'Nueva consulta', subtitulo: 'Iniciar consulta', icono: 'fas fa-notes-medical', url: '/NuevaConsulta', color: 'purple' },
+                { titulo: 'Ver agenda', subtitulo: 'Agenda completa', icono: 'far fa-calendar-alt', url: '/Agenda', color: 'warning' },
+                { titulo: 'Nueva receta', subtitulo: 'Generar receta', icono: 'fas fa-prescription', url: '/HistorialRecetas', color: 'danger' }
+            ],
+
+            // refresco automático (dinamismo)
+            intervaloRefresco: null
+        }
+    },
+
+    computed: {
+        fechaHoy() {
+            const hoy = new Date();
+            return hoy.toLocaleDateString('es-MX', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+    },
+
+    mounted() {
+        this.cargarResumen();
+
+        // se vuelve a cargar solo, cada 60 segundos, sin recargar la página
+        this.intervaloRefresco = setInterval(() => {
+            this.cargarResumen();
+        }, 60000);
+    },
+
+    beforeUnmount() {
+        // importante: limpiar el intervalo al salir de la vista
+        if (this.intervaloRefresco) clearInterval(this.intervaloRefresco);
+    },
+
+    methods: {
+
+        async cargarResumen() {
+            // Cada sección se carga de forma independiente, así si un endpoint
+            // todavía no existe o falla, no se cae todo el dashboard.
+            const [pacientes, triage, consultas, medicamentos] = await Promise.all([
+                this.obtenerPacientes(),
+                this.obtenerTriage(),
+                this.obtenerConsultas(),
+                this.obtenerMedicamentos()
+            ]);
+
+            this.procesarTarjetasSuperiores(pacientes, triage, consultas);
+            this.procesarProximasConsultas(consultas);
+            this.procesarAlertasClinicas(triage, consultas, medicamentos);
+            this.procesarFlujoAtencion(pacientes, triage, consultas);
+            this.procesarActividadReciente(pacientes, triage, consultas);
+        },
+
+        // ─── OBTENCIÓN DE DATOS BASE (una sola vez por refresh) ───────────
+
+        async obtenerPacientes() {
+            try {
+                const response = await ApiService.get('/pacientes');
+                return response.data || [];
+            } catch (error) {
+                console.error('Error al cargar pacientes:', error);
+                return [];
+            }
+        },
+
+        async obtenerTriage() {
+            try {
+                const response = await ApiService.get('/triage');
+                return response.data || [];
+            } catch (error) {
+                console.error('Error al cargar triage:', error);
+                return [];
+            }
+        },
+
+        async obtenerConsultas() {
+            try {
+                const response = await ApiService.get('/consultas');
+                return response.data || [];
+            } catch (error) {
+                console.error('Error al cargar consultas:', error);
+                return [];
+            }
+        },
+
+        async obtenerMedicamentos() {
+            try {
+                // Mismo endpoint que usa PanelMedicamento.vue
+                const response = await ApiService.get('medicamentos');
+                return response.data || [];
+            } catch (error) {
+                console.error('Error al cargar medicamentos:', error);
+                return [];
+            }
+        },
+
+        esHoy(fecha) {
+            if (!fecha) return false;
+            const hoy = new Date().toISOString().slice(0, 10);
+            return String(fecha).slice(0, 10) === hoy;
+        },
+
+        // ─── TARJETAS SUPERIORES ────────────────────────────────────────
+
+        procesarTarjetasSuperiores(pacientes, triage, consultas) {
+            this.resumen.pacientesRegistrados = pacientes.length;
+
+            this.resumen.triageHoy = triage.filter(p =>
+                this.esHoy(p.triages?.[0]?.created_at)
+            ).length;
+
+            const consultasHoy = consultas.filter(c =>
+                this.esHoy(c.fecha || c.created_at)
+            );
+            this.resumen.consultasHoy = consultasHoy.length;
+
+            this.resumen.pendientes = consultasHoy.filter(c => {
+                const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+                return estado !== 'finalizada' && estado !== 'completada' && estado !== 'cancelada';
+            }).length;
+        },
+
+        // ─── PROXIMAS CONSULTAS ─────────────────────────────────────────
+
+        procesarProximasConsultas(consultas) {
+            this.cargandoConsultas = false;
+            this.proximasConsultas = consultas
+                .filter(c => this.esHoy(c.fecha || c.created_at))
+                .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+                .slice(0, 5)
+                .map(c => ({
+                    id: c.id,
+                    hora: c.hora || '--:--',
+                    paciente: c.paciente ? c.paciente.nombre : (c.paciente_nombre || 'Paciente'),
+                    tipo: c.motivo_consulta || 'Consulta general',
+                    estado: this.etiquetaEstado(c.estado_consulta || c.estado)
+                }));
+        },
+
+        etiquetaEstado(estado) {
+            switch ((estado || '').toLowerCase()) {
+                case 'finalizada':
+                case 'completada':
+                    return 'Finalizada';
+                case 'cancelada':
+                    return 'Cancelada';
+                case 'en_proceso':
+                default:
+                    return 'En proceso';
+            }
+        },
+
+        // ─── ALERTAS CLINICAS ───────────────────────────────────────────
+        // Nota: no existe todavía un endpoint único de "alertas". Las
+        // armamos combinando datos que ya tenemos de triage y consultas.
+        // Cuando tengas un endpoint real de alertas de IA, esta función
+        // es la única que hay que reemplazar.
+
+        procesarAlertasClinicas(triage, consultas, medicamentos) {
+            this.cargandoAlertas = false;
+            const alertas = [];
+
+            const graves = triage.filter(p =>
+                this.esHoy(p.triages?.[0]?.created_at) &&
+                (p.triages?.[0]?.estado || '').toLowerCase() === 'grave'
+            );
+            if (graves.length > 0) {
+                alertas.push({
+                    nivel: 'alta',
+                    icono: 'fas fa-exclamation-triangle',
+                    titulo: 'Prioridad alta',
+                    descripcion: `${graves.length} paciente${graves.length > 1 ? 's' : ''} requiere${graves.length > 1 ? 'n' : ''} valoración médica prioritaria.`
+                });
+            }
+
+            // ─── Farmacia: misma lógica y mismo umbral (30 días) que
+            // AlertasMedicamentos.vue, para que el número coincida con
+            // lo que se ve en la vista de Medicamentos.
+            const DIAS_LIMITE_CADUCIDAD = 30;
+            const hoyFecha = new Date();
+            const limiteFecha = new Date();
+            limiteFecha.setDate(limiteFecha.getDate() + DIAS_LIMITE_CADUCIDAD);
+
+            let sinStock = 0, stockCritico = 0, porCaducar = 0, caducados = 0;
+
+            medicamentos.forEach(med => {
+                const inv = med.inventario;
+                if (!inv) return;
+
+                if (inv.stock_actual == 0) {
+                    sinStock++;
+                } else if (inv.stock_actual <= inv.stock_minimo) {
+                    stockCritico++;
+                }
+
+                if (inv.fecha_caducidad) {
+                    const fechaCad = new Date(inv.fecha_caducidad);
+                    if (fechaCad >= hoyFecha && fechaCad <= limiteFecha) {
+                        porCaducar++;
+                    } else if (fechaCad < hoyFecha) {
+                        caducados++;
+                    }
+                }
+            });
+
+            if (caducados > 0 || stockCritico > 0 || sinStock > 0) {
+                const partes = [];
+                if (caducados > 0) partes.push(`${caducados} caducado${caducados > 1 ? 's' : ''}`);
+                if (stockCritico > 0) partes.push(`${stockCritico} con stock crítico`);
+                if (sinStock > 0) partes.push(`${sinStock} sin existencia`);
+
+                alertas.push({
+                    nivel: 'alta',
+                    icono: 'fas fa-pills',
+                    titulo: 'Alertas de farmacia',
+                    descripcion: `Medicamentos: ${partes.join(', ')}.`
+                });
+            }
+
+            if (porCaducar > 0) {
+                alertas.push({
+                    nivel: 'media',
+                    icono: 'fas fa-clock',
+                    titulo: 'Medicamentos por caducar',
+                    descripcion: `${porCaducar} medicamento${porCaducar > 1 ? 's' : ''} próximo${porCaducar > 1 ? 's' : ''} a caducar en los próximos ${DIAS_LIMITE_CADUCIDAD} días.`
+                });
+            }
+
+            const finalizadasHoy = consultas.filter(c => {
+                const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+                return this.esHoy(c.fecha || c.created_at) &&
+                       (estado === 'finalizada' || estado === 'completada');
+            });
+            if (finalizadasHoy.length > 0) {
+                alertas.push({
+                    nivel: 'info',
+                    icono: 'fas fa-info-circle',
+                    titulo: 'Información',
+                    descripcion: `${finalizadasHoy.length} consulta${finalizadasHoy.length > 1 ? 's' : ''} finalizada${finalizadasHoy.length > 1 ? 's' : ''} el día de hoy.`
+                });
+            }
+
+            // ─── Notificación de alertas altas nuevas ────────────────
+            // Solo avisa cuando SUBE el número de alertas de prioridad
+            // alta respecto al refresco anterior (no en la carga inicial).
+            const altasActuales = alertas.filter(a => a.nivel === 'alta').length;
+            if (!this.primeraCargaAlertas && altasActuales > this.alertaAltaPrevias) {
+                this.dispararNotificacionAlerta();
+            }
+            this.alertaAltaPrevias = altasActuales;
+            this.primeraCargaAlertas = false;
+
+            this.alertasClinicas = alertas;
+        },
+
+        dispararNotificacionAlerta() {
+            this.notificacionNueva = true;
+            this.reproducirSonidoAlerta();
+            setTimeout(() => { this.notificacionNueva = false; }, 4000);
+        },
+
+        reproducirSonidoAlerta() {
+            // Sonido corto generado con Web Audio API, sin depender de
+            // ningún archivo externo. Si el navegador bloquea audio
+            // autoplay, simplemente no suena (no rompe nada).
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+            } catch (e) {
+                // Audio no disponible; se ignora silenciosamente.
+            }
+        },
+
+        // ─── FLUJO DE ATENCION DEL DIA ──────────────────────────────────
+
+        procesarFlujoAtencion(pacientes, triage, consultas) {
+            const registrados = pacientes.filter(p => this.esHoy(p.created_at)).length;
+            const triageRealizado = triage.filter(p => this.esHoy(p.triages?.[0]?.created_at)).length;
+
+            const consultasHoy = consultas.filter(c => this.esHoy(c.fecha || c.created_at));
+            const enConsulta = consultasHoy.filter(c =>
+                (c.estado_consulta || c.estado || '').toLowerCase() === 'en_proceso'
+            ).length;
+            const finalizados = consultasHoy.filter(c => {
+                const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+                return estado === 'finalizada' || estado === 'completada';
+            }).length;
+
+            const totalPasos = Math.max(registrados, 1);
+            const progreso = Math.min(100, Math.round((finalizados / totalPasos) * 100));
+
+            this.flujo = { registrados, triageRealizado, enConsulta, finalizados, progreso };
+        },
+
+        // ─── ACTIVIDAD RECIENTE ─────────────────────────────────────────
+        // Combina lo más reciente de pacientes, triage y consultas de hoy,
+        // ordenado por fecha/hora. Cuando exista un endpoint de bitácora
+        // real, esta función se reemplaza por una sola llamada a ese log.
+
+        procesarActividadReciente(pacientes, triage, consultas) {
+            this.cargandoActividad = false;
+            const eventos = [];
+
+            pacientes
+                .filter(p => this.esHoy(p.created_at))
+                .forEach(p => eventos.push({
+                    tipo: 'paciente',
+                    titulo: 'Nuevo paciente registrado',
+                    detalle: `${p.nombre || ''} ${p.apellido_paterno || ''}`.trim(),
+                    fecha: p.created_at
+                }));
+
+            triage
+                .filter(p => this.esHoy(p.triages?.[0]?.created_at))
+                .forEach(p => eventos.push({
+                    tipo: 'triage',
+                    titulo: 'Triage registrado',
+                    detalle: p.nombre || '',
+                    fecha: p.triages[0].created_at
+                }));
+
+            consultas
+                .filter(c => this.esHoy(c.fecha || c.created_at))
+                .forEach(c => {
+                    const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+                    eventos.push({
+                        tipo: (estado === 'finalizada' || estado === 'completada') ? 'consulta' : 'inicio',
+                        titulo: (estado === 'finalizada' || estado === 'completada')
+                            ? 'Consulta finalizada'
+                            : 'Consulta iniciada',
+                        detalle: c.paciente ? c.paciente.nombre : (c.paciente_nombre || ''),
+                        fecha: c.created_at
+                    });
+                });
+
+            this.actividadReciente = eventos
+                .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                .slice(0, 6)
+                .map(e => ({
+                    ...e,
+                    hora: e.fecha
+                        ? new Date(e.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                        : ''
+                }));
+        }
+    }
+}
+</script>
+
+<style scoped>
+
+/* ─── ANIMACIONES DE ENTRADA ─────────────────────────────────────── */
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+    animation: fadeInUp .55s cubic-bezier(.22,1,.36,1) both;
+}
+
+.delay-1 { animation-delay: .05s; }
+.delay-2 { animation-delay: .12s; }
+.delay-3 { animation-delay: .19s; }
+.delay-4 { animation-delay: .26s; }
+
+.stagger-item {
+    animation: fadeInUp .4s cubic-bezier(.22,1,.36,1) both;
+    animation-delay: calc(var(--i, 0) * .06s);
+}
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity .25s ease;
+}
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+}
+
+.empty-icon {
+    font-size: 28px;
+    opacity: .35;
+}
+
+/* ─── SKELETON LOADERS ───────────────────────────────────────────── */
+
+.skeleton {
+    background: linear-gradient(90deg, #eef0f3 25%, #f7f8fa 37%, #eef0f3 63%);
+    background-size: 400% 100%;
+    animation: skeletonLoading 1.4s ease infinite;
+    border-radius: 6px;
+}
+
+@keyframes skeletonLoading {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+.skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 8px;
+}
+
+.skeleton-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+}
+
+.skeleton-hora { width: 42px; height: 14px; flex-shrink: 0; }
+.skeleton-line { height: 12px; margin-bottom: 8px; }
+.skeleton-line:last-child { margin-bottom: 0; }
+.skeleton-line-title { width: 55%; height: 14px; }
+.skeleton-line-sub { width: 38%; }
+.skeleton-badge { width: 74px; height: 24px; border-radius: 20px; flex-shrink: 0; }
+.skeleton-circle { width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0; }
+.skeleton-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.skeleton-time { width: 38px; height: 12px; flex-shrink: 0; }
+
+/* ─── EMPTY STATES ILUSTRADOS ────────────────────────────────────── */
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.empty-illustration {
+    animation: floatY 3s ease-in-out infinite;
+}
+
+@keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+/* ─── BADGE "NUEVA" (alertas) ────────────────────────────────────── */
+
+.badge-nueva {
+    background: #dc2626;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    animation: badgeNuevaPop .4s cubic-bezier(.34,1.56,.64,1);
+}
+
+@keyframes badgeNuevaPop {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ─── TARJETAS DE ESTADISTICAS ───────────────────────────────────── */
+
+.stat-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.06);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 28px rgba(0,0,0,.1);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.12) rotate(-6deg);
+}
+
+.bg-purple-subtle { background: #f1e6fb; }
+.text-purple { color: #7b1fa2; }
+
+.counter-number {
+    transition: color .2s ease;
+}
+
+.stat-link {
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: gap .2s ease;
+}
+
+.stat-link i {
+    font-size: 11px;
+    transition: transform .2s ease;
+}
+
+.stat-link:hover i {
+    transform: translateX(3px);
+}
+
+/* ─── PANELES ─────────────────────────────────────────────────────── */
+
+.panel-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.06);
+    height: 100%;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.consulta-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 8px;
+    border-top: 1px solid #f0f0f0;
+    border-radius: 10px;
+    transition: background .2s ease;
+}
+
+.consulta-item:hover {
+    background: #f8fafc;
+}
+
+.consulta-item:first-of-type {
+    border-top: none;
+}
+
+.hora {
+    font-weight: 700;
+    color: #1976d2;
+    width: 55px;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 12px;
+    transition: transform .2s ease;
+}
+
+.consulta-item:hover .badge {
+    transform: scale(1.05);
+}
+
+.estado-finalizada {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.estado-en-proceso {
+    background: #fef3c7;
+    color: #b45309;
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(180,83,9,.25); }
+    50% { box-shadow: 0 0 0 5px rgba(180,83,9,0); }
+}
+
+.estado-cancelada {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.fecha-box {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-weight: 500;
+    color: #495057;
+    transition: box-shadow .2s ease;
+}
+
+.fecha-box:hover {
+    box-shadow: 0 3px 10px rgba(0,0,0,.06);
+}
+
+/* ─── ALERTAS CLINICAS ──────────────────────────────────────────────
+   La alerta de nivel "alta" respira/late para que resalte de verdad;
+   "media" tiene un realce más sutil; "info" queda estática. */
+
+.alerta-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+    transition: transform .2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.alerta-item:hover {
+    transform: translateX(3px);
+}
+
+.alerta-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,.55);
+}
+
+.alerta-alta {
+    background: #fef2f2;
+    color: #dc2626;
+    animation: alertaLatido 1.8s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(220,38,38,.35);
+}
+
+@keyframes alertaLatido {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(220,38,38,.35);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(220,38,38,0);
+        transform: scale(1.015);
+    }
+}
+
+.alerta-alta .alerta-icon-wrap i {
+    animation: iconoTemblor 1.8s ease-in-out infinite;
+}
+
+@keyframes iconoTemblor {
+    0%, 100% { transform: rotate(0); }
+    10% { transform: rotate(-10deg); }
+    20% { transform: rotate(9deg); }
+    30% { transform: rotate(-6deg); }
+    40% { transform: rotate(4deg); }
+    50%, 100% { transform: rotate(0); }
+}
+
+.alerta-media {
+    background: #fffbeb;
+    color: #b45309;
+    animation: alertaResalte 2.6s ease-in-out infinite;
+}
+
+@keyframes alertaResalte {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(180,83,9,.25); }
+    50% { box-shadow: 0 0 0 6px rgba(180,83,9,0); }
+}
+
+.alerta-info {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+/* ─── FLUJO DE ATENCION ──────────────────────────────────────────── */
+
+.flujo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: center;
+}
+
+.flujo-paso {
+    flex: 1;
+}
+
+.flujo-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin: 0 auto;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease;
+}
+
+.flujo-icon-registro { background: linear-gradient(135deg, #74c0fc, #1971c2); color: #fff; }
+.flujo-icon-triage { background: linear-gradient(135deg, #69db7c, #2f9e44); color: #fff; }
+.flujo-icon-consulta { background: linear-gradient(135deg, #da77f2, #9c36b5); color: #fff; }
+.flujo-icon-final { background: linear-gradient(135deg, #63e6be, #0ca678); color: #fff; }
+
+.flujo-activo {
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    animation: flujoAparece .5s cubic-bezier(.34,1.56,.64,1);
+}
+
+@keyframes flujoAparece {
+    0% { transform: scale(.7); }
+    60% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+}
+
+.flujo-paso:hover .flujo-icon {
+    transform: scale(1.08);
+}
+
+.flujo-linea {
+    flex: 0 0 30px;
+    border-top: 2px dashed #d1d5db;
+    margin-top: -28px;
+    position: relative;
+    overflow: visible;
+}
+
+.flujo-linea-progreso {
+    position: absolute;
+    top: -1px;
+    left: 0;
+    height: 2px;
+    background: #0d6efd;
+    display: block;
+    transition: width .6s ease;
+}
+
+.progress-track {
+    background: #eef0f3;
+    border-radius: 20px;
+    height: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #0d6efd, #4dabf7);
+    height: 100%;
+    border-radius: 20px;
+    transition: width .6s cubic-bezier(.22,1,.36,1);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,.55) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: shine 2.2s ease-in-out infinite;
+}
+
+@keyframes shine {
+    0% { transform: translateX(-100%); }
+    60%, 100% { transform: translateX(100%); }
+}
+
+/* ─── ACTIVIDAD RECIENTE ─────────────────────────────────────────── */
+
+.timeline-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 8px;
+    border-top: 1px solid #f0f0f0;
+    border-radius: 10px;
+    transition: background .2s ease;
+}
+
+.timeline-item:hover {
+    background: #f8fafc;
+}
+
+.timeline-item:first-of-type {
+    border-top: none;
+}
+
+.timeline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.timeline-item:first-of-type .timeline-dot::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: inherit;
+    opacity: .4;
+    animation: dotPing 1.8s ease-out infinite;
+}
+
+@keyframes dotPing {
+    0% { transform: scale(1); opacity: .45; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+
+.dot-paciente { background: #f59e0b; }
+.dot-triage { background: #10b981; }
+.dot-consulta { background: #3b82f6; }
+.dot-inicio { background: #10b981; }
+
+/* ─── ACCESOS RAPIDOS ────────────────────────────────────────────── */
+
+.acceso-rapido {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 16px;
+    background: #f8f9fa;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease, background .25s ease;
+    height: 100%;
+}
+
+.acceso-rapido:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 10px 22px rgba(0,0,0,.1);
+    background: white;
+}
+
+.acceso-rapido i {
+    font-size: 20px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+
+.acceso-rapido:hover i {
+    transform: scale(1.15) rotate(8deg);
+}
+
+.acceso-primary i { background: #dbeafe; color: #1d4ed8; }
+.acceso-success i { background: #d1fae5; color: #059669; }
+.acceso-purple i { background: #f1e6fb; color: #7b1fa2; }
+.acceso-warning i { background: #fef3c7; color: #b45309; }
+.acceso-danger i { background: #fee2e2; color: #dc2626; }
+
+/* Respeta preferencia del sistema por menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+    .fade-in-up, .stagger-item, .alerta-alta, .alerta-media,
+    .estado-en-proceso, .flujo-activo, .progress-shine, .timeline-dot::after,
+    .iconoTemblor {
+        animation: none !important;
+    }
+}
+</style>

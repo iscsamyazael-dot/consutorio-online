@@ -7,15 +7,19 @@
 @stop
 
 @section('content')
-    <p>Seguimiento de Pacientes y farmacia</p>
+
+    <div id="app">
+        <dashboard-home></dashboard-home>
+    </div>
+
 @stop
 
 {{-- 👇 Usamos @push en lugar de @section para no romper el stack global de estilos --}}
 @push('css')
-    {{-- <link rel="stylesheet" href="/css/admin_custom.css"> --}}
+    {{-- Los estilos del dashboard ya vienen "scoped" dentro de Home.vue --}}
 @endpush
 
 {{-- 👇 Igual con los scripts: @push agrega al stack sin sobreescribir --}}
 @push('js')
-    <script> console.log('Hi!'); </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 @endpush
