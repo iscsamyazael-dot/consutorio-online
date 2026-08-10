@@ -196,9 +196,7 @@ Route::middleware('auth')->group(function () {
             Route::get('ExpedientePacientes/{id}', function ($id) {
                 return view('pacientes.expediente');
             })->name('pacientes.expediente');
-            Route::get('consultaNormal/{id}', function ($id) {
-                return view('consultas.create');
-            })->name('consultas.create');
+           Route::get('consultaNormal/{id}', [ConsultaController::class, 'create']);
             Route::get('ConsultaInteligente/{id}', function ($id) { 
                 $paciente = Paciente::findOrFail($id);
                 return view('consultas.consulta_inteligente', compact('paciente'));

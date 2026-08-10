@@ -29,7 +29,15 @@
 
           <transition name="fade-slide">
             <div v-if="showDropdown" class="dropdown-menu-custom">
-              <a :href="url('NuevaConsulta')" class="dropdown-item" @click="closeDropdown">
+              <!--
+                Si hay un paciente seleccionado en la tabla (doble clic en
+                ConsultaClinica.vue, guardado en localStorage bajo la llave
+                "pacienteSeleccionado"), el link arma la URL con su id:
+                /consultaNormal/{id} y /ConsultaInteligente/{id}.
+                Si no hay paciente seleccionado, cae a las rutas "en blanco"
+                de siempre: /NuevaConsulta y /ConsultaInteligenteNueva.
+              -->
+              <a :href="url('NuevaConsulta', 'consultaNormal')" class="dropdown-item" @click="closeDropdown">
                 <span class="dropdown-item-icon dropdown-item-icon--blue">
                   <i class="ti ti-file-plus"></i>
                 </span>
@@ -39,7 +47,7 @@
                 </span>
               </a>
 
-              <a :href="url('ConsultaInteligenteNueva')" class="dropdown-item" @click="closeDropdown">
+              <a :href="url('ConsultaInteligenteNueva', 'ConsultaInteligente')" class="dropdown-item" @click="closeDropdown">
                 <span class="dropdown-item-icon dropdown-item-icon--purple">
                   <i class="ti ti-brain"></i>
                 </span>
@@ -104,6 +112,10 @@
 </template>
 
 <script>
+// Misma llave usada en ConsultaClinica.vue al hacer doble clic en un
+// paciente de la tabla de espera (seleccionarParaConsulta()).
+const CLAVE_PACIENTE_SELECCIONADO = 'pacienteSeleccionado'
+
 export default {
   name: 'CentroConsultas',
 
@@ -126,6 +138,9 @@ export default {
   data() {
     return {
       showDropdown: false,
+      // Id del paciente seleccionado en la tabla (si existe), leído de
+      // localStorage cada vez que se abre el dropdown.
+      pacienteSeleccionadoId: null,
     }
   },
 
@@ -138,12 +153,38 @@ export default {
   },
 
   methods: {
-    url(path) {
-      return `/${path}`
+    // Arma la URL del link del dropdown.
+    // - pathSinPaciente: ruta a usar cuando NO hay paciente seleccionado (ej. 'NuevaConsulta')
+    // - pathConPaciente: prefijo de ruta a usar cuando SÍ hay paciente seleccionado (ej. 'consultaNormal')
+    //   el resultado será /pathConPaciente/{id}
+    url(pathSinPaciente, pathConPaciente) {
+      if (this.pacienteSeleccionadoId) {
+        return `/${pathConPaciente}/${this.pacienteSeleccionadoId}`
+      }
+      return `/${pathSinPaciente}`
     },
+
     toggleDropdown() {
+      // Cada vez que se abre el menú, refresca el paciente seleccionado
+      // por si cambió desde la última vez que se abrió
+      if (!this.showDropdown) {
+        this.actualizarPacienteSeleccionado()
+      }
       this.showDropdown = !this.showDropdown
     },
+
+    // Lee el paciente seleccionado en la tabla desde localStorage
+    // (guardado por ConsultaClinica.vue al hacer doble clic en una fila)
+    actualizarPacienteSeleccionado() {
+      try {
+        const guardado = localStorage.getItem(CLAVE_PACIENTE_SELECCIONADO)
+        this.pacienteSeleccionadoId = guardado ? (JSON.parse(guardado).id || null) : null
+      } catch (error) {
+        console.error('No se pudo leer el paciente seleccionado:', error)
+        this.pacienteSeleccionadoId = null
+      }
+    },
+
     closeDropdown() {
       this.showDropdown = false
     },
