@@ -32,24 +32,6 @@
                     <i class="fas fa-lock mr-1"></i> Consulta finalizada
                 </span>
 
-                <!-- Cortar conversación: separado de "Enviar mensaje" a propósito,
-                     para que no se confunda con una acción de envío más. -->
-                <button
-                    v-else
-                    type="button"
-                    class="btn-cortar"
-                    title="Finalizar y cortar esta conversación"
-                    :disabled="!consultaId || finalizando"
-                    @click="abrirModalFinalizar"
-                >
-                    <span v-if="finalizando">
-                        <i class="fas fa-spinner fa-spin"></i> Finalizando...
-                    </span>
-                    <span v-else>
-                        <i class="fas fa-stop-circle"></i> Cortar conversación
-                    </span>
-                </button>
-
             </div>
 
         </div>
@@ -232,8 +214,27 @@
                     ></textarea>
                 </div>
 
-                <!-- CONTENEDOR DE ACCIONES (Micrófono, Adjuntar, Enviar) -->
+                <!-- CONTENEDOR DE ACCIONES (Finalizar, Micrófono, Adjuntar, Enviar) -->
                 <div class="d-flex align-items-center ml-2 mb-1 gap-1">
+
+                    <!-- BOTÓN FINALIZAR (movido desde el header) -->
+                    <button
+                        v-if="!consultaFinalizada"
+                        type="button"
+                        class="btn-finalizar-inline"
+                        title="Finalizar y cortar esta conversación"
+                        :disabled="!consultaId || finalizando"
+                        @click="abrirModalFinalizar"
+                    >
+                        <span v-if="finalizando">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                        <span v-else>
+                            <i class="fas fa-stop-circle"></i> Finalizar
+                        </span>
+                    </button>
+
+                    <span v-if="!consultaFinalizada" class="action-divider"></span>
 
                     <!-- BOTÓN MICRÓFONO -->
                     <button
@@ -1214,38 +1215,51 @@ export default {
     background: #ccc;
 }
 
-/* ─── BOTÓN "CORTAR CONVERSACIÓN" ─────────────────────────────────── */
-/* Antes usaba las clases genéricas de Bootstrap (btn-outline-danger)
-   sin ningún estilo propio. Ahora tiene identidad visual clara. */
+/* ─── BOTÓN "FINALIZAR" (en la barra de acciones inferior) ────────── */
+/* Antes vivía en el header, separado de las demás acciones. Ahora se
+   agrupa junto a mic/clip/enviar, con el mismo alto (36px) que los
+   íconos, pero con texto visible ya que es una acción destructiva
+   que conviene distinguir claramente del resto. */
 
-.btn-cortar {
+.btn-finalizar-inline {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 18px;
     border: 1.5px solid #dc3545;
     background: #fff;
     color: #dc3545;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
-    padding: 6px 14px;
-    border-radius: 20px;
     cursor: pointer;
+    white-space: nowrap;
     transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .12s ease;
 }
 
-.btn-cortar:hover:not(:disabled) {
+.btn-finalizar-inline:hover:not(:disabled) {
     background: #dc3545;
     color: #fff;
     box-shadow: 0 4px 12px rgba(220,53,69,.28);
 }
 
-.btn-cortar:active:not(:disabled) {
+.btn-finalizar-inline:active:not(:disabled) {
     transform: translateY(1px);
 }
 
-.btn-cortar:disabled {
+.btn-finalizar-inline:disabled {
     opacity: .55;
     cursor: not-allowed;
+}
+
+/* Separador visual entre Finalizar y el resto de las acciones,
+   para que no se confunda con un botón más de envío. */
+.action-divider {
+    width: 1px;
+    height: 22px;
+    background: #dee2e6;
+    margin: 0 2px;
 }
 
 /* ─── MODAL DE CONFIRMACIÓN ──────────────────────────────────────── */
