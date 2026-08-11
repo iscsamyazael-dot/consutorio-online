@@ -135,6 +135,14 @@ class EvaluacionesIAController extends Controller
             }
 
             // ==========================
+            // FILTRO FECHA
+            // ==========================
+            if ($request->filled('fecha')) {
+                // whereDate asegura comparar la fecha sin importar la hora/minutos (HH:mm:ss)
+                $query->whereDate('created_at', $request->fecha);
+            }
+
+            // ==========================
             // FILTRO ESPECIALIDAD
             // ==========================
             if ($request->filled('especialidad')) {

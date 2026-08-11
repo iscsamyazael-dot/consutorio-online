@@ -215,142 +215,159 @@ import * as bootstrap from 'bootstrap'
 import ApiService from '../../services/ApiService.js'
 
 export default {
-  props: {
-    consultaId: {
-      type: [Number, String],
-      default: 516
+
+    props: {
+        derivaciones: {
+            type: Array,
+            default: () => []
+        },
+
+        loading: {
+            type: Boolean,
+            default: false
+        }
+    },
+
+    data() {
+        return {
+            motivoSeleccionado: {}
+        }
+    },
+
+    methods: {
+
+        getPrioridadBadge(prioridad) {
+            switch (prioridad) {
+                case 'baja':
+                    return 'bg-success text-white fw-bold shadow-sm'
+
+                case 'media':
+                    return 'bg-warning text-dark fw-bold shadow-sm'
+
+                case 'alta':
+                    return 'bg-orange text-white fw-bold shadow-sm'
+
+                case 'critica':
+                    return 'bg-danger text-white fw-bold shadow-sm'
+
+                default:
+                    return 'bg-secondary text-white'
+            }
+        },
+
+        getPrioridadIcon(prioridad) {
+            switch (prioridad) {
+                case 'baja':
+                    return 'fas fa-check-circle'
+
+                case 'media':
+                    return 'fas fa-minus-circle'
+
+                case 'alta':
+                    return 'fas fa-exclamation-circle'
+
+                case 'critica':
+                    return 'fas fa-radiation'
+
+                default:
+                    return 'fas fa-circle'
+            }
+        },
+
+        getEstadoBadge(estado) {
+            switch (estado) {
+                case 'pendiente':
+                    return 'bg-warning text-dark'
+
+                case 'enviado':
+                    return 'bg-primary text-white'
+
+                case 'atendido':
+                    return 'bg-success text-white'
+
+                default:
+                    return 'bg-secondary text-white'
+            }
+        },
+
+        verMotivo(item) {
+
+            this.motivoSeleccionado = item
+
+            const modal = new bootstrap.Modal(
+                document.getElementById('modalMotivo')
+            )
+
+            modal.show()
+        },
+
+        async actualizarEstado(item, nuevoEstado) {
+
+            try {
+
+                await ApiService.put(
+                    `/derivaciones/${item.id}/estado`,
+                    {
+                        estado: nuevoEstado
+                    }
+                )
+
+                item.estado = nuevoEstado
+
+            } catch (error) {
+
+                console.error(
+                    'Error al actualizar estado:',
+                    error
+                )
+            }
+        },
+
+        getEstadoButton(estado) {
+
+            switch (estado) {
+
+                case 'pendiente':
+                    return 'btn-warning'
+
+                case 'enviado':
+                    return 'btn-primary'
+
+                case 'atendido':
+                    return 'btn-success'
+
+                default:
+                    return 'btn-secondary'
+            }
+        },
+
+        getEstadoIcon(estado) {
+
+            switch (estado) {
+
+                case 'pendiente':
+                    return 'fas fa-clock'
+
+                case 'enviado':
+                    return 'fas fa-paper-plane'
+
+                case 'atendido':
+                    return 'fas fa-check-circle'
+
+                default:
+                    return 'fas fa-circle'
+            }
+        },
+
+        capitalizar(texto) {
+
+            if (!texto) {
+                return ''
+            }
+
+            return texto.charAt(0).toUpperCase() + texto.slice(1)
+        }
     }
-  },
-
-  data() {
-    return {
-      derivaciones: [],
-      loading: true,
-      motivoSeleccionado: {}
-    }
-  },
-
-  mounted() {
-    this.obtenerDerivaciones()
-  },
-
-  methods: {
-    async obtenerDerivaciones() {
-      this.loading = true
-
-      try {
-        const response = await ApiService.get('/derivaciones')
-        this.derivaciones = response.data
-      } catch (error) {
-        console.error('Error al cargar derivaciones:', error)
-      } finally {
-        this.loading = false
-      }
-    },
-
-    getPrioridadBadge(prioridad) {
-      switch (prioridad) {
-        case 'baja':
-          return 'bg-success text-white fw-bold shadow-sm'
-        case 'media':
-          return 'bg-warning text-dark fw-bold shadow-sm'
-        case 'alta':
-          return 'bg-orange text-white fw-bold shadow-sm'
-        case 'critica':
-          return 'bg-danger text-white fw-bold shadow-sm'
-        default:
-          return 'bg-secondary text-white'
-      }
-    },
-
-    getPrioridadIcon(prioridad) {
-      switch (prioridad) {
-        case 'baja':
-          return 'fas fa-check-circle'
-
-        case 'media':
-          return 'fas fa-minus-circle'
-
-        case 'alta':
-          return 'fas fa-exclamation-circle'
-
-        case 'critica':
-          return 'fas fa-radiation'
-
-        default:
-          return 'fas fa-circle'
-      }
-    },
-
-    getEstadoBadge(estado) {
-      switch (estado) {
-        case 'pendiente':
-          return 'bg-warning text-dark'
-        case 'enviado':
-          return 'bg-primary text-white'
-        case 'atendido':
-          return 'bg-success text-white'
-        default:
-          return 'bg-secondary text-white'
-      }
-    },
-
-    verMotivo(item) {
-
-        this.motivoSeleccionado = item
-
-        const modal = new bootstrap.Modal(
-            document.getElementById('modalMotivo')
-        )
-
-        modal.show()
-
-    },
-
-    async actualizarEstado(item, nuevoEstado){
-      try{
-        await ApiService.put(`/derivaciones/${item.id}/estado`,{
-            estado:nuevoEstado
-        });
-        item.estado = nuevoEstado;
-      }catch(error){
-        console.error(error);
-      }
-    },
-
-    getEstadoButton(estado){
-      switch(estado){
-        case 'pendiente':
-          return 'btn-warning';
-        case 'enviado':
-          return 'btn-primary';
-        case 'atendido':
-          return 'btn-success';
-        default:
-          return 'btn-secondary';
-      }
-    },
-
-    getEstadoIcon(estado){
-      switch(estado){
-        case 'pendiente':
-          return 'fas fa-clock';
-        case 'enviado':
-          return 'fas fa-paper-plane';
-        case 'atendido':
-          return 'fas fa-check-circle';
-        default:
-          return 'fas fa-circle';
-      }
-
-    },
-
-    capitalizar(texto){
-      return texto.charAt(0).toUpperCase() + texto.slice(1);
-    },
-
-
-  }
 }
 </script>
 
