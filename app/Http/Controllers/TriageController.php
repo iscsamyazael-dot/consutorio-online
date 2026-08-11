@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,17 +19,59 @@ class TriageController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        return Paciente::select(
-            'id',
-            'paciente_id',
-            'nombre'
-        )
-        ->with([
-            'triages:id,paciente_id,triage_codigo,estado,sintomas,presion,saturacion,temperatura,created_at'
-        ])
-        ->get();
+        try {
+            $query = Paciente::with([
+                'triages' => function ($q) use ($request) {
+                    $q->latest();
+                    if ($request->filled('fecha')) {
+                        $q->whereDate('created_at', $request->fecha);
+                    }
+                },
+                'consultas' => function ($q) {
+                    $q->latest()->limit(1); // la consulta más reciente del paciente
+                }
+            ]);
+
+            if ($request->filled('fecha')) {
+                $query->whereHas('triages', function ($q) use ($request) {
+                    $q->whereDate('created_at', $request->fecha);
+                });
+            }
+
+            $pacientes = $query->get()->map(function ($p) {
+                $consulta = $p->consultas->first();
+
+                return [
+                    'id'              => $p->id,
+                    'nombre'          => trim($p->nombre . ' ' . ($p->apellido ?? '')),
+                    'estado_consulta' => $consulta->estado_consulta ?? null, // ya no default a 'en_proceso'
+                    'triages'         => $p->triages->map(function ($t) {
+                        return [
+                            'id'          => $t->id,
+                            'sintomas'    => $t->sintomas ?? $t->motivo_consulta ?? 'Sin síntomas',
+                            'presion'     => $t->presion,
+                            'saturacion'  => $t->saturacion,
+                            'temperatura' => $t->temperatura,
+                            'estado'      => $t->estado ?? 'leve',
+                            'created_at'  => $t->created_at,
+                        ];
+                    })->values(),
+                ];
+            })
+            // Oculta pacientes sin triage O sin estado_consulta (no pueden entrar en el flujo de espera/alertas)
+            ->filter(fn ($p) => $p['triages']->isNotEmpty() && !is_null($p['estado_consulta']))
+            ->values();
+
+            return response()->json($pacientes, 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error'   => 'Error al consultar triages',
+                'detalle' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

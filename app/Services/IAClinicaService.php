@@ -1967,6 +1967,99 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
     }
 
     /**
+     * Analiza signos vitales del triage y devuelve prioridad + estado para la tabla
+     */
+    public function analizarTriage(array $datos): array
+    {
+        $prompt = "
+    Eres un sistema experto en triage médico de urgencias hospitalarias.
+    Analiza los siguientes signos vitales y síntomas del paciente.
+
+    Síntomas: {$datos['sintomas']}
+    Presión Arterial: {$datos['presion']}
+    Saturación O₂: {$datos['saturacion']}%
+    Temperatura: {$datos['temperatura']}°C
+
+    Clasifica al paciente según el Sistema de Triage Manchester (MTS) de 5 niveles:
+
+    ROJO     → Nivel 1. Emergencia / Reanimación. Riesgo vital inmediato. Atención en 0 a 3 minutos.
+    NARANJA  → Nivel 2. Muy urgente. Riesgo alto. Atención en menos de 10 a 15 minutos.
+    AMARILLO → Nivel 3. Urgente. Riesgo moderado. Atención en 30 a 60 minutos.
+    VERDE    → Nivel 4. Urgencia menor. Paciente estable. Atención hasta 120 minutos.
+    AZUL     → Nivel 5. No urgente. Puede esperar hasta 180 minutos o derivarse a consulta externa.
+
+    Estado clínico:
+    - grave    → corresponde a ROJO o NARANJA
+    - moderado → corresponde a AMARILLO
+    - leve     → corresponde a VERDE o AZUL
+
+    Devuelve EXCLUSIVAMENTE este JSON sin texto adicional ni Markdown:
+    {
+    \"prioridad\": \"rojo|naranja|amarillo|verde|azul\",
+    \"estado\": \"grave|moderado|leve\",
+    \"justificacion\": \"Una sola oración corta explicando la clasificación\"
+    }
+        ";
+
+        try {
+            $response = Http::withToken(config('services.ai.key'))
+                ->timeout(15)
+                ->post('https://api.deepseek.com/chat/completions', [
+                    'model'           => 'deepseek-v4-flash',
+                    'messages'        => [['role' => 'user', 'content' => $prompt]],
+                    'response_format' => ['type' => 'json_object'],
+                    'temperature'     => 0.1,
+                ]);
+
+            if (!$response->successful()) {
+                Log::error('Error HTTP triage IA', ['status' => $response->status()]);
+                return $this->triageFallback();
+            }
+
+            $data = json_decode($response->json('choices.0.message.content'), true);
+
+            if (!isset($data['prioridad'], $data['estado'])) {
+                Log::error('Respuesta de triage IA incompleta', ['data' => $data]);
+                return $this->triageFallback();
+            }
+
+            $prioridad = strtolower($data['prioridad']);
+
+            if (!in_array($prioridad, ['rojo', 'naranja', 'amarillo', 'verde', 'azul'], true)) {
+                Log::warning('IA devolvió una prioridad de triage no reconocida', ['data' => $data]);
+                return $this->triageFallback();
+            }
+
+            return [
+                'prioridad'     => $prioridad,
+                'estado'        => strtolower($data['estado']),
+                'justificacion' => $data['justificacion'] ?? '',
+                'fuente'        => 'ia',
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Excepción triage IA: ' . $e->getMessage());
+            return $this->triageFallback();
+        }
+    }
+
+    private function triageFallback(): array
+    {
+        // Ojo: por seguridad del paciente, si la IA falla NO asumimos "verde"
+        // (podría dejar a alguien grave esperando 120 min sin que nadie lo note).
+        // "amarillo" fuerza revisión relativamente pronto mientras un humano evalúa manualmente.
+        return [
+            'prioridad'     => 'amarillo',
+            'estado'        => 'moderado',
+            'justificacion' => 'IA no disponible. Clasificación de respaldo — requiere revisión manual.',
+            'fuente'        => 'fallback',
+        ];
+    }
+
+
+
+
+    /** 
      * Decodifica de forma segura el contenido JSON devuelto por la IA,
      * distinguiendo explícitamente entre "la IA respondió y el JSON es
      * válido" y "la IA respondió pero el JSON viene incompleto/corrupto"
