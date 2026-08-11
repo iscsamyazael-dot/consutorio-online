@@ -124,7 +124,7 @@
                                     <h6 class="mb-0">{{ c.paciente }}</h6>
                                     <small class="text-muted">{{ c.tipo }}</small>
                                 </div>
-                                <span :class="'badge estado-' + c.estado.toLowerCase().replace(' ', '-')">
+                                <span :class="'badge estado-' + c.estadoClase">
                                     {{ c.estado }}
                                 </span>
                             </div>
@@ -357,8 +357,7 @@ export default {
                 { titulo: 'Registrar paciente', subtitulo: 'Nuevo paciente', icono: 'fas fa-user-plus', url: '/PacienteNuevo', color: 'primary' },
                 { titulo: 'Nuevo triage', subtitulo: 'Triage rápido', icono: 'fas fa-heartbeat', url: '/TRIAGES', color: 'success' },
                 { titulo: 'Nueva consulta', subtitulo: 'Iniciar consulta', icono: 'fas fa-notes-medical', url: '/NuevaConsulta', color: 'purple' },
-                { titulo: 'Ver agenda', subtitulo: 'Agenda completa', icono: 'far fa-calendar-alt', url: '/Agenda', color: 'warning' },
-                { titulo: 'Nueva receta', subtitulo: 'Generar receta', icono: 'fas fa-prescription', url: '/HistorialRecetas', color: 'danger' }
+                { titulo: 'Ver agenda', subtitulo: 'Agenda completa', icono: 'far fa-calendar-alt', url: '/Agenda', color: 'warning' }
             ],
 
             // refresco automático (dinamismo)
@@ -454,10 +453,30 @@ export default {
             }
         },
 
+        // ─── UTILIDADES DE FECHA (hora LOCAL, no UTC) ──────────────────
+
+        formatoFechaLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        },
+
         esHoy(fecha) {
             if (!fecha) return false;
-            const hoy = new Date().toISOString().slice(0, 10);
-            return String(fecha).slice(0, 10) === hoy;
+
+            const soloFecha = /^\d{4}-\d{2}-\d{2}$/.test(String(fecha).trim());
+            let fechaComparar;
+
+            if (soloFecha) {
+                fechaComparar = fecha;
+            } else {
+                const d = new Date(fecha);
+                if (isNaN(d.getTime())) return false;
+                fechaComparar = this.formatoFechaLocal(d);
+            }
+
+            return fechaComparar === this.formatoFechaLocal(new Date());
         },
 
         // ─── TARJETAS SUPERIORES ────────────────────────────────────────
@@ -481,29 +500,37 @@ export default {
         },
 
         // ─── PROXIMAS CONSULTAS ─────────────────────────────────────────
+        // Cambio pedido: ya no se muestra el estado real de la BD.
+        // 1) Las consultas finalizada/completada/cancelada se quitan del
+        //    panel por completo (al dar "Finalizar consulta" desaparecen
+        //    solas en el siguiente refresco / próxima carga).
+        // 2) De las que quedan (ordenadas por hora), la primera se marca
+        //    como "En proceso" y todas las demás como "Agendada".
 
         procesarProximasConsultas(consultas) {
             this.cargandoConsultas = false;
-            this.proximasConsultas = consultas
+
+            const activasHoy = consultas
                 .filter(c => this.esHoy(c.fecha || c.created_at))
-                .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+                .filter(c => {
+                    const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+                    return estado !== 'finalizada' && estado !== 'completada' && estado !== 'cancelada';
+                })
+                .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+
+            this.proximasConsultas = activasHoy
                 .slice(0, 10)
                 .map((c, i) => ({
                     id: c.id,
                     hora: c.hora || '--:--',
                     paciente: c.paciente ? c.paciente.nombre : (c.paciente_nombre || 'Paciente'),
                     tipo: c.motivo_consulta || 'Consulta general',
-                    // Regla simple: solo la primera de la lista dice
-                    // "En proceso", todas las demás dicen "Finalizada".
-                    estado: i === 0 ? 'En proceso' : 'Finalizada'
+                    estado: i === 0 ? 'En proceso' : 'Agendada',
+                    estadoClase: i === 0 ? 'en-proceso' : 'agendada'
                 }));
         },
 
         // ─── ALERTAS CLINICAS ───────────────────────────────────────────
-        // Nota: no existe todavía un endpoint único de "alertas". Las
-        // armamos combinando datos que ya tenemos de triage y consultas.
-        // Cuando tengas un endpoint real de alertas de IA, esta función
-        // es la única que hay que reemplazar.
 
         procesarAlertasClinicas(triage, consultas, medicamentos) {
             this.cargandoAlertas = false;
@@ -522,9 +549,6 @@ export default {
                 });
             }
 
-            // ─── Farmacia: misma lógica y mismo umbral (30 días) que
-            // AlertasMedicamentos.vue, para que el número coincida con
-            // lo que se ve en la vista de Medicamentos.
             const DIAS_LIMITE_CADUCIDAD = 30;
             const hoyFecha = new Date();
             const limiteFecha = new Date();
@@ -589,9 +613,6 @@ export default {
                 });
             }
 
-            // ─── Notificación de alertas altas nuevas ────────────────
-            // Solo avisa cuando SUBE el número de alertas de prioridad
-            // alta respecto al refresco anterior (no en la carga inicial).
             const altasActuales = alertas.filter(a => a.nivel === 'alta').length;
             if (!this.primeraCargaAlertas && altasActuales > this.alertaAltaPrevias) {
                 this.dispararNotificacionAlerta();
@@ -609,9 +630,6 @@ export default {
         },
 
         reproducirSonidoAlerta() {
-            // Sonido corto generado con Web Audio API, sin depender de
-            // ningún archivo externo. Si el navegador bloquea audio
-            // autoplay, simplemente no suena (no rompe nada).
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator();
@@ -653,9 +671,6 @@ export default {
         },
 
         // ─── ACTIVIDAD RECIENTE ─────────────────────────────────────────
-        // Combina lo más reciente de pacientes, triage y consultas de hoy,
-        // ordenado por fecha/hora. Cuando exista un endpoint de bitácora
-        // real, esta función se reemplaza por una sola llamada a ese log.
 
         procesarActividadReciente(pacientes, triage, consultas) {
             this.cargandoActividad = false;
@@ -894,8 +909,6 @@ export default {
     margin-bottom: 20px;
 }
 
-/* Contenedor con altura fija: muestra ~3 consultas y el resto
-   queda accesible con scroll interno, sin que el panel crezca. */
 .lista-scroll {
     max-height: 232px;
     overflow-y: auto;
@@ -973,6 +986,14 @@ export default {
     50% { box-shadow: 0 0 0 5px rgba(180,83,9,0); }
 }
 
+/* Nuevo estado: consultas que aún no entran en turno.
+   Deliberadamente estático (sin pulso), para no competir
+   visualmente con "En proceso". */
+.estado-agendada {
+    background: #e7f0ff;
+    color: #1d4ed8;
+}
+
 .estado-cancelada {
     background: #fee2e2;
     color: #dc2626;
@@ -991,9 +1012,7 @@ export default {
     box-shadow: 0 3px 10px rgba(0,0,0,.06);
 }
 
-/* ─── ALERTAS CLINICAS ──────────────────────────────────────────────
-   La alerta de nivel "alta" respira/late para que resalte de verdad;
-   "media" tiene un realce más sutil; "info" queda estática. */
+/* ─── ALERTAS CLINICAS ────────────────────────────────────────────── */
 
 .alerta-item {
     display: flex;
@@ -1211,7 +1230,10 @@ export default {
 
 /* ─── ACCESOS RAPIDOS ────────────────────────────────────────────── */
 /* Grid flexible: el espacio libre se reparte entre todas las tarjetas
-   en vez de dejar un hueco vacío al final de la fila. */
+   en vez de dejar un hueco vacío al final de la fila.
+   Cambio: se quita el max-width que tope el crecimiento de cada
+   tarjeta, así el flex-grow (el "1" de "1 1 200px") sí reparte todo
+   el ancho libre entre las 4 tarjetas y ocupan la fila completa. */
 
 .accesos-grid {
     display: flex;
@@ -1220,8 +1242,7 @@ export default {
 }
 
 .acceso-rapido {
-    flex: 1 1 180px;
-    max-width: 230px;
+    flex: 1 1 200px;
     display: flex;
     align-items: center;
     gap: 12px;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -134,6 +135,103 @@ class TriageController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Guarda (o actualiza) los signos vitales de un paciente desde el
+     * modal rápido de "Editar signos vitales" en panelatencion.vue.
+     *
+     * - Si el paciente ya tiene un triage, se actualiza el más reciente
+     *   (misma lógica que usa el frontend con ultimoTriage()).
+     * - Si el paciente no tiene ningún triage todavía, se crea uno nuevo
+     *   con un triage_codigo generado con el mismo formato que usa
+     *   PacienteController@store (TRI-AÑO-0001).
+     *
+     * Ruta: POST /triage/guardar/{id?}  (nombre: triage.guardarRapido)
+     * El {id} es el id del paciente. También se acepta como
+     * 'paciente_id' en el body por si no viene en la URL.
+     */
+    public function guardarTriageRapido(Request $request, $id = null)
+    {
+        $pacienteId = $id ?? $request->input('paciente_id');
+
+        if (!$pacienteId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Falta el id del paciente.',
+            ], 422);
+        }
+
+        $paciente = Paciente::findOrFail($pacienteId);
+
+        $data = $request->validate([
+            'presion'                 => 'nullable|string|max:20',
+            'saturacion'              => 'nullable|numeric|min:0|max:100',
+            'temperatura'             => 'nullable|numeric',
+            'frecuencia_cardiaca'     => 'nullable|numeric',
+            'frecuencia_respiratoria' => 'nullable|numeric',
+            'peso'                    => 'nullable|numeric',
+            'talla'                   => 'nullable|numeric',
+        ]);
+
+        try {
+            $triage = DB::transaction(function () use ($paciente, $data) {
+                // Tomamos el triage más reciente del paciente (igual que
+                // ultimoTriage() en el frontend)
+                $triageExistente = $paciente->triages()->latest('id')->first();
+
+                if ($triageExistente) {
+                    $triageExistente->update($data);
+                    return $triageExistente;
+                }
+
+                // No tenía triage: creamos uno nuevo con código propio
+                $claveTriage = $this->generarCodigoTriage();
+
+                return Triage::create(array_merge($data, [
+                    'triage_codigo'   => $claveTriage,
+                    'paciente_id'     => $paciente->id,
+                    'codigo_paciente' => $paciente->paciente_id,
+                    'estado'          => 'verde', // nivel de triage por defecto; se ajusta desde el panel de edición
+                ]));
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Signos vitales actualizados correctamente',
+                'triage'  => $triage,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en TriageController@guardarTriageRapido: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudieron guardar los signos vitales.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Genera un código TRI-AAAA-NNNN con reinicio anual, igual formato
+     * que el usado en PacienteController@generarCodigoConReinicioAnual,
+     * pero aplicado directamente al modelo Triage con lockForUpdate para
+     * evitar duplicados si dos triages se crean al mismo tiempo.
+     */
+    private function generarCodigoTriage(): string
+    {
+        $anioActual = date('Y');
+
+        $ultimoRegistro = Triage::where('triage_codigo', 'LIKE', "TRI-{$anioActual}-%")
+            ->orderBy('id', 'desc')
+            ->lockForUpdate()
+            ->first();
+
+        $numero = $ultimoRegistro
+            ? ((int) substr($ultimoRegistro->triage_codigo, -4)) + 1
+            : 1;
+
+        return 'TRI-' . $anioActual . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
     }
 
     public function analizarIA(int $pacienteId, IAClinicaService $ia): JsonResponse

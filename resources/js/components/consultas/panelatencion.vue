@@ -324,6 +324,17 @@
               </button>
             </div>
             <div class="cc-modal__body">
+              <!-- Aviso: este paciente no tiene cita hoy, y al guardar se agregará a la lista -->
+              <div
+                v-if="modal.paciente && !tieneCitaHoy(modal.paciente)"
+                class="cc-triage-aviso"
+              >
+                <i class="ti ti-info-circle" aria-hidden="true"></i>
+                Este paciente no tiene cita para hoy. Al guardar, se agregará al final de la
+                <strong>lista de espera de hoy</strong> usando el médico y la especialidad
+                seleccionados en los filtros de la tabla.
+              </div>
+
               <!-- Referencia visual del paciente + badge de estado global del triaje -->
               <div class="cc-exp-ref">
                 <div class="cc-mini-avatar cc-mini-avatar--lg" :style="{ background: avatarColor(nombreCompleto(modal.paciente)) }">
@@ -839,7 +850,9 @@ export default {
     // - Si hay texto en el buscador: busca por nombre/folio en TODOS los
     //   pacientes, sin importar especialidad/médico/fecha.
     // - Si no hay texto: aplica los filtros de especialidad/médico/fecha
-    //   (cruzando contra las citas de cada paciente).
+    //   (cruzando contra las citas de cada paciente) y ordena por hora de
+    //   cita, para que la lista de hoy quede en orden cronológico real y
+    //   cualquier paciente "colado" desde la búsqueda caiga al final.
     pacientesFiltrados() {
       const q = this.busqueda.trim().toLowerCase()
 
@@ -851,19 +864,35 @@ export default {
       }
 
       const hayFiltroDeCitas = !!(this.especialidadSeleccionada || this.medicoSeleccionado || this.fechaFiltro)
-      if (!hayFiltroDeCitas) return this.pacientes
+      let lista = this.pacientes
 
-      return this.pacientes.filter(p => {
-        const citasDelPaciente = this.citasPorPacienteId.get(p.id) || []
-        return citasDelPaciente.some(c => {
-          const medicoOk = !this.medicoSeleccionado ||
-            (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoSeleccionado)
-          const especialidadOk = !this.especialidadSeleccionada ||
-            (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadSeleccionada)
-          const fechaOk = !this.fechaFiltro || c.fecha === this.fechaFiltro
-          return medicoOk && especialidadOk && fechaOk
+      if (hayFiltroDeCitas) {
+        lista = this.pacientes.filter(p => {
+          const citasDelPaciente = this.citasPorPacienteId.get(p.id) || []
+          return citasDelPaciente.some(c => {
+            const medicoOk = !this.medicoSeleccionado ||
+              (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoSeleccionado)
+            const especialidadOk = !this.especialidadSeleccionada ||
+              (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadSeleccionada)
+            const fechaOk = !this.fechaFiltro || c.fecha === this.fechaFiltro
+            return medicoOk && especialidadOk && fechaOk
+          })
         })
-      })
+      }
+
+      // Orden cronológico por hora de cita (solo tiene sentido cuando hay
+      // una fecha de referencia): los agendados quedan en su orden normal,
+      // y el paciente agregado desde la búsqueda (con hora = momento en que
+      // se guardó su triage) cae automáticamente al final de la cola.
+      if (this.fechaFiltro || hayFiltroDeCitas) {
+        lista = lista.slice().sort((a, b) => {
+          const ha = this.horaCitaPaciente(a) || 'zzzzzz'
+          const hb = this.horaCitaPaciente(b) || 'zzzzzz'
+          return ha.localeCompare(hb)
+        })
+      }
+
+      return lista
     },
 
     // ── Evaluación de signos vitales del modal de edición rápida de triage ──
@@ -967,17 +996,35 @@ export default {
       }
     },
 
+    // Actualiza SOLO los datos propios del paciente (tabla `pacientes`).
+    // Los signos vitales / triage NUNCA se mandan por aquí: eso vive en
+    // guardarTriageEnBackend(), que pega contra /triage/guardar/{id}.
     async guardarCambiosPaciente(paciente) {
       const objetivo = paciente || this.pacienteActivo
       if (!objetivo) return
       try {
+        // Enviamos solo los campos que corresponden a la tabla `pacientes`;
+        // 'triages' se excluye explícitamente porque el backend ya lo
+        // ignora (y no debe viajar en este PUT).
+        const { triages, ...datosPaciente } = objetivo
+
         // Envía los datos actualizados del paciente al backend
-        await ApiService.put('/pacientes/' + objetivo.id, objetivo)
+        await ApiService.put('/pacientes/' + objetivo.id, datosPaciente)
         await this.obtenerPacientes()
       } catch (error) {
         console.error('Error al guardar paciente:', error)
         throw error
       }
+    },
+
+    // Punto único para persistir signos vitales / triage en el backend.
+    // Pega contra POST /triage/guardar/{pacienteId} (TriageController@guardarTriageRapido).
+    // 'payload' solo debe traer los campos numéricos de signos vitales que
+    // acepta ese endpoint (presion, saturacion, temperatura, frecuencia_cardiaca,
+    // frecuencia_respiratoria, peso, talla).
+    async guardarTriageEnBackend(pacienteId, payload) {
+      const { data } = await axios.post(`/triage/guardar/${pacienteId}`, payload)
+      return data
     },
 
     // ──────────────────────────────────────────
@@ -989,6 +1036,96 @@ export default {
       if (this.medicoSeleccionado) {
         const sigueSiendoValido = this.medicosFiltrados.some(m => m.id === this.medicoSeleccionado)
         if (!sigueSiendoValido) this.medicoSeleccionado = ''
+      }
+    },
+
+    // ──────────────────────────────────────────
+    // Cola de hoy: helpers y alta automática de cita
+    // ──────────────────────────────────────────
+
+    // Fecha de hoy en ISO, para comparar contra citas
+    obtenerFechaHoyISO() {
+      return obtenerFechaHoyISO()
+    },
+
+    // ¿Este paciente ya tiene una cita para hoy (no cancelada)?
+    tieneCitaHoy(paciente) {
+      if (!paciente) return false
+      const hoy = this.obtenerFechaHoyISO()
+      const citasDelPaciente = this.citasPorPacienteId.get(paciente.id) || []
+      return citasDelPaciente.some(c => c.fecha === hoy && c.estado !== 'Cancelada')
+    },
+
+    // Hora de la cita de un paciente para la fecha actualmente filtrada
+    // (o de hoy si no hay fecha elegida). Se usa para ordenar la tabla.
+    horaCitaPaciente(p) {
+      const fechaObjetivo = this.fechaFiltro || this.obtenerFechaHoyISO()
+      const citasDelPaciente = this.citasPorPacienteId.get(p.id) || []
+      const relevantes = citasDelPaciente.filter(
+        c => c.fecha === fechaObjetivo && c.estado !== 'Cancelada'
+      )
+      if (!relevantes.length) return null
+      return relevantes.map(c => c.hora).sort()[0]
+    },
+
+    // Crea la cita de HOY para un paciente que no la tenía (llegó por
+    // búsqueda). Usa el médico/especialidad que estén elegidos en los
+    // filtros de la tabla; si faltan, pide elegirlos y no guarda nada.
+    async agregarPacienteAListaHoy(paciente) {
+      if (!this.medicoSeleccionado || !this.especialidadSeleccionada) {
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'warning',
+            title: 'Selecciona médico y especialidad',
+            text: 'Para agregar a este paciente a la lista de hoy, primero elige un médico y una especialidad en los filtros de la tabla.'
+          })
+        } else {
+          alert('Selecciona médico y especialidad en los filtros para agregar a este paciente a la lista de hoy.')
+        }
+        return false
+      }
+
+      try {
+        const ahora = new Date()
+        const hora =
+          String(ahora.getHours()).padStart(2, '0') + ':' +
+          String(ahora.getMinutes()).padStart(2, '0') + ':' +
+          String(ahora.getSeconds()).padStart(2, '0')
+
+        await axios.post('/api/citas', {
+          paciente_id:      paciente.id,
+          medico_id:        this.medicoSeleccionado,
+          especialidad_id:  this.especialidadSeleccionada,
+          fecha:            this.obtenerFechaHoyISO(),
+          hora:             hora,
+          estado:           'Agendado',
+          tipo:             'Consulta',
+          observaciones:    'Agregado a la lista de hoy desde la búsqueda de paciente'
+        })
+
+        // Refresca citas para que el nuevo registro entre al cruce y al orden
+        await this.obtenerCitas()
+
+        // Si el filtro de fecha no era hoy, lo alineamos para que se vea en la lista
+        if (this.fechaFiltro !== this.obtenerFechaHoyISO()) {
+          this.fechaFiltro = this.obtenerFechaHoyISO()
+        }
+
+        // Limpia el buscador para volver a la vista de "lista de hoy"
+        // (donde ya va a aparecer, al final, por hora)
+        this.busqueda = ''
+
+        return true
+      } catch (error) {
+        console.error('Error al agregar paciente a la lista de hoy:', error)
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'error',
+            title: 'No se pudo agregar a la lista de hoy',
+            text: error.response?.data?.message || 'Intenta de nuevo.'
+          })
+        }
+        return false
       }
     },
 
@@ -1066,31 +1203,30 @@ export default {
       this.editMode = false
     },
 
+    // Guarda los cambios del panel izquierdo. Ahora hace DOS llamadas
+    // separadas al backend, porque cada una vive en una tabla distinta:
+    //  1) /triage/guardar/{id} → motivo_consulta, sintomas y estado de triage
+    //     (Rojo/Amarillo/Verde), que se guardan en la tabla `triage`.
+    //  2) PUT /pacientes/{id} → el estado general del paciente
+    //     (En espera/Atendido/Cancelado), que vive en la tabla `pacientes`.
+    // Antes todo esto se metía dentro de pacienteActivo.triages y se
+    // mandaba junto por el PUT de pacientes, pero el backend ignora ese
+    // campo por diseño (ver PacienteController@update), así que nunca
+    // llegaba a guardarse el triage.
     async guardarEdicion() {
       if (!this.pacienteActivo) return
 
       this.guardandoEdicion = true
       try {
-        // Actualiza el estado general del paciente (Activo, En espera, etc.)
+        // 1) Triage: motivo de consulta, síntomas y nivel de triage
+        const triageActualizado = await this.guardarTriageEnBackend(this.pacienteActivo.id, {
+          motivo_consulta: this.editForm.diagnostico,
+          sintomas:         this.editForm.sintomas,
+          estado_triage:    this.editForm.triage
+        })
+
+        // 2) Estado general del paciente
         this.pacienteActivo.estado = this.editForm.estado
-
-        // Actualiza (o crea) el registro de triage más reciente con los
-        // datos del formulario, para que la tabla y el panel se reflejen igual
-        if (!this.pacienteActivo.triages || !this.pacienteActivo.triages.length) {
-          this.pacienteActivo.triages = [{}]
-        }
-        const ultimo = this.pacienteActivo.triages[this.pacienteActivo.triages.length - 1]
-        ultimo.motivo_consulta = this.editForm.diagnostico
-        ultimo.sintomas = this.editForm.sintomas
-        ultimo.estado = this.editForm.triage
-
-        // Sincroniza la copia dentro del array principal de pacientes
-        const idx = this.pacientes.findIndex(p => p.id === this.pacienteActivo.id)
-        if (idx !== -1) {
-          this.pacientes[idx] = { ...this.pacienteActivo }
-        }
-
-        // Persiste los cambios en la API
         await this.guardarCambiosPaciente(this.pacienteActivo)
 
         this.editMode = false
@@ -1103,6 +1239,7 @@ export default {
           })
         }
       } catch (error) {
+        console.error('Error al guardar la edición del panel:', error)
         if (window.Swal) {
           window.Swal.fire({ icon: 'error', title: 'No se pudieron guardar los cambios', text: 'Intenta de nuevo.' })
         }
@@ -1197,25 +1334,44 @@ export default {
     },
 
     // Guarda los signos vitales editados desde el ícono de la tabla y los
-    // persiste con PUT /api/pacientes/:id, igual que el resto del formulario.
+    // persiste con POST /triage/guardar/{id} (TriageController@guardarTriageRapido),
+    // en vez de meterlos dentro del paciente y mandarlos por PUT /pacientes/{id}
+    // (ese endpoint ignora 'triages' por diseño, ver PacienteController@update).
+    //
+    // Si el paciente NO tiene cita hoy (llegó por búsqueda), primero se le
+    // crea la cita de hoy (agregarPacienteAListaHoy) para que entre en la
+    // cola; si falta médico/especialidad en los filtros, se cancela el guardado.
     // El nivel de triage (Rojo/Amarillo/Verde) no se toca desde aquí; eso
-    // sigue viviendo en el modo de edición del panel izquierdo.
+    // sigue viviendo en el modo de edición del panel izquierdo (guardarEdicion).
     async guardarTriageRapido() {
       const paciente = this.modal.paciente
       if (!paciente) return
 
+      if (!this.tieneCitaHoy(paciente)) {
+        const seAgrego = await this.agregarPacienteAListaHoy(paciente)
+        if (!seAgrego) return
+      }
+
       this.guardandoTriage = true
       try {
-        // Actualiza (o crea) el registro de triage más reciente del paciente
-        // con los signos vitales capturados en el modal
-        if (!paciente.triages || !paciente.triages.length) {
-          paciente.triages = [{ ...this.triageForm }]
-        } else {
-          Object.assign(paciente.triages[paciente.triages.length - 1], this.triageForm)
+        // Persiste los signos vitales directamente en el backend
+        const resultado = await this.guardarTriageEnBackend(paciente.id, this.triageForm)
+
+        // Refleja el triage devuelto por el backend en la copia local del
+        // paciente, para que la tabla/panel se actualicen sin esperar a
+        // un obtenerPacientes() completo
+        if (resultado?.triage) {
+          if (!paciente.triages) paciente.triages = []
+          const idx = paciente.triages.findIndex(t => t.id === resultado.triage.id)
+          if (idx !== -1) {
+            paciente.triages[idx] = resultado.triage
+          } else {
+            paciente.triages.push(resultado.triage)
+          }
         }
 
-        // Persiste el cambio en el backend
-        await this.guardarCambiosPaciente(paciente)
+        // Refresca la lista completa para mantener todo sincronizado
+        await this.obtenerPacientes()
 
         if (window.Swal) {
           window.Swal.fire({
@@ -1227,6 +1383,7 @@ export default {
 
         this.cerrarModal()
       } catch (error) {
+        console.error('Error al guardar los signos vitales:', error)
         if (window.Swal) {
           window.Swal.fire({ icon: 'error', title: 'No se pudieron guardar los signos vitales', text: 'Intenta de nuevo.' })
         }
@@ -1882,6 +2039,22 @@ export default {
 
 /* Cuerpo scrollable del modal */
 .cc-modal__body { padding: 24px; overflow-y: auto; flex: 1; }
+
+/* Aviso dentro del modal de triage cuando el paciente no tiene cita hoy */
+.cc-triage-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 12.5px;
+  line-height: 1.5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+}
+.cc-triage-aviso i { margin-top: 2px; flex-shrink: 0; }
 
 /* Grid 2 columnas para la ficha clínica */
 .cc-modal__grid {

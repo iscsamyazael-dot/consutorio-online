@@ -72,6 +72,7 @@
                 @marcarErrorIa="marcarErrorIa"
                 @actualizarConsultaId="actualizarConsultaId"
                 @archivoSubido="refrescarArchivos"
+                @conversacionFinalizada="manejarConversacionFinalizada"
             />
             <PanelIA
                 :ia-data="iaData"
@@ -103,6 +104,7 @@
 </template>
 <script>
 import ApiService from '../../services/ApiService.js'
+import axios from 'axios'
 import TranscripcionLive from './TranscripcionLive.vue'
 import PanelIA from './PanelIA.vue'
 import HistorialClinico from './HistorialClinico.vue'
@@ -291,6 +293,83 @@ export default {
         if (this.$refs.archivosClinicos) {
 
             this.$refs.archivosClinicos.cargarArchivos();
+        }
+    },
+
+    // Fecha de hoy en formato YYYY-MM-DD, en hora local, para comparar
+    // contra cita.fecha (mismo formato que usa el resto del sistema).
+    obtenerFechaHoyISO() {
+        const hoy = new Date()
+        const y = hoy.getFullYear()
+        const m = String(hoy.getMonth() + 1).padStart(2, '0')
+        const d = String(hoy.getDate()).padStart(2, '0')
+        return `${y}-${m}-${d}`
+    },
+
+    /**
+     * Se dispara cuando TranscripcionLive.vue emite
+     * "conversacionFinalizada" (después de hacer PATCH a /consultaIA
+     * marcando la consulta como finalizada).
+     *
+     * 1. Busca la cita de HOY de este paciente y la marca 'Finalizada'
+     *    con PATCH /api/citas/{id}/estado.
+     * 2. Vuelve a pedir las citas de hoy, toma el siguiente pendiente
+     *    (no Finalizada/Cancelada, ordenado por hora) y navega ahí.
+     * 3. Si no hay siguiente, muestra un aviso de que no hay más
+     *    pacientes en espera.
+     */
+    async manejarConversacionFinalizada() {
+        try {
+            const hoy = this.obtenerFechaHoyISO()
+
+            // CitaController@index no filtra por fecha, así que
+            // filtramos aquí las citas de hoy.
+            const respCitas = await axios.get('/api/citas')
+            const citasHoy = (respCitas.data || []).filter(c => c.fecha === hoy)
+
+            // 1. Marca como Finalizada la cita de hoy de este paciente
+            const citaActual = citasHoy.find(
+                c => c.paciente && c.paciente.id == this.pacienteId
+            )
+
+            if (citaActual) {
+                await axios.patch(`/api/citas/${citaActual.id}/estado`, {
+                    estado: 'Finalizada'
+                })
+            } else {
+                console.warn('No se encontró una cita de hoy para este paciente; no se pudo marcar como Finalizada.')
+            }
+
+            // 2. Busca el siguiente paciente pendiente de hoy, por hora
+            const pendientes = citasHoy
+                .filter(c => c.id !== citaActual?.id)
+                .filter(c => !['Finalizada', 'Cancelada'].includes(c.estado))
+                .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+
+            const siguiente = pendientes[0]
+
+            if (siguiente && siguiente.paciente) {
+                // Recarga completa, mismo patrón que seleccionarPaciente()
+                window.location.href = '/ConsultaInteligente/' + siguiente.paciente.id
+            } else if (window.Swal) {
+                window.Swal.fire({
+                    icon: 'info',
+                    title: 'No hay más pacientes en espera',
+                    text: 'Ya atendiste a todos los pacientes agendados para hoy.'
+                })
+            } else {
+                alert('No hay más pacientes en espera para hoy.')
+            }
+
+        } catch (error) {
+            console.error('Error al avanzar al siguiente paciente:', error)
+            if (window.Swal) {
+                window.Swal.fire({
+                    icon: 'error',
+                    title: 'No se pudo avanzar al siguiente paciente',
+                    text: 'Intenta de nuevo o vuelve a la lista.'
+                })
+            }
         }
     }
 }

@@ -131,6 +131,8 @@ Route::middleware('auth')->group(function () {
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
         Route::resource('citas', CitaController::class);// Agenda: CRUD de citas
         Route::get('/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calendario
+        Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendari
+        // Agenda: actualizar datos del paciente
         // Cambias 'SubirArchivosControlador' por el que ya tengas
         Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
         //Código para hacer el filtro de un paciente mediante un input //
@@ -149,6 +151,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/triage/{pacienteId}/analizar-ia', [TriageController::class, 'analizarIA']);
         Route::get('/triage/{id}', [TriageController::class, 'show']);
         ///*** AQUI TERMINA LAS RUTAS DE LAS LAS APIS Y CONSUMO DE DATOS */
+        // Ruta explícita para manejar la petición POST desde panelatencion.vue
+        Route::post('/triage/guardar/{id?}', [TriageController::class, 'guardarTriageRapido'])->name('triage.guardarRapido');
+        Route::put('/pacientes/{id}', [PacienteController::class, 'update'])->name('pacientes.update');
 
         //**INICIA LAS RUTAS PARA LAS VISTAS DE ACUERDO AL ACESSO DE CADA USUARIO *//
 
