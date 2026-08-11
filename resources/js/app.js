@@ -48,6 +48,7 @@ import PanelTabla from './components/configuracion-sistema/PanelTabla.vue'
 //Modulo de registro de usuario 
 import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
 import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
+import TenantMaster from  './components/superadmin/TenantMaster.vue';
 
 // ------------------------------------------------------
 // Instancia única de la app
@@ -83,6 +84,7 @@ app.component('configuracion-sistema', ConfiSistema);
 app.component('configuracion-sistema-panelcontrasena', PanelContraseña);
 app.component('registro-usuario', RegistrarUsuario);
 app.component('panel-tabla', PanelTabla);
+app.component('tenant-master-contenedor',TenantMaster);
     
 
 // 3. MONTAJE DE LA APP

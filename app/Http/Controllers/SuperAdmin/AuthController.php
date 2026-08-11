@@ -36,7 +36,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->route('superadmin.tenants.index');
+        return redirect()->route('superadmin.clientes.index');
     }
 
     /**
