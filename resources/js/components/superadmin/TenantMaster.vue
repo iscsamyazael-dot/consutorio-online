@@ -6,39 +6,44 @@
     <!-- Cabecera de página y botón de acción -->
     <div class="page-head">
       <div>
-        <h1>{{ isFormView ? 'Registrar cliente' : 'Gestión de clientes' }}</h1>
-        <p>{{ isFormView ? 'Complete los pasos para dar de alta un nuevo inquilino' : 'Administración de consultorios registrados en la plataforma' }}</p>
+        <h1>{{ headTitle }}</h1>
+        <p>{{ headSubtitle }}</p>
       </div>
-      <button v-if="!isFormView" class="btn btn-primary" @click="currentView = 'form'">
+      <button v-if="currentView === 'list'" class="btn btn-primary" @click="abrirCrear">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
         Registrar cliente
       </button>
-      <button v-else class="btn btn-ghost" @click="currentView = 'list'">
+      <button v-else class="btn btn-ghost" @click="volverALista">
         Cancelar
       </button>
     </div>
 
-    <!-- Estadísticas superiores (Componente hijo opcional o sección directa) -->
+    <!-- Estadísticas superiores -->
     <stats-counters :total="totalCount" :active="activeCount" :inactive="inactiveCount"></stats-counters>
 
     <!-- Contenedor Principal (Cambia dinámicamente entre Lista y Formulario) -->
     <div class="card">
-      <tenant-list 
-        v-if="!isFormView" 
-        :tenants="tenants" 
-        @go-to-form="currentView = 'form'"
+      <tenant-list
+        v-if="currentView === 'list'"
+        ref="tenantList"
+        @go-to-form="abrirCrear"
+        @editar-cliente="abrirEditar"
       ></tenant-list>
 
-      <tenant-form 
-        v-else 
+      <tenant-form
+        v-else
+        :modo="currentView === 'editar' ? 'editar' : 'crear'"
+        :tenant="selectedTenant"
         @tenant-created="handleTenantCreated"
-        @cancel="currentView = 'list'"
+        @tenant-updated="handleTenantUpdated"
+        @cancel="volverALista"
       ></tenant-form>
     </div>
   </div>
 </template>
 
 <script>
+import ApiService from '../../services/ApiService.js'
 import HeaderBar from './HeaderBar.vue';
 import StatsCounters from './TenantEstadistica.vue';
 import TenantList from './TenantLista.vue';
@@ -54,36 +59,73 @@ export default {
   },
   data() {
     return {
-      currentView: 'list', // 'list' o 'form'
-      tenants: [
-        { folio: 'CONSULTORIO-2026-001', name: 'UltraConsultorio', db: 'medico_online_Ultra_Consultorio', domain: 'ultraconsultorio.com', status: 'activo' },
-        { folio: 'CONSULTORIO-2026-002', name: 'Clínica San Rafael', db: 'medico_online_Clinica_San_Rafael', domain: 'sanrafael.com', status: 'activo' },
-        { folio: 'CONSULTORIO-2026-003', name: 'Consultorio Médico Vida', db: 'medico_online_Consultorio_Vida', domain: 'vida.com', status: 'inactivo' }
-      ]
+      currentView: 'list', // 'list' | 'crear' | 'editar'
+      selectedTenant: null
     }
   },
   computed: {
-    isFormView() {
-      return this.currentView === 'form';
+    headTitle() {
+      if (this.currentView === 'crear') return 'Registrar cliente';
+      if (this.currentView === 'editar') return 'Editar cliente';
+      return 'Gestión de clientes';
     },
+    headSubtitle() {
+      if (this.currentView === 'crear') return 'Complete los pasos para dar de alta un nuevo inquilino';
+      if (this.currentView === 'editar') return 'Modifique los datos editables del consultorio';
+      return 'Administración de consultorios registrados en la plataforma';
+    },
+    // TODO: estos 3 conteos hoy dependen de la lista real que carga
+    // TenantList internamente, no de un array local. Los dejo en 0 por
+    // ahora -- ver mi pregunta al final sobre cómo quieres alimentar
+    // stats-counters con datos reales (endpoint separado, o exponer la
+    // lista de TenantList hacia arriba).
     totalCount() {
-      return this.tenants.length + 11; // Simulado con la base estática original
+      return this.$refs.tenantList?.clientes?.length || 0;
     },
     activeCount() {
-      return this.tenants.filter(t => t.status === 'activo').length + 11;
+      return this.$refs.tenantList?.clientes?.filter(c => c.estatus === 'activo').length || 0;
     },
     inactiveCount() {
-      return this.tenants.filter(t => t.status === 'inactivo').length;
+      return this.$refs.tenantList?.clientes?.filter(c => c.estatus === 'inactivo').length || 0;
     }
   },
   methods: {
-    handleTenantCreated(newTenant) {
-      const folioNum = String(this.tenants.length + 4).padStart(3, '0');
-      this.tenants.unshift({
-        folio: `CONSULTORIO-2026-${folioNum}`,
-        ...newTenant
-      });
+    abrirCrear() {
+      this.selectedTenant = null;
+      this.currentView = 'crear';
+    },
+    abrirEditar(id) {
+      // Si la tabla le mandó el objeto completo, extraemos el id, si le mandó directo el id, lo usamos
+      this.selectedTenant = id;
+      this.currentView = 'editar';
+    },
+    volverALista() {
       this.currentView = 'list';
+      this.selectedTenant = null;
+    },
+    async handleTenantCreated(nuevoCliente) {
+      try {
+        // AJUSTA el método/endpoint según lo que exponga tu ApiService real.
+        await ApiService.post('inquilinos', nuevoCliente);
+        this.volverALista();
+        await this.$nextTick();
+        this.$refs.tenantList?.obtenerClientes();
+      } catch (error) {
+        console.error('Error al registrar cliente:', error);
+        // TODO: mostrar toast/error visible al usuario
+      }
+    },
+    async handleTenantUpdated(clienteActualizado) {
+      try {
+      // Como el hijo ya guardó en la base de datos, 
+      // solo regresamos a la lista y refrescamos los datos:
+      this.volverALista();
+      await this.$nextTick();
+      this.$refs.tenantList?.obtenerClientes();
+
+      } catch (error) {
+        console.error('Error al actualizar la vista:', error);
+      }
     }
   }
 }

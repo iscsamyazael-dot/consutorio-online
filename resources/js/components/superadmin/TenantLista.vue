@@ -92,7 +92,7 @@
                          CLIENTES
                     =================================== -->
                     <tr
-                        v-for="cliente in clientes" :key="cliente.id">
+                        v-for="cliente in filteredClientes" :key="cliente.id">
 
                         <!-- FOLIO -->
                         <td>
@@ -157,6 +157,7 @@
                                     type="button"
                                     aria-label="Editar cliente"
                                     title="Editar cliente"
+                                    @click="$emit('editar-cliente', cliente.id)"
                                 >
                                     <svg
                                         width="14"
@@ -172,32 +173,6 @@
                                         />
                                     </svg>
                                 </button>
-
-                                <!-- VER -->
-                                <button
-                                    type="button"
-                                    aria-label="Ver detalle"
-                                    title="Ver detalle"
-                                >
-                                    <svg
-                                        width="14"
-                                        height="14"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                    >
-                                        <path
-                                            d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"
-                                        />
-
-                                        <circle
-                                            cx="12"
-                                            cy="12"
-                                            r="3"
-                                        />
-                                    </svg>
-                                </button>
                             </div>
                         </td>
                     </tr>
@@ -206,7 +181,7 @@
                     <!-- ==================================
                          SIN RESULTADOS
                     =================================== -->
-                    <tr v-if="clientes.length === 0">
+                    <tr v-if="filteredClientes.length === 0">
                         <td
                             colspan="6"
                             class="empty-state"
@@ -254,66 +229,67 @@ export default {
 
     name: 'TenantList',
 
-    props: {
-
-        tenants: {
-            type: Array,
-            required: true
-        }
-
-    },
+    // NOTA: por ahora este componente sigue haciendo su propio fetch (ver
+    // obtenerClientes) y por eso la prop 'tenants' quedó sin usar. La dejo
+    // comentada como referencia hasta que decidamos una sola fuente de
+    // verdad (ver mi pregunta al final de la respuesta).
+    // props: {
+    //     tenants: {
+    //         type: Array,
+    //         required: true
+    //     }
+    // },
 
     data() {
 
         return {
-            clientes:[],
+            clientes: [],
             search: ''
-
         }
 
     },
 
     computed: {
 
-        filteredTenants() {
+        filteredClientes() {
 
             const term = this.search
                 .toLowerCase()
                 .trim()
 
             if (!term) {
-                return this.tenants
+                return this.clientes
             }
 
-            return this.tenants.filter(tenant => {
+            return this.clientes.filter(cliente => {
 
                 return (
 
-                    tenant.folio
+                    cliente.folio
                         ?.toLowerCase()
                         .includes(term)
 
                     ||
 
-                    tenant.name
+                    cliente.nombre_consultorio
                         ?.toLowerCase()
                         .includes(term)
 
                     ||
 
-                    tenant.db
+                    cliente.db_name
                         ?.toLowerCase()
                         .includes(term)
 
                     ||
 
-                    tenant.domain
+                    cliente.dominio_correo
                         ?.toLowerCase()
                         .includes(term)
 
                     ||
 
-                    tenant.status
+                    cliente.estatus
                         ?.toLowerCase()
                         .includes(term)
 
@@ -328,7 +304,7 @@ export default {
     mounted(){
         this.obtenerClientes();
     },
-    
+
     methods:{
         async obtenerClientes() {
             try {
