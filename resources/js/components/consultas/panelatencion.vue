@@ -352,6 +352,22 @@
                 </span>
               </div>
 
+              <!-- Motivo de consulta / síntomas: la IA usa este texto + los
+                   signos vitales para determinar automáticamente el nivel
+                   de urgencia (Rojo/Amarillo/Verde) al guardar. -->
+              <div class="cc-motivo-panel">
+                <div class="cc-motivo-panel-head">
+                  <span><i class="ti ti-notes-medical" aria-hidden="true"></i> Motivo de consulta / síntomas</span>
+                  <span class="cc-motivo-panel-sub">La IA calculará la urgencia con base en esto</span>
+                </div>
+                <textarea
+                  class="cc-motivo-textarea"
+                  rows="3"
+                  v-model="triageForm.motivo_consulta"
+                  placeholder="Describe lo que el paciente reporta: dolor, mareo, dificultad para respirar, etc."
+                ></textarea>
+              </div>
+
               <!-- Panel de signos vitales, igual que el paso "Triaje" del alta de paciente -->
               <div class="cc-vitals-panel">
                 <div class="cc-vitals-panel-head">
@@ -748,7 +764,8 @@ export default {
         frecuencia_cardiaca: null,
         frecuencia_respiratoria: null,
         peso: null,
-        talla: null
+        talla: null,
+        motivo_consulta: ''
       },
       // Indica si se está guardando el triage rápido (deshabilita botones)
       guardandoTriage: false,
@@ -1051,9 +1068,9 @@ export default {
 
     // Punto único para persistir signos vitales / triage en el backend.
     // Pega contra POST /triage/guardar/{pacienteId} (TriageController@guardarTriageRapido).
-    // 'payload' solo debe traer los campos numéricos de signos vitales que
-    // acepta ese endpoint (presion, saturacion, temperatura, frecuencia_cardiaca,
-    // frecuencia_respiratoria, peso, talla).
+    // 'payload' solo debe traer los campos que acepta ese endpoint
+    // (presion, saturacion, temperatura, frecuencia_cardiaca,
+    // frecuencia_respiratoria, peso, talla, motivo_consulta).
     async guardarTriageEnBackend(pacienteId, payload) {
       const { data } = await axios.post(`/triage/guardar/${pacienteId}`, payload)
       return data
@@ -1329,7 +1346,8 @@ export default {
           frecuencia_cardiaca:      t.frecuencia_cardiaca       ?? null,
           frecuencia_respiratoria:  t.frecuencia_respiratoria   ?? null,
           peso:                     t.peso                      ?? null,
-          talla:                    t.talla                     ?? null
+          talla:                    t.talla                     ?? null,
+          motivo_consulta:          ''   // siempre vacío: es un nuevo motivo/consulta, no se arrastra el anterior
         }
       }
 
@@ -1403,8 +1421,10 @@ export default {
     // Si el paciente NO tiene cita hoy (llegó por búsqueda), primero se le
     // crea la cita de hoy (agregarPacienteAListaHoy) para que entre en la
     // cola; si falta médico/especialidad en los filtros, se cancela el guardado.
-    // El nivel de triage (Rojo/Amarillo/Verde) no se toca desde aquí; eso
-    // sigue viviendo en el modo de edición del panel izquierdo (guardarEdicion).
+    // El nivel de triage (Rojo/Amarillo/Verde) ahora puede venir calculado
+    // por la IA en el backend cuando se escribió un motivo_consulta (ver
+    // TriageController@guardarTriageRapido); si no, sigue viviendo el modo
+    // de edición del panel izquierdo (guardarEdicion).
     async guardarTriageRapido() {
       const paciente = this.modal.paciente
       if (!paciente) return
@@ -1435,12 +1455,27 @@ export default {
         // Refresca la lista completa para mantener todo sincronizado
         await this.obtenerPacientes()
 
+        // Si el backend (IA) determinó un nivel de triage, se lo mostramos
+        // al médico/enfermera como confirmación de la clasificación de urgencia.
+        const nivel = resultado?.triage?.estado
+        const iconosPorNivel = { Rojo: '🔴', Amarillo: '🟡', Verde: '🟢' }
+
         if (window.Swal) {
-          window.Swal.fire({
-            toast: true, position: 'top-end', icon: 'success',
-            title: 'Signos vitales actualizados', showConfirmButton: false,
-            timer: 1400, timerProgressBar: true
-          })
+          if (nivel) {
+            window.Swal.fire({
+              toast: true, position: 'top-end', icon: 'success',
+              title: 'Signos vitales actualizados',
+              text: `La IA clasificó a este paciente como ${iconosPorNivel[nivel] || ''} ${nivel}`,
+              showConfirmButton: false,
+              timer: 2600, timerProgressBar: true
+            })
+          } else {
+            window.Swal.fire({
+              toast: true, position: 'top-end', icon: 'success',
+              title: 'Signos vitales actualizados', showConfirmButton: false,
+              timer: 1400, timerProgressBar: true
+            })
+          }
         }
 
         this.cerrarModal()
@@ -2173,6 +2208,37 @@ export default {
 .cc-badge-critical .cc-overall-dot { background: #dc2626; animation: cc-pulse 1.4s infinite; }
 
 @keyframes cc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ─── Panel de motivo de consulta / síntomas (edición rápida de triage) ─── */
+.cc-motivo-panel {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.cc-motivo-panel-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px; padding: 0 2px;
+  flex-wrap: wrap; gap: 4px;
+}
+.cc-motivo-panel-head > span:first-child {
+  font-size: 13.5px; font-weight: 700; color: #111827;
+  display: flex; align-items: center; gap: 6px;
+}
+.cc-motivo-panel-sub { font-size: 11px; color: #9ca3af; }
+.cc-motivo-textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb; border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px; font-family: inherit; color: #111827;
+  resize: vertical; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cc-motivo-textarea:focus {
+  border-color: #185FA5;
+  box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
+}
 
 /* ─── Panel de signos vitales (edición rápida de triage) ─── */
 .cc-vitals-panel {

@@ -78,7 +78,13 @@ class ConsultaIAController extends Controller
                     // para que quede registrado quién abrió la consulta.
                     'user_id' => auth()->id(),
                     'motivo_consulta' => 'Consulta Inteligente',
-                    'estado' => 'en_proceso',
+                    // NOTA: 'estado' y 'estado_consulta' son columnas
+                    // DISTINTAS en la tabla consultas. El flujo real del
+                    // sistema (Home.vue, finalizarConsulta, etc.) usa
+                    // estado_consulta, con default 'en_proceso'. Se deja
+                    // explícito aquí para que no dependa del default de
+                    // la BD y quede claro cuál es la columna que importa.
+                    'estado_consulta' => 'en_proceso',
                     'consulta_inteligente' => 1,
                     'session_uuid' => Str::uuid()
                 ]);
@@ -101,7 +107,13 @@ class ConsultaIAController extends Controller
             // Una vez que el médico presiona "Finalizar" (finalizarConsulta()),
             // el diagnóstico de esta consulta queda cerrado. No se aceptan
             // más transcripciones para que no se siga modificando.
-            if ($consulta->estado === 'finalizada') {
+            //
+            // FIX: antes se comparaba contra la columna 'estado' (default
+            // 'pendiente', que nunca se actualiza en ningún flujo real).
+            // La columna que realmente se marca como 'finalizada' es
+            // 'estado_consulta' (ver finalizarConsulta() más abajo), así
+            // que el bloqueo debe leer esa misma columna.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => false,
                     'error'   => 'Esta consulta ya fue finalizada. Inicia una nueva consulta para continuar.'
@@ -189,6 +201,13 @@ class ConsultaIAController extends Controller
      * - El diagnóstico/evaluación IA de esta consulta queda tal cual quedó,
      *   sin más actualizaciones.
      *
+     * IMPORTANTE: esto actualiza ÚNICAMENTE la columna estado_consulta
+     * de la tabla `consultas`. NO se toca la tabla `triage` (columna
+     * `estado`, con valores 'leve'/'grave'): ese campo es el nivel de
+     * severidad con el que llegó el paciente y debe conservarse como
+     * parte del historial clínico, sin importar que la consulta ya
+     * haya sido cerrada.
+     *
      * No borra ni modifica nada de lo ya guardado; solo cierra la puerta a
      * seguir enviando mensajes.
      */
@@ -200,19 +219,24 @@ class ConsultaIAController extends Controller
                 return response()->json(['success' => false, 'error' => 'Consulta no encontrada'], 404);
             }
 
-            if ($consulta->estado === 'finalizada') {
+            // FIX: antes se leía/escribía la columna 'estado' (default
+            // 'pendiente', sin uso real en el sistema). La columna que
+            // consulta el resto de la app (y la que se ve en phpMyAdmin
+            // con los valores 'en_proceso'/'finalizada') es
+            // 'estado_consulta'.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => true,
                     'ya_estaba_finalizada' => true,
-                    'estado' => $consulta->estado,
+                    'estado_consulta' => $consulta->estado_consulta,
                 ]);
             }
 
-            $consulta->update(['estado' => 'finalizada']);
+            $consulta->update(['estado_consulta' => 'finalizada']);
 
             return response()->json([
                 'success' => true,
-                'estado' => $consulta->estado,
+                'estado_consulta' => $consulta->estado_consulta,
             ]);
 
         } catch (\Exception $e) {
@@ -277,7 +301,10 @@ class ConsultaIAController extends Controller
 
             // Mismo bloqueo que en store(): si la consulta ya fue
             // finalizada, no se procesan más archivos/análisis.
-            if ($consulta->estado === 'finalizada') {
+            //
+            // FIX: misma corrección de columna que en store() y
+            // finalizarConsulta() — se lee estado_consulta, no estado.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => false,
                     'error'   => 'Esta consulta ya fue finalizada. Inicia una nueva consulta para continuar.'
