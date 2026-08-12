@@ -1334,20 +1334,17 @@ export default {
       this.modal.paciente = paciente
 
       // Si se abre la edición rápida de signos vitales, precarga los valores actuales
-            if (tipo === 'triage') {
-        // Si el paciente NO tiene cita hoy (llegó por búsqueda), es una
-        // consulta nueva: el formulario arranca vacío, sin arrastrar
-        // signos vitales de una visita anterior.
-        const t = this.tieneCitaHoy(paciente) ? (this.ultimoTriage(paciente) || {}) : {}
+           if (tipo === 'triage') {
+        // Inicializa el formulario completamente vacío para una nueva captura
         this.triageForm = {
-          presion:                  t.presion                  || '',
-          saturacion:               t.saturacion               ?? null,
-          temperatura:              t.temperatura               ?? null,
-          frecuencia_cardiaca:      t.frecuencia_cardiaca       ?? null,
-          frecuencia_respiratoria:  t.frecuencia_respiratoria   ?? null,
-          peso:                     t.peso                      ?? null,
-          talla:                    t.talla                     ?? null,
-          motivo_consulta:          ''   // siempre vacío: es un nuevo motivo/consulta, no se arrastra el anterior
+          presion: '',
+          saturacion: null,
+          temperatura: null,
+          frecuencia_cardiaca: null,
+          frecuencia_respiratoria: null,
+          peso: null,
+          talla: null,
+          motivo_consulta: ''
         }
       }
 
