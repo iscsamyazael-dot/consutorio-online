@@ -68,13 +68,7 @@
         <span class="scard-icon"><i class="ti ti-stethoscope"></i></span>
       </div>
 
-      <div class="scard scard-green">
-        <div class="scard-text">
-          <p class="scard-num">{{ cargandoStats ? '—' : statsFinal.activos }}</p>
-          <p class="scard-label">Pacientes activos</p>
-        </div>
-        <span class="scard-icon"><i class="ti ti-user-heart"></i></span>
-      </div>
+     
 
       <div class="scard scard-amber">
         <div class="scard-text">
