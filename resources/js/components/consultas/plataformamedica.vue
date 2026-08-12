@@ -181,19 +181,22 @@ export default {
       )
       const activos = activosIds.size
 
-      // Pendientes: citas de hoy que siguen en 'Agendado' (aún no
-      // atendidas ni finalizadas ni canceladas).
-      const pendientes = citasHoy.filter(c => c.estado === 'Agendado').length
+      // Pendientes: citas de hoy que siguen 'Agendado' o 'En proceso'
+      // (aún no atendidas ni finalizadas ni canceladas).
+      const pendientes = citasHoy.filter(c =>
+        c.estado === 'Agendado' || c.estado === 'En proceso'
+      ).length
 
       // Urgencias: citas de hoy cuyo paciente tiene su último triage
-      // marcado como 'Rojo' (grave). El triage vive en /pacientes,
-      // no viene anidado en /api/citas, por eso se cruza con
-      // pacientesPorId.
+      // marcado como 'urgente' (enum real de la tabla triage:
+      // leve/estable/grave/urgente — ver TriageController@mapearEstadoIa).
+      // El triage vive en /pacientes, no viene anidado en /api/citas,
+      // por eso se cruza con pacientesPorId.
       const urgencias = citasHoy.filter(c => {
         if (!c.paciente) return false
         const pacienteCompleto = this.pacientesPorId.get(c.paciente.id)
         const triage = this.ultimoTriage(pacienteCompleto)
-        return triage && triage.estado === 'Rojo'
+        return triage && triage.estado === 'urgente'
       }).length
 
       return { hoy, activos, pendientes, urgencias }

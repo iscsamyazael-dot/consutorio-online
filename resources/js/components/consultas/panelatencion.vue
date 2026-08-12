@@ -232,7 +232,7 @@
               <td><span class="cc-chip" :class="chipClass(p.estado)">{{ p.estado || 'Sin asignar' }}</span></td>
               <!-- Chip de urgencia/triage -->
               <td><span class="cc-chip" :class="triageClass(ultimoTriage(p)?.estado)">{{ ultimoTriage(p)?.estado || 'Sin asignar' }}</span></td>
-              <!-- Botones de acción: ojo azul, triage morado y carpeta cyan sobre fondo gris neutro -->
+              <!-- Botones de acción: ojo azul, triage morado, carpeta cyan y basura roja sobre fondo gris neutro -->
               <td class="cc-td--actions">
                 <button class="cc-icon-btn cc-icon-btn--view" title="Ver / seleccionar" @click="verPaciente(p)">
                   <i class="ti ti-eye" aria-hidden="true"></i>
@@ -242,6 +242,16 @@
                 </button>
                 <button class="cc-icon-btn cc-icon-btn--folder" title="Expediente" @click="abrirExpedienteDesdeFila(p)">
                   <i class="ti ti-folder" aria-hidden="true"></i>
+                </button>
+                <!-- Basura: finaliza la cita de hoy de este paciente (no borra al paciente,
+                     solo lo quita de la lista de espera marcando la cita como 'Finalizada') -->
+                <button
+                  class="cc-icon-btn cc-icon-btn--danger"
+                  title="Finalizar y quitar de la lista de espera"
+                  :disabled="finalizandoId === p.id"
+                  @click="finalizarPaciente(p)"
+                >
+                  <i class="ti ti-trash" aria-hidden="true"></i>
                 </button>
               </td>
             </tr>
@@ -777,6 +787,11 @@ export default {
       // (se sincroniza con localStorage para resaltar la fila al recargar)
       pacienteSeleccionadoId: null,
 
+      // ID del paciente cuya cita se está finalizando (basura). Deshabilita
+      // el botón de esa fila mientras el PATCH está en vuelo, para evitar
+      // doble clic.
+      finalizandoId: null,
+
       // Formulario completo del expediente clínico
       form: {
         paciente_id:              '',
@@ -878,9 +893,10 @@ export default {
     // Cancelada, Inasistencia) del cruce. Antes solo se comparaba
     // medico/especialidad/fecha, así que un paciente cuya cita ya se
     // marcó 'Finalizada' (vía PATCH /api/citas/{id}/estado desde
-    // ConsultaInteligente.vue) seguía "calificando" para la lista de
-    // espera y nunca desaparecía de la tabla aunque el backend ya
-    // hubiera guardado el nuevo estado correctamente.
+    // ConsultaInteligente.vue, o desde el botón de basura de esta misma
+    // vista) seguía "calificando" para la lista de espera y nunca
+    // desaparecía de la tabla aunque el backend ya hubiera guardado el
+    // nuevo estado correctamente.
     pacientesFiltrados() {
       const q = this.busqueda.trim().toLowerCase()
 
@@ -1116,24 +1132,33 @@ export default {
       return String(fecha).slice(0, 10)
     },
 
-    // ¿Este paciente ya tiene una cita para hoy (no cancelada)?
-    // Revisa si tiene cita hoy PARA el médico/especialidad
-    // actualmente seleccionados en los filtros de la tabla.
-    // Si tiene cita hoy pero con otro médico/especialidad, debe tratarse
-    // como "no tiene cita [con este filtro]" para que se le cree una nueva.
-    tieneCitaHoy(paciente) {
-      if (!paciente) return false
+    // Devuelve la cita de HOY de un paciente que aún sigue activa (no
+    // cancelada ni finalizada), respetando el médico/especialidad
+    // actualmente seleccionados en los filtros de la tabla. Si tiene
+    // cita hoy pero con otro médico/especialidad, no cuenta.
+    // Centraliza la lógica que antes solo vivía (duplicada) dentro de
+    // tieneCitaHoy(); ahora también la usa finalizarPaciente() para saber
+    // qué cita hay que marcar como 'Finalizada'.
+    obtenerCitaHoyActiva(paciente) {
+      if (!paciente) return null
       const hoy = this.obtenerFechaHoyISO()
       const citasDelPaciente = this.citasPorPacienteId.get(paciente.id) || []
-      return citasDelPaciente.some(c => {
+      return citasDelPaciente.find(c => {
         const fechaOk = this.fechaSolo(c.fecha) === hoy
-        const estadoOk = c.estado !== 'Cancelada'
+        const estadoOk = !['Cancelada', 'Finalizada'].includes(c.estado)
         const medicoOk = !this.medicoSeleccionado ||
           (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoSeleccionado)
         const especialidadOk = !this.especialidadSeleccionada ||
           (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadSeleccionada)
         return fechaOk && estadoOk && medicoOk && especialidadOk
-      })
+      }) || null
+    },
+
+    // ¿Este paciente ya tiene una cita para hoy (no cancelada/finalizada)?
+    // Revisa si tiene cita hoy PARA el médico/especialidad
+    // actualmente seleccionados en los filtros de la tabla.
+    tieneCitaHoy(paciente) {
+      return !!this.obtenerCitaHoyActiva(paciente)
     },
 
     // Hora de la cita de un paciente para la fecha actualmente filtrada
@@ -1206,6 +1231,82 @@ export default {
           })
         }
         return false
+      }
+    },
+
+    // ──────────────────────────────────────────
+    // Finalizar / quitar paciente de la lista de espera (botón de basura)
+    // ──────────────────────────────────────────
+
+    // No borra al paciente ni su historial: solo marca su cita de HOY
+    // como 'Finalizada' vía PATCH /api/citas/{id}/estado (mismo endpoint
+    // que ya usa ConsultaInteligente.vue). Como pacientesFiltrados excluye
+    // citas 'Finalizada'/'Cancelada', el paciente desaparece de la lista
+    // de espera en cuanto se refresca `citas`.
+    async finalizarPaciente(paciente) {
+      if (!paciente) return
+
+      const cita = this.obtenerCitaHoyActiva(paciente)
+      if (!cita) {
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'info',
+            title: 'Sin cita activa hoy',
+            text: 'Este paciente no tiene una cita de hoy que finalizar (con el médico/especialidad filtrados).'
+          })
+        }
+        return
+      }
+
+      // Confirmación antes de finalizar, para evitar clics accidentales
+      let confirmado = true
+      if (window.Swal) {
+        const resultado = await window.Swal.fire({
+          icon: 'warning',
+          title: '¿Finalizar esta consulta?',
+          text: `${this.nombreCompleto(paciente)} se quitará de la lista de espera de hoy.`,
+          showCancelButton: true,
+          confirmButtonText: 'Sí, finalizar',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#dc2626'
+        })
+        confirmado = resultado.isConfirmed
+      } else {
+        confirmado = window.confirm(`¿Finalizar la consulta de ${this.nombreCompleto(paciente)}?`)
+      }
+      if (!confirmado) return
+
+      this.finalizandoId = paciente.id
+      try {
+        await axios.patch(`/api/citas/${cita.id}/estado`, { estado: 'Finalizada' })
+
+        // Refresca citas para que pacientesFiltrados excluya esta cita ya
+        await this.obtenerCitas()
+
+        // Si el paciente finalizado era el activo en el panel izquierdo,
+        // cae al siguiente de la cola (o al vacío si no queda nadie)
+        if (this.pacienteActivo && this.pacienteActivo.id === paciente.id) {
+          this.pacienteActivo = this.pacientesFiltrados[0] || null
+        }
+
+        if (window.Swal) {
+          window.Swal.fire({
+            toast: true, position: 'top-end', icon: 'success',
+            title: 'Consulta finalizada', showConfirmButton: false,
+            timer: 1400, timerProgressBar: true
+          })
+        }
+      } catch (error) {
+        console.error('Error al finalizar la consulta:', error)
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'error',
+            title: 'No se pudo finalizar la consulta',
+            text: error.response?.data?.message || 'Intenta de nuevo.'
+          })
+        }
+      } finally {
+        this.finalizandoId = null
       }
     },
 
@@ -1334,20 +1435,17 @@ export default {
       this.modal.paciente = paciente
 
       // Si se abre la edición rápida de signos vitales, precarga los valores actuales
-            if (tipo === 'triage') {
-        // Si el paciente NO tiene cita hoy (llegó por búsqueda), es una
-        // consulta nueva: el formulario arranca vacío, sin arrastrar
-        // signos vitales de una visita anterior.
-        const t = this.tieneCitaHoy(paciente) ? (this.ultimoTriage(paciente) || {}) : {}
+           if (tipo === 'triage') {
+        // Inicializa el formulario completamente vacío para una nueva captura
         this.triageForm = {
-          presion:                  t.presion                  || '',
-          saturacion:               t.saturacion               ?? null,
-          temperatura:              t.temperatura               ?? null,
-          frecuencia_cardiaca:      t.frecuencia_cardiaca       ?? null,
-          frecuencia_respiratoria:  t.frecuencia_respiratoria   ?? null,
-          peso:                     t.peso                      ?? null,
-          talla:                    t.talla                     ?? null,
-          motivo_consulta:          ''   // siempre vacío: es un nuevo motivo/consulta, no se arrastra el anterior
+          presion: '',
+          saturacion: null,
+          temperatura: null,
+          frecuencia_cardiaca: null,
+          frecuencia_respiratoria: null,
+          peso: null,
+          talla: null,
+          motivo_consulta: ''
         }
       }
 
@@ -2064,6 +2162,7 @@ export default {
 }
 .cc-icon-btn:hover  { transform: translateY(-1px); }
 .cc-icon-btn:active { transform: scale(0.94); }
+.cc-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 /* Ojo — azul eléctrico como en la foto */
 .cc-icon-btn--view       { background: #f0f2f5; color: #2563eb; }
@@ -2081,9 +2180,9 @@ export default {
 .cc-icon-btn--edit       { background: #f0f2f5; color: #d97706; }
 .cc-icon-btn--edit:hover { background: #fef3c7; }
 
-/* Eliminar — rojo (por si se usa en otro lugar) */
+/* Basura — rojo. Finaliza la cita de hoy y quita al paciente de la lista */
 .cc-icon-btn--danger       { background: #f0f2f5; color: #ef4444; }
-.cc-icon-btn--danger:hover { background: #fee2e2; }
+.cc-icon-btn--danger:hover:not(:disabled) { background: #fee2e2; }
 
 /* ─── Overlay y modales ─── */
 /* Fondo semitransparente que cubre toda la pantalla */
