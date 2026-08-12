@@ -85,8 +85,6 @@ class TriageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    
-
     public function store(Request $request)
     {
         // 1. Validamos los parámetros que vienen desde el formulario
@@ -106,8 +104,22 @@ class TriageController extends Controller
             "Temperatura Corporal: " . ($request->temperatura ? $request->temperatura . '°C' : 'No registrada')
         ];
 
-        // 3. Inicializamos una prioridad por defecto preventiva
-        $estadoDeterminado = 'verde'; 
+        // 3. Inicializamos una prioridad por defecto preventiva.
+        // FIX: la columna `estado` en la BD es un ENUM('Rojo','Amarillo','Verde')
+        // con mayúscula inicial. Usar 'verde' en minúsculas truena el insert
+        // con "Data truncated for column 'estado'" (SQLSTATE[01000] 1265).
+        $estadoDeterminado = 'Verde';
+
+        // Mapeo defensivo de lo que devuelva la IA hacia los ÚNICOS 3 valores
+        // que existen en el ENUM. Si la IA regresa un nivel que no reconocemos
+        // (ej. 'naranja'), lo tratamos como 'Rojo' para no perder urgencia
+        // por un valor que ni siquiera es válido en la base de datos.
+        $mapaEstados = [
+            'rojo'     => 'Rojo',
+            'naranja'  => 'Rojo',
+            'amarillo' => 'Amarillo',
+            'verde'    => 'Verde',
+        ];
 
         try {
             // Instanciamos tu servicio y llamamos al método sugerirMedicamentoLibre que procesa el JSON de 8 fases
@@ -115,12 +127,15 @@ class TriageController extends Controller
             $resultadoIa = $iaService->sugerirMedicamentoLibre($datosClinicos);
 
             if ($resultadoIa && isset($resultadoIa['triage']['nivel'])) {
-                // Obtenemos la clasificación clínica real devuelta por la IA: VERDE, AMARILLO, NARANJA o ROJO
-                $estadoDeterminado = strtolower($resultadoIa['triage']['nivel']); 
+                // Obtenemos la clasificación clínica real devuelta por la IA
+                // (puede venir como VERDE, Amarillo, rojo, etc.) y la
+                // normalizamos al valor exacto que acepta el ENUM.
+                $nivelIa = strtolower($resultadoIa['triage']['nivel']);
+                $estadoDeterminado = $mapaEstados[$nivelIa] ?? 'Verde';
             }
         } catch (\Exception $e) {
             \Log::error("Error de comunicación con DeepSeek al realizar Triage: " . $e->getMessage());
-            // Si la IA falla, continuará con 'verde' de forma segura y no romperá el flujo del sistema
+            // Si la IA falla, continuará con 'Verde' de forma segura y no romperá el flujo del sistema
         }
 
         // 4. Guardamos en la base de datos con el estado asignado dinámicamente por tu IA
@@ -130,7 +145,7 @@ class TriageController extends Controller
             'saturacion'  => $request->saturacion,
             'temperatura' => $request->temperatura,
             'sintomas'    => $request->sintomas,
-            'estado'      => $estadoDeterminado, // Aquí se guarda: 'verde', 'amarillo', 'naranja' o 'rojo'
+            'estado'      => $estadoDeterminado, // Aquí se guarda: 'Rojo', 'Amarillo' o 'Verde'
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -142,6 +157,7 @@ class TriageController extends Controller
             'estado'  => $estadoDeterminado
         ], 201);
     }
+
     /**
      * Display the specified resource.
      */
@@ -149,7 +165,7 @@ class TriageController extends Controller
     {
         // Traemos el Paciente, sus triages, y cargamos sus alertas y recomendaciones asociadas
         return Paciente::with([
-            'triages', 
+            'triages',
             'alertas',          // Relación hasMany en Paciente
             'recomendaciones'   // Relación hasManyThrough o similar en tu modelo Paciente
         ])->find($id);
@@ -177,6 +193,107 @@ class TriageController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Guarda (o actualiza) los signos vitales de un paciente desde el
+     * modal rápido de "Editar signos vitales" en panelatencion.vue.
+     *
+     * - Si el paciente ya tiene un triage, se actualiza el más reciente
+     *   (misma lógica que usa el frontend con ultimoTriage()).
+     * - Si el paciente no tiene ningún triage todavía, se crea uno nuevo
+     *   con un triage_codigo generado con el mismo formato que usa
+     *   PacienteController@store (TRI-AÑO-0001).
+     *
+     * Ruta: POST /triage/guardar/{id?}  (nombre: triage.guardarRapido)
+     * El {id} es el id del paciente. También se acepta como
+     * 'paciente_id' en el body por si no viene en la URL.
+     */
+    public function guardarTriageRapido(Request $request, $id = null)
+    {
+        $pacienteId = $id ?? $request->input('paciente_id');
+
+        if (!$pacienteId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Falta el id del paciente.',
+            ], 422);
+        }
+
+        $paciente = Paciente::findOrFail($pacienteId);
+
+        $data = $request->validate([
+            'presion'                 => 'nullable|string|max:20',
+            'saturacion'              => 'nullable|numeric|min:0|max:100',
+            'temperatura'             => 'nullable|numeric',
+            'frecuencia_cardiaca'     => 'nullable|numeric',
+            'frecuencia_respiratoria' => 'nullable|numeric',
+            'peso'                    => 'nullable|numeric',
+            'talla'                   => 'nullable|numeric',
+        ]);
+
+        try {
+            $triage = DB::transaction(function () use ($paciente, $data) {
+                // Tomamos el triage más reciente del paciente (igual que
+                // ultimoTriage() en el frontend)
+                $triageExistente = $paciente->triages()->latest('id')->first();
+
+                if ($triageExistente) {
+                    $triageExistente->update($data);
+                    return $triageExistente;
+                }
+
+                // No tenía triage: creamos uno nuevo con código propio
+                $claveTriage = $this->generarCodigoTriage();
+
+                return Triage::create(array_merge($data, [
+                    'triage_codigo'   => $claveTriage,
+                    'paciente_id'     => $paciente->id,
+                    'codigo_paciente' => $paciente->paciente_id,
+                    // FIX: la columna `estado` es ENUM('Rojo','Amarillo','Verde')
+                    // con mayúscula inicial. 'verde' en minúsculas truena el
+                    // insert con "Data truncated for column 'estado'"
+                    // (SQLSTATE[01000] 1265) y por eso este endpoint regresaba 500.
+                    'estado'          => 'Verde', // nivel de triage por defecto; se ajusta desde el panel de edición
+                ]));
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Signos vitales actualizados correctamente',
+                'triage'  => $triage,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error en TriageController@guardarTriageRapido: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudieron guardar los signos vitales.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Genera un código TRI-AAAA-NNNN con reinicio anual, igual formato
+     * que el usado en PacienteController@generarCodigoConReinicioAnual,
+     * pero aplicado directamente al modelo Triage con lockForUpdate para
+     * evitar duplicados si dos triages se crean al mismo tiempo.
+     */
+    private function generarCodigoTriage(): string
+    {
+        $anioActual = date('Y');
+
+        $ultimoRegistro = Triage::where('triage_codigo', 'LIKE', "TRI-{$anioActual}-%")
+            ->orderBy('id', 'desc')
+            ->lockForUpdate()
+            ->first();
+
+        $numero = $ultimoRegistro
+            ? ((int) substr($ultimoRegistro->triage_codigo, -4)) + 1
+            : 1;
+
+        return 'TRI-' . $anioActual . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
     }
 
     public function analizarIA(int $pacienteId, IAClinicaService $ia): JsonResponse
@@ -237,7 +354,4 @@ class TriageController extends Controller
             'fuente'        => $resultado['fuente'],
         ]);
     }
-
-
-
 }

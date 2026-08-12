@@ -9,25 +9,30 @@ use Carbon\Carbon;
 class ActualizarCitasInasistencias extends Command
 {
     protected $signature = 'app:actualizar-citas-inasistencias';
-    protected $description = 'Marca como Inasistencia las citas que ya pasaron de su hora programada';
+    protected $description = 'Marca como Inasistencia las citas que ya pasaron de su hora programada, con un margen de tolerancia';
 
     public function handle()
     {
         // Forzamos la hora exacta actual de México
         $ahora = Carbon::now('America/Mexico_City');
         $fechaHoy = $ahora->format('Y-m-d');
-        
-        // Si quieres darles una tolerancia (ej. 15 o 30 minutos después de su hora), 
-        // puedes usar ->subMinutes(15). Si quieres que sea exactamente al cumplirse la hora, déjalo solo con $ahora->format('H:i:s')
-        $horaActual = $ahora->format('H:i:s');
 
-        $this->info("Hora actual de México: " . $horaActual);
-        $this->info("Buscando citas de hoy ($fechaHoy) con hora <= $horaActual");
+        // Margen de tolerancia: una cita solo se marca como Inasistencia
+        // si ya pasó 1 hora de su hora programada. Sin esto, una cita
+        // creada "ahora mismo" (ej. al agregar un paciente desde la
+        // búsqueda en ConsultaClinica.vue, que usa la hora actual como
+        // hora de la cita) se marcaba Inasistencia en la siguiente
+        // corrida del cron (cada 10 min), aunque el médico apenas la
+        // fuera a atender.
+        $limite = $ahora->copy()->subHour()->format('H:i:s');
 
-        // Buscamos citas agendadas de hoy cuya hora ya pasó
+        $this->info("Hora actual de México: " . $ahora->format('H:i:s'));
+        $this->info("Buscando citas de hoy ($fechaHoy) con hora <= $limite (1 hora de tolerancia)");
+
+        // Buscamos citas agendadas de hoy cuya hora ya pasó, dando margen
         $citas = Cita::where('estado', 'Agendado')
             ->where('fecha', $fechaHoy)
-            ->where('hora', '<=', $horaActual)
+            ->where('hora', '<=', $limite)
             ->get();
 
         if ($citas->isEmpty()) {

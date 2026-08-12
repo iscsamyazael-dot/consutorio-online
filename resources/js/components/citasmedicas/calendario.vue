@@ -1,4 +1,6 @@
 <template>
+  <!-- // cSpell:disable -->
+
   <div class="calendar-container">
 
     <!-- TOPBAR -->
