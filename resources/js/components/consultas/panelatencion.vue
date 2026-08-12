@@ -339,10 +339,11 @@
                 v-if="modal.paciente && !tieneCitaHoy(modal.paciente)"
                 class="cc-triage-aviso"
               >
-                <i class="ti ti-info-circle" aria-hidden="true"></i>
-                Este paciente no tiene cita para hoy. Al guardar, se agregará al final de la
-                <strong>lista de espera de hoy</strong> usando el médico y la especialidad
-                seleccionados en los filtros de la tabla.
+                <i class="ti ti-info-circle" aria-hidden="true">
+                </i>
+                <p> Este paciente no tiene cita para hoy, al guardar 
+                 se agregará al final de la
+                <strong>lista de espera de hoy.</strong></p>
               </div>
 
               <!-- Referencia visual del paciente + badge de estado global del triaje -->
