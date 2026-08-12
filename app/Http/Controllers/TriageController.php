@@ -252,9 +252,11 @@ class TriageController extends Controller
                         }
                     }
 
-                    $estado = $estado
-                        ?? optional($paciente->triages()->latest('id')->first())->estado
-                        ?? 'leve';
+                    // Si no hay estado explícito ni evaluado por la IA, asignamos uno por defecto ('leve')
+                    // o puedes cambiarlo según tus requerimientos clínicos.
+                    if (!$estado) {
+                        $estado = 'leve'; 
+                    }
                 }
 
                 return Triage::create(array_merge($data, [

@@ -95,7 +95,7 @@ export default {
         ultimoTriage() {
             const triages = this.paciente?.triages;
             if (Array.isArray(triages) && triages.length > 0) {
-                return triages[0];
+                return triages[triages.length - 1];
             }
             return null;
         },

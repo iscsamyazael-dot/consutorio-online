@@ -1444,12 +1444,9 @@ export default {
         // un obtenerPacientes() completo
         if (resultado?.triage) {
           if (!paciente.triages) paciente.triages = []
-          const idx = paciente.triages.findIndex(t => t.id === resultado.triage.id)
-          if (idx !== -1) {
-            paciente.triages[idx] = resultado.triage
-          } else {
-            paciente.triages.push(resultado.triage)
-          }
+          
+          // Siempre se agrega como un nuevo registro al historial local
+          paciente.triages.push(resultado.triage)
         }
 
         // Refresca la lista completa para mantener todo sincronizado
