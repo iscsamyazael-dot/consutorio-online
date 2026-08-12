@@ -18,16 +18,16 @@ class ActualizarCitasInasistencias extends Command
         $fechaHoy = $ahora->format('Y-m-d');
 
         // Margen de tolerancia: una cita solo se marca como Inasistencia
-        // si ya pasaron 30 minutos de su hora programada. Sin esto, una
-        // cita creada "ahora mismo" (ej. al agregar un paciente desde la
+        // si ya pasó 1 hora de su hora programada. Sin esto, una cita
+        // creada "ahora mismo" (ej. al agregar un paciente desde la
         // búsqueda en ConsultaClinica.vue, que usa la hora actual como
         // hora de la cita) se marcaba Inasistencia en la siguiente
         // corrida del cron (cada 10 min), aunque el médico apenas la
         // fuera a atender.
-        $limite = $ahora->copy()->subMinutes(30)->format('H:i:s');
+        $limite = $ahora->copy()->subHour()->format('H:i:s');
 
         $this->info("Hora actual de México: " . $ahora->format('H:i:s'));
-        $this->info("Buscando citas de hoy ($fechaHoy) con hora <= $limite (30 min de tolerancia)");
+        $this->info("Buscando citas de hoy ($fechaHoy) con hora <= $limite (1 hora de tolerancia)");
 
         // Buscamos citas agendadas de hoy cuya hora ya pasó, dando margen
         $citas = Cita::where('estado', 'Agendado')
