@@ -164,11 +164,41 @@ class TriageController extends Controller
 
     public function show(string $id)
     {
-        return Paciente::with([
-            'triages',
+        // return Paciente::with([
+        //     'triages',
+        //     'alertas',
+        //     'recomendaciones'
+        $paciente = Paciente::with([
+            'triages' => fn($q) => $q->latest(),
             'alertas',
-            'recomendaciones'
+            'recomendaciones',
+            'consultas' => fn($q) => $q->latest()->limit(1),
         ])->find($id);
+
+        if (!$paciente) {
+            return response()->json(['error' => 'Paciente no encontrado'], 404);
+        }
+
+        $consulta = $paciente->consultas->first();
+
+        return response()->json([
+            'id'              => $paciente->id,
+            'nombre'          => trim($paciente->nombre . ' ' . ($paciente->apellido ?? '')),
+            'estado_consulta' => $consulta->estado_consulta ?? null,
+            'triages'         => $paciente->triages->map(function ($t) {
+                return [
+                    'id'          => $t->id,
+                    'sintomas'    => $t->sintomas ?? $t->motivo_consulta ?? 'Sin síntomas',
+                    'presion'     => $t->presion,
+                    'saturacion'  => $t->saturacion,
+                    'temperatura' => $t->temperatura,
+                    'estado'      => $t->estado ?? 'leve',
+                    'created_at'  => $t->created_at,
+                ];
+            })->values(),
+            'alertas'         => $paciente->alertas,
+            'recomendaciones' => $paciente->recomendaciones,
+        ]);
     }
 
     public function edit(string $id) {}
