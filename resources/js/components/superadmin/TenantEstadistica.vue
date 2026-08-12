@@ -174,12 +174,15 @@ export default {
     },
 
      mounted(){
-        this.obtenerTotalClientes();
-        this.obtenerTotalActivos();
-        this.obtenerTotalSuspendidos();
+        this.cargarEstadisticas();
     },
 
     methods:{
+        cargarEstadisticas(){
+            this.obtenerTotalClientes();
+            this.obtenerTotalActivos();
+            this.obtenerTotalSuspendidos();
+        },
         async obtenerTotalClientes() {
             try {
                 const response = await ApiService.get('TotalInquilinos');

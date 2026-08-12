@@ -19,7 +19,7 @@
     </div>
 
     <!-- Estadísticas superiores -->
-    <stats-counters :total="totalCount" :active="activeCount" :inactive="inactiveCount"></stats-counters>
+    <stats-counters ref="stats" :total="totalCount" :active="activeCount" :inactive="inactiveCount"></stats-counters>
 
     <!-- Contenedor Principal (Cambia dinámicamente entre Lista y Formulario) -->
     <div class="card">
@@ -105,14 +105,19 @@ export default {
     },
     async handleTenantCreated(nuevoCliente) {
       try {
-        // AJUSTA el método/endpoint según lo que exponga tu ApiService real.
-        await ApiService.post('inquilinos', nuevoCliente);
+        // Nota: ya no necesitas hacer el post aquí si el hijo ya lo hizo, 
+        // solo refrescamos.
         this.volverALista();
+        
+        // 1. Refrescamos la lista
         await this.$nextTick();
         this.$refs.tenantList?.obtenerClientes();
+        
+        // 2. REFRESCO DE ESTADÍSTICAS (¡Aquí está la magia!)
+        this.$refs.stats?.cargarEstadisticas();
+        
       } catch (error) {
         console.error('Error al registrar cliente:', error);
-        // TODO: mostrar toast/error visible al usuario
       }
     },
     async handleTenantUpdated(clienteActualizado) {
@@ -122,6 +127,8 @@ export default {
       this.volverALista();
       await this.$nextTick();
       this.$refs.tenantList?.obtenerClientes();
+      // 2. REFRESCO DE ESTADÍSTICAS
+      this.$refs.stats?.cargarEstadisticas();
 
       } catch (error) {
         console.error('Error al actualizar la vista:', error);

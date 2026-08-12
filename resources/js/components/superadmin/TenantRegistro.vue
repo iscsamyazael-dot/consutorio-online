@@ -68,8 +68,17 @@
           Al confirmar se creará el registro en tenants y la base de datos física del consultorio.
         </div>
         <div class="form-actions">
-          <button class="btn btn-ghost" @click="currentStep = 2">Atrás</button>
-          <div class="right"><button class="btn btn-primary" @click="guardarCliente()">Confirmar y registrar</button></div>
+          <button class="btn btn-ghost" @click="currentStep = 2" :disabled="cargando">Atrás</button>
+          <div class="right">
+            <button class="btn btn-primary" @click="guardarCliente()" :disabled="cargando">
+              <span v-if="cargando" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              {{ mensajeCarga }}
+            </button>
+          </div>
+        </div>
+        <!-- Toast de Notificación -->
+        <div v-if="showToast" class="toast-notification">
+          {{ toastMessage }}
         </div>
       </div>
     </template>
@@ -134,8 +143,9 @@ export default {
   },
   data() {
     return {
-     cliente:null,
-
+      cliente:null,
+      cargando:false,
+      mensajeCarga: 'Confirmar y registrar',
       currentStep: 1,
       showToast: false,
       toastMessage: '',
@@ -169,7 +179,11 @@ export default {
   },
   computed: {
     generatedDbName() {
-      const cleanName = (this.form.name || 'Cliente').trim().replace(/\s+/g, '_');
+      // Tomamos el campo correcto dependiendo de si estás creando o editando
+      const nombre = this.guardarRegistro?.nombre_consultorio || this.form?.nombre_consultorio || 'Cliente';
+      const cleanName = nombre.trim().toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Limpia acentos por si acaso
+        .replace(/\s+/g, '_');                           // Cambia espacios por guiones bajos
       return `medico_online_${cleanName}`;
     },
     hasUnsavedChanges() {
@@ -264,16 +278,28 @@ export default {
 
     async guardarCliente(){
       try {
+          //Mensaje de espera mientras se crea la base de datos
+          this.cargando = true;
+          this.mensajeCarga = 'Creando la base de datos, espere...'
+          // Aseguramos que el db_name calculado se vaya en el objeto que mandamos al backend
+          this.guardarRegistro.db_name = this.generatedDbName;
+
           const response = await ApiService.post('inquilinos', this.guardarRegistro);
           console.log('Cliente guardado:', response.data);
+
           // Activamos el Toast de éxito
-          this.toastMessage = '¡Cliente Registrado con éxito!';
+          this.mensajeCarga = '¡Registro completado!'
+          this.toastMessage = '¡Cliente Registrado y Base de Datos creada con éxito!';
           this.showToast = true;
+
           // Opcional: Esperar un momento para que se alcance a ver el toast y regresar o limpiar
           setTimeout(() => {
               this.showToast = false;
-              this.$emit('tenant-updated', this.cliente); // O el evento que uses para volver a la lista
-          }, 1200);
+              this.cargando = false;
+              this.mensajeCarga = 'Confirmar y registrar';
+              this.$emit('tenant-updated', response.data.data.cliente); // O el evento que uses para volver a la lista
+          }, 1500);
+
       } catch (error) {
           console.error('Error al guardar el cliente:', error);
           // Toast de error por si algo falla
