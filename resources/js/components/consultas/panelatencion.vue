@@ -24,10 +24,10 @@
           <span class="cc-mono">{{ pacienteActivo.paciente_id }}</span>
         </div>
       </div>
-      <!-- Estado vacío cuando no hay paciente seleccionado -->
+      <!-- Estado vacío cuando no hay paciente seleccionado / no hay citas hoy -->
       <div v-else class="cc-hero">
         <div class="cc-hero__info">
-          <p class="cc-hero__name" style="color: #9ca3af;">Sin paciente seleccionado</p>
+          <p class="cc-hero__name" style="color: #9ca3af;">{{ mensajeSinPaciente }}</p>
         </div>
       </div>
 
@@ -699,7 +699,10 @@ export default {
       // especialidad y fecha; se cruza con "pacientes" por id para poder filtrar.
       citas: [],
 
-      // Paciente mostrado en el panel izquierdo
+      // Paciente mostrado en el panel izquierdo.
+      // Ya NO se asigna automáticamente a pacientes[0] en obtenerPacientes();
+      // la selección inicial la decide inicializarPacienteActivo(), que usa
+      // la cola de HOY (pacientesFiltrados), no la lista completa de pacientes.
       pacienteActivo: null,
 
       // Texto escrito en el buscador (filtra por nombre o folio, EN TODOS
@@ -853,6 +856,14 @@ export default {
     //   (cruzando contra las citas de cada paciente) y ordena por hora de
     //   cita, para que la lista de hoy quede en orden cronológico real y
     //   cualquier paciente "colado" desde la búsqueda caiga al final.
+    //
+    // FIX: se agregó estadoOk para excluir citas ya cerradas (Finalizada,
+    // Cancelada, Inasistencia) del cruce. Antes solo se comparaba
+    // medico/especialidad/fecha, así que un paciente cuya cita ya se
+    // marcó 'Finalizada' (vía PATCH /api/citas/{id}/estado desde
+    // ConsultaInteligente.vue) seguía "calificando" para la lista de
+    // espera y nunca desaparecía de la tabla aunque el backend ya
+    // hubiera guardado el nuevo estado correctamente.
     pacientesFiltrados() {
       const q = this.busqueda.trim().toLowerCase()
 
@@ -874,8 +885,10 @@ export default {
               (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoSeleccionado)
             const especialidadOk = !this.especialidadSeleccionada ||
               (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadSeleccionada)
-            const fechaOk = !this.fechaFiltro || c.fecha === this.fechaFiltro
-            return medicoOk && especialidadOk && fechaOk
+            const fechaOk = !this.fechaFiltro || this.fechaSolo(c.fecha) === this.fechaFiltro
+            // Excluye citas ya cerradas de la lista de espera del día
+            const estadoOk = !['Cancelada', 'Finalizada'].includes(c.estado)
+            return medicoOk && especialidadOk && fechaOk && estadoOk
           })
         })
       }
@@ -893,6 +906,21 @@ export default {
       }
 
       return lista
+    },
+
+    // Mensaje mostrado en el panel izquierdo cuando no hay pacienteActivo.
+    // Si no hay ningún paciente en pacientesFiltrados (típicamente porque
+    // no hay citas para la fecha filtrada), se avisa explícitamente en vez
+    // de dejar un genérico "Sin paciente seleccionado" que puede confundirse
+    // con un error.
+    mensajeSinPaciente() {
+      if (this.pacientesFiltrados.length === 0 && this.fechaFiltro) {
+        const esHoy = this.fechaFiltro === this.obtenerFechaHoyISO()
+        return esHoy
+          ? 'No hay citas para hoy'
+          : `No hay citas para el ${this.formatearFecha(this.fechaFiltro)}`
+      }
+      return 'Sin paciente seleccionado'
     },
 
     // ── Evaluación de signos vitales del modal de edición rápida de triage ──
@@ -952,11 +980,14 @@ export default {
     }
   },
 
-  // Al montar el componente, carga pacientes y citas
-  mounted() {
-    this.obtenerPacientes()
-    this.obtenerCitas()
+  // Al montar el componente, carga pacientes y citas.
+  // Se espera a que ambas peticiones terminen (Promise.all) antes de
+  // inicializar el paciente activo, porque este depende de pacientesFiltrados,
+  // que a su vez depende de que tanto `pacientes` como `citas` ya estén cargados.
+  async mounted() {
+    await Promise.all([this.obtenerPacientes(), this.obtenerCitas()])
     this.cargarSeleccionPrevia()
+    this.inicializarPacienteActivo()
   },
 
   methods: {
@@ -971,14 +1002,15 @@ export default {
         const response = await ApiService.get('/pacientes')
         this.pacientes = response.data
 
-        // Si ya había un paciente activo en el panel, refresca su referencia
-        // con los datos nuevos en lugar de reemplazarlo por el primero de la
-        // lista (evita "perder" la selección al guardar cambios).
+        // Si ya había un paciente activo en el panel (ej. tras guardar
+        // cambios), refresca su referencia con los datos nuevos. Ya NO se
+        // asigna automáticamente pacientes[0] cuando no hay paciente activo:
+        // la selección inicial la decide inicializarPacienteActivo(), que
+        // usa la cola de HOY (pacientesFiltrados) en vez de la lista
+        // completa de pacientes.
         if (this.pacienteActivo) {
           const actualizado = this.pacientes.find(p => p.id === this.pacienteActivo.id)
-          this.pacienteActivo = actualizado || this.pacientes[0] || null
-        } else if (this.pacientes.length > 0) {
-          this.pacienteActivo = this.pacientes[0]
+          this.pacienteActivo = actualizado || null
         }
       } catch (error) {
         console.error('Error al obtener pacientes:', error)
@@ -1048,12 +1080,43 @@ export default {
       return obtenerFechaHoyISO()
     },
 
+    // Selecciona como paciente activo inicial al primero de la lista de
+    // espera de HOY (pacientesFiltrados, ya viene ordenada por hora de
+    // cita), no a cualquier paciente de la base de datos completa. Si no
+    // hay citas para la fecha actualmente filtrada, el panel queda vacío
+    // y muestra mensajeSinPaciente ("No hay citas para hoy").
+    inicializarPacienteActivo() {
+      this.pacienteActivo = this.pacientesFiltrados[0] || null
+    },
+
+    // Normaliza cualquier valor de fecha que venga del backend a "YYYY-MM-DD".
+    // El backend a veces serializa la columna `fecha` como datetime completo
+    // (ej. "2026-08-11T00:00:00.000000Z") en vez de solo la fecha; comparar
+    // eso con "===" contra un "YYYY-MM-DD" nunca hace match, por lo que las
+    // citas de hoy "existían" pero no aparecían en la lista filtrada.
+    fechaSolo(fecha) {
+      if (!fecha) return ''
+      return String(fecha).slice(0, 10)
+    },
+
     // ¿Este paciente ya tiene una cita para hoy (no cancelada)?
+    // Revisa si tiene cita hoy PARA el médico/especialidad
+    // actualmente seleccionados en los filtros de la tabla.
+    // Si tiene cita hoy pero con otro médico/especialidad, debe tratarse
+    // como "no tiene cita [con este filtro]" para que se le cree una nueva.
     tieneCitaHoy(paciente) {
       if (!paciente) return false
       const hoy = this.obtenerFechaHoyISO()
       const citasDelPaciente = this.citasPorPacienteId.get(paciente.id) || []
-      return citasDelPaciente.some(c => c.fecha === hoy && c.estado !== 'Cancelada')
+      return citasDelPaciente.some(c => {
+        const fechaOk = this.fechaSolo(c.fecha) === hoy
+        const estadoOk = c.estado !== 'Cancelada'
+        const medicoOk = !this.medicoSeleccionado ||
+          (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoSeleccionado)
+        const especialidadOk = !this.especialidadSeleccionada ||
+          (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadSeleccionada)
+        return fechaOk && estadoOk && medicoOk && especialidadOk
+      })
     },
 
     // Hora de la cita de un paciente para la fecha actualmente filtrada
@@ -1062,7 +1125,7 @@ export default {
       const fechaObjetivo = this.fechaFiltro || this.obtenerFechaHoyISO()
       const citasDelPaciente = this.citasPorPacienteId.get(p.id) || []
       const relevantes = citasDelPaciente.filter(
-        c => c.fecha === fechaObjetivo && c.estado !== 'Cancelada'
+        c => this.fechaSolo(c.fecha) === fechaObjetivo && c.estado !== 'Cancelada'
       )
       if (!relevantes.length) return null
       return relevantes.map(c => c.hora).sort()[0]
@@ -1203,16 +1266,12 @@ export default {
       this.editMode = false
     },
 
-    // Guarda los cambios del panel izquierdo. Ahora hace DOS llamadas
+    // Guarda los cambios del panel izquierdo. Hace DOS llamadas
     // separadas al backend, porque cada una vive en una tabla distinta:
     //  1) /triage/guardar/{id} → motivo_consulta, sintomas y estado de triage
     //     (Rojo/Amarillo/Verde), que se guardan en la tabla `triage`.
     //  2) PUT /pacientes/{id} → el estado general del paciente
     //     (En espera/Atendido/Cancelado), que vive en la tabla `pacientes`.
-    // Antes todo esto se metía dentro de pacienteActivo.triages y se
-    // mandaba junto por el PUT de pacientes, pero el backend ignora ese
-    // campo por diseño (ver PacienteController@update), así que nunca
-    // llegaba a guardarse el triage.
     async guardarEdicion() {
       if (!this.pacienteActivo) return
 
@@ -1258,8 +1317,11 @@ export default {
       this.modal.paciente = paciente
 
       // Si se abre la edición rápida de signos vitales, precarga los valores actuales
-      if (tipo === 'triage') {
-        const t = this.ultimoTriage(paciente) || {}
+            if (tipo === 'triage') {
+        // Si el paciente NO tiene cita hoy (llegó por búsqueda), es una
+        // consulta nueva: el formulario arranca vacío, sin arrastrar
+        // signos vitales de una visita anterior.
+        const t = this.tieneCitaHoy(paciente) ? (this.ultimoTriage(paciente) || {}) : {}
         this.triageForm = {
           presion:                  t.presion                  || '',
           saturacion:               t.saturacion               ?? null,

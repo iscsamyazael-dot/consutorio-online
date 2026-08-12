@@ -43,8 +43,6 @@ class TriageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    
-
     public function store(Request $request)
     {
         // 1. Validamos los parámetros que vienen desde el formulario
@@ -64,8 +62,22 @@ class TriageController extends Controller
             "Temperatura Corporal: " . ($request->temperatura ? $request->temperatura . '°C' : 'No registrada')
         ];
 
-        // 3. Inicializamos una prioridad por defecto preventiva
-        $estadoDeterminado = 'verde'; 
+        // 3. Inicializamos una prioridad por defecto preventiva.
+        // FIX: la columna `estado` en la BD es un ENUM('Rojo','Amarillo','Verde')
+        // con mayúscula inicial. Usar 'verde' en minúsculas truena el insert
+        // con "Data truncated for column 'estado'" (SQLSTATE[01000] 1265).
+        $estadoDeterminado = 'Verde';
+
+        // Mapeo defensivo de lo que devuelva la IA hacia los ÚNICOS 3 valores
+        // que existen en el ENUM. Si la IA regresa un nivel que no reconocemos
+        // (ej. 'naranja'), lo tratamos como 'Rojo' para no perder urgencia
+        // por un valor que ni siquiera es válido en la base de datos.
+        $mapaEstados = [
+            'rojo'     => 'Rojo',
+            'naranja'  => 'Rojo',
+            'amarillo' => 'Amarillo',
+            'verde'    => 'Verde',
+        ];
 
         try {
             // Instanciamos tu servicio y llamamos al método sugerirMedicamentoLibre que procesa el JSON de 8 fases
@@ -73,12 +85,15 @@ class TriageController extends Controller
             $resultadoIa = $iaService->sugerirMedicamentoLibre($datosClinicos);
 
             if ($resultadoIa && isset($resultadoIa['triage']['nivel'])) {
-                // Obtenemos la clasificación clínica real devuelta por la IA: VERDE, AMARILLO, NARANJA o ROJO
-                $estadoDeterminado = strtolower($resultadoIa['triage']['nivel']); 
+                // Obtenemos la clasificación clínica real devuelta por la IA
+                // (puede venir como VERDE, Amarillo, rojo, etc.) y la
+                // normalizamos al valor exacto que acepta el ENUM.
+                $nivelIa = strtolower($resultadoIa['triage']['nivel']);
+                $estadoDeterminado = $mapaEstados[$nivelIa] ?? 'Verde';
             }
         } catch (\Exception $e) {
             \Log::error("Error de comunicación con DeepSeek al realizar Triage: " . $e->getMessage());
-            // Si la IA falla, continuará con 'verde' de forma segura y no romperá el flujo del sistema
+            // Si la IA falla, continuará con 'Verde' de forma segura y no romperá el flujo del sistema
         }
 
         // 4. Guardamos en la base de datos con el estado asignado dinámicamente por tu IA
@@ -88,7 +103,7 @@ class TriageController extends Controller
             'saturacion'  => $request->saturacion,
             'temperatura' => $request->temperatura,
             'sintomas'    => $request->sintomas,
-            'estado'      => $estadoDeterminado, // Aquí se guarda: 'verde', 'amarillo', 'naranja' o 'rojo'
+            'estado'      => $estadoDeterminado, // Aquí se guarda: 'Rojo', 'Amarillo' o 'Verde'
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -100,6 +115,7 @@ class TriageController extends Controller
             'estado'  => $estadoDeterminado
         ], 201);
     }
+
     /**
      * Display the specified resource.
      */
@@ -107,7 +123,7 @@ class TriageController extends Controller
     {
         // Traemos el Paciente, sus triages, y cargamos sus alertas y recomendaciones asociadas
         return Paciente::with([
-            'triages', 
+            'triages',
             'alertas',          // Relación hasMany en Paciente
             'recomendaciones'   // Relación hasManyThrough o similar en tu modelo Paciente
         ])->find($id);
@@ -192,7 +208,11 @@ class TriageController extends Controller
                     'triage_codigo'   => $claveTriage,
                     'paciente_id'     => $paciente->id,
                     'codigo_paciente' => $paciente->paciente_id,
-                    'estado'          => 'verde', // nivel de triage por defecto; se ajusta desde el panel de edición
+                    // FIX: la columna `estado` es ENUM('Rojo','Amarillo','Verde')
+                    // con mayúscula inicial. 'verde' en minúsculas truena el
+                    // insert con "Data truncated for column 'estado'"
+                    // (SQLSTATE[01000] 1265) y por eso este endpoint regresaba 500.
+                    'estado'          => 'Verde', // nivel de triage por defecto; se ajusta desde el panel de edición
                 ]));
             });
 
@@ -292,7 +312,4 @@ class TriageController extends Controller
             'fuente'        => $resultado['fuente'],
         ]);
     }
-
-
-
 }

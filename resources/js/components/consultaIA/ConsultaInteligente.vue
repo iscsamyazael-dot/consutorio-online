@@ -325,7 +325,7 @@ export default {
             // CitaController@index no filtra por fecha, así que
             // filtramos aquí las citas de hoy.
             const respCitas = await axios.get('/api/citas')
-            const citasHoy = (respCitas.data || []).filter(c => c.fecha === hoy)
+            const citasHoy = (respCitas.data || []).filter(c => String(c.fecha).slice(0, 10) === hoy)
 
             // 1. Marca como Finalizada la cita de hoy de este paciente
             const citaActual = citasHoy.find(

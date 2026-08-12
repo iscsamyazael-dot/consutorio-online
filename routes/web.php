@@ -127,11 +127,24 @@ Route::middleware('auth')->group(function () {
         //Route::resource('dashboard/citas', CitaController::class hola);
         // Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);//COMNTDAAAAA
         //Route::resource('dashboard/citas', CitaController::class);
-        Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calenda
+        Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calendario (usada por el calendario del dashboard, distinta de /api/citas)
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
         Route::resource('citas', CitaController::class);// Agenda: CRUD de citas
-        Route::get('/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calendario
-        Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendari
+        Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendario / lista de espera
+
+        // ─────────────────────────────────────────────────────────────
+        // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
+        // GET /api/citas apuntando a controladores distintos
+        // (getEventos y getCitas); Laravel resolvía la ambigüedad usando
+        // la última definida, lo cual es frágil (cualquier reordenamiento
+        // futuro del archivo puede cambiar en silencio qué método
+        // responde). getCitas() es el que trae la estructura completa
+        // (paciente, medico, especialidad anidados) que consumen
+        // ConsultaClinica.vue y ConsultaInteligente.vue, así que es el
+        // que se conserva aquí.
+        // ─────────────────────────────────────────────────────────────
+        Route::get('/api/citas', [CitaController::class, 'getCitas']);// Agenda: lista de citas con paciente/medico/especialidad (ConsultaClinica.vue, ConsultaInteligente.vue)
+
         // Agenda: actualizar datos del paciente
         // Cambias 'SubirArchivosControlador' por el que ya tengas
         Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
@@ -139,10 +152,16 @@ Route::middleware('auth')->group(function () {
         Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
         //Codigo para las vistas y que son usadas en el menú de adminlte"
         //codigo  de las citas //
-        //actualiza el estado 
-        Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class, 'actualizarEstado'])->name('citas.estado');// Agenda: cambiar estado de cita
-        // api de calendario//
-        Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
+
+        // ─────────────────────────────────────────────────────────────
+        // ÚNICA definición de PATCH .../citas/{cita}/estado. Antes había
+        // dos rutas casi idénticas (con y sin prefijo /api) apuntando al
+        // mismo método actualizarEstado. Se deja solo la que realmente
+        // usa el frontend: axios.patch('/api/citas/{id}/estado', ...)
+        // en ConsultaInteligente.vue.
+        // ─────────────────────────────────────────────────────────────
+        Route::patch('/api/citas/{cita}/estado', [CitaController::class, 'actualizarEstado'])->name('citas.estado.api');// Agenda: cambiar estado de cita (usada por ConsultaInteligente.vue)
+
         //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
         Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
             ->name('ExpedienteDetalle');

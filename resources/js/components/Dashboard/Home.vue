@@ -319,6 +319,7 @@
 
 <script>
 import ApiService from '../../services/ApiService.js'
+import axios from 'axios'
 
 export default {
     name: 'Home',
@@ -396,18 +397,18 @@ export default {
         async cargarResumen() {
             // Cada sección se carga de forma independiente, así si un endpoint
             // todavía no existe o falla, no se cae todo el dashboard.
-            const [pacientes, triage, consultas, medicamentos] = await Promise.all([
+            const [pacientes, triage, citas, medicamentos] = await Promise.all([
                 this.obtenerPacientes(),
                 this.obtenerTriage(),
-                this.obtenerConsultas(),
+                this.obtenerCitas(),
                 this.obtenerMedicamentos()
             ]);
 
-            this.procesarTarjetasSuperiores(pacientes, triage, consultas);
-            this.procesarProximasConsultas(consultas);
-            this.procesarAlertasClinicas(triage, consultas, medicamentos);
-            this.procesarFlujoAtencion(pacientes, triage, consultas);
-            this.procesarActividadReciente(pacientes, triage, consultas);
+            this.procesarTarjetasSuperiores(pacientes, triage, citas);
+            this.procesarProximasConsultas(citas);
+            this.procesarAlertasClinicas(triage, citas, medicamentos);
+            this.procesarFlujoAtencion(pacientes, triage, citas);
+            this.procesarActividadReciente(pacientes, triage, citas);
         },
 
         // ─── OBTENCIÓN DE DATOS BASE (una sola vez por refresh) ───────────
@@ -432,12 +433,21 @@ export default {
             }
         },
 
-        async obtenerConsultas() {
+        // CAMBIO: antes se leía de '/consultas' (ConsultaController), que
+        // guarda las sesiones de Consulta Inteligente (puede haber varias
+        // por paciente, y no corresponden 1 a 1 con la agenda del día:
+        // por eso un mismo paciente podía aparecer duplicado y con estados
+        // que no eran realmente los de "hoy"). El panel "Próximas consultas
+        // de hoy" debe reflejar la AGENDA real, así que ahora se usa
+        // /api/citas (CitaController@getCitas) — el mismo endpoint que ya
+        // usa ConsultaClinica.vue para su lista de espera, con paciente,
+        // médico y especialidad anidados.
+        async obtenerCitas() {
             try {
-                const response = await ApiService.get('/consultas');
+                const response = await axios.get('/api/citas');
                 return response.data || [];
             } catch (error) {
-                console.error('Error al cargar consultas:', error);
+                console.error('Error al cargar citas:', error);
                 return [];
             }
         },
@@ -479,41 +489,80 @@ export default {
             return fechaComparar === this.formatoFechaLocal(new Date());
         },
 
+        // Normaliza el string de estado de una cita/consulta para comparar
+        // sin importar mayúsculas o si viene con espacio ("En proceso")
+        // o con guión bajo ("en_proceso").
+        normalizarEstado(estado) {
+            return (estado || '').toLowerCase().trim().replace(/\s+/g, '_');
+        },
+
+        // CAMBIO CLAVE: último registro de triage de un paciente.
+        // Antes se usaba "p.triages?.[0]" (el PRIMER triage que se creó).
+        // Eso hacía que un triage editado/actualizado después de su
+        // creación (vía POST /triage/guardar/{id}, que actualiza el mismo
+        // registro) nunca se reflejara como "de hoy" si el primer registro
+        // era de un día anterior. Ahora se toma el ÚLTIMO elemento del
+        // arreglo, igual que hace ConsultaClinica.vue.
+        ultimoTriage(p) {
+            if (!p?.triages?.length) return null;
+            return p.triages[p.triages.length - 1];
+        },
+
+        // Un triage "cuenta como de hoy" si se creó hoy O si se editó /
+        // actualizó hoy (updated_at). Así, editar signos vitales o el nivel
+        // de triage de un paciente hoy sí lo refleja en el dashboard aunque
+        // el registro se haya creado antes.
+        triageEsDeHoy(triageRecord) {
+            if (!triageRecord) return false;
+            return this.esHoy(triageRecord.created_at) || this.esHoy(triageRecord.updated_at);
+        },
+
+        // Nombre del paciente dentro de un objeto de cita. El paciente puede
+        // venir anidado con nombre + apellidos, o ya como un nombre plano.
+        nombrePacienteCita(c) {
+            if (!c.paciente) return c.paciente_nombre || 'Paciente';
+            if (c.paciente.nombre && (c.paciente.apellido_paterno || c.paciente.apellido_materno)) {
+                return [c.paciente.nombre, c.paciente.apellido_paterno, c.paciente.apellido_materno]
+                    .filter(Boolean)
+                    .join(' ');
+            }
+            return c.paciente.nombre || 'Paciente';
+        },
+
         // ─── TARJETAS SUPERIORES ────────────────────────────────────────
 
-        procesarTarjetasSuperiores(pacientes, triage, consultas) {
+        procesarTarjetasSuperiores(pacientes, triage, citas) {
             this.resumen.pacientesRegistrados = pacientes.length;
 
             this.resumen.triageHoy = triage.filter(p =>
-                this.esHoy(p.triages?.[0]?.created_at)
+                this.triageEsDeHoy(this.ultimoTriage(p))
             ).length;
 
-            const consultasHoy = consultas.filter(c =>
+            const citasHoy = citas.filter(c =>
                 this.esHoy(c.fecha || c.created_at)
             );
-            this.resumen.consultasHoy = consultasHoy.length;
+            this.resumen.consultasHoy = citasHoy.length;
 
-            this.resumen.pendientes = consultasHoy.filter(c => {
-                const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+            this.resumen.pendientes = citasHoy.filter(c => {
+                const estado = this.normalizarEstado(c.estado);
                 return estado !== 'finalizada' && estado !== 'completada' && estado !== 'cancelada';
             }).length;
         },
 
-        // ─── PROXIMAS CONSULTAS ─────────────────────────────────────────
-        // Cambio pedido: ya no se muestra el estado real de la BD.
-        // 1) Las consultas finalizada/completada/cancelada se quitan del
-        //    panel por completo (al dar "Finalizar consulta" desaparecen
-        //    solas en el siguiente refresco / próxima carga).
+        // ─── PROXIMAS CONSULTAS (citas de hoy) ──────────────────────────
+        // 1) Las citas canceladas/finalizadas se quitan del panel por
+        //    completo (al finalizar una consulta desaparecen solas en el
+        //    siguiente refresco / próxima carga).
         // 2) De las que quedan (ordenadas por hora), la primera se marca
         //    como "En proceso" y todas las demás como "Agendada".
 
-        procesarProximasConsultas(consultas) {
+        procesarProximasConsultas(citas) {
             this.cargandoConsultas = false;
 
-            const activasHoy = consultas
+            const activasHoy = citas
                 .filter(c => this.esHoy(c.fecha || c.created_at))
                 .filter(c => {
-                    const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+                    const estado = this.normalizarEstado(c.estado);
                     return estado !== 'finalizada' && estado !== 'completada' && estado !== 'cancelada';
                 })
                 .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
@@ -523,8 +572,8 @@ export default {
                 .map((c, i) => ({
                     id: c.id,
                     hora: c.hora || '--:--',
-                    paciente: c.paciente ? c.paciente.nombre : (c.paciente_nombre || 'Paciente'),
-                    tipo: c.motivo_consulta || 'Consulta general',
+                    paciente: this.nombrePacienteCita(c),
+                    tipo: c.especialidad?.nombre || c.tipo || 'Consulta general',
                     estado: i === 0 ? 'En proceso' : 'Agendada',
                     estadoClase: i === 0 ? 'en-proceso' : 'agendada'
                 }));
@@ -532,14 +581,14 @@ export default {
 
         // ─── ALERTAS CLINICAS ───────────────────────────────────────────
 
-        procesarAlertasClinicas(triage, consultas, medicamentos) {
+        procesarAlertasClinicas(triage, citas, medicamentos) {
             this.cargandoAlertas = false;
             const alertas = [];
 
-            const graves = triage.filter(p =>
-                this.esHoy(p.triages?.[0]?.created_at) &&
-                (p.triages?.[0]?.estado || '').toLowerCase() === 'grave'
-            );
+            const graves = triage.filter(p => {
+                const t = this.ultimoTriage(p);
+                return this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
+            });
             if (graves.length > 0) {
                 alertas.push({
                     nivel: 'alta',
@@ -599,8 +648,8 @@ export default {
                 });
             }
 
-            const finalizadasHoy = consultas.filter(c => {
-                const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+            const finalizadasHoy = citas.filter(c => {
+                const estado = this.normalizarEstado(c.estado);
                 return this.esHoy(c.fecha || c.created_at) &&
                        (estado === 'finalizada' || estado === 'completada');
             });
@@ -651,16 +700,16 @@ export default {
 
         // ─── FLUJO DE ATENCION DEL DIA ──────────────────────────────────
 
-        procesarFlujoAtencion(pacientes, triage, consultas) {
+        procesarFlujoAtencion(pacientes, triage, citas) {
             const registrados = pacientes.filter(p => this.esHoy(p.created_at)).length;
-            const triageRealizado = triage.filter(p => this.esHoy(p.triages?.[0]?.created_at)).length;
+            const triageRealizado = triage.filter(p => this.triageEsDeHoy(this.ultimoTriage(p))).length;
 
-            const consultasHoy = consultas.filter(c => this.esHoy(c.fecha || c.created_at));
-            const enConsulta = consultasHoy.filter(c =>
-                (c.estado_consulta || c.estado || '').toLowerCase() === 'en_proceso'
+            const citasHoy = citas.filter(c => this.esHoy(c.fecha || c.created_at));
+            const enConsulta = citasHoy.filter(c =>
+                this.normalizarEstado(c.estado) === 'en_proceso'
             ).length;
-            const finalizados = consultasHoy.filter(c => {
-                const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+            const finalizados = citasHoy.filter(c => {
+                const estado = this.normalizarEstado(c.estado);
                 return estado === 'finalizada' || estado === 'completada';
             }).length;
 
@@ -672,7 +721,7 @@ export default {
 
         // ─── ACTIVIDAD RECIENTE ─────────────────────────────────────────
 
-        procesarActividadReciente(pacientes, triage, consultas) {
+        procesarActividadReciente(pacientes, triage, citas) {
             this.cargandoActividad = false;
             const eventos = [];
 
@@ -685,26 +734,33 @@ export default {
                     fecha: p.created_at
                 }));
 
+            // Un triage aparece aquí si se creó o se editó/actualizó hoy.
+            // La fecha que se usa para ordenar es la de la última
+            // modificación (updated_at), así un triage editado hoy sube al
+            // tope del timeline aunque se haya creado antes.
             triage
-                .filter(p => this.esHoy(p.triages?.[0]?.created_at))
-                .forEach(p => eventos.push({
-                    tipo: 'triage',
-                    titulo: 'Triage registrado',
-                    detalle: p.nombre || '',
-                    fecha: p.triages[0].created_at
-                }));
+                .filter(p => this.triageEsDeHoy(this.ultimoTriage(p)))
+                .forEach(p => {
+                    const t = this.ultimoTriage(p);
+                    eventos.push({
+                        tipo: 'triage',
+                        titulo: 'Triage registrado/actualizado',
+                        detalle: p.nombre || '',
+                        fecha: t.updated_at || t.created_at
+                    });
+                });
 
-            consultas
+            citas
                 .filter(c => this.esHoy(c.fecha || c.created_at))
                 .forEach(c => {
-                    const estado = (c.estado_consulta || c.estado || '').toLowerCase();
+                    const estado = this.normalizarEstado(c.estado);
                     eventos.push({
                         tipo: (estado === 'finalizada' || estado === 'completada') ? 'consulta' : 'inicio',
                         titulo: (estado === 'finalizada' || estado === 'completada')
                             ? 'Consulta finalizada'
                             : 'Consulta iniciada',
-                        detalle: c.paciente ? c.paciente.nombre : (c.paciente_nombre || ''),
-                        fecha: c.created_at
+                        detalle: this.nombrePacienteCita(c),
+                        fecha: c.updated_at || c.created_at
                     });
                 });
 
