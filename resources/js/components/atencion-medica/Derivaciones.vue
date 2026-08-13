@@ -1,15 +1,19 @@
 <template>
 
+    <DerivacionesClinicas
+    @filtro-derivaciones="filtroDerivaciones"
+    />
 
-<DerivacionesClinicas></DerivacionesClinicas>
-<FiltrosDerivaciones
-    :especialidades="especialidades"
-    @filtrar="aplicarFiltros"
-    @restablecer="cargarDerivacionesIniciales"
-/>
-<ListaDerivaciones
-        :derivaciones="derivaciones"
-        :loading="loading"
+    <FiltrosDerivaciones
+        :especialidades="especialidades"
+        @filtrar="aplicarFiltros"
+        @restablecer="cargarDerivacionesIniciales"
+    />
+
+    <ListaDerivaciones
+            :derivaciones="derivaciones"
+            :loading="loading" 
+            :filtro-activo="filtroActivo"
     />
 
 
@@ -34,9 +38,11 @@ export default {
 
     data() {
         return {
+            filtroActivo: 'todas',
             especialidades: [],
             derivaciones: [],
             loading: false
+            
         }
     },
 
@@ -84,6 +90,10 @@ export default {
 
                 this.loading = false
             }
+        },
+
+        filtroDerivaciones(filtro) {
+            this.filtroActivo = filtro
         },
 
         async cargarDerivacionesIniciales() {
