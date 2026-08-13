@@ -136,15 +136,25 @@ class DerivacionController extends Controller
 
         $casosCriticos = 0;
         $canalizados = 0;
+        $atendidos = 0;
 
         foreach ($derivaciones as $derivacion) {
 
-            if ($this->obtenerPrioridadDesdeMotivo($derivacion->motivo) === 'critica') {
+                // Evaluamos la prioridad generada a partir del motivo
+            $prioridadCalculada = strtolower($this->obtenerPrioridadDesdeMotivo($derivacion->motivo) ?? '');
+
+            // Casos críticos = detecta tanto 'critica' como 'alta'
+            if ($prioridadCalculada === 'critica' || $prioridadCalculada === 'alta') {
                 $casosCriticos++;
             }
-
-            if ($derivacion->estado === 'enviado') {
+            // Canalizados = estado enviado
+            if (strtolower($derivacion->estado ?? '') === 'enviado') {
                 $canalizados++;
+            }
+
+            // Atendidos = estado atendido
+            if (strtolower($derivacion->estado ?? '') === 'atendido') {
+                $atendidos++;
             }
         }
 
@@ -152,6 +162,7 @@ class DerivacionController extends Controller
             'total_derivaciones' => $derivaciones->count(),
             'casos_criticos'     => $casosCriticos,
             'canalizados'        => $canalizados,
+            'atendidos'          => $atendidos,
         ]);
     }
 

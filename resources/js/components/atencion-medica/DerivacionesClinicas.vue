@@ -26,74 +26,118 @@
 
     <div class="row g-3 mb-4">
         <!-- Tarjeta 1: Derivaciones Activas -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div 
-                class="card border-0 text-dark rounded-4 shadow-sm h-100"
-                style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
+                class="card border-0 text-dark rounded-4 shadow-sm h-100 derivacion-card"
+                :class="{ 'card-activa': filtroActivo === 'todas' }"
+                @click="seleccionarFiltro('todas')"
             >
                 <div class="card-body d-flex align-items-center">
-                <div 
-                    class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center me-3"
-                    style="width: 50px; height: 50px; flex-shrink: 0;"
-                >
-                    <i class="fas fa-share-square fa-lg"></i>
-                </div>
-                <div>
-                    <small class="text-muted fw-semibold d-block">Derivaciones Activas</small>
-                    <h4 class="fw-bold mb-0 text-dark">
-                    {{ estadisticas.total_derivaciones }}
-                    </h4>
-                </div>
+                    <div 
+                        class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center me-3"
+                        style="width: 50px; height: 50px; flex-shrink: 0;"
+                    >
+                        <i class="fas fa-share-square fa-lg"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted fw-semibold d-block">Derivaciones Activas</small>
+                        <h4 class="fw-bold mb-0 text-dark">
+                        {{ estadisticas.total_derivaciones }}
+                        </h4>
+                    </div>
                 </div>
             </div>
         </div>
 
-            <!-- Tarjeta 2: Alta Prioridad -->
-            <div class="col-md-4">
-                <div 
-                    class="card border-0 text-dark rounded-4 shadow-sm h-100"
-                    style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
-                >
-                    <div class="card-body d-flex align-items-center">
+        
+        <!-- Tarjeta 2: Casos críticos -->
+        <div class="col-md-3">
+            <div 
+                class="card border-0 text-dark rounded-4 shadow-sm h-100 derivacion-card"
+                :class="{ 'card-activa': filtroActivo === 'criticos' }"
+                @click="seleccionarFiltro('criticos')"
+                style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
+            >
+                <div class="card-body d-flex align-items-center">
                     <div 
                         class="bg-danger-subtle text-danger rounded-circle d-flex align-items-center justify-content-center me-3"
                         style="width: 50px; height: 50px; flex-shrink: 0;"
                     >
                         <i class="fas fa-exclamation-triangle fa-lg"></i>
                     </div>
+
                     <div>
-                        <small class="text-muted fw-semibold d-block">Casos críticos</small>
+                        <small class="text-muted fw-semibold d-block">
+                            Casos críticos y altos
+                        </small>
+
                         <h4 class="fw-bold mb-0 text-dark">
-                        {{ estadisticas.casos_criticos }}
+                            {{ estadisticas.casos_criticos }}
                         </h4>
-                    </div>
                     </div>
                 </div>
             </div>
+        </div>
 
         <!-- Tarjeta 3: Canalizados -->
-        <div class="col-md-4">
-        <div 
-            class="card border-0 text-dark rounded-4 shadow-sm h-100"
-            style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
-        >
-            <div class="card-body d-flex align-items-center">
+        <div class="col-md-3">
             <div 
-                class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center me-3"
-                style="width: 50px; height: 50px; flex-shrink: 0;"
+                class="card border-0 text-dark rounded-4 shadow-sm h-100 derivacion-card"
+                :class="{ 'card-activa': filtroActivo === 'canalizados' }"
+                @click="seleccionarFiltro('canalizados')"
+                style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
             >
-                <i class="fas fa-paper-plane fa-lg"></i>
-            </div>
-            <div>
-                <small class="text-muted fw-semibold d-block">Canalizados</small>
-                <h4 class="fw-bold mb-0 text-dark">
-                {{ estadisticas.canalizados }}
-                </h4>
-            </div>
+                <div class="card-body d-flex align-items-center">
+                    <div 
+                        class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center me-3"
+                        style="width: 50px; height: 50px; flex-shrink: 0;"
+                    >
+                        <i class="fas fa-paper-plane fa-lg"></i>
+                    </div>
+
+                    <div>
+                        <small class="text-muted fw-semibold d-block">
+                            Canalizados
+                        </small>
+
+                        <h4 class="fw-bold mb-0 text-dark">
+                            {{ estadisticas.canalizados }}
+                        </h4>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- Tarjeta 4: Atendidos -->
+        <div class="col-md-3">
+            <div 
+                class="card border-0 text-dark rounded-4 shadow-sm h-100 derivacion-card"
+                :class="{ 'card-activa': filtroActivo === 'atendidos' }"
+                @click="seleccionarFiltro('atendidos')"
+                style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(10px);"
+            >
+                <div class="card-body d-flex align-items-center">
+                    <div 
+                        class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-3"
+                        style="width: 50px; height: 50px; flex-shrink: 0;"
+                    >
+                        <i class="fas fa-check-circle fa-lg"></i>
+                    </div>
+
+                    <div>
+                        <small class="text-muted fw-semibold d-block">
+                            Atendidos
+                        </small>
+
+                        <h4 class="fw-bold mb-0 text-dark">
+                            {{ estadisticas.atendidos }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
         </div>
-  </div>
+       <!--AQUI TERMINA SECCION DE CARTAS--> 
+    </div>
 
 
 
@@ -372,15 +416,18 @@ export default {
         pacienteInicial: { type: String, default: '' }
     },
 
-    emits: ['derivacion-guardada'],
+    emits: ['derivacion-guardada', 'filtro-derivaciones'],
 
     data() {
         return {
             estadisticas: {
                 total_derivaciones: 0,
                 casos_criticos: 0,
-                canalizados: 0
+                canalizados: 0,
+                atendidos: 0
             },
+
+            filtroActivo: 'todas',
             modalVisible: false,
             pasoActual: 0,
             guardando: false,
@@ -459,6 +506,19 @@ export default {
                 console.error(error);
             }
         },
+
+        seleccionarFiltro(filtro) {
+            // Si vuelve a pulsar la misma carta,
+            // regresamos a mostrar todas
+            if (this.filtroActivo === filtro && filtro !== 'todas') {
+                this.filtroActivo = 'todas';
+            } else {
+                this.filtroActivo = filtro;
+            }
+
+            this.$emit('filtro-derivaciones', this.filtroActivo);
+        },
+
         abrirModal() {
             if (this.pacienteInicial) this.form.paciente = this.pacienteInicial;
             this.modalVisible = true;
@@ -645,6 +705,24 @@ export default {
 }
 .step-item.active .step-label { color: #fd7e14; }
 .step-item.done  .step-label  { color: #28a745; }
+
+/* -- CARDS -- */
+.derivacion-card {
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: 2px solid transparent !important;
+}
+
+.derivacion-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.10) !important;
+}
+
+.derivacion-card.card-activa {
+    transform: translateY(-3px);
+    border-color: #0d6efd !important;
+    box-shadow: 0 8px 25px rgba(13, 110, 253, 0.18) !important;
+}
 
 /* ── Body ── */
 .modal-body-custom {
