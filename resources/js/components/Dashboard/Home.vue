@@ -446,6 +446,10 @@ export default {
                 this.obtenerMedicamentos()
             ]);
 
+            // 🔍 DEBUG TEMPORAL
+            window.debugCitas = citas;
+            window.debugTriage = triage;
+
             this.procesarTarjetasSuperiores(pacientes, triage, citas);
             this.procesarProximasConsultas(citas);
             this.procesarAlertasClinicas(triage, citas, medicamentos);
@@ -627,6 +631,17 @@ export default {
                 const esGraveHoy = this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
                 return esGraveHoy && !pacientesFinalizadosHoy.has(String(p.id));
             });
+            
+            // 🔍 DEBUG TEMPORAL — quitar después de diagnosticar
+            console.log('--- DEBUG ALERTAS ---');
+            console.log('Citas de hoy (raw):', citas.filter(c => this.esHoy(c.fecha || c.created_at)));
+            console.log('Pacientes finalizados hoy (Set):', [...pacientesFinalizadosHoy]);
+            console.log('Triage grave (antes de excluir):', triage.filter(p => {
+                const t = this.ultimoTriage(p);
+                return this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
+            }).map(p => ({ id: p.id, nombre: p.nombre })));
+            console.log('--- FIN DEBUG ---');
+            
 
             if (graves.length > 0) {
                 alertas.push({
