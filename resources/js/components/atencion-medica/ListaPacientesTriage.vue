@@ -82,7 +82,7 @@
 
                                 <th>Prioridad</th>
 
-                                <th>Paciente</th>
+                                <th>Paciente</th> 
 
                                 <th>Motivo / Síntoma</th>
 
@@ -188,68 +188,51 @@
                                 <!-- ==================================
                                      MOTIVO
                                 =================================== -->
-                                <td
+                               <td
                                     class="motivo-columna"
-                                    :title="paciente.triages?.[0]?.sintomas || 'Sin motivo registrado'"
+                                    :title="paciente.triages?.[0]?.sintomas || 'Sin motivo'"
                                 >
-                                    {{ recortarMotivo(paciente.triages?.[0]?.sintomas) }}
+                                    {{ paciente.triages?.[0]?.sintomas ? recortarMotivo(paciente.triages[0].sintomas) : 'Sin motivo' }}
                                 </td>
 
 
                                 <!-- ==================================
                                      SIGNOS VITALES
                                 =================================== -->
-                                <td
-                                    style="
-                                        font-size: 12.5px;
-                                        white-space: nowrap;
-                                    "
-                                >
+                                <td style="font-size: 12.5px; white-space: nowrap;">
+    
+                                    <!-- Evaluamos si el paciente no tiene datos de triage cargados -->
+                                    <template v-if="!paciente.triages || paciente.triages.length === 0">
+                                        <span class="badge bg-secondary">Sin triage</span>
+                                    </template>
 
-                                    <div>
+                                    <template v-else>
+                                        <!-- Presión -->
+                                        <div>
+                                            <i class="fas fa-stethoscope text-info me-1"></i>
+                                            {{ paciente.triages[0].presion || 'Sin triage' }}
+                                        </div>
 
-                                        <i
-                                            class="fas fa-stethoscope text-info me-1"
-                                        ></i>
+                                        <!-- Saturación -->
+                                        <div>
+                                            <i class="fas fa-lungs me-1" style="color: #0d9488;"></i>
+                                            {{
+                                                paciente.triages[0].saturacion 
+                                                    ? paciente.triages[0].saturacion + '%' 
+                                                    : 'Sin triage'
+                                            }}
+                                        </div>
 
-                                        {{
-                                            paciente.triages?.[0]?.presion ||
-                                            'N/R'
-                                        }}
-
-                                    </div>
-
-
-                                    <div>
-
-                                        <i
-                                            class="fas fa-lungs me-1"
-                                            style="color: #0d9488;"
-                                        ></i>
-
-                                        {{
-                                            paciente.triages?.[0]?.saturacion
-                                                ? paciente.triages[0].saturacion + '%'
-                                                : 'N/R'
-                                        }}
-
-                                    </div>
-
-
-                                    <div>
-
-                                        <i
-                                            class="fas fa-thermometer-half text-warning me-1"
-                                        ></i>
-
-                                        {{
-                                            paciente.triages?.[0]?.temperatura
-                                                ? paciente.triages[0].temperatura + ' °C'
-                                                : 'N/R'
-                                        }}
-
-                                    </div>
-
+                                        <!-- Temperatura -->
+                                        <div>
+                                            <i class="fas fa-thermometer-half text-warning me-1"></i>
+                                            {{
+                                                paciente.triages[0].temperatura 
+                                                    ? paciente.triages[0].temperatura + ' °C' 
+                                                    : 'Sin triage'
+                                            }}
+                                        </div>
+                                    </template>
                                 </td>
 
 
@@ -826,19 +809,9 @@ export default {
     methods: {
 
         recortarMotivo(motivo) {
-            if (!motivo) {
-                return 'Sin motivo registrado';
-            }
-            const texto =
-                String(motivo)
-                    .replace(/\s+/g, ' ')
-                    .trim();
-
-            const limite = 65;
-            if (texto.length <= limite) {
-                return texto;
-            }
-            return texto.substring(0, limite).trim() + '...';
+            if (!motivo) return 'Sin motivo';
+            const limite = 30; // o los caracteres que uses
+            return motivo.length > limite ? motivo.substring(0, limite) + '...' : motivo;
         },
 
         /**
