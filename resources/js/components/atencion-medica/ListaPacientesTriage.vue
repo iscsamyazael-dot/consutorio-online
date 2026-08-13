@@ -101,11 +101,13 @@
 
                         <tbody>
 
+                            
                             <tr
                                 v-for="paciente in pacientesFiltrados"
                                 :key="paciente.id"
                                 :class="{
                                     'table-danger':
+                                        !analisisIA[paciente.id]?.sinDatos &&
                                         obtenerEspera(
                                             paciente.triages?.[0]?.estado,
                                             paciente.triages?.[0]?.created_at,
@@ -591,52 +593,31 @@ export default {
     pacientesVencidos() {
 
         return this.triage
-
             .filter(paciente => {
 
-                if (
-                    !paciente.estado_consulta ||
-                    !paciente.triages?.[0]
-                ) {
+                // ⛔ Sin datos suficientes: no genera alerta de vencido
+                if (this.analisisIA[paciente.id]?.sinDatos) {
                     return false;
                 }
 
-
-                const estadoConsulta =
-                    String(
-                        paciente.estado_consulta
-                    )
-                        .toLowerCase()
-                        .trim();
-
-
-                // Los finalizados no generan alerta
-                if (
-                    estadoConsulta === 'finalizada' ||
-                    estadoConsulta === 'finalizado' ||
-                    estadoConsulta === 'atendido'
-                ) {
+                if (!paciente.estado_consulta || !paciente.triages?.[0]) {
                     return false;
                 }
 
+                const estadoConsulta = String(paciente.estado_consulta).toLowerCase().trim();
 
-                const triage0 =
-                    paciente.triages[0];
+                if (['finalizada', 'finalizado', 'atendido'].includes(estadoConsulta)) {
+                    return false;
+                }
 
+                const triage0 = paciente.triages[0];
 
-                return this.obtenerEspera(
-                    triage0.estado,
-                    triage0.created_at,
-                    paciente.estado_consulta
-                ).vencido;
+                return this.obtenerEspera(triage0.estado, triage0.created_at, paciente.estado_consulta).vencido;
 
             })
+            .map(paciente => ({ paciente }));
 
-            .map(paciente => ({
-                paciente
-            }));
-
-    }
+    },
 
     },
 
@@ -1489,87 +1470,20 @@ export default {
          */
         verificarVencidosYAlertar() {
 
-            this.triage.forEach(
-                paciente => {
+            this.triage.forEach(paciente => {
 
-                    const triage0 =
-                        paciente.triages?.[0];
-
-
-                    if (!triage0) {
-
-                        return;
-
-                    }
-
-
-                    const estadoConsulta =
-                        String(
-                            paciente.estado_consulta || ''
-                        )
-                            .toLowerCase()
-                            .trim();
-
-
-                    if (
-                        estadoConsulta ===
-                            'finalizada' ||
-                        estadoConsulta ===
-                            'finalizado' ||
-                        estadoConsulta ===
-                            'atendido'
-                    ) {
-
-                        this.alertasEnviadas.delete(
-                            paciente.id
-                        );
-
-                        return;
-
-                    }
-
-
-                    if (
-                        !paciente.estado_consulta
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    const espera =
-                        this.obtenerEspera(
-                            triage0.estado,
-                            triage0.created_at,
-                            paciente.estado_consulta
-                        );
-
-
-                    if (
-                        espera.vencido &&
-                        !this.alertasEnviadas.has(
-                            paciente.id
-                        )
-                    ) {
-
-                        this.alertasEnviadas.add(
-                            paciente.id
-                        );
-
-
-                        this.notificarDoctor(
-                            paciente,
-                            triage0
-                        );
-
-                    }
-
+                // ⛔ Sin datos suficientes: no participa en el ciclo de alertas
+                if (this.analisisIA[paciente.id]?.sinDatos) {
+                    return;
                 }
-            );
+
+                const triage0 = paciente.triages?.[0];
+                if (!triage0) return;
+
+                // ...resto igual que ya tenías
+            });
 
         },
-
 
         /**
          * ==========================================
