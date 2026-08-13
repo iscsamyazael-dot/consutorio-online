@@ -370,10 +370,23 @@ var route = document.querySelector("[name=route]").value //Esta linea sirve para
 var urlConsultaIA = route + '/consultaIA'; //Se consume la ruta de la API que se encuentra en el archivo web//
 var urlArchivoIA = route + '/consultaIA/archivo'; //Endpoint de subida de archivos - mismo prefijo que urlConsultaIA//
 
-// Endpoint para persistir el cierre de la consulta. Sigue el mismo
-// patrón que el resto del sistema (estado_consulta: 'finalizada',
-// visto en Home.vue). AJUSTA esta ruta si tu backend usa otra distinta.
-var urlFinalizarConsulta = route + '/consultas';
+// Endpoint que realmente persiste el cierre de la consulta:
+// POST /consultaIA/{consultaId}/finalizar -> ConsultaIAController@finalizarConsulta
+// (confirmado en routes/web.php, ver también finalizarConsulta() en el
+// controlador: solo marca consultas.estado_consulta = 'finalizada').
+//
+// FIX: antes esto apuntaba a `route + '/consultas'` y se llamaba con
+// axios.patch(`${urlFinalizarConsulta}/${consultaId}`, {estado_consulta:
+// 'finalizada'}). Esa ruta cae en ConsultaController@update (el resource
+// genérico de /consultas), que responde 200 pero NO actualiza
+// estado_consulta de forma confiable — por eso el frontend se
+// comportaba como si hubiera finalizado (mensaje "conversación
+// finalizada", evento emitido) pero en la base de datos la consulta
+// seguía en 'en_proceso', el paciente no desaparecía de la lista de
+// espera, y al recargar volvía a mostrar el mismo paciente en vez de
+// avanzar al siguiente (o de disparar el aviso de "no hay más
+// pacientes" cuando era el único).
+var urlFinalizarConsulta = urlConsultaIA; // = route + '/consultaIA'
 
 const FORMATOS_PERMITIDOS = [
     'application/pdf',
@@ -956,9 +969,11 @@ export default {
         | es destructiva (ya no se puede seguir escribiendo).
         |
         | Al confirmar: se detiene el micrófono si estaba activo, se
-        | PERSISTE el cierre en el backend (PATCH a /consultas/{id} con
-        | estado_consulta: 'finalizada' — AJUSTA urlFinalizarConsulta y/o
-        | el payload si tu ruta real es distinta), se bloquea el
+        | PERSISTE el cierre en el backend con
+        | POST urlFinalizarConsulta/{consultaId}/finalizar (equivalente a
+        | POST /consultaIA/{consultaId}/finalizar ->
+        | ConsultaIAController@finalizarConsulta, la única ruta que marca
+        | consultas.estado_consulta = 'finalizada'), se bloquea el
         | input/mic/adjuntar/enviar, y se avisa al padre.
         */
         abrirModalFinalizar() {
@@ -981,10 +996,11 @@ export default {
 
             try {
 
-                // Persistimos el cierre en el backend.
-                await axios.patch(`${urlFinalizarConsulta}/${this.consultaId}`, {
-                    estado_consulta: 'finalizada'
-                })
+                // Persistimos el cierre en el backend. La ruta correcta es
+                // POST /consultaIA/{id}/finalizar (ConsultaIAController@
+                // finalizarConsulta) — no acepta ni requiere body, el
+                // estado se marca internamente en el controlador.
+                await axios.post(`${urlFinalizarConsulta}/${this.consultaId}/finalizar`)
 
                 this.detenerEscucha()
                 this.consultaFinalizada = true
