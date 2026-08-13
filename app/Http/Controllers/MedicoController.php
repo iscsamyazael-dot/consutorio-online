@@ -13,8 +13,8 @@ class MedicoController extends Controller
 {
     public function index()
     {
+        // Traemos TODOS los médicos (activos e inactivos)
         $medicos = Medico::with(['especialidad', 'horarios', 'configuraciones.ubicacion'])
-            ->where('activo', 1)
             ->get();
 
         return response()->json($medicos);
