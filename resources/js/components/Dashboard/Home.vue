@@ -505,7 +505,7 @@ export default {
         // arreglo, igual que hace ConsultaClinica.vue.
         ultimoTriage(p) {
             if (!p?.triages?.length) return null;
-            return p.triages[p.triages.length - 1];
+            return p.triages[0]; // el backend ordena con .latest() → el más nuevo va primero
         },
 
         // Un triage "cuenta como de hoy" si se creó hoy O si se editó /

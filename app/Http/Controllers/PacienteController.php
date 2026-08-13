@@ -235,7 +235,7 @@ class PacienteController extends Controller
     {
        
         $paciente = Paciente::with([
-            'triages',
+            'triages'=>fn($q) => $q->latest()->limit(1), //Traemos el ultimo triage del paciente es decir el triage actual de la consulta
             'archivos',
             'recetas.detalles',
             'recetas.consulta',
