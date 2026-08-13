@@ -658,7 +658,6 @@ export default {
                 const esGraveHoy = this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
                 return esGraveHoy && !pacientesFinalizadosHoy.has(String(p.id));
             });
-<<<<<<< HEAD
             
             // 🔍 DEBUG TEMPORAL — quitar después de diagnosticar
             console.log('--- DEBUG ALERTAS ---');
@@ -670,11 +669,9 @@ export default {
             }).map(p => ({ id: p.id, nombre: p.nombre })));
             console.log('--- FIN DEBUG ---');
             
-=======
             console.log("Citas que llegaron:", citas);
             console.log("Citas finalizadas detectadas:", Array.from(pacientesFinalizadosHoy));
             console.log("Pacientes graves encontrados:", graves.map(p => p.id));
->>>>>>> feature/expedienteMedicoIA
 
             if (graves.length > 0) {
                 alertas.push({
