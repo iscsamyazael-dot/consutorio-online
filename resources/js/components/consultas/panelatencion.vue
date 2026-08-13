@@ -698,6 +698,10 @@
 <script>
 import ApiService from '../../services/ApiService.js'
 import axios from 'axios'
+// Bus de eventos compartido para avisar a otras vistas (ej. Home.vue,
+// el dashboard) cuando una consulta se finaliza, sin esperar el
+// setInterval de refresco automático de esa vista.
+import eventBus from '../../utils/eventBus.js'
 
 // Clave usada en localStorage para el paciente seleccionado para "Nueva consulta"
 const CLAVE_PACIENTE_SELECCIONADO = 'pacienteSeleccionado'
@@ -1283,6 +1287,11 @@ export default {
 
         // Refresca citas para que pacientesFiltrados excluya esta cita ya
         await this.obtenerCitas()
+
+        // Avisa a otras vistas (ej. Home.vue, el dashboard) que una
+        // consulta se finalizó, para que se refresquen al instante en
+        // vez de esperar hasta 60s al próximo setInterval.
+        eventBus.emit('consulta-finalizada')
 
         // Si el paciente finalizado era el activo en el panel izquierdo,
         // cae al siguiente de la cola (o al vacío si no queda nadie)

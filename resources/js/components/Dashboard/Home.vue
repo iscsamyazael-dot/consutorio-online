@@ -7,8 +7,17 @@
                 <h2 class="fw-bold mb-1">Panel de administración Médico Online</h2>
                 <p class="text-muted mb-0">Resumen de la actividad del consultorio</p>
             </div>
-            <div class="fecha-box">
-                <i class="far fa-calendar me-2"></i>{{ fechaHoy }}
+            <div class="d-flex align-items-center gap-2">
+                <!-- NUEVO: indicador de última actualización, para que el usuario
+                     sepa qué tan "frescos" están los datos mientras espera el
+                     próximo refresco automático -->
+                <small class="text-muted ultima-actualizacion" v-if="ultimaActualizacionTexto">
+                    <i class="fas fa-sync-alt me-1" :class="{ 'fa-spin': actualizando }"></i>
+                    {{ ultimaActualizacionTexto }}
+                </small>
+                <div class="fecha-box">
+                    <i class="far fa-calendar me-2"></i>{{ fechaHoy }}
+                </div>
             </div>
         </div>
 
@@ -296,8 +305,6 @@
                 </h6>
             </div>
 
-            <!-- Layout flexible: reparte el espacio sobrante entre las tarjetas
-                 en vez de dejar un hueco vacío al final de la fila -->
             <div class="accesos-grid">
                 <a v-for="(acc, i) in accesosRapidos"
                    :key="i"
@@ -320,13 +327,17 @@
 <script>
 import ApiService from '../../services/ApiService.js'
 import axios from 'axios'
+// NUEVO: event bus para refrescar el dashboard al instante cuando otra
+// vista (ej. ConsultaClinica.vue) finaliza una consulta, en vez de
+// esperar hasta 60s al próximo setInterval.
+// Requiere `npm i mitt`. Ver src/utils/eventBus.js
+import eventBus from '../../utils/eventBus.js'
 
 export default {
     name: 'Home',
 
     data() {
         return {
-            // Contadores de las 4 tarjetas de arriba
             resumen: {
                 pacientesRegistrados: 0,
                 triageHoy: 0,
@@ -353,7 +364,6 @@ export default {
             actividadReciente: [],
             cargandoActividad: true,
 
-            // Rutas reales, confirmadas contra tu web.php
             accesosRapidos: [
                 { titulo: 'Registrar paciente', subtitulo: 'Nuevo paciente', icono: 'fas fa-user-plus', url: '/PacienteNuevo', color: 'primary' },
                 { titulo: 'Nuevo triage', subtitulo: 'Triage rápido', icono: 'fas fa-heartbeat', url: '/TRIAGES', color: 'success' },
@@ -361,8 +371,12 @@ export default {
                 { titulo: 'Ver agenda', subtitulo: 'Agenda completa', icono: 'far fa-calendar-alt', url: '/Agenda', color: 'warning' }
             ],
 
-            // refresco automático (dinamismo)
-            intervaloRefresco: null
+            intervaloRefresco: null,
+
+            // NUEVO: soporte para el indicador "Actualizado hace X"
+            actualizando: false,
+            ultimaActualizacion: null,
+            tickerReloj: null
         }
     },
 
@@ -375,28 +389,56 @@ export default {
                 month: 'long',
                 year: 'numeric'
             });
+        },
+
+        // NUEVO: texto relativo ("hace 5s", "hace 2 min") recalculado cada
+        // vez que cambia ultimaActualizacion o el tickerReloj (ver mounted).
+        ultimaActualizacionTexto() {
+            if (!this.ultimaActualizacion) return '';
+            // dependencia reactiva "muda" para forzar recálculo cada segundo
+            void this.tickerReloj;
+
+            const segundos = Math.floor((Date.now() - this.ultimaActualizacion.getTime()) / 1000);
+            if (segundos < 5) return 'Actualizado ahora';
+            if (segundos < 60) return `Actualizado hace ${segundos}s`;
+            const minutos = Math.floor(segundos / 60);
+            return `Actualizado hace ${minutos} min`;
         }
     },
 
     mounted() {
         this.cargarResumen();
 
-        // se vuelve a cargar solo, cada 60 segundos, sin recargar la página
         this.intervaloRefresco = setInterval(() => {
             this.cargarResumen();
         }, 60000);
+
+        // NUEVO: refresco inmediato cuando cualquier vista avisa que
+        // finalizó (o cambió el estado de) una consulta.
+        eventBus.on('consulta-finalizada', this.cargarResumen);
+        eventBus.on('consulta-actualizada', this.cargarResumen);
+
+        // NUEVO: ticker cada segundo solo para refrescar el texto de
+        // "Actualizado hace X" sin volver a pedir datos al servidor.
+        this.tickerReloj = 0;
+        this._intervaloTicker = setInterval(() => {
+            this.tickerReloj++;
+        }, 1000);
     },
 
     beforeUnmount() {
-        // importante: limpiar el intervalo al salir de la vista
         if (this.intervaloRefresco) clearInterval(this.intervaloRefresco);
+        if (this._intervaloTicker) clearInterval(this._intervaloTicker);
+
+        eventBus.off('consulta-finalizada', this.cargarResumen);
+        eventBus.off('consulta-actualizada', this.cargarResumen);
     },
 
     methods: {
 
         async cargarResumen() {
-            // Cada sección se carga de forma independiente, así si un endpoint
-            // todavía no existe o falla, no se cae todo el dashboard.
+            this.actualizando = true;
+
             const [pacientes, triage, citas, medicamentos] = await Promise.all([
                 this.obtenerPacientes(),
                 this.obtenerTriage(),
@@ -409,6 +451,9 @@ export default {
             this.procesarAlertasClinicas(triage, citas, medicamentos);
             this.procesarFlujoAtencion(pacientes, triage, citas);
             this.procesarActividadReciente(pacientes, triage, citas);
+
+            this.ultimaActualizacion = new Date();
+            this.actualizando = false;
         },
 
         // ─── OBTENCIÓN DE DATOS BASE (una sola vez por refresh) ───────────
@@ -433,15 +478,6 @@ export default {
             }
         },
 
-        // CAMBIO: antes se leía de '/consultas' (ConsultaController), que
-        // guarda las sesiones de Consulta Inteligente (puede haber varias
-        // por paciente, y no corresponden 1 a 1 con la agenda del día:
-        // por eso un mismo paciente podía aparecer duplicado y con estados
-        // que no eran realmente los de "hoy"). El panel "Próximas consultas
-        // de hoy" debe reflejar la AGENDA real, así que ahora se usa
-        // /api/citas (CitaController@getCitas) — el mismo endpoint que ya
-        // usa ConsultaClinica.vue para su lista de espera, con paciente,
-        // médico y especialidad anidados.
         async obtenerCitas() {
             try {
                 const response = await axios.get('/api/citas');
@@ -454,7 +490,6 @@ export default {
 
         async obtenerMedicamentos() {
             try {
-                // Mismo endpoint que usa PanelMedicamento.vue
                 const response = await ApiService.get('medicamentos');
                 return response.data || [];
             } catch (error) {
@@ -489,36 +524,20 @@ export default {
             return fechaComparar === this.formatoFechaLocal(new Date());
         },
 
-        // Normaliza el string de estado de una cita/consulta para comparar
-        // sin importar mayúsculas o si viene con espacio ("En proceso")
-        // o con guión bajo ("en_proceso").
         normalizarEstado(estado) {
             return (estado || '').toLowerCase().trim().replace(/\s+/g, '_');
         },
 
-        // CAMBIO CLAVE: último registro de triage de un paciente.
-        // Antes se usaba "p.triages?.[0]" (el PRIMER triage que se creó).
-        // Eso hacía que un triage editado/actualizado después de su
-        // creación (vía POST /triage/guardar/{id}, que actualiza el mismo
-        // registro) nunca se reflejara como "de hoy" si el primer registro
-        // era de un día anterior. Ahora se toma el ÚLTIMO elemento del
-        // arreglo, igual que hace ConsultaClinica.vue.
         ultimoTriage(p) {
             if (!p?.triages?.length) return null;
-            return p.triages[0]; // el backend ordena con .latest() → el más nuevo va primero
+            return p.triages[0];
         },
 
-        // Un triage "cuenta como de hoy" si se creó hoy O si se editó /
-        // actualizó hoy (updated_at). Así, editar signos vitales o el nivel
-        // de triage de un paciente hoy sí lo refleja en el dashboard aunque
-        // el registro se haya creado antes.
         triageEsDeHoy(triageRecord) {
             if (!triageRecord) return false;
             return this.esHoy(triageRecord.created_at) || this.esHoy(triageRecord.updated_at);
         },
 
-        // Nombre del paciente dentro de un objeto de cita. El paciente puede
-        // venir anidado con nombre + apellidos, o ya como un nombre plano.
         nombrePacienteCita(c) {
             if (!c.paciente) return c.paciente_nombre || 'Paciente';
             if (c.paciente.nombre && (c.paciente.apellido_paterno || c.paciente.apellido_materno)) {
@@ -527,6 +546,10 @@ export default {
                     .join(' ');
             }
             return c.paciente.nombre || 'Paciente';
+        },
+
+        idPacienteCita(c) {
+            return c.paciente?.id ?? c.paciente_id ?? null;
         },
 
         // ─── TARJETAS SUPERIORES ────────────────────────────────────────
@@ -550,11 +573,6 @@ export default {
         },
 
         // ─── PROXIMAS CONSULTAS (citas de hoy) ──────────────────────────
-        // 1) Las citas canceladas/finalizadas se quitan del panel por
-        //    completo (al finalizar una consulta desaparecen solas en el
-        //    siguiente refresco / próxima carga).
-        // 2) De las que quedan (ordenadas por hora), la primera se marca
-        //    como "En proceso" y todas las demás como "Agendada".
 
         procesarProximasConsultas(citas) {
             this.cargandoConsultas = false;
@@ -585,10 +603,31 @@ export default {
             this.cargandoAlertas = false;
             const alertas = [];
 
+            // CORREGIDO: se normalizan los ids a String() en ambos lados
+            // de la comparación (al construir el Set y al hacer .has()).
+            // Antes, si idPacienteCita(c) devolvía un id como string
+            // (ej. "12") y p.id venía como number (ej. 12), el Set.has()
+            // fallaba silenciosamente por comparación estricta de tipos,
+            // y un paciente grave con consulta ya finalizada NUNCA se
+            // quitaba de "Prioridad alta".
+            const pacientesFinalizadosHoy = new Set(
+                citas
+                    .filter(c => this.esHoy(c.fecha || c.created_at))
+                    .filter(c => {
+                        const estado = this.normalizarEstado(c.estado);
+                        return estado === 'finalizada' || estado === 'completada';
+                    })
+                    .map(c => this.idPacienteCita(c))
+                    .filter(id => id !== null && id !== undefined)
+                    .map(id => String(id))
+            );
+
             const graves = triage.filter(p => {
                 const t = this.ultimoTriage(p);
-                return this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
+                const esGraveHoy = this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
+                return esGraveHoy && !pacientesFinalizadosHoy.has(String(p.id));
             });
+
             if (graves.length > 0) {
                 alertas.push({
                     nivel: 'alta',
@@ -734,10 +773,6 @@ export default {
                     fecha: p.created_at
                 }));
 
-            // Un triage aparece aquí si se creó o se editó/actualizó hoy.
-            // La fecha que se usa para ordenar es la de la última
-            // modificación (updated_at), así un triage editado hoy sube al
-            // tope del timeline aunque se haya creado antes.
             triage
                 .filter(p => this.triageEsDeHoy(this.ultimoTriage(p)))
                 .forEach(p => {
@@ -885,6 +920,12 @@ export default {
 @keyframes badgeNuevaPop {
     0% { transform: scale(0); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
+}
+
+/* ─── INDICADOR "ACTUALIZADO HACE X" (NUEVO) ─────────────────────── */
+
+.ultima-actualizacion {
+    white-space: nowrap;
 }
 
 /* ─── TARJETAS DE ESTADISTICAS ───────────────────────────────────── */
@@ -1042,9 +1083,6 @@ export default {
     50% { box-shadow: 0 0 0 5px rgba(180,83,9,0); }
 }
 
-/* Nuevo estado: consultas que aún no entran en turno.
-   Deliberadamente estático (sin pulso), para no competir
-   visualmente con "En proceso". */
 .estado-agendada {
     background: #e7f0ff;
     color: #1d4ed8;
@@ -1285,11 +1323,6 @@ export default {
 .dot-inicio { background: #10b981; }
 
 /* ─── ACCESOS RAPIDOS ────────────────────────────────────────────── */
-/* Grid flexible: el espacio libre se reparte entre todas las tarjetas
-   en vez de dejar un hueco vacío al final de la fila.
-   Cambio: se quita el max-width que tope el crecimiento de cada
-   tarjeta, así el flex-grow (el "1" de "1 1 200px") sí reparte todo
-   el ancho libre entre las 4 tarjetas y ocupan la fila completa. */
 
 .accesos-grid {
     display: flex;
@@ -1348,7 +1381,6 @@ export default {
 .acceso-danger { border-left-color: #dc2626; }
 .acceso-danger i { background: #fee2e2; color: #dc2626; }
 
-/* Respeta preferencia del sistema por menos movimiento */
 @media (prefers-reduced-motion: reduce) {
     .fade-in-up, .stagger-item, .alerta-alta, .alerta-media,
     .estado-en-proceso, .flujo-activo, .progress-shine, .timeline-dot::after,
