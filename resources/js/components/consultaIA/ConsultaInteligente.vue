@@ -105,6 +105,7 @@
 <script>
 import ApiService from '../../services/ApiService.js'
 import axios from 'axios'
+import eventBus from '../../utils/eventBus.js'
 import TranscripcionLive from './TranscripcionLive.vue'
 import PanelIA from './PanelIA.vue'
 import HistorialClinico from './HistorialClinico.vue'
@@ -336,6 +337,8 @@ export default {
                 await axios.patch(`/api/citas/${citaActual.id}/estado`, {
                     estado: 'Finalizada'
                 })
+                 // Avisar al Dashboard/Home que la consulta terminó
+                    eventBus.emit('consulta-finalizada')
             } else {
                 console.warn('No se encontró una cita de hoy para este paciente; no se pudo marcar como Finalizada.')
             }
