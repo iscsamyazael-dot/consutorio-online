@@ -117,61 +117,28 @@
                                 <!-- ==================================
                                      PRIORIDAD
                                 =================================== -->
+                                <!-- Columna PRIORIDAD -->
                                 <td>
-
-                                    <template
-                                        v-if="
-                                            analisisIA[paciente.id]?.loading
-                                        "
-                                    >
-
+                                    <template v-if="analisisIA[paciente.id]?.sinDatos">
                                         <span class="badge bg-secondary">
-
-                                            <span
-                                                class="spinner-border spinner-border-sm me-1"
-                                            ></span>
-
-                                            Analizando IA...
-
+                                            <i class="fas fa-minus-circle me-1"></i>
+                                            Sin triage
                                         </span>
-
                                     </template>
 
+                                    <template v-else-if="analisisIA[paciente.id]?.loading">
+                                        <span class="badge bg-secondary">
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                            Analizando IA...
+                                        </span>
+                                    </template>
 
                                     <template v-else>
-
-                                        <span
-                                            :class="
-                                                obtenerPrioridad(
-                                                    analisisIA[paciente.id]?.prioridad ||
-                                                    mapearEstadoAPrioridad(
-                                                        paciente.triages?.[0]?.estado
-                                                    )
-                                                ).clase
-                                            "
-                                        >
-
-                                            {{
-                                                obtenerPrioridad(
-                                                    analisisIA[paciente.id]?.prioridad ||
-                                                    mapearEstadoAPrioridad(
-                                                        paciente.triages?.[0]?.estado
-                                                    )
-                                                ).texto
-                                            }}
-
+                                        <span :class="obtenerPrioridad(analisisIA[paciente.id]?.prioridad || mapearEstadoAPrioridad(paciente.triages?.[0]?.estado)).clase">
+                                            {{ obtenerPrioridad(analisisIA[paciente.id]?.prioridad || mapearEstadoAPrioridad(paciente.triages?.[0]?.estado)).texto }}
                                         </span>
-
-                                        <i
-                                            v-if="
-                                                analisisIA[paciente.id]?.error
-                                            "
-                                            class="fas fa-exclamation-circle text-warning ms-1"
-                                            title="IA no disponible, usando reglas de respaldo"
-                                        ></i>
-
+                                        <i v-if="analisisIA[paciente.id]?.error" class="fas fa-exclamation-circle text-warning ms-1" title="IA no disponible, usando reglas de respaldo"></i>
                                     </template>
-
                                 </td>
 
 
@@ -217,18 +184,17 @@
                                         <div>
                                             <i class="fas fa-lungs me-1" style="color: #0d9488;"></i>
                                             {{
-                                                paciente.triages[0].saturacion 
-                                                    ? paciente.triages[0].saturacion + '%' 
+                                                paciente.triages[0].saturacion !== null && paciente.triages[0].saturacion !== undefined && paciente.triages[0].saturacion !== ''
+                                                    ? paciente.triages[0].saturacion + '%'
                                                     : 'Sin triage'
                                             }}
                                         </div>
 
-                                        <!-- Temperatura -->
                                         <div>
                                             <i class="fas fa-thermometer-half text-warning me-1"></i>
                                             {{
-                                                paciente.triages[0].temperatura 
-                                                    ? paciente.triages[0].temperatura + ' °C' 
+                                                paciente.triages[0].temperatura !== null && paciente.triages[0].temperatura !== undefined && paciente.triages[0].temperatura !== ''
+                                                    ? paciente.triages[0].temperatura + ' °C'
                                                     : 'Sin triage'
                                             }}
                                         </div>
@@ -255,53 +221,16 @@
 
 
                                     <template v-else>
-
-                                        <span
-                                            v-if="
-                                                obtenerEstadoFinal(paciente)
-                                                === 'grave'
-                                            "
-                                            class="badge bg-danger"
-                                        >
-                                            GRAVE
-                                        </span>
-
-
-                                        <span
-                                            v-else-if="
-                                                obtenerEstadoFinal(paciente)
-                                                === 'urgente'
-                                            "
-                                            class="badge bg-warning text-dark"
-                                        >
-                                            URGENTE
-                                        </span>
-
-
-                                        <span
-                                            v-else
-                                            class="badge bg-info text-dark"
-                                        >
-                                            LEVE
-                                        </span>
-
+                                        <span v-if="obtenerEstadoFinal(paciente) === 'sin_datos'" class="badge bg-secondary">SIN TRIAGE</span>
+                                        <span v-else-if="obtenerEstadoFinal(paciente) === 'grave'" class="badge bg-danger">GRAVE</span>
+                                        <span v-else-if="obtenerEstadoFinal(paciente) === 'moderado'" class="badge bg-warning text-dark">MODERADO</span>
+                                        <span v-else class="badge bg-info text-dark">LEVE</span>
 
                                         <br>
 
-
-                                        <small
-                                            class="text-muted fst-italic"
-                                            style="font-size: 11px;"
-                                        >
-
-                                            {{
-                                                analisisIA[paciente.id]
-                                                    ?.justificacion ||
-                                                'Evaluado por Triage base'
-                                            }}
-
+                                        <small class="text-muted fst-italic" style="font-size: 11px;">
+                                            {{ analisisIA[paciente.id]?.justificacion || 'Evaluado por Triage base' }}
                                         </small>
-
                                     </template>
 
                                 </td>
@@ -310,28 +239,15 @@
                                 <!-- ==================================
                                      ESPERA
                                 =================================== -->
+                                <!-- Columna ESPERA -->
                                 <td>
-
-                                    <span
-                                        :class="
-                                            obtenerEspera(
-                                                paciente.triages?.[0]?.estado,
-                                                paciente.triages?.[0]?.created_at,
-                                                paciente.estado_consulta
-                                            ).claseCss
-                                        "
-                                    >
-
-                                        {{
-                                            obtenerEspera(
-                                                paciente.triages?.[0]?.estado,
-                                                paciente.triages?.[0]?.created_at,
-                                                paciente.estado_consulta
-                                            ).texto
-                                        }}
-
+                                    <span v-if="analisisIA[paciente.id]?.sinDatos" class="badge bg-secondary">
+                                        — Sin evaluar
                                     </span>
 
+                                    <span v-else :class="obtenerEspera(paciente.triages?.[0]?.estado, paciente.triages?.[0]?.created_at, paciente.estado_consulta).claseCss">
+                                        {{ obtenerEspera(paciente.triages?.[0]?.estado, paciente.triages?.[0]?.created_at, paciente.estado_consulta).texto }}
+                                    </span>
                                 </td>
 
 
@@ -821,40 +737,17 @@ export default {
          */
         obtenerEstadoFinal(paciente) {
 
-            const estadoIA =
-                String(
-                    this.analisisIA[paciente.id]?.estado ||
-                    ''
-                )
-                    .toLowerCase()
-                    .trim();
-
-
-            if (estadoIA) {
-
-                return estadoIA;
-
+            if (this.analisisIA[paciente.id]?.sinDatos) {
+                return 'sin_datos';
             }
 
+            const estadoIA = String(this.analisisIA[paciente.id]?.estado || '').toLowerCase().trim();
+            if (estadoIA) return estadoIA;
 
-            const estadoBD =
-                String(
-                    paciente.triages?.[0]?.estado ||
-                    ''
-                )
-                    .toLowerCase()
-                    .trim();
-
-
-            if (estadoBD) {
-
-                return estadoBD;
-
-            }
-
+            const estadoBD = String(paciente.triages?.[0]?.estado || '').toLowerCase().trim();
+            if (estadoBD) return estadoBD;
 
             return 'leve';
-
         },
 
 
@@ -1016,34 +909,32 @@ export default {
          */
         async analizarConIA(paciente) {
 
-            const triage =
-                paciente.triages?.[0];
+            const triage = paciente.triages?.[0];
 
+            // ⛔ Sin vitales reales: no se llama a la IA, no se gasta contador/token
+            if (!this.tieneDatosSuficientes(triage)) {
 
-            if (!triage) {
+                this.analisisIA = {
+                    ...this.analisisIA,
+                    [paciente.id]: {
+                        loading: false,
+                        sinDatos: true,
+                        prioridad: null,
+                        estado: 'sin_datos',
+                        justificacion: 'Sin triage registrado o evaluación no completada.',
+                    }
+                };
 
-                return;
-
+                return; // 👈 nunca llega al ApiService.get(...) que llama a DeepSeek
             }
 
-
             this.analisisIA = {
-
                 ...this.analisisIA,
-
-                [paciente.id]: {
-                    loading: true
-                }
-
+                [paciente.id]: { loading: true }
             };
 
-
             try {
-
-                const response =
-                    await ApiService.get(
-                        `/triage/${paciente.id}/analizar-ia`
-                    );
+                const response = await ApiService.get(`/triage/${paciente.id}/analizar-ia`);
 
 
                 const data =
@@ -1578,6 +1469,16 @@ export default {
 
             };
 
+        },
+
+        tieneDatosSuficientes(triage) {
+            if (!triage) return false;
+
+            return (
+                (triage.presion && String(triage.presion).trim() !== '') ||
+                (triage.saturacion !== null && triage.saturacion !== undefined && triage.saturacion !== '') ||
+                (triage.temperatura !== null && triage.temperatura !== undefined && triage.temperatura !== '')
+            );
         },
 
 
