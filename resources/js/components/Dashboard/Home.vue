@@ -177,7 +177,7 @@
                         <div v-else key="list">
                             <div
                                 class="alerta-item stagger-item"
-                                v-for="(a, i) in alertasClinicas"
+                                v-for="(a, i) in alertasClinicasFiltradas"
                                 :key="i"
                                 :class="'alerta-' + a.nivel"
                                 :style="{ '--i': i }"
@@ -376,7 +376,8 @@ export default {
             // NUEVO: soporte para el indicador "Actualizado hace X"
             actualizando: false,
             ultimaActualizacion: null,
-            tickerReloj: null
+            tickerReloj: null,
+            tiempoCreacionAlertas: null // timestamp de la última vez que se cargaron alertas, para evitar notificaciones repetidas al refrescar
         }
     },
 
@@ -403,6 +404,31 @@ export default {
             if (segundos < 60) return `Actualizado hace ${segundos}s`;
             const minutos = Math.floor(segundos / 60);
             return `Actualizado hace ${minutos} min`;
+        },
+       // NUEVO: filtra únicamente la alerta de prioridad alta para que desaparezca después de 5 minutos
+       // NUEVO: oculta únicamente la alerta de prioridad alta después de 5 minutos
+        alertasClinicasFiltradas() {
+            void this.tickerReloj; // Mantiene el conteo reactivo cada segundo
+            if (!this.tiempoCreacionAlertas) return this.alertasClinicas;
+            
+            const ahora = Date.now();
+            const TIEMPO_EXPIRACION = 10 * 1000; // Ponlo en 10 segundos para probar rápido
+            const expirado = (ahora - this.tiempoCreacionAlertas) >= TIEMPO_EXPIRACION;
+            
+            return this.alertasClinicas.filter(alerta => {
+                // Verificamos si la alerta es la de prioridad alta (ya sea por nivel o por su título)
+                const esPrioridadAlta = 
+                    (alerta.nivel && alerta.nivel.toLowerCase() === 'danger') || 
+                    (alerta.titulo && alerta.titulo.toLowerCase().includes('prioridad alta'));
+
+                // Si es prioridad alta y ya pasó el tiempo, la filtramos (ocultamos)
+                if (esPrioridadAlta && expirado) {
+                    return false;
+                }
+                
+                // Las demás alertas se quedan siempre visibles
+                return true;
+            });
         }
     },
 
@@ -605,6 +631,7 @@ export default {
 
         procesarAlertasClinicas(triage, citas, medicamentos) {
             this.cargandoAlertas = false;
+            this.tiempoCreacionAlertas = Date.now();
             const alertas = [];
 
             // CORREGIDO: se normalizan los ids a String() en ambos lados
@@ -621,7 +648,7 @@ export default {
                         const estado = this.normalizarEstado(c.estado);
                         return estado === 'finalizada' || estado === 'completada';
                     })
-                    .map(c => this.idPacienteCita(c))
+                    .map(c => c.paciente_id || c.id_paciente)
                     .filter(id => id !== null && id !== undefined)
                     .map(id => String(id))
             );
@@ -631,6 +658,7 @@ export default {
                 const esGraveHoy = this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
                 return esGraveHoy && !pacientesFinalizadosHoy.has(String(p.id));
             });
+<<<<<<< HEAD
             
             // 🔍 DEBUG TEMPORAL — quitar después de diagnosticar
             console.log('--- DEBUG ALERTAS ---');
@@ -642,6 +670,11 @@ export default {
             }).map(p => ({ id: p.id, nombre: p.nombre })));
             console.log('--- FIN DEBUG ---');
             
+=======
+            console.log("Citas que llegaron:", citas);
+            console.log("Citas finalizadas detectadas:", Array.from(pacientesFinalizadosHoy));
+            console.log("Pacientes graves encontrados:", graves.map(p => p.id));
+>>>>>>> feature/expedienteMedicoIA
 
             if (graves.length > 0) {
                 alertas.push({
