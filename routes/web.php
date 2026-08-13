@@ -103,6 +103,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('recetas', RecetaController::class);
         Route::resource('receta-detalles', RecetaDetalleController::class);
         Route::resource('usuarios', UserController::class);
+        
+        //Ruta para ver el total de las consultas finalizadas el día de hoy
+        Route::get('total-consultas-finalizadas', [TriageController::class, 'totalFinalizadasHoy']);
+
 
         // IMPORTANTE: estas rutas deben ir ANTES de Route::resource('consultaIA', ...)
         // y deben coincidir EXACTAMENTE con la URL que llama el frontend
@@ -147,6 +151,7 @@ Route::middleware('auth')->group(function () {
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
         Route::resource('citas', CitaController::class);// Agenda: CRUD de citas
         Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendario / lista de espera
+
 
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas

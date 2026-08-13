@@ -338,6 +338,7 @@ export default {
 
     data() {
         return {
+            totalConsultasFinalizadasHoy:0,
             resumen: {
                 pacientesRegistrados: 0,
                 triageHoy: 0,
@@ -484,6 +485,25 @@ export default {
 
             this.ultimaActualizacion = new Date();
             this.actualizando = false;
+        },
+
+        //Metodo para obtener el total de las consultas finalizadas del día de hoy//
+        async obtenerTotalConsultasFinalizadas() {
+            try {
+                const hoy = this.formatoFechaLocal(new Date());
+                console.log('[TotalConsultasFinalizadas] Solicitando total para fecha:', hoy);
+                const response = await ApiService.get('/total-consultas-finalizadas', {
+                    params: { fecha: hoy }
+                });
+                console.log('[TotalConsultasFinalizadas] Respuesta cruda del backend:', response.data);
+                const total = response.data?.total_finalizadas ?? 0;
+                console.log('[TotalConsultasFinalizadas] Total procesado:', total);
+                return total;
+            } catch (error) {
+                console.error('[TotalConsultasFinalizadas] Error al cargar total de consultas finalizadas:', error);
+                console.error('[TotalConsultasFinalizadas] Detalle del error:', error.response?.data || error.message);
+                return 0;
+            }
         },
 
         // ─── OBTENCIÓN DE DATOS BASE (una sola vez por refresh) ───────────

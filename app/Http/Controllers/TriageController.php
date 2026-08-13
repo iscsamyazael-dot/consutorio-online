@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Models\Triage;
 use App\Models\Paciente;
+use App\Models\Consulta;
 use App\Models\AlertaClinica;       // Asegúrate de tener o crear este modelo
 use App\Models\RecomendacionIA;     // Asegúrate de tener o crear este modelo
 use App\Services\IAClinicaService; // Importamos tu servicio estrella
@@ -95,6 +96,29 @@ class TriageController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'error'   => 'Error al consultar triages',
+                'detalle' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    //Función para ver el total de las consultas finalizadas del día de hoy//
+    public function totalFinalizadasHoy(Request $request): JsonResponse
+    {
+        try {
+            $fecha = $request->filled('fecha') ? $request->fecha : now()->toDateString();
+
+            $total = Consulta::whereDate('created_at', $fecha)
+                ->where('estado_consulta', 'finalizada')
+                ->count();
+
+            return response()->json([
+                'total_finalizadas' => $total,
+                'fecha'             => $fecha,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error'   => 'Error al consultar total de consultas finalizadas',
                 'detalle' => $e->getMessage()
             ], 500);
         }
