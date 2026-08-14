@@ -466,17 +466,19 @@ export default {
         async cargarResumen() {
             this.actualizando = true;
 
-            const [pacientes, triage, citas, medicamentos] = await Promise.all([
+            const [pacientes, triage, citas, medicamentos, totalFinalizadas] = await Promise.all([
                 this.obtenerPacientes(),
                 this.obtenerTriage(),
                 this.obtenerCitas(),
-                this.obtenerMedicamentos()
+                this.obtenerMedicamentos(),
+                this.obtenerTotalConsultasFinalizadas()
             ]);
 
             // 🔍 DEBUG TEMPORAL
             window.debugCitas = citas;
             window.debugTriage = triage;
 
+            this.totalConsultasFinalizadasHoy = totalFinalizadas;
             this.procesarTarjetasSuperiores(pacientes, triage, citas);
             this.procesarProximasConsultas(citas);
             this.procesarAlertasClinicas(triage, citas, medicamentos);
@@ -757,12 +759,13 @@ export default {
                 return this.esHoy(c.fecha || c.created_at) &&
                        (estado === 'finalizada' || estado === 'completada');
             });
-            if (finalizadasHoy.length > 0) {
+            
+            if (this.totalConsultasFinalizadasHoy > 0) {
                 alertas.push({
                     nivel: 'info',
                     icono: 'fas fa-info-circle',
                     titulo: 'Información',
-                    descripcion: `${finalizadasHoy.length} consulta${finalizadasHoy.length > 1 ? 's' : ''} finalizada${finalizadasHoy.length > 1 ? 's' : ''} el día de hoy.`
+                    descripcion: `${this.totalConsultasFinalizadasHoy} consulta${this.totalConsultasFinalizadasHoy > 1 ? 's' : ''} finalizada${this.totalConsultasFinalizadasHoy > 1 ? 's' : ''} el día de hoy.`
                 });
             }
 
@@ -812,10 +815,12 @@ export default {
             const enConsulta = citasHoy.filter(c =>
                 this.normalizarEstado(c.estado) === 'en_proceso'
             ).length;
-            const finalizados = citasHoy.filter(c => {
-                const estado = this.normalizarEstado(c.estado);
-                return estado === 'finalizada' || estado === 'completada';
-            }).length;
+            
+            const finalizados = this.totalConsultasFinalizadasHoy;
+            // const finalizados = citasHoy.filter(c => {
+            //     const estado = this.normalizarEstado(c.estado);
+            //     return estado === 'finalizada' || estado === 'completada';
+            // }).length;
 
             const totalPasos = Math.max(registrados, 1);
             const progreso = Math.min(100, Math.round((finalizados / totalPasos) * 100));
