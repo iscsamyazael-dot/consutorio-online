@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Models\Triage;
 use App\Models\Paciente;
+use App\Models\Consulta;
 use App\Models\AlertaClinica;       // Asegúrate de tener o crear este modelo
 use App\Models\RecomendacionIA;     // Asegúrate de tener o crear este modelo
 use App\Services\IAClinicaService; // Importamos tu servicio estrella
@@ -100,6 +101,29 @@ class TriageController extends Controller
         }
     }
 
+    //Función para ver el total de las consultas finalizadas del día de hoy//
+    public function totalFinalizadasHoy(Request $request): JsonResponse
+    {
+        try {
+            $fecha = $request->filled('fecha') ? $request->fecha : now()->toDateString();
+
+            $total = Consulta::whereDate('created_at', $fecha)
+                ->where('estado_consulta', 'finalizada')
+                ->count();
+
+            return response()->json([
+                'total_finalizadas' => $total,
+                'fecha'             => $fecha,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error'   => 'Error al consultar total de consultas finalizadas',
+                'detalle' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function create()
     {
         //
@@ -185,13 +209,14 @@ class TriageController extends Controller
             'id'              => $paciente->id,
             'nombre'          => trim($paciente->nombre . ' ' . ($paciente->apellido ?? '')),
             'estado_consulta' => $consulta->estado_consulta ?? null,
-            'triages'         => $paciente->triages->map(function ($t) {
+            'triages' => $p->triages->map(function ($t) {
                 return [
                     'id'          => $t->id,
-                    'sintomas'    => $t->sintomas ?? $t->motivo_consulta ?? 'Sin síntomas',
-                    'presion'     => $t->presion,
-                    'saturacion'  => $t->saturacion,
-                    'temperatura' => $t->temperatura,
+                    // Si no hay síntomas ni motivo, asignamos un texto descriptivo por defecto
+                    'sintomas'    => $t->sintomas ?? $t->motivo_consulta ?? 'Sin motivo registrado',
+                    'presion'     => $t->presion ?? null,
+                    'saturacion'  => $t->saturacion ?? null,
+                    'temperatura' => $t->temperatura ?? null,
                     'estado'      => $t->estado ?? 'leve',
                     'created_at'  => $t->created_at,
                 ];

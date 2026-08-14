@@ -74,7 +74,11 @@
               class="timeline-card"
               v-for="consulta in infoConsultas"
               :key="consulta.id">
-              <div class="timeline-dot" :class="colorPunto(consulta.tipo_consulta)"></div>
+              <!-- FIX: antes recibía consulta.tipo_consulta (texto ya
+                   formateado, "En proceso"/"Finalizada"), pero colorPunto()
+                   espera el valor crudo de la BD (en_proceso/finalizada).
+                   Ahora recibe consulta.estado. -->
+              <div class="timeline-dot" :class="colorPunto(consulta.estado)"></div>
               <div class="flex-grow-1">
                 <div class="d-flex justify-content-between flex-wrap gap-2">
                  <div class="fecha-hora">
@@ -88,9 +92,13 @@
                       {{ formatearHora(consulta.fecha) }}
                     </span>
                   </div>
+                  <!-- FIX: mismo motivo que arriba, colorBadge() también
+                       espera el valor crudo (consulta.estado), no el texto
+                       ya formateado. El texto que se muestra sigue siendo
+                       consulta.tipo_consulta. -->
                   <span
                     class="badge rounded-pill px-3 py-2"
-                    :class="colorBadge(consulta.tipo_consulta)">
+                    :class="colorBadge(consulta.estado)">
                     {{ consulta.tipo_consulta }}
                   </span>
                 </div>
@@ -509,17 +517,28 @@ body {
                   // Mapeamos la estructura real del backend a lo que pinta la tarjeta:
                   // - diagnóstico viene de la primera evaluación de IA de esa consulta
                   // - "descripcion" (tarjeta sin motivo) usa la recomendación de la IA si no hay motivo
+                  //
+                  // FIX: antes tipo_consulta se calculaba con
+                  // `index === 0 ? 'En proceso' : 'Finalizada'`, un truco
+                  // por posición en el arreglo que ignoraba por completo
+                  // el estado real de la consulta en la BD. Ahora se usa
+                  // consulta.estado_consulta (que el backend ya devuelve
+                  // desde historialClinico()) y se formatea con
+                  // formatearEstado(), que ya existía pero no se usaba.
                   this.infoConsultas = consultas
-                    .map((consulta, index) => {
+                    .map((consulta) => {
                       const evaluacion = (consulta.evaluaciones && consulta.evaluaciones[0]) || null
 
                      return {
                         id: consulta.id,
                         fecha: consulta.created_at,
 
-                        // La primera consulta está en proceso
-                        // Las demás se consideran finalizadas
-                        tipo_consulta: index === 0 ? 'En proceso' : 'Finalizada',
+                        // Estado real de la BD (consultas.estado_consulta):
+                        // 'estado' crudo para pintar el color (colorPunto/
+                        // colorBadge) y 'tipo_consulta' ya formateado para
+                        // mostrar el texto en el badge.
+                        estado: consulta.estado_consulta,
+                        tipo_consulta: this.formatearEstado(consulta.estado_consulta),
 
                         motivo: consulta.motivo_consulta,
                         diagnostico: evaluacion ? evaluacion.diagnostico_probable : null,
@@ -581,7 +600,7 @@ body {
 
             // Colores del punto de la línea de tiempo según el estado real
             // de la consulta.
-            // ⚠️ Ajusta estos valores si tu columna `estado` usa otros textos
+            // ⚠️ Ajusta estos valores si tu columna `estado_consulta` usa otros textos
             colorPunto(estado){
               switch((estado || '').toLowerCase()){
                 case 'finalizada':

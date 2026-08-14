@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Route;
 
 
 
+
 Route::get('/', function () { return view('auth.login'); });
 
 Route::middleware('auth')->group(function () {
@@ -103,6 +104,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('recetas', RecetaController::class);
         Route::resource('receta-detalles', RecetaDetalleController::class);
         Route::resource('usuarios', UserController::class);
+        
+        //Ruta para ver el total de las consultas finalizadas el día de hoy
+        Route::get('total-consultas-finalizadas', [TriageController::class, 'totalFinalizadasHoy']);
+
 
         // IMPORTANTE: estas rutas deben ir ANTES de Route::resource('consultaIA', ...)
         // y deben coincidir EXACTAMENTE con la URL que llama el frontend
@@ -148,6 +153,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('citas', CitaController::class);// Agenda: CRUD de citas
         Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendario / lista de espera
 
+
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
         // GET /api/citas apuntando a controladores distintos
@@ -160,7 +166,7 @@ Route::middleware('auth')->group(function () {
         // que se conserva aquí.
         // ─────────────────────────────────────────────────────────────
         Route::get('/api/citas', [CitaController::class, 'getCitas']);// Agenda: lista de citas con paciente/medico/especialidad (ConsultaClinica.vue, ConsultaInteligente.vue)
-
+         Route::get('/api/dashboard/consultas-hoy', [DashboardController::class, 'consultasHoy']); // Dashboard SPA: consultas usadas y finalizadas hoy (Home.vue)
         // Agenda: actualizar datos del paciente
         // Cambias 'SubirArchivosControlador' por el que ya tengas
         Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
