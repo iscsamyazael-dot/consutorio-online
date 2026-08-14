@@ -46,7 +46,18 @@
     <!-- SIGNOS VITALES DEL TRIAGE -->
     <div class="row">
         <div class="col-12">
-            <SignosVitales :paciente="paciente" />
+            <!--
+                @triage-agregado: SignosVitales.vue emite este evento
+                justo después de guardar un triage nuevo (POST
+                /triage/guardar). Volvemos a pedir el paciente completo
+                para que `paciente.triages` refleje el dato real que
+                regresó el backend (el componente hijo ya lo muestra de
+                inmediato de forma optimista, esto solo lo sincroniza).
+            -->
+            <SignosVitales
+                :paciente="paciente"
+                @triage-agregado="obtenerPaciente"
+            />
         </div>
     </div>
     <!-- FILA PRINCIPAL -->

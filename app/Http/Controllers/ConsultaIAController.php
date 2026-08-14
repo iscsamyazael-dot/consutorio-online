@@ -1296,6 +1296,19 @@ class ConsultaIAController extends Controller
                 ->first();
     }
 
+    /**
+     * Historial clínico completo de un paciente (todas sus consultas +
+     * transcripciones), usado por ExpedienteTabs.vue -> obtenerConsultas().
+     *
+     * FIX: el select() de $consultas traía la columna 'estado' (sin uso
+     * real en el sistema, nunca se actualiza) en vez de 'estado_consulta'
+     * (la columna que finalizarConsulta() sí marca como 'finalizada' al
+     * presionar el botón "Finalizar" en ConsultaTiempoReal.vue). Sin
+     * 'estado_consulta' en la respuesta, el frontend no tenía forma de
+     * saber si una consulta ya había sido cerrada, y mostraba siempre
+     * "En proceso" para la primera consulta del historial sin importar
+     * su estado real.
+     */
     public function historialClinico(Request $request)
     {
         try {
@@ -1317,7 +1330,7 @@ class ConsultaIAController extends Controller
                         ]);
                 }])
                 ->orderBy('created_at', 'desc')
-                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado', 'created_at']);
+                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado_consulta', 'created_at']);
 
             $evaluaciones = EvaluacionIA::whereIn('consulta_id', $consultas->pluck('id'))
                 ->orderBy('created_at', 'desc')
