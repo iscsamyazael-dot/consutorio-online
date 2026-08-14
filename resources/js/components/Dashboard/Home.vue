@@ -1432,4 +1432,4 @@ export default {
         animation: none !important;
     }
 }
-</style>
+</style> 
