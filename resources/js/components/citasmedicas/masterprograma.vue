@@ -32,7 +32,7 @@ export default {
         return {
             storeUrl:      '/citas',        // para guardar la cita (POST)
             apiCitasUrl:   '/api/citas',     // para TRAER datos en JSON (cargarCitas)
-            paginaCitasUrl:'/citas',         // para "Cancelar" y redirigir tras guardar (página normal)
+            paginaCitasUrl:'/Agenda',         // para "Cancelar" y redirigir tras guardar (página normal)
             csrfToken:     document.querySelector('meta[name="csrf-token"]').content,
             citas: []
         }

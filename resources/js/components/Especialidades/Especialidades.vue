@@ -195,6 +195,11 @@
         </div>
 
       </div>
+      <!-- Mensaje de confirmación estilizado -->
+      <div v-if="mostrarMensajeEstilizado" class="cc-toast-notification">
+        <i class="ti ti-check-circle" aria-hidden="true"></i>
+        <span>{{ textoConfirmacion }}</span>
+      </div>
     </div>
 
     <!-- ===== MODAL EDITAR ===== -->
@@ -534,6 +539,7 @@ export default {
     // Actualiza los datos de una especialidad, reasigna el doctor elegido a esa
     // especialidad, recarga la lista, cierra el formulario y muestra un mensaje de confirmación.
     actualizar() {
+      console.log("¡El botón disparó la función actualizar!");
       if (!this.validarForm()) {
         this.mostrarToast("⚠ Revisa los campos marcados", "error");
         return;
@@ -542,13 +548,15 @@ export default {
       this.loading.actualizar = true;
       ///ApiService.put(`/especialidades/${this.form.id}`, this.form)
       const { doctorId, doctorNombreActual, ...datosEspecialidad } = this.form;
-
+      this.textoConfirmacion = "¡Especialidad y doctor actualizados correctamente!";
+      this.mostrarMensajeEstilizado = true;
       ApiService.put(`/especialidades/${this.form.id}`, datosEspecialidad)
         .then(() => {
           if (doctorId) {
             // ⚠️ Ajusta el método/ruta si tu backend espera algo distinto
             // a PUT `${MEDICOS_ENDPOINT}/{id}` con { especialidad_id }.
-            return ApiService.put(`${MEDICOS_ENDPOINT}/${doctorId}`, {
+            console.log("Enviando especialidad_id:", this.form.id);
+            return ApiService.put(`${MEDICOS_ENDPOINT}/${doctorId}/especialidad`, {
               especialidad_id: this.form.id,
             });
           }
@@ -657,6 +665,33 @@ export default {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
 
+.cc-toast-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #10b981; /* Verde elegante */
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 9999;
+  font-family: inherit;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 .specialties-page{
     --primary:#2563eb;
     --primary-dark:#1d4ed8;

@@ -1,40 +1,88 @@
 <template>
+  <EvaluacionesInteligentes></EvaluacionesInteligentes>
 
- <!-- ========================================= -->
-    <!-- EVALUCION IA -->
-    <!-- ========================================= -->
-    <EvaluacionesInteligentes></EvaluacionesInteligentes>
-    
+  <FiltrosEvaluacionIA
+    :especialidades="especialidades"
+    :medicos="medicos"
+    @filtrar="onFiltrar"
+  ></FiltrosEvaluacionIA>
 
+  <EvaluacionIA
+    v-if="vistaActual === 'tabla'"
+    :filtros="filtros"
+    @ver-evaluacion="abrirInforme"
+  />
 
-     <!-- ========================================= -->
-    <!-- EVALUACIONES INTELIGENTES  -->
-    <!-- ========================================= -->
-    <EvaluacionIA></EvaluacionIA>
-    
-
-</template>
-
-
+  <InformeCompletoIA
+    v-else-if="vistaActual === 'detalle'"
+    :folio="folioSeleccionado"
+    @volver="volverATabla"
+  />
+</template> 
 
 <script>
-import EvaluacionIA from './EvaluacionIA.vue';
 import EvaluacionesInteligentes from './EvaluacionesInteligentes.vue';
-
-
+import FiltrosEvaluacionIA from './FiltrosEvaluacionIA.vue';
+import EvaluacionIA from './EvaluacionIA.vue';
+import InformeCompletoIA from './InformeCompletoIA.vue';
 
 export default {
-    components: {
-        EvaluacionIA,
-        EvaluacionesInteligentes
+  name: 'IndexEvaluacionesIA',
+
+  components: {
+    EvaluacionesInteligentes,
+    FiltrosEvaluacionIA,
+    EvaluacionIA,
+    InformeCompletoIA,
+  },
+
+  props: {
+    especialidadesJson: {
+      type: [Array, String],
+      default: () => [],
     },
-    data(){
-        return{}
-    }, 
-    methods:{}
+    medicosJson: {
+      type: [Array, String],
+      default: () => [],
+    },
+  },
 
-}
+  data() {
+    return {
+      vistaActual: 'tabla',
+      folioSeleccionado: null,
+      filtros: {},
+    };
+  },
 
+  computed: {
+    // Vue convierte automáticamente los atributos JSON del blade en arrays/objetos,
+    // pero por si llegan como string (según cómo esté registrado el elemento raíz),
+    // los parseamos de forma segura aquí.
+    especialidades() {
+      return typeof this.especialidadesJson === 'string'
+        ? JSON.parse(this.especialidadesJson || '[]')
+        : this.especialidadesJson;
+    },
+    medicos() {
+      return typeof this.medicosJson === 'string'
+        ? JSON.parse(this.medicosJson || '[]')
+        : this.medicosJson;
+    },
+  },
 
-
+  methods: {
+    onFiltrar(filtros) {
+      this.filtros = filtros;
+    },
+    abrirInforme(folio) {
+      this.folioSeleccionado = folio;
+      this.vistaActual = 'detalle';
+    },
+    volverATabla() {
+      this.vistaActual = 'tabla';
+      this.folioSeleccionado = null;
+    },
+  },
+};
 </script>

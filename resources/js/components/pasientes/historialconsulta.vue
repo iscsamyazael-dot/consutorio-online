@@ -59,63 +59,162 @@
             <small>Registro cronológico de atención médica</small>
           </div>
 
-          <div class="timeline-card">
-            <div class="timeline-dot bg-success"></div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between flex-wrap gap-2">
-                <h6 class="fw-bold mb-0">10 Mayo 2026</h6>
-                <span class="badge bg-success rounded-pill px-3 py-2">
-                  Consulta general
-                </span>
-              </div>
-              <p class="mt-2 mb-1"><strong>Motivo:</strong> Dolor de garganta</p>
-              <p class="text-muted small mb-3">Diagnóstico: Faringitis leve.</p>
-              <a href="/HistorialConsulta" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                Ver consulta completa
-              </a>
-            </div>
-          </div>
+          <!-- Contenedor con límite de altura: a partir de ~2 consultas
+               visibles, el resto se ve haciendo scroll AQUÍ DENTRO, en vez
+               de que la tarjeta crezca y empuje toda la página. -->
+          <div class="consultas-scroll">
 
-          <div class="timeline-card">
-            <div class="timeline-dot bg-warning"></div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between flex-wrap gap-2">
-                <h6 class="fw-bold mb-0">02 Abril 2026</h6>
-                <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
-                  Seguimiento
-                </span>
-              </div>
-              <p class="mt-2 mb-0 text-muted">Control general del paciente.</p>
+            <div v-if="infoConsultas.length === 0" class="alert alert-info text-center">
+              <i class="fas fa-folder-open mr-2"></i>
+              No se encuentran consultas registradas para este paciente.
             </div>
+
+            <div
+              v-else
+              class="timeline-card"
+              v-for="consulta in infoConsultas"
+              :key="consulta.id">
+              <!-- FIX: antes recibía consulta.tipo_consulta (texto ya
+                   formateado, "En proceso"/"Finalizada"), pero colorPunto()
+                   espera el valor crudo de la BD (en_proceso/finalizada).
+                   Ahora recibe consulta.estado. -->
+              <div class="timeline-dot" :class="colorPunto(consulta.estado)"></div>
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between flex-wrap gap-2">
+                 <div class="fecha-hora">
+                    <h6 class="fw-bold mb-0">
+                      <i class="fas fa-calendar-alt text-primary me-2"></i>
+                      {{ formatearFecha(consulta.fecha) }}
+                    </h6>
+
+                    <span class="hora-consulta">
+                      <i class="fas fa-clock text-primary me-1"></i>
+                      {{ formatearHora(consulta.fecha) }}
+                    </span>
+                  </div>
+                  <!-- FIX: mismo motivo que arriba, colorBadge() también
+                       espera el valor crudo (consulta.estado), no el texto
+                       ya formateado. El texto que se muestra sigue siendo
+                       consulta.tipo_consulta. -->
+                  <span
+                    class="badge rounded-pill px-3 py-2"
+                    :class="colorBadge(consulta.estado)">
+                    {{ consulta.tipo_consulta }}
+                  </span>
+                </div>
+
+                <template v-if="consulta.motivo">
+                  <p class="mt-2 mb-1"><strong>Motivo:</strong> {{ consulta.motivo }}</p>
+                  <p class="text-muted small mb-3" v-if="consulta.diagnostico">
+                    Diagnóstico: {{ consulta.diagnostico }}
+                  </p>
+                  <a :href="`/HistorialConsulta/${consulta.id}`" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                    Ver consulta completa
+                  </a>
+                </template>
+
+                <p class="mt-2 mb-0 text-muted" v-else>
+                  {{ consulta.descripcion }}
+                </p>
+              </div>
+            </div>
+
           </div>
+          <!-- fin .consultas-scroll -->
         </div>
 
-        <!-- RECETAS -->
-        <div v-if="tabActiva === 'recetas'">
-          <div class="section-title">
-            <h5>Historial de recetas</h5>
-            <small>Tratamientos indicados al paciente</small>
-          </div>
+          <!-- RECETAS -->
+<div v-if="tabActiva === 'recetas'">
 
-          <div class="record-card">
-            <div>
-              <h6 class="fw-bold mb-1">10 Mayo 2026</h6>
-              <p class="mb-0 text-muted">Amoxicilina 500mg, cada 8 horas por 7 días.</p>
-            </div>
-            <button class="btn btn-sm btn-outline-primary rounded-pill px-3">
-              Ver receta
-            </button>
-          </div>
+  <div class="section-title">
+    <h5>Historial de recetas</h5>
+    <small>Tratamientos indicados al paciente</small>
+  </div>
 
-          <div class="record-card">
-            <div>
-              <h6 class="fw-bold mb-1">02 Abril 2026</h6>
-              <p class="mb-0 text-muted">Ibuprofeno 400mg, cada 12 horas por 3 días.</p>
-            </div>
-            <button class="btn btn-sm btn-outline-primary rounded-pill px-3">
-              Ver receta
-            </button>
-          </div>
+  <!-- Igual que en Consultas: a partir de ~2 recetas visibles, el resto
+       se ve con scroll AQUÍ DENTRO, sin empujar el resto de la página. -->
+  <div class="recetas-scroll">
+
+    <!-- SIN RECETAS -->
+    <div
+      v-if="infoRecetas.length === 0"
+      class="alert alert-info text-center"
+    >
+      <i class="fas fa-prescription me-2"></i>
+      No se encuentran recetas registradas para este paciente.
+    </div>
+
+    <!-- RECETAS -->
+    <div
+      v-else
+      v-for="receta in infoRecetas"
+      :key="receta.id"
+      class="record-card"
+    >
+
+      <div>
+
+        <h6 class="fw-bold mb-1">
+          <i class="fas fa-calendar-alt text-primary me-2"></i>
+
+          {{ formatearFecha(receta.created_at) }}
+          <span class="text-muted fw-normal">
+            &middot; {{ formatearHora(receta.created_at) }}
+          </span>
+        </h6>
+
+        <p class="mb-1">
+          <strong>Medicamentos:</strong>
+        </p>
+
+        <ul
+          v-if="parseMedicamentos(receta.medicamentos).length"
+          class="mb-2"
+        >
+          <li
+            v-for="(med, index) in parseMedicamentos(receta.medicamentos)"
+            :key="index"
+          >
+            {{ med.nombre }}
+
+            <span v-if="med.dosis">
+              - {{ med.dosis }}
+            </span>
+
+            <span v-if="med.frecuencia">
+              - {{ med.frecuencia }}
+            </span>
+
+            <span v-if="med.duracion">
+              - {{ med.duracion }}
+            </span>
+          </li>
+        </ul>
+
+        <p
+          v-if="receta.indicaciones_generales"
+          class="mb-0 text-muted"
+        >
+          <strong>Indicaciones:</strong>
+          {{ receta.indicaciones_generales }}
+        </p>
+
+      </div>
+
+      <button
+        class="btn btn-sm btn-outline-primary rounded-pill px-3"
+        @click="verPdfReceta(receta)"
+      >
+        <i class="fas fa-file-pdf me-1"></i>
+        Ver PDF
+      </button>
+
+    </div>
+
+  </div>
+  <!-- fin .recetas-scroll -->
+
+</div>
         </div>
 
         <!-- ARCHIVOS -->
@@ -182,29 +281,38 @@
 
       </div>
     </div>
-  </div>
   
   <!--Modal para mostrar los archivos a traves de un modal-->
+  <!-- Este mismo modal se reutiliza para: archivos clínicos (pestaña
+       "Archivos") y para el PDF de receta generado por la IA (pestaña
+       "Recetas" -> botón "Ver PDF"), ver verArchivo() y verPdfReceta(). -->
   <div class="modal fade" id="modalArchivo">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Vista De Los Arcchivos Clínicos</h5>
+                <h5 class="modal-title">Vista De Los Archivos Clínicos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
             <div class="modal-body">
                 <img
-                    v-if="archivoSeleccionado && esImagen(archivoSeleccionado)"
+                    v-if="archivoSeleccionado && esImagen()"
                     :src="archivoSeleccionado"
                     class="img-fluid">
                 <iframe
-                    v-else
+                    v-else-if="archivoSeleccionado && esPDF()"
                     :src="archivoSeleccionado"
                     width="100%"
                     height="700"
                     frameborder="0"
                 ></iframe>
+                <div v-else-if="archivoSeleccionado" class="text-center p-5">
+                    <i class="fas fa-file-alt text-secondary mb-3" style="font-size:60px;"></i>
+                    <p>Este tipo de archivo no se puede previsualizar en el navegador.</p>
+                    <a :href="archivoSeleccionado" class="btn btn-primary" target="_blank" download>
+                        <i class="fas fa-download me-2"></i>Descargar archivo
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -215,6 +323,18 @@
 <style scoped>
 body {
   background: #f4f6f9;
+}
+.fecha-hora {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.hora-consulta {
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .rounded-4 {
@@ -247,6 +367,51 @@ body {
 
 .section-title small {
   color: #6c757d;
+}
+
+/* Límite de altura para el historial de consultas: a partir de ~2
+   tarjetas visibles, el resto se ve con scroll DENTRO de esta caja,
+   sin empujar el resto de la página hacia abajo. Ajusta max-height
+   según cuántas tarjetas quieras mostrar de entrada. */
+.consultas-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.consultas-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.consultas-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+.consultas-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Mismo tratamiento que .consultas-scroll pero para el historial de
+   recetas: a partir de ~2 recetas visibles, el resto se ve con scroll
+   DENTRO de esta caja. */
+.recetas-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.recetas-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recetas-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+.recetas-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .timeline-card,
@@ -322,31 +487,236 @@ body {
             return {  
               tabActiva: 'consultas',
               infoArchivos: [],
-              archivoSeleccionado:''
+              infoConsultas: [],
+              infoRecetas: [],
+              archivoSeleccionado:'',
+              archivoExtension: ''
             }
         },
         mounted() {
-            //this.obtenerPacientes();
             console.log('PROP PacienteId:', this.pacienteId);
         },
         methods: {
+          parseMedicamentos(meds) {
+            if (!meds) return []
+            if (Array.isArray(meds)) return meds
+            try {
+              const parsed = JSON.parse(meds)
+              return Array.isArray(parsed) ? parsed : []
+            } catch (e) {
+              console.error('Error al parsear medicamentos:', e)
+              return []
+            }
+          },
+          async obtenerConsultas(){
+              try {
+                  const response = await ApiService.get('/historialClinico?paciente_id=' + this.pacienteId)
+
+                  const consultas = response.data.consultas || []
+
+                  // Mapeamos la estructura real del backend a lo que pinta la tarjeta:
+                  // - diagnóstico viene de la primera evaluación de IA de esa consulta
+                  // - "descripcion" (tarjeta sin motivo) usa la recomendación de la IA si no hay motivo
+                  //
+                  // FIX: antes tipo_consulta se calculaba con
+                  // `index === 0 ? 'En proceso' : 'Finalizada'`, un truco
+                  // por posición en el arreglo que ignoraba por completo
+                  // el estado real de la consulta en la BD. Ahora se usa
+                  // consulta.estado_consulta (que el backend ya devuelve
+                  // desde historialClinico()) y se formatea con
+                  // formatearEstado(), que ya existía pero no se usaba.
+                  this.infoConsultas = consultas
+                    .map((consulta) => {
+                      const evaluacion = (consulta.evaluaciones && consulta.evaluaciones[0]) || null
+
+                     return {
+                        id: consulta.id,
+                        fecha: consulta.created_at,
+
+                        // Estado real de la BD (consultas.estado_consulta):
+                        // 'estado' crudo para pintar el color (colorPunto/
+                        // colorBadge) y 'tipo_consulta' ya formateado para
+                        // mostrar el texto en el badge.
+                        estado: consulta.estado_consulta,
+                        tipo_consulta: this.formatearEstado(consulta.estado_consulta),
+
+                        motivo: consulta.motivo_consulta,
+                        diagnostico: evaluacion ? evaluacion.diagnostico_probable : null,
+                        descripcion: evaluacion ? evaluacion.recomendacion : null
+                      }
+                    })
+                    // Solo mostramos consultas que ya tengan evaluación real de la
+                    // IA (diagnóstico o recomendación). El motivo por sí solo NO
+                    // cuenta como contenido: en las consultas de IA siempre llega
+                    // un motivo genérico ("Consulta Inteligente") aunque la consulta
+                    // no haya avanzado, así que basarnos en motivo dejaba pasar
+                    // consultas "vacías" como esa.
+                    .filter(consulta => !!(consulta.diagnostico || consulta.descripcion))
+
+                  console.log('Historial clínico cargado:', this.infoConsultas)
+              } catch(error){
+                  console.error("Error al obtener el historial clínico:", error)
+              }
+          },
+          //Formatea la fecha que llega en created_at (ej: 2026-05-10T14:32:00.000000Z)//
+          formatearFecha(fecha){
+            if(!fecha) return ''
+            const f = new Date(fecha)
+            return f.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
+          },
+          formatearHora(fecha){
+            if(!fecha) return ''
+
+            const f = new Date(fecha)
+
+            return f.toLocaleTimeString('es-MX', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            })
+            
+          },
+           // Formatea el estado
+            formatearEstado(estado){
+              if(!estado){
+                return 'En proceso'
+              }
+
+              switch(estado.toLowerCase()){
+                case 'en_proceso':
+                  return 'En proceso'
+
+                case 'finalizada':
+                case 'completada':
+                  return 'Finalizada'
+
+                case 'cancelada':
+                  return 'Cancelada'
+
+                default:
+                  return 'En proceso'
+              }
+            },
+
+            // Colores del punto de la línea de tiempo según el estado real
+            // de la consulta.
+            // ⚠️ Ajusta estos valores si tu columna `estado_consulta` usa otros textos
+            colorPunto(estado){
+              switch((estado || '').toLowerCase()){
+                case 'finalizada':
+                case 'completada':
+                  return 'bg-success'
+
+                case 'en_proceso':
+                  return 'bg-warning'
+
+                case 'urgencia':
+                  return 'bg-danger'
+
+                default:
+                  return 'bg-secondary'
+              }
+            },
+          //Colores del badge según el estado real de la consulta//
+          colorBadge(estado){
+            switch((estado || '').toLowerCase()){
+              case 'finalizada':
+              case 'completada':
+                return 'bg-success'
+              case 'en_proceso':
+                return 'bg-warning text-dark'
+              case 'urgencia':
+                return 'bg-danger'
+              default:
+                return 'bg-secondary'
+            }
+          },
           //Función para obtener los archivos de un paciente mediante su ID//
             async obtenerArchivos(){
                 try {
                     const response = await ApiService.get('/ExpedienteDetalle/' + this.pacienteId)
                     this.infoArchivos = response.data.archivos || []
+                    this.infoRecetas = response.data.recetas   || []
+
                     console.log('Archivos cargados:',this.infoArchivos)
+                    console.log('Recetas cargadas:', this.infoRecetas)
+
                 }catch(error){
                         console.error("Error al obtener Archivos:", error)
                 }
             },
           //Función para determinar que tipo de archivo se mostrara mediante un modal//
+          //  Corrección: los archivos que vienen del chat de Consulta IA tienen
+          //  consulta_id y viven en el disco privado 'local' (storage/app/private/...),
+          //  así que NO se puede armar una URL directa: hay que pasar por la ruta
+          //  de descarga del backend (consultaIA.descargarArchivo). Los archivos
+          //  subidos manualmente (sin consulta_id) sí viven en public/archivos_clinicos
+          //  y se pueden servir con una URL directa.
+          //  Además: la extensión real se saca de archivo_url (nombre guardado en BD),
+          //  no de la URL final mostrada, porque la ruta de descarga no trae extensión.
             verArchivo(documentos){
-              this.archivoSeleccionado = '/' + documentos.archivo_url
+              if (!documentos || !documentos.archivo_url) {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Sin archivo',
+                  text: 'Este registro no tiene archivo asociado.'
+                });
+                return;
+              }
+
+              const baseURL = document
+                .querySelector('meta[name="base-url"]')
+                .getAttribute('content');
+              const base = baseURL.replace(/\/$/, '');
+
+              this.archivoExtension = documentos.archivo_url.split('.').pop().toLowerCase();
+
+              if (documentos.consulta_id) {
+                // Viene del chat de Consulta IA: disco privado 'local',
+                // hay que pasar por la ruta de descarga del backend.
+                this.archivoSeleccionado = `${base}/consultaIA/archivo/${documentos.id}/descargar`;
+              } else {
+                // Subido manualmente: disco público, URL directa.
+                let ruta = documentos.archivo_url;
+                ruta = ruta.startsWith('/') ? ruta : '/' + ruta;
+                this.archivoSeleccionado = base + ruta;
+              }
+
+              console.log('URL del archivo a mostrar:', this.archivoSeleccionado);
+
               $('#modalArchivo').modal('show')
             },
-            esImagen(ruta){
-                return /\.(jpg|jpeg|png|gif|webp)$/i.test(ruta)
+            //Función para previsualizar el PDF de receta generado por la IA
+            //(pestaña "Recetas" -> botón "Ver PDF"). Reutiliza el mismo
+            //modal/iframe que ya usa verArchivo(), apuntando a la ruta
+            //consultaIA.verPdf, que entrega el PDF inline (no descarga).
+            verPdfReceta(receta){
+              if (!receta || !receta.consulta_id) {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Sin PDF disponible',
+                  text: 'Esta receta no tiene una consulta asociada para generar el PDF.'
+                });
+                return;
+              }
+
+              const baseURL = document
+                .querySelector('meta[name="base-url"]')
+                .getAttribute('content');
+              const base = baseURL.replace(/\/$/, '');
+
+              this.archivoExtension = 'pdf';
+              this.archivoSeleccionado = `${base}/consultaIA/${receta.consulta_id}/pdf/receta/ver`;
+
+              console.log('URL del PDF de receta a mostrar:', this.archivoSeleccionado);
+
+              $('#modalArchivo').modal('show')
+            },
+            esImagen(){
+                return ['jpg','jpeg','png','gif','webp'].includes(this.archivoExtension)
+            },
+            esPDF(){
+                return this.archivoExtension === 'pdf'
             },
           //Aquítermina la función para determinar que tipo de archivo se mostrara mediante un modal//
           //Función para determinar la extención de archvo por ejemplo (pdf,docx,jpg etc)
@@ -378,6 +748,7 @@ body {
                       return 'fas fa-file-alt text-secondary';
                 }
              }
+            
           //Aquí termina la función para determinar la extención del archivo ///
         },
         props:{
@@ -393,6 +764,7 @@ body {
                 handler(id){
                     if(id){
                         this.obtenerArchivos();
+                        this.obtenerConsultas();
                     }
                 }
             }

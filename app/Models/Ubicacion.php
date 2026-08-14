@@ -18,6 +18,8 @@ class Ubicacion extends Model
         'horario_apertura',
         'horario_cierre',
         'activo',
+        'imagen',
+        'telefono'
     ];
     protected $casts = [
         'activo' => 'boolean',

@@ -19,7 +19,7 @@
                 </button>
 
             </div>
-
+ 
             <div class="modal-body">
 
                 <h4>Samy Azael Lopez Acosta</h4>

@@ -1,391 +1,158 @@
+<!-- Interfaz alertas pequeñas -->
 <template>
-    <section class="content">
-        <div class="container-fluid">
-            <!-- ===================================== -->
-            <!-- HEADER -->
-            <!-- ===================================== -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h3 class="font-weight-bold">
-                                <i class="fas fa-exclamation-triangle text-warning"></i>
-                                Centro de Alertas Farmacéuticas
-                            </h3>
-                            <small class="text-muted">
-                                Monitoreo inteligente del inventario médico
-                            </small>
-                        </div>
-                        <div>
-                            <button class="btn btn-primary btn-sm">
-                                <i class="fas fa-sync-alt"></i>
-                                Actualizar
-                            </button>
-                        </div>
-                    </div>
-                </div>
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold text-danger">
+                <i class="fas fa-bell"></i>
+                Alertas Críticas
+            </h5>
+            <button class="btn btn-sm btn-outline-secondary" @click="$emit('actualizar-inventario')" :disabled="cargando">
+                <i class="fas fa-sync-alt" :class="{ 'fa-spin': cargando }"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <!-- Estado: cargando -->
+            <div v-if="cargando" class="text-center text-muted py-3">
+                <i class="fas fa-spinner fa-spin me-2"></i> Cargando alertas...
             </div>
 
-            <!-- ===================================== -->
-            <!-- KPI ALERTAS -->
-            <!-- ===================================== -->
-
-            <div class="row">
-                <!-- CRITICAS -->
-                <div class="col-lg-3 col-md-6 col-12">
-                    <div class="small-box bg-danger">
-                        <div class="inner">
-                            <h3>8</h3>
-                            <p>Alertas Críticas</p>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-radiation-alt"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CADUCAR -->
-                <div class="col-lg-3 col-md-6 col-12">
-                    <div class="small-box bg-warning">
-                        <div class="inner">
-                            <h3>15</h3>
-                            <p>Próximos a Caducar</p>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- AGOTADOS -->
-                <div class="col-lg-3 col-md-6 col-12">
-                    <div class="small-box bg-secondary">
-                        <div class="inner">
-                            <h3>5</h3>
-                            <p>Sin Existencia</p>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-ban"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- IA -->
-                <div class="col-lg-3 col-md-6 col-12">
-                    <div class="small-box bg-info">
-                        <div class="inner">
-                            <h3>3</h3>
-                            <p>Alertas IA</p>
-                        </div>
-                        <div class="icon">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                    </div>
-                </div>
+            <!-- Estado: sin alertas -->
+            <div v-else-if="alertas.length === 0" class="text-center text-muted py-3">
+                <i class="fas fa-check-circle me-2 text-success"></i> Sin alertas pendientes
             </div>
 
-            <!-- ===================================== -->
-            <!-- FILTROS -->
-            <!-- ===================================== -->
-
-            <div class="card card-outline card-primary">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-filter"></i>
-                        Filtros de Alertas
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <!-- BUSCAR -->
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>
-                                    Buscar medicamento
-                                </label>
-                                <input type="text" class="form-control form-control-sm" placeholder="Nombre medicamento...">
-                            </div>
-                        </div>
-
-                        <!-- TIPO -->
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>
-                                    Tipo alerta
-                                </label>
-                                <select class="form-control form-control-sm">
-                                    <option>
-                                        Todas
-                                    </option>
-                                    <option>
-                                        Críticas
-                                    </option>
-                                    <option>
-                                        Caducidad
-                                    </option>
-                                    <option>
-                                        Agotados
-                                    </option>
-                                    <option>
-                                        IA
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- PRIORIDAD -->
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>
-                                    Prioridad
-                                </label>
-                                <select class="form-control form-control-sm">
-                                    <option>
-                                        Todas
-                                    </option>
-                                    <option>
-                                        Alta
-                                    </option>
-                                    <option>
-                                        Media
-                                    </option>
-                                    <option>
-                                        Baja
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- BOTON -->
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button class="btn btn-primary btn-sm btn-block">
-                                <i class="fas fa-search"></i>
-                                Filtrar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===================================== -->
-            <!-- TABLA ALERTAS -->
-            <!-- ===================================== -->
-
-            <div class="card card-outline card-danger">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="card-title">
-                            <i class="fas fa-bell"></i>
-                            Alertas del Sistema
-
-                        </h3>
-                        <button class="btn btn-success btn-sm">
-                            <i class="fas fa-file-excel"></i>
-                            Exportar
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-hover table-striped">
-                        <thead class="bg-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Tipo</th>
-                                <th>Medicamento</th>
-                                <th>Descripción</th>
-                                <th>Prioridad</th>
-                                <th>Fecha</th>
-                                <th width="180">
-                                    Acciones
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            <!-- ALERTA -->
-                            <tr>
-                                <td>1</td>
-                                <td>
-                                    <span class="badge badge-danger">
-                                        Stock crítico
-                                    </span>
-                                </td>
-                                <td>
-                                    <strong>
-                                        Paracetamol 500mg
-                                    </strong>
-                                </td>
-                                <td>
-                                    El stock actual es menor al mínimo permitido.
-                                </td>
-                                <td>
-                                    <span class="badge badge-danger">
-                                        Alta
-                                    </span>
-                                </td>
-                                <td>
-                                    26/05/2026
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <button class="btn btn-info btn-sm">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-warning btn-sm">
-                                            <i class="fas fa-boxes"></i>
-                                        </button>
-                                        <button class="btn btn-success btn-sm">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <!-- ALERTA -->
-                            <tr>
-                                <td>2</td>
-                                <td>
-                                    <span class="badge badge-warning">
-                                        Caducidad
-                                    </span>
-                                </td>
-                                <td>
-                                    <strong>
-                                        Insulina NPH
-                                    </strong>
-                                </td>
-                                <td>
-                                    El medicamento caduca en 12 días.
-                                </td>
-                                <td>
-                                    <span class="badge badge-warning">
-                                        Media
-                                    </span>
-                                </td>
-                                <td>
-                                    26/05/2026
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <button class="btn btn-info btn-sm">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-danger btn-sm">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <!-- ALERTA -->
-                            <tr>
-                                <td>3</td>
-                                <td>
-                                    <span class="badge badge-secondary">
-                                        Agotado
-                                    </span>
-                                </td>
-                                <td>
-                                    <strong>
-                                        Amoxicilina
-                                    </strong>
-                                </td>
-                                <td>
-                                    El medicamento no tiene existencias.
-                                </td>
-                                <td>
-                                    <span class="badge badge-dark">
-                                        Alta
-                                    </span>
-                                </td>
-                                <td>
-                                    26/05/2026
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <button class="btn btn-info btn-sm">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-primary btn-sm">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <!-- IA -->
-                            <tr>
-                                <td>4</td>
-                                <td>
-                                    <span class="badge badge-info">
-                                        IA
-                                    </span>
-                                </td>
-                                <td>
-                                    <strong>
-                                        Antibióticos
-                                    </strong>
-                                </td>
-                                <td>
-                                    IA detectó aumento anormal de consumo.
-                                </td>
-                                <td>
-                                    <span class="badge badge-info">
-                                        Predictiva
-                                    </span>
-                                </td>
-                                <td>
-                                    26/05/2026
-                                </td>
-                                <td>
-                                    <div class="btn-group">
-                                        <button class="btn btn-info btn-sm">
-                                            <i class="fas fa-robot"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Alertas reales -->
+            <div
+                v-else
+                v-for="alerta in alertas"
+                :key="alerta.id"
+                class="alert d-flex align-items-center"
+                :class="claseAlerta(alerta.tipo)"
+            >
+                <i :class="iconoAlerta(alerta.tipo)" class="me-3"></i>
+                <div>
+                    <strong>{{ alerta.nombre }}</strong>
+                    {{ alerta.mensaje }}
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 </template>
 
 <script>
-export default {
-    data(){
-        return{
+// Umbral de días para considerar "próximo a caducar".
+// Debe coincidir con MedicamentoController@resumen (30 días) y con
+// InventarioMedico.vue / TablaMedicamentos.vue, para que todas las
+// vistas muestren exactamente los mismos medicamentos como "por caducar".
+const DIAS_LIMITE_CADUCIDAD = 30
 
+export default {
+    // Ya NO hace su propio fetch: recibe 'medicamentos' como prop desde
+    // App.vue, la única fuente de la verdad compartida con la tabla y
+    // las KPI cards. Así, cualquier edición/movimiento/eliminación que
+    // dispare 'actualizar-inventario' en App.vue se refleja aquí al
+    // instante, sin necesidad de recargar la página ni de cambiar de
+    // pestaña para forzar un remount.
+    props: {
+        medicamentos: {
+            type: Array,
+            default: () => []
+        },
+        // Opcional: si el padre expone un estado de carga global,
+        // se puede pasar aquí para mostrar el mismo spinner.
+        cargando: {
+            type: Boolean,
+            default: false
         }
     },
+
+    // Le avisa al padre que el usuario pidió refrescar manualmente
+    // (botón de la campanita/sync), para que App.vue vuelva a pedir
+    // los datos al API igual que hace tras guardar un cambio.
+    emits: ['actualizar-inventario'],
+
+    computed: {
+        // Misma lógica que MedicamentoController@resumen, pero generando
+        // el detalle de cada alerta en vez de solo el conteo.
+        // IMPORTANTE: la fecha de caducidad se lee siempre de
+        // medicamento.inventario.fecha_caducidad (fuente única de verdad,
+        // la misma que usa el backend y la tabla de InventarioMedico.vue).
+        //
+        // Al ser un computed sobre la prop 'medicamentos', se recalcula
+        // automáticamente cada vez que App.vue reasigna ese array
+        // (por ejemplo después de guardar una edición), sin fetch propio.
+        alertas() {
+            const hoy = new Date()
+            const limite = new Date()
+            limite.setDate(limite.getDate() + DIAS_LIMITE_CADUCIDAD)
+
+            const lista = []
+
+            this.medicamentos.forEach((med) => {
+                const inv = med.inventario
+                if (!inv) return
+
+                const nombreCompleto = `${med.nombre ?? ''} ${med.concentracion ?? ''}`.trim()
+
+                if (inv.stock_actual == 0) {
+                    lista.push({
+                        id: `sin_stock_${med.id}`,
+                        tipo: 'sin_stock',
+                        nombre: nombreCompleto,
+                        mensaje: 'sin existencias.'
+                    })
+                } else if (inv.stock_actual <= inv.stock_minimo) {
+                    lista.push({
+                        id: `stock_critico_${med.id}`,
+                        tipo: 'stock_critico',
+                        nombre: nombreCompleto,
+                        mensaje: `tiene stock crítico (${inv.stock_actual} unidades).`
+                    })
+                }
+
+                if (inv.fecha_caducidad) {
+                    const fechaCad = new Date(inv.fecha_caducidad)
+                    if (fechaCad >= hoy && fechaCad <= limite) {
+                        const dias = Math.ceil((fechaCad - hoy) / (1000 * 60 * 60 * 24))
+                        lista.push({
+                            id: `por_caducar_${med.id}`,
+                            tipo: 'por_caducar',
+                            nombre: nombreCompleto,
+                            mensaje: `caduca en ${dias} día${dias === 1 ? '' : 's'}.`
+                        })
+                    } else if (fechaCad < hoy) {
+                        lista.push({
+                            id: `caducado_${med.id}`,
+                            tipo: 'caducado',
+                            nombre: nombreCompleto,
+                            mensaje: 'ya caducó.'
+                        })
+                    }
+                }
+            })
+
+            return lista
+        }
+    },
+
     methods: {
+        claseAlerta(tipo) {
+            return {
+                stock_critico: 'alert-danger',
+                por_caducar: 'alert-warning',
+                sin_stock: 'alert-secondary',
+                caducado: 'alert-dark'
+            }[tipo] || 'alert-light'
+        },
 
+        iconoAlerta(tipo) {
+            return {
+                stock_critico: 'fas fa-exclamation-triangle',
+                por_caducar: 'fas fa-clock',
+                sin_stock: 'fas fa-ban',
+                caducado: 'fas fa-skull-crossbones'
+            }[tipo] || 'fas fa-info-circle'
+        }
     }
-
 }
-
 </script>
-
-<style scoped>
-
-.small-box{
-    border-radius: 10px;
-}
-
-.card{
-    border-radius: 10px;
-}
-
-.table td,
-.table th{
-    vertical-align: middle;
-}
-
-.badge{
-    font-size: 12px;
-}
-
-</style>

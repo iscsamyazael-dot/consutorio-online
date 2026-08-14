@@ -9,7 +9,7 @@
 <input type="hidden" name="route" value="{{ url('/') }}">
     
 <div id="app">
-    <master-registro-paciente></master-registro-paciente>
+    <master-registro-paciente :paciente-id="@json(optional($paciente)->id)"></master-registro-paciente>
 </div>
 
 @stop

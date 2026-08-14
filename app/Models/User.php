@@ -4,13 +4,14 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens,HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -18,6 +19,7 @@ class User extends Authenticatable
      * @var list<string>
      */ 
     protected $fillable = [
+    'user_id',
     'name',
     'email',
     'password',
@@ -29,6 +31,13 @@ class User extends Authenticatable
     {
          return $this->hasMany(Consulta::class);
     }
+
+    public function medico()
+    {
+        // Un usuario tiene un registro en la tabla medicos vinculado por 'user_id'
+        return $this->hasOne(Medico::class, 'user_id');
+    }
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -50,8 +59,12 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activo' => 'boolean',
         ];
     }
+
+
+    
 
     
 }
