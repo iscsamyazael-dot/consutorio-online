@@ -1,419 +1,184 @@
 <template>
-    
-<div class="card shadow-lg">
-
-    <div class="card-header bg-primary text-white">
-
-        <h5 class="mb-0">
-            Evaluaciones Inteligentes
-        </h5>
-
+  <div class="card card-outline card-info">
+    <div class="card-header">
+      <h3 class="card-title"><i class="fas fa-list mr-1"></i> Evaluaciones IA</h3>
     </div>
 
-    <div class="card-body table-responsive">
+    <div class="card-body table-responsive p-0">
+      <table class="table table-hover text-nowrap">
+        <thead>
+          <tr>
+            <th>Folio</th>
+            <th>Paciente</th>
+            <th>Consulta</th>
+            <th>Fecha</th>
+            <th>Riesgo</th>
+            <th>Confianza IA</th>
+            <th>Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Spinner de carga -->
+          <tr v-if="loading">
+            <td colspan="8" class="text-center py-4">
+              <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+              <p class="mb-0 mt-2 text-muted">Cargando datos...</p>
+            </td>
+          </tr>
 
-        <table class="table table-hover table-bordered">
+          <!-- Sin datos -->
+          <tr v-else-if="!evaluaciones.length">
+            <td colspan="8" class="text-center text-muted py-4">
+              No hay evaluaciones registradas.
+            </td>
+          </tr>
 
-            <thead class="bg-light">
+          <!-- Filas -->
+          <tr v-else v-for="eva in evaluaciones":key="eva.consulta_id">
+            <td><span class="font-weight-bold">{{ eva.folio }}</span></td>
+            <td>{{ eva.paciente }}</td>
+            <td>{{ eva.consulta }}</td>
+            <td>{{ eva.fecha }}</td>
+            <td>
+              <span class="badge" :class="`badge-${riesgoColor(eva.riesgo)}`">
+                {{ eva.riesgo }}
+              </span>
+            </td>
+            <td style="min-width: 160px;">
+              <div class="d-flex flex-wrap gap-1">
 
-                <tr>
-
-                    <th>Paciente</th>
-                    <th>Síntomas</th>
-                    <th>Riesgo</th>
-                    <th>Diagnóstico IA</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                <tr>
-
-                    <td>Juan Pérez</td>
-                    <td>Dolor torácico</td>
-
-                    <td>
-                        <span class="badge badge-danger p-2">
-                            ALTO
-                        </span>
-                    </td>
-
-                    <td>
-                        Evento cardiovascular
-                    </td>
-
-                    <td>
-                        <span class="badge badge-warning">
-                            En análisis
-                        </span>
-                    </td>
-
-                    <td>
-
-                        <button
-    class="btn btn-sm btn-info"
-    @click="verEvaluacionIA({
-        paciente: 'Juan Pérez',
-        sintomas: 'Dolor torácico y dificultad respiratoria',
-        riesgo: 'ALTO',
-        diagnostico: 'Posible síndrome coronario agudo detectado por IA',
-        estado: 'Crítico',
-        recomendaciones: 'Traslado inmediato a cardiología y monitoreo continuo',
-        fecha: '2026-05-27'
-    })"
->
-
-    <i class="fas fa-eye"></i>
-
-</button>
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
-
-
-<!-- =========================================
-MODAL VER EVALUACION IA
-========================================= -->
-
-<div
-    v-if="modalEvaluacionIA"
-    class="modal fade show d-block"
-    tabindex="-1"
-    style="
-        background: rgba(15,23,42,.75);
-        backdrop-filter: blur(6px);
-    "
->
-
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-
-        <div
-            class="modal-content border-0 rounded-5 overflow-hidden shadow-lg"
-        >
-
-            <!-- HEADER -->
-
-            <div
-                class="p-4 text-white"
-                style="
-                    background:
-                    linear-gradient(
-                        135deg,
-                        #4f46e5,
-                        #06b6d4
-                    );
-                "
-            >
-
-                <div
-                    class="d-flex justify-content-between align-items-center"
+                <span
+                  v-for="(confianza, index) in eva.confianzas"
+                  :key="index"
+                  class="badge badge-primary mr-1"
                 >
+                  {{ confianza }}%
+                </span>
 
-                    <div class="d-flex align-items-center">
-
-                        <!-- ICONO -->
-
-                        <div
-                            class="rounded-circle d-flex justify-content-center align-items-center me-4"
-                            style="
-                                width:80px;
-                                height:80px;
-                                background:rgba(255,255,255,.2);
-                            "
-                        >
-
-                            <i
-                                class="fas fa-robot"
-                                style="font-size:35px;"
-                            ></i>
-
-                        </div>
-
-                        <!-- TEXTO -->
-
-                        <div>
-
-                            <h2 class="fw-bold mb-1">
-
-                                Evaluación Médica IA
-
-                            </h2>
-
-                            <p class="mb-0 opacity-75">
-
-                                Diagnóstico clínico inteligente
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <!-- CERRAR -->
-
-                    <button
-                        class="btn btn-light rounded-circle"
-                        @click="modalEvaluacionIA = false"
+              </div>
+            </td>
+            <td>
+              <span class="badge" :class="`badge-${estadoColor(eva.estado)}`">
+                {{ eva.estado }}
+              </span>
+            </td>
+            <td class="text-center">
+              <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    @click="verEvaluacion(eva.consulta_folio)"
                     >
-
-                        <i class="fas fa-times"></i>
-
-                    </button>
-
-                </div>
-
-            </div>
-
-            <!-- BODY -->
-
-            <div
-                class="modal-body p-5"
-                style="background:#f1f5f9;"
-            >
-
-                <div class="row">
-
-                    <!-- PACIENTE -->
-
-                    <div class="col-md-6 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-user me-2 text-primary"></i>
-
-                                Paciente
-
-                            </small>
-
-                            <h5 class="fw-bold mt-3">
-
-                                {{ evaluacionIASeleccionada.paciente }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <!-- RIESGO -->
-
-                    <div class="col-md-6 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
-
-                                Riesgo Detectado
-
-                            </small>
-
-                            <h5 class="fw-bold text-danger mt-3">
-
-                                {{ evaluacionIASeleccionada.riesgo }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <!-- ESTADO -->
-
-                    <div class="col-md-6 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-heartbeat me-2 text-success"></i>
-
-                                Estado Clínico
-
-                            </small>
-
-                            <h5 class="fw-bold text-success mt-3">
-
-                                {{ evaluacionIASeleccionada.estado }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <!-- FECHA -->
-
-                    <div class="col-md-6 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-calendar me-2 text-info"></i>
-
-                                Fecha Evaluación
-
-                            </small>
-
-                            <h5 class="fw-bold mt-3">
-
-                                {{ evaluacionIASeleccionada.fecha }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <!-- SINTOMAS -->
-
-                    <div class="col-12 mb-4">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-notes-medical me-2 text-warning"></i>
-
-                                Síntomas Detectados
-
-                            </small>
-
-                            <p class="mt-3 mb-0">
-
-                                {{ evaluacionIASeleccionada.sintomas }}
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <!-- DIAGNOSTICO -->
-
-                    <div class="col-12 mb-4">
-
-                        <div
-                            class="rounded-4 shadow-sm p-4 text-white"
-                            style="
-                                background:
-                                linear-gradient(
-                                    135deg,
-                                    #4338ca,
-                                    #06b6d4
-                                );
-                            "
-                        >
-
-                            <small>
-
-                                <i class="fas fa-brain me-2"></i>
-
-                                Diagnóstico IA
-
-                            </small>
-
-                            <h5 class="fw-bold mt-3">
-
-                                {{ evaluacionIASeleccionada.diagnostico }}
-
-                            </h5>
-
-                        </div>
-
-                    </div>
-
-                    <!-- RECOMENDACIONES -->
-
-                    <div class="col-12">
-
-                        <div class="bg-white rounded-4 shadow-sm p-4">
-
-                            <small class="text-muted">
-
-                                <i class="fas fa-lightbulb me-2 text-warning"></i>
-
-                                Recomendaciones IA
-
-                            </small>
-
-                            <p class="mt-3 mb-0">
-
-                                {{ evaluacionIASeleccionada.recomendaciones }}
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
+                    <i class="fas fa-eye"></i> Ver
+                </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-</div>
-
-
+    <!-- Paginación -->
+    <div class="card-footer clearfix" v-if="evaluaciones.length && totalPaginas > 1">
+      <ul class="pagination pagination-sm m-0 float-right">
+        <li class="page-item" :class="{ disabled: paginaActual === 1 }">
+          <a class="page-link" href="#" @click.prevent="cargarDatos(paginaActual - 1)">«</a>
+        </li>
+        <li 
+          v-for="p in totalPaginas" 
+          :key="p" 
+          class="page-item" 
+          :class="{ active: paginaActual === p }"
+        >
+          <a class="page-link" href="#" @click.prevent="cargarDatos(p)">{{ p }}</a>
+        </li>
+        <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
+          <a class="page-link" href="#" @click.prevent="cargarDatos(paginaActual + 1)">»</a>
+        </li>
+      </ul>
+    </div>
+  </div>
 </template>
 
-
 <script>
+import ApiService from '../../services/ApiService.js';
 
 export default {
+  name: 'TablaEvaluacionesIA',
 
-    data() {
+  props: {
+    filtros: {
+      type: Object,
+      default: () => ({}),
+    }
+  },
 
-        return {
+  emits: ['ver-evaluacion'],
 
-            // =====================================
-            // MODAL EVALUACION IA
-            // =====================================
+  data() {
+    return {
+      evaluaciones: [],
+      paginaActual: 1,
+      totalPaginas: 1,
+      loading: false,
+    };
+  },
 
-            modalEvaluacionIA: false,
+  watch: {
+    filtros: {
+      deep: true,
+      handler() {
+        this.cargarDatos(1);
+      }
+    }
+  },
 
-            evaluacionIASeleccionada: {}
+  mounted() {
+    this.cargarDatos();
+  },
 
-        }
-
+  methods: {
+    async cargarDatos(page = 1) {
+      this.loading = true;
+      try {
+        const response = await ApiService.get('/api/evaluaciones-ia', {
+          params: { page, ...this.filtros }
+        });
+        
+        // Maneja respuestas tanto de axios como de wrappers personalizados
+        const resData = response.data || response;
+        
+        this.evaluaciones = resData.data || [];
+        this.paginaActual = resData.current_page || 1;
+        this.totalPaginas = resData.last_page || 1;
+      } catch (error) {
+        console.error("Error al cargar evaluaciones desde ApiService:", error);
+      } finally {
+        this.loading = false;
+      }
     },
 
-    methods: {
+    riesgoColor(riesgo) {
+      const colores = { alto: 'danger', medio: 'warning', bajo: 'success' };
+      return colores[riesgo] || 'secondary';
+    },
 
-        // =====================================
-        // VER EVALUACION IA
-        // =====================================
+    estadoColor(estado) {
+      const colores = {
+        'pendiente': 'warning',
+        'Revisada': 'success',
+      };
+      return colores[estado] || 'secondary';
+    },
 
-        verEvaluacionIA(data) {
-
-            this.evaluacionIASeleccionada = data
-
-            this.modalEvaluacionIA = true
-
-        }
-
-    }
-
-}
-
+    verEvaluacion(folio) {
+      this.$emit('ver-evaluacion', folio);
+    },
+  },
+};
 </script>
+
+<style scoped>
+.progress-sm {
+  height: 6px;
+}
+</style>

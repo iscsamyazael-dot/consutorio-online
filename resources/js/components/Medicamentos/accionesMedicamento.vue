@@ -162,7 +162,7 @@
                                         v-model = "medicamento.presentacion">
                                 </div>
                             </div>
-                            <!-- CONCENTRACION -->
+                            <!-- CONCENTRACION  2026-->
                             <div class="col-md-3 mt-3">
                                 <label class="font-weight-bold">
                                     Concentración
@@ -703,7 +703,12 @@
         data(){
             return{
                 medicamentos:[],
-                sctockActual:0,
+                // FIX: la propiedad estaba mal escrita como "sctockActual".
+                // Como no coincidía con "stockActual" (usado en el template
+                // y en seleccionarMedicamento()), Vue nunca la registraba
+                // como reactiva y el campo "Stock Actual" del modal nunca
+                // se actualizaba en pantalla al elegir un medicamento.
+                stockActual:0,
                 medicamento:{
                     codigo: '',
                     nombre: '',

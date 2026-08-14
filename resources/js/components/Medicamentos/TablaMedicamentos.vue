@@ -1,6 +1,23 @@
 <template>
     <section class="content">
         <div class="container-fluid">
+
+            <!-- ===================================== -->
+            <!-- MENSAJES / TOASTS DE FEEDBACK (APILABLES) -->
+            <!-- ===================================== -->
+            <div class="position-fixed d-flex flex-column"
+                 style="top:20px; right:20px; z-index:9999; gap:10px; max-width:320px;">
+                <div v-for="msg in mensajes" :key="msg.id"
+                     class="alert alert-dismissible fade show shadow"
+                     :class="'alert-' + msg.tipo"
+                     style="min-width:300px; margin-bottom:0;">
+                    {{ msg.texto }}
+                    <button type="button" class="close" @click="cerrarMensaje(msg.id)">
+                        <span>&times;</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="card shadow-sm border-0 rounded-4 mt-4">
                 <div class="card-body">
                     <div class="row">
@@ -10,61 +27,65 @@
                             </label>
                             <input type="text"
                                    class="form-control"
-                                   placeholder="Nombre, código o lote">
+                                   placeholder="Nombre, código o lote"
+                                   v-model="filtros.busqueda">
                         </div>
                         <div class="col-md-2 mb-3">
                             <label class="form-label fw-bold">
                                 Estado
                             </label>
-                            <select class="form-select">
-                                <option>Todos</option>
-                                <option>Disponible</option>
-                                <option>Bajo Stock</option>
-                                <option>Crítico</option>
-                                <option>Caducado</option>
+                            <select class="form-select" v-model="filtros.estado">
+                                <option value="Todos">Todos</option>
+                                <option value="Disponible">Disponible</option>
+                                <option value="Bajo Stock">Bajo Stock</option>
+                                <option value="Crítico">Crítico</option>
+                                <option value="Próximo a Caducar">Próximo a Caducar</option>
+                                <option value="Caducado">Caducado</option>
                             </select>
                         </div>
                         <div class="col-md-2 mb-3">
                             <label class="form-label fw-bold">
                                 Categoría
                             </label>
-                            <select class="form-select">
-                                <option>Todas</option>
-                                <option>Analgésicos</option>
-                                <option>Antibióticos</option>
-                                <option>Antiinflamatorios</option>
+                            <select class="form-select" v-model="filtros.categoria">
+                                <option value="Todas">Todas</option>
+                                <option value="Analgésicos">Analgésicos</option>
+                                <option value="Antibióticos">Antibióticos</option>
+                                <option value="Antiinflamatorios">Antiinflamatorios</option>
                             </select>
                         </div>
                         <div class="col-md-2 mb-3">
                             <label class="form-label fw-bold">
                                 Caducidad
                             </label>
-                            <select class="form-select">
-                                <option>Todas</option>
-                                <option>Próximo vencer</option>
-                                <option>Vigente</option>
-                                <option>Caducado</option>
+                            <select class="form-select" v-model="filtros.caducidad">
+                                <option value="Todas">Todas</option>
+                                <option value="Próximo vencer">Próximo vencer</option>
+                                <option value="Vigente">Vigente</option>
+                                <option value="Caducado">Caducado</option>
                             </select>
                         </div>
                         <div class="col-md-3 d-flex align-items-end mb-3">
-                            <button class="btn btn-primary w-100">
-                                <i class="fas fa-search"></i>
-                                Filtrar
+                            <button class="btn btn-primary w-100" @click="limpiarFiltros">
+                                <i class="fas fa-eraser"></i>
+                                Limpiar filtros
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            
             <div class="card shadow-sm border-0 rounded-4 mt-4">
                 <div class="card-header bg-white border-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="fw-bold mb-0">
                             <i class="fas fa-box-open text-primary"></i>
                             Inventario Médico
+                            <span class="badge badge-light text-muted ml-2">
+                                {{ medicamentosFiltrados.length }} resultado(s)
+                            </span>
                         </h5>
-                        <button class="btn btn-outline-primary btn-sm">
+                        <button class="btn btn-outline-primary btn-sm" @click="exportarCSV">
                             <i class="fas fa-file-export"></i>
                             Exportar
                         </button>
@@ -78,16 +99,31 @@
                 <th>Medicamento</th>
                 <th>Presentación</th>
                 <th>Lote</th>
-                <th>Stock</th>
+                <th class="sortable-th" @click="ordenarPor('stock_actual')">
+                    Stock
+                    <i class="fas" :class="iconoOrden('stock_actual')"></i>
+                </th>
                 <th>Stock Mínimo</th>
-                <th>Caducidad</th>
+                <th class="sortable-th" @click="ordenarPor('fecha_caducidad')">
+                    Caducidad
+                    <i class="fas" :class="iconoOrden('fecha_caducidad')"></i>
+                </th>
                 <th>Estado</th>
                 <th width="180">Acciones</th>
             </tr>
         </thead>
 
         <tbody>
-            <tr v-for=" medica in medicamentos" :key="medica.id">
+            <tr v-if="medicamentosPaginados.length === 0">
+                <td colspan="9" class="text-center text-muted py-4">
+                    <i class="fas fa-search mr-2"></i>
+                    No se encontraron medicamentos con esos filtros.
+                </td>
+            </tr>
+
+            <tr v-for="medica in medicamentosPaginados" :key="medica.id"
+                class="fila-clicable"
+                @click="verMedicamento(medica.id)">
                 <!-- CODIGO -->
                 <td>
                     <span class="font-weight-bold text-primary">
@@ -116,7 +152,7 @@
                 <!-- LOTE -->
                 <td>
                     <span
-                        v-if="medica.ultimo_movimiento" 
+                        v-if="medica.ultimo_movimiento"
                         class="badge badge-secondary px-3 py-2">
                         {{ medica.ultimo_movimiento.lote }}
                     </span>
@@ -127,84 +163,92 @@
                     </span>
                 </td>
 
-                <!-- STOCK -->
+                <!-- STOCK (color dinámico según urgencia real, igual que la columna Estado) -->
                 <td>
-                    <span class="badge badge-success px-3 py-2">
-                        {{ medica.inventario.stock_actual }}
+                    <span
+                        class="badge px-3 py-2"
+                        :class="'badge-' + colorEstadoStock(estadoStock(medica))">
+                        {{ medica.inventario?.stock_actual ?? 0 }}
                     </span>
                 </td>
 
                 <!-- STOCK MINIMO -->
                 <td>
                     <span class="badge badge-warning px-3 py-2">
-                        {{ medica.inventario.stock_minimo }}
+                        {{ medica.inventario?.stock_minimo ?? 0 }}
                     </span>
                 </td>
 
                 <!-- CADUCIDAD -->
                 <td>
                     <span
-                        v-if="medica.ultimo_movimiento" 
-                        class="text-warning font-weight-bold">
-                        {{ medica.ultimo_movimiento.fecha_caducidad }}
+                        v-if="medica.inventario?.fecha_caducidad"
+                        :class="{
+                            'text-danger': estaCaducado(medica),
+                            'text-warning': !estaCaducado(medica) && proximoACaducar(medica)
+                        }"
+                        class="font-weight-bold">
+                        {{ medica.inventario.fecha_caducidad }}
+                        <br>
+                        <small class="font-weight-normal">{{ textoDiasRestantes(medica) }}</small>
                     </span>
-                    <span 
+                    <span
                         v-else
-                        class="text-danger font-weight-bold">
+                        class="text-muted font-weight-bold">
                         Sin fecha de caducidad
                     </span>
                 </td>
 
-                <!-- ESTADO -->
+                <!-- ESTADO (estado del inventario, coincide con el filtro de arriba) -->
                 <td>
                     <span
-                        v-if="medica.activo == 1"
-                        class="badge badge-success px-3 py-2">
-                        Activo
-                    </span>
-                    <span
-                        v-else
-                        class="badge badge-danger px-3 py-2">
-                        Inactivo
+                        class="badge px-3 py-2"
+                        :class="'badge-' + colorEstadoStock(estadoStock(medica))">
+                        {{ estadoStock(medica) }}
                     </span>
                 </td>
 
                 <!-- ACCIONES -->
-                <td>
+                <td @click.stop>
                     <div class="btn-group shadow-sm">
 
                         <!-- VER DETALLE -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-info"
-                            data-toggle="modal"
-                            data-target="#modalDetalleMedicamento"
                             title="Ver Detalle"
+                            aria-label="Ver detalle del medicamento"
                             @click="verMedicamento(medica.id)">
                             <i class="fas fa-eye"></i>
                         </button>
 
                         <!-- EDITAR -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-primary"
-                            data-toggle="modal"
-                            data-target="#modalEditarMedicamento"
-                            title="Editar Medicamento">
+                            title="Editar Medicamento"
+                            aria-label="Editar medicamento"
+                            @click="editarMedicamento(medica)">
                             <i class="fas fa-edit"></i>
                         </button>
 
                         <!-- MOVIMIENTO -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-warning text-dark"
-                            data-toggle="modal"
-                            data-target="#modalMovimientoInventario"
-                            title="Movimiento Inventario">
+                            title="Movimiento Inventario"
+                            aria-label="Registrar movimiento de inventario"
+                            @click="abrirMovimiento(medica)">
                             <i class="fas fa-exchange-alt"></i>
                         </button>
 
                         <!-- ELIMINAR -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-danger"
-                            title="Eliminar">
+                            title="Eliminar"
+                            aria-label="Eliminar medicamento"
+                            @click="confirmarEliminar(medica)">
                             <i class="fas fa-trash"></i>
                         </button>
 
@@ -213,6 +257,26 @@
             </tr>
         </tbody>
     </table>
+
+    <!-- PAGINACION -->
+    <div v-if="totalPaginas > 1" class="d-flex justify-content-between align-items-center mt-3 px-2">
+        <small class="text-muted">
+            Mostrando {{ inicioRango }}–{{ finRango }} de {{ medicamentosFiltrados.length }}
+        </small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" :class="{ disabled: paginaActual === 1 }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(paginaActual - 1)">Anterior</a>
+                </li>
+                <li v-for="p in totalPaginas" :key="p" class="page-item" :class="{ active: p === paginaActual }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(p)">{{ p }}</a>
+                </li>
+                <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(paginaActual + 1)">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
 </div>
             </div>
         </div>
@@ -221,9 +285,6 @@
 <!-- ============================================= -->
 <!-- MODAL DETALLE MEDICAMENTO -->
 <!-- ============================================= -->
-<!-- ===================================== -->
-<!-- MODAL DETALLE MEDICAMENTO -->
-<!-- ===================================== -->
 <div class="modal fade" id="modalDetalleMedicamento" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
@@ -247,15 +308,20 @@
                         </small>
                     </div>
                 </div>
-                <button
-                    type="button"
-                    class="close text-white"
-                    data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalDetalleMedicamento')">
                     <span>&times;</span>
                 </button>
             </div>
             <!-- BODY -->
             <div class="modal-body p-4">
+                <!-- SPINNER DE CARGA -->
+                <div v-if="cargandoDetalle" class="text-center py-5">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="sr-only">Cargando...</span>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Cargando información del medicamento...</p>
+                </div>
+                <div v-else>
                 <!-- ALERTA -->
                 <div class="alert alert-light border-left border-info shadow-sm mb-4">
                     <i class="fas fa-info-circle text-info mr-2"></i>
@@ -294,7 +360,7 @@
                                     Estado
                                 </label>
                                 <div>
-                                    <span v-if="medicamentoDetalle.activo == 1" 
+                                    <span v-if="medicamentoDetalle.activo == 1"
                                         class="badge badge-success px-3 py-2">
                                         Activo
                                     </span>
@@ -341,12 +407,12 @@
                                     Requiere Receta
                                 </label>
                                 <div>
-                                    <span v-if="medicamentoDetalle == 1"
+                                    <span v-if="medicamentoDetalle.requiere_receta == 1"
                                          class="badge badge-danger px-3 py-2">
                                          Sí
                                     </span>
                                     <span v-else
-                                       class="badge badge-succes px-3 py-2">
+                                       class="badge badge-success px-3 py-2">
                                         No
                                     </span>
                                 </div>
@@ -370,8 +436,10 @@
                                 <label class="font-weight-bold text-muted">
                                     Stock Actual
                                 </label>
-                                <div class="h4 text-success font-weight-bold">
-                                    {{ medicamentoDetalle.inventario.stock_actual}}
+                                <!-- Color dinámico: refleja el mismo estado que la columna "Estado Inventario" -->
+                                <div class="h4 font-weight-bold"
+                                     :class="'text-' + colorEstadoStock(estadoStock(medicamentoDetalle))">
+                                    {{ medicamentoDetalle.inventario?.stock_actual ?? 0 }}
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -379,7 +447,7 @@
                                     Stock Mínimo
                                 </label>
                                 <div class="h4 text-danger font-weight-bold">
-                                    {{ medicamentoDetalle.inventario.stock_minimo}}
+                                    {{ medicamentoDetalle.inventario?.stock_minimo ?? 0 }}
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
@@ -387,12 +455,56 @@
                                     Estado Inventario
                                 </label>
                                 <div>
-                                    <span class="badge badge-success px-3 py-2">
-                                        Disponible
+                                    <span
+                                        class="badge px-3 py-2"
+                                        :class="'badge-' + colorEstadoStock(estadoStock(medicamentoDetalle))">
+                                        {{ estadoStock(medicamentoDetalle) }}
                                     </span>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                <!-- ===================================== -->
+                <!-- HISTORIAL DE MOVIMIENTOS -->
+                <!-- ===================================== -->
+                <div class="card card-outline card-secondary mb-4" v-if="medicamentoDetalle.movimientos_inventario && medicamentoDetalle.movimientos_inventario.length > 0">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-history mr-2"></i>
+                            Historial de Movimientos
+                        </h5>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 260px; overflow-y:auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Lote</th>
+                                    <th>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="mov in medicamentoDetalle.movimientos_inventario.slice().reverse()" :key="mov.id">
+                                    <td>{{ mov.fecha_movimiento ? new Date(mov.fecha_movimiento).toLocaleDateString() : '—' }}</td>
+                                    <td>
+                                        <span class="badge"
+                                            :class="{
+                                                'badge-success': mov.tipo_movimiento === 'entrada',
+                                                'badge-danger': mov.tipo_movimiento === 'salida',
+                                                'badge-secondary': mov.tipo_movimiento === 'ajuste'
+                                            }">
+                                            {{ mov.tipo_movimiento }}
+                                        </span>
+                                    </td>
+                                    <td>{{ mov.cantidad }}</td>
+                                    <td>{{ mov.lote || '—' }}</td>
+                                    <td>{{ mov.motivo_movimiento || '—' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 <!-- ===================================== -->
@@ -465,20 +577,24 @@
                                     Fecha Registro
                                 </label>
                                 <div>
-                                    {{ new Date(medicamentoDetalle.created_at).toLocaleDateString() }}
+                                    {{ medicamentoDetalle.created_at ? new Date(medicamentoDetalle.created_at).toLocaleDateString() : '—' }}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
             <!-- FOOTER -->
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalDetalleMedicamento')">
                     <i class="fas fa-times mr-1"></i>
                     Cerrar
                 </button>
-                <button class="btn btn-primary">
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    @click="pasarAEditarDesdeDetalle">
                     <i class="fas fa-edit mr-1"></i>
                     Editar Medicamento
                 </button>
@@ -516,7 +632,7 @@
                         </small>
                     </div>
                 </div>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalEditarMedicamento')">
                     <span>&times;</span>
                 </button>
             </div>
@@ -722,7 +838,16 @@
                                     <label class="font-weight-bold">
                                         Stock Mínimo
                                     </label>
-                                    <input type="number" class="form-control" v-model="medicamentoSeleccionado.stock_minimo">
+                                    <input type="number" class="form-control" v-model="medicamentoSeleccionado.inventario.stock_minimo">
+                                </div>
+                            </div>
+                            <!-- FECHA CADUCIDAD -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Fecha de Caducidad
+                                    </label>
+                                    <input type="date" class="form-control" v-model="medicamentoSeleccionado.inventario.fecha_caducidad">
                                 </div>
                             </div>
                         </div>
@@ -735,13 +860,17 @@
             <!-- ===================================== -->
 
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalEditarMedicamento')">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
-                <button class="btn btn-primary" @click="actualizarMedicamento">
-                    <i class="fas fa-save mr-1"></i>
-                    Guardar Cambios
+                <button
+                    class="btn btn-primary"
+                    :disabled="guardandoEdicion"
+                    @click="actualizarMedicamento">
+                    <i class="fas fa-spinner fa-spin mr-1" v-if="guardandoEdicion"></i>
+                    <i class="fas fa-save mr-1" v-else></i>
+                    {{ guardandoEdicion ? 'Guardando...' : 'Guardar Cambios' }}
                 </button>
             </div>
         </div>
@@ -755,9 +884,6 @@
 <div class="modal fade" id="modalMovimientoInventario" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
-            <!-- ===================================== -->
-            <!-- HEADER -->
-            <!-- ===================================== -->
             <!-- ===================================== -->
             <!-- HEADER -->
             <!-- ===================================== -->
@@ -780,7 +906,7 @@
                         </small>
                     </div>
                 </div>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalMovimientoInventario')">
                     <span>&times;</span>
                 </button>
             </div>
@@ -824,7 +950,7 @@
                                     <i class="fas fa-boxes"></i>
                                 </span>
                             </div>
-                            <input type="text" class="form-control" :value="medicamentoSeleccionado?.stock" disabled>
+                            <input type="text" class="form-control" :value="medicamentoSeleccionado?.inventario?.stock_actual" disabled>
                         </div>
                     </div>
 
@@ -838,7 +964,7 @@
                                     <i class="fas fa-exclamation-triangle"></i>
                                 </span>
                             </div>
-                            <input type="text" class="form-control" :value="medicamentoSeleccionado?.stock_minimo" disabled>
+                            <input type="text" class="form-control" :value="medicamentoSeleccionado?.inventario?.stock_minimo" disabled>
                         </div>
                     </div>
                     <!-- MOVIMIENTO -->
@@ -871,7 +997,7 @@
                         <label class="font-weight-bold">
                             Cantidad
                         </label>
-                        <input type="number" class="form-control" v-model="movimiento.cantidad">
+                        <input type="number" min="1" class="form-control" v-model.number="movimiento.cantidad">
                     </div>
 
                     <div class="col-md-6">
@@ -925,7 +1051,7 @@
                         <label class="font-weight-bold">
                             Costo Unitario
                         </label>
-                        <input type="number" class="form-control" v-model="movimiento.costo_unitario">
+                        <input type="number" step="0.01" class="form-control" v-model.number="movimiento.costo_unitario">
                     </div>
                     <div class="col-md-12 mt-3">
                         <label class="font-weight-bold">
@@ -950,14 +1076,68 @@
             <!-- FOOTER -->
             <!-- ===================================== -->
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalMovimientoInventario')">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
                 <button
-                    class="btn btn-success">
-                    <i class="fas fa-save mr-1"></i>
-                    Guardar Movimiento
+                    class="btn btn-success"
+                    :disabled="guardandoMovimiento"
+                    @click="guardarMovimiento">
+                    <i class="fas fa-spinner fa-spin mr-1" v-if="guardandoMovimiento"></i>
+                    <i class="fas fa-save mr-1" v-else></i>
+                    {{ guardandoMovimiento ? 'Guardando...' : 'Guardar Movimiento' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- MODAL CONFIRMAR ELIMINACIÓN (reemplaza window.confirm) -->
+<!-- ============================================= -->
+<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white border-0" style="background:linear-gradient(135deg,#dc3545,#b02a37);">
+                <div class="d-flex align-items-center">
+                    <div class="mr-3 d-flex justify-content-center align-items-center"
+                        style="
+                            width:45px;
+                            height:45px;
+                            border-radius:50%;
+                            background:rgba(255,255,255,.15);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5 class="mb-0 font-weight-bold">
+                        Confirmar Eliminación
+                    </h5>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalConfirmarEliminar')">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0">
+                    ¿Eliminar el medicamento
+                    <strong>{{ medicamentoAEliminar?.nombre }}</strong>?
+                </p>
+                <p class="text-muted small mt-2 mb-0">
+                    Esta acción no se puede deshacer.
+                </p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalConfirmarEliminar')">
+                    <i class="fas fa-times mr-1"></i>
+                    Cancelar
+                </button>
+                <button
+                    class="btn btn-danger"
+                    :disabled="eliminandoId === medicamentoAEliminar?.id"
+                    @click="ejecutarEliminacion">
+                    <i class="fas fa-spinner fa-spin mr-1" v-if="eliminandoId === medicamentoAEliminar?.id"></i>
+                    <i class="fas fa-trash mr-1" v-else></i>
+                    {{ eliminandoId === medicamentoAEliminar?.id ? 'Eliminando...' : 'Eliminar' }}
                 </button>
             </div>
         </div>
@@ -967,22 +1147,58 @@
 
 <script>
 import ApiService from '../../services/ApiService.js'
+
+// Umbral de días para considerar "Próximo a Caducar" / "Próximo vencer".
+// Debe coincidir con MedicamentoController@resumen (30 días) y con
+// AlertasCriticas.vue, para que todas las vistas sean consistentes.
+const DIAS_LIMITE_CADUCIDAD = 30
+const MEDICAMENTOS_POR_PAGINA = 10
+
 export default {
     props: {
-        medicamento: {
-            type: Object,
-            default: () => ({})
+        // Array de medicamentos administrado por el componente padre
+        // (única fuente de la verdad, compartida con las tarjetas KPI).
+        medicamentos: {
+            type: Array,
+            default: () => []
         }
     },
+
+    // Avisa al padre para que recargue medicamentos tras cualquier
+    // acción que modifique datos (editar, eliminar, registrar movimiento).
+    emits: ['actualizar-inventario'],
+
    data(){
         return{
-            medicamentos:[],
-            medicamentoDetalle:[],
-            stockActual:0,
-            inventario:{
-                stock_actual:0,
-                stock_minimo:0
+            // ── FILTROS ──
+            filtros: {
+                busqueda: '',
+                estado: 'Todos',
+                categoria: 'Todas',
+                caducidad: 'Todas'
             },
+
+            // ── ORDENAMIENTO ──
+            orden: {
+                campo: null,      // 'stock_actual' | 'fecha_caducidad' | null
+                direccion: 'asc'  // 'asc' | 'desc'
+            },
+
+            // ── PAGINACION ──
+            paginaActual: 1,
+
+            // ── DETALLE ──
+            medicamentoDetalle:{
+                inventario:{},
+                ultimo_movimiento:null
+            },
+
+            // ── EDICION ──
+            medicamentoSeleccionado:{
+                inventario:{}
+            },
+
+            // ── MOVIMIENTO ──
             movimiento:{
                     // Medicamento
                     medicamento_id:'',
@@ -1004,72 +1220,514 @@ export default {
                     referencia_documento:'',
                     observaciones:''
                 },
-            medicamentoSeleccionado:{},
 
-            medicamentoDetalle:{
-                inventario:{},
-                ultimo_movimiento:[]
+            // ── ELIMINACION ──
+            // Medicamento pendiente de confirmar en modalConfirmarEliminar.
+            medicamentoAEliminar: null,
+
+            // ── FEEDBACK VISUAL ──
+            // Array de { id, texto, tipo } - permite mostrar varios toasts
+            // apilados en vez de que uno pise al anterior.
+            mensajes: [],
+            guardandoEdicion: false,
+            guardandoMovimiento: false,
+            eliminandoId: null,
+            cargandoDetalle: false
+        }
+    },
+
+    watch: {
+        // Cualquier cambio de filtro regresa a la página 1, para no
+        // quedarse "varado" en una página que ya no tiene resultados.
+        filtros: {
+            deep: true,
+            handler() {
+                this.paginaActual = 1
             }
         }
     },
 
-    mounted(){
-        this.obtenerMedicamentos();
-    },
+    computed: {
+        // Aplica los 4 filtros del panel superior sobre la lista recibida por props.
+        medicamentosFiltrados() {
+            const termino = this.filtros.busqueda.toLowerCase().trim()
 
-    watch: {
-        medicamento: {
-            immediate: true,
-            handler(nuevo){
-                if(nuevo){
-                    this.movimiento.medicamento = nuevo.nombre || ''
-                }
-            }
+            const resultado = this.medicamentos.filter(medica => {
+                const coincideTexto = !termino ||
+                    (medica.nombre ?? '').toLowerCase().includes(termino) ||
+                    (medica.codigo ?? '').toLowerCase().includes(termino) ||
+                    (medica.ultimo_movimiento?.lote ?? '').toLowerCase().includes(termino)
+
+                const coincideEstado =
+                    this.filtros.estado === 'Todos' ||
+                    this.estadoStock(medica) === this.filtros.estado
+
+                // NOTA: se asume que cada medicamento trae medica.categoria (string)
+                // o medica.categoria.nombre. Ajustar según el shape real del API.
+                const categoriaNombre = medica.categoria?.nombre ?? medica.categoria ?? ''
+                const coincideCategoria =
+                    this.filtros.categoria === 'Todas' ||
+                    categoriaNombre === this.filtros.categoria
+
+                const coincideCaducidad = this.coincideFiltroCaducidad(medica)
+
+                return coincideTexto && coincideEstado && coincideCategoria && coincideCaducidad
+            })
+
+            return this.aplicarOrden(resultado)
+        },
+
+        totalPaginas() {
+            return Math.max(1, Math.ceil(this.medicamentosFiltrados.length / MEDICAMENTOS_POR_PAGINA))
+        },
+
+        medicamentosPaginados() {
+            const inicio = (this.paginaActual - 1) * MEDICAMENTOS_POR_PAGINA
+            return this.medicamentosFiltrados.slice(inicio, inicio + MEDICAMENTOS_POR_PAGINA)
+        },
+
+        inicioRango() {
+            if (this.medicamentosFiltrados.length === 0) return 0
+            return (this.paginaActual - 1) * MEDICAMENTOS_POR_PAGINA + 1
+        },
+
+        finRango() {
+            return Math.min(this.paginaActual * MEDICAMENTOS_POR_PAGINA, this.medicamentosFiltrados.length)
         }
     },
 
     methods: {
-        /*//Metodo para traer la lista de los medicamentos //*/
-        async obtenerMedicamentos(){
-            try {
-                const response = await ApiService.get('medicamentos')
-                this.medicamentos = response.data
-                console.log('Medicamentos cargados:',this.medicamentos)
+        // ═══════════════════════════════════════
+        // ORDENAMIENTO
+        // ═══════════════════════════════════════
+        ordenarPor(campo) {
+            if (this.orden.campo === campo) {
+                this.orden.direccion = this.orden.direccion === 'asc' ? 'desc' : 'asc'
+            } else {
+                this.orden.campo = campo
+                this.orden.direccion = 'asc'
             }
-            catch(error){
-                console.error("Error al obtner medicamentos:", error)
-            }
+            this.paginaActual = 1
         },
-        /*//Termina el metodo para listar los medicamentos //*/
-        //Metodo para obtner el detalle de un solo medicamento//
+
+        iconoOrden(campo) {
+            if (this.orden.campo !== campo) return 'fa-sort text-muted'
+            return this.orden.direccion === 'asc' ? 'fa-sort-up' : 'fa-sort-down'
+        },
+
+        aplicarOrden(lista) {
+            if (!this.orden.campo) return lista
+
+            const campo = this.orden.campo
+            const factor = this.orden.direccion === 'asc' ? 1 : -1
+
+            return [...lista].sort((a, b) => {
+                let valA, valB
+
+                if (campo === 'stock_actual') {
+                    valA = a.inventario?.stock_actual ?? 0
+                    valB = b.inventario?.stock_actual ?? 0
+                } else if (campo === 'fecha_caducidad') {
+                    // Sin fecha se manda siempre al final, sin importar la dirección.
+                    const fechaA = a.inventario?.fecha_caducidad
+                    const fechaB = b.inventario?.fecha_caducidad
+                    if (!fechaA && !fechaB) return 0
+                    if (!fechaA) return 1
+                    if (!fechaB) return -1
+                    valA = new Date(fechaA).getTime()
+                    valB = new Date(fechaB).getTime()
+                }
+
+                if (valA < valB) return -1 * factor
+                if (valA > valB) return 1 * factor
+                return 0
+            })
+        },
+
+        // ═══════════════════════════════════════
+        // PAGINACION
+        // ═══════════════════════════════════════
+        irAPagina(p) {
+            if (p < 1 || p > this.totalPaginas) return
+            this.paginaActual = p
+        },
+
+        // ═══════════════════════════════════════
+        // VER DETALLE
+        // ═══════════════════════════════════════
         async verMedicamento(id){
-            console.log('ID del medicamento:',id)
+            // Abrimos el modal DE INMEDIATO con un estado de carga, en vez
+            // de esperar a que resuelva el fetch. Así el usuario ve
+            // feedback instantáneo aunque el endpoint tarde, en lugar de
+            // sentir que el clic no hizo nada.
+            this.medicamentoDetalle = { inventario: {}, ultimo_movimiento: null }
+            this.cargandoDetalle = true
+            this.abrirModal('modalDetalleMedicamento')
+
             try{
                 const response = await ApiService.get('/medicamentos/' + id)
                 this.medicamentoDetalle = response.data
-                console.log('Medicamento Detalle',this.medicamentoDetalle)
             }catch(error){
                 console.error(error)
+                this.mostrarMensaje('No se pudo cargar el detalle del medicamento.', 'danger')
+                this.cerrarModal('modalDetalleMedicamento')
+            }finally{
+                this.cargandoDetalle = false
             }
         },
-        //Aqui termina el metodo para obtner el detalle de un solo medicamento//
-        guardarMovimiento(){
-            console.log(this.movimiento)
-            $('#modalMovimientoInventario').modal('hide')
+
+        // Botón "Editar Medicamento" dentro del modal de Detalle: cierra
+        // ese modal y abre el de edición con los datos ya cargados.
+        pasarAEditarDesdeDetalle(){
+            this.editarMedicamento(this.medicamentoDetalle)
+            this.cerrarModal('modalDetalleMedicamento')
         },
-        ///////////////////////////////////////////////////////////////////////
-         //Función para hacer la busqueda de un medicamento mediante su ID dentro de la tabla de inventariod//
-         seleccionarMedicamento(){
-                const medicamentoSeleccionado = this.medicamentos.find(
-                    medicamento => medicamento.id == this.movimiento.medicamento_id
-                )
-                console.log('Medicamentos del Inventario',medicamentoSeleccionado)
-                if(medicamentoSeleccionado && medicamentoSeleccionado.inventario){
-                    this.stockActual = medicamentoSeleccionado.inventario.stock_actual
-                    this.movimiento.stock_minimo = medicamentoSeleccionado.inventario.stock_minimo
-                    this.movimiento.ubicacion = medicamentoSeleccionado.inventario.ubicacion
+
+        // ═══════════════════════════════════════
+        // EDITAR
+        // ═══════════════════════════════════════
+        editarMedicamento(medica){
+            // Clonamos para no mutar la lista original mientras se edita,
+            // y garantizamos que 'inventario' siempre exista (evita errores
+            // de v-model sobre una propiedad undefined).
+            this.medicamentoSeleccionado = {
+                ...medica,
+                inventario: { ...(medica.inventario || {}) }
+            }
+            this.abrirModal('modalEditarMedicamento')
+        },
+
+        async actualizarMedicamento(){
+            if (!this.medicamentoSeleccionado?.id) {
+                this.mostrarMensaje('No hay un medicamento seleccionado para editar.', 'warning')
+                return
+            }
+
+            this.guardandoEdicion = true
+            try{
+                // Route::resource('medicamentos', MedicamentoController::class) -> update
+                await ApiService.put('/medicamentos/' + this.medicamentoSeleccionado.id, this.medicamentoSeleccionado)
+
+                this.cerrarModal('modalEditarMedicamento')
+                this.mostrarMensaje('Medicamento actualizado correctamente.', 'success')
+                this.$emit('actualizar-inventario')
+            }catch(error){
+                console.error(error)
+                this.mostrarMensaje('No se pudo actualizar el medicamento.', 'danger')
+            }finally{
+                this.guardandoEdicion = false
+            }
+        },
+
+        // ═══════════════════════════════════════
+        // MOVIMIENTO DE INVENTARIO
+        // ═══════════════════════════════════════
+        abrirMovimiento(medica){
+            this.medicamentoSeleccionado = {
+                ...medica,
+                inventario: { ...(medica.inventario || {}) }
+            }
+
+            this.movimiento = {
+                medicamento_id: medica.id,
+                tipo_movimiento: 'entrada',
+                cantidad: 0,
+                fecha_movimiento: '',
+                stock_minimo: medica.inventario?.stock_minimo ?? 0,
+                ubicacion: medica.inventario?.ubicacion ?? '',
+                lote: '',
+                fecha_caducidad: '',
+                proveedor: '',
+                costo_unitario: 0,
+                motivo_movimiento: '',
+                referencia_documento: '',
+                observaciones: ''
+            }
+
+            this.abrirModal('modalMovimientoInventario')
+        },
+
+        async guardarMovimiento(){
+            if (!this.movimiento.medicamento_id) {
+                this.mostrarMensaje('Selecciona un medicamento antes de registrar el movimiento.', 'warning')
+                return
+            }
+            if (!this.movimiento.cantidad || this.movimiento.cantidad <= 0) {
+                this.mostrarMensaje('La cantidad debe ser mayor a cero.', 'warning')
+                return
+            }
+
+            this.guardandoMovimiento = true
+            try{
+                // Route::resource('movimientos', MovimientoInventarioController::class)
+                // es un recurso independiente (no anidado bajo /medicamentos/{id}),
+                // por eso el medicamento_id va dentro del payload.
+                await ApiService.post('/movimientos', this.movimiento)
+
+                this.cerrarModal('modalMovimientoInventario')
+                this.mostrarMensaje('Movimiento registrado correctamente.', 'success')
+                this.$emit('actualizar-inventario')
+            }catch(error){
+                console.error(error)
+                this.mostrarMensaje('No se pudo registrar el movimiento.', 'danger')
+            }finally{
+                this.guardandoMovimiento = false
+            }
+        },
+
+        // ═══════════════════════════════════════
+        // ELIMINAR
+        // ═══════════════════════════════════════
+        // Ya no usamos window.confirm(): abrimos un modal propio,
+        // estilizado igual que el resto de la app y con estado de
+        // "Eliminando..." mientras corre la petición.
+        confirmarEliminar(medica){
+            this.medicamentoAEliminar = medica
+            this.abrirModal('modalConfirmarEliminar')
+        },
+
+        async ejecutarEliminacion(){
+            if (!this.medicamentoAEliminar) return
+
+            this.eliminandoId = this.medicamentoAEliminar.id
+            try{
+                // Route::resource('medicamentos', MedicamentoController::class) -> destroy
+                await ApiService.delete('/medicamentos/' + this.medicamentoAEliminar.id)
+
+                this.cerrarModal('modalConfirmarEliminar')
+                this.mostrarMensaje('Medicamento eliminado correctamente.', 'success')
+                this.$emit('actualizar-inventario')
+            }catch(error){
+                console.error(error)
+                this.mostrarMensaje('No se pudo eliminar el medicamento.', 'danger')
+            }finally{
+                this.eliminandoId = null
+                this.medicamentoAEliminar = null
+            }
+        },
+
+        // ═══════════════════════════════════════
+        // FILTROS
+        // ═══════════════════════════════════════
+        limpiarFiltros(){
+            this.filtros = {
+                busqueda: '',
+                estado: 'Todos',
+                categoria: 'Todas',
+                caducidad: 'Todas'
+            }
+        },
+
+        // Determina el estado del inventario para un medicamento, en base
+        // a stock_actual / stock_minimo / fecha_caducidad. Coincide con las
+        // opciones del filtro "Estado": Disponible, Bajo Stock, Crítico,
+        // Próximo a Caducar, Caducado.
+        estadoStock(medica){
+            const stockActual = medica.inventario?.stock_actual ?? 0
+            const stockMinimo = medica.inventario?.stock_minimo ?? 0
+
+            if (this.estaCaducado(medica)) return 'Caducado'
+            if (this.proximoACaducar(medica)) return 'Próximo a Caducar'
+            if (stockActual <= 0) return 'Crítico'
+            if (stockActual <= stockMinimo) return 'Bajo Stock'
+            return 'Disponible'
+        },
+
+        colorEstadoStock(estado){
+            const colores = {
+                'Disponible':        'success',
+                'Bajo Stock':        'warning',
+                'Crítico':           'danger',
+                'Próximo a Caducar': 'info',
+                'Caducado':          'dark'
+            }
+            return colores[estado] ?? 'secondary'
+        },
+
+        estaCaducado(medica){
+            const fecha = medica.inventario?.fecha_caducidad
+            if (!fecha) return false
+            return new Date(fecha) < new Date()
+        },
+
+        proximoACaducar(medica){
+            const fecha = medica.inventario?.fecha_caducidad
+            if (!fecha) return false
+
+            const fechaCad = new Date(fecha)
+            const hoy = new Date()
+            const limite = new Date()
+            limite.setDate(hoy.getDate() + DIAS_LIMITE_CADUCIDAD)
+
+            return fechaCad >= hoy && fechaCad <= limite
+        },
+
+        // Texto auxiliar bajo la fecha de caducidad ("25 días",
+        // "Caducado hace 3 días", etc.) para no obligar al usuario a
+        // calcular mentalmente cuánto falta.
+        textoDiasRestantes(medica){
+            const fecha = medica.inventario?.fecha_caducidad
+            if (!fecha) return ''
+
+            const fechaCad = new Date(fecha)
+            const hoy = new Date()
+            hoy.setHours(0, 0, 0, 0)
+            fechaCad.setHours(0, 0, 0, 0)
+
+            const dias = Math.round((fechaCad - hoy) / (1000 * 60 * 60 * 24))
+
+            if (dias < 0) return `Caducó hace ${Math.abs(dias)} día(s)`
+            if (dias === 0) return 'Caduca hoy'
+            return `${dias} día(s)`
+        },
+
+        coincideFiltroCaducidad(medica){
+            if (this.filtros.caducidad === 'Todas') return true
+
+            const fecha = medica.inventario?.fecha_caducidad
+            if (!fecha) return false
+
+            const fechaCad = new Date(fecha)
+            const hoy = new Date()
+            const enTreintaDias = new Date()
+            enTreintaDias.setDate(hoy.getDate() + DIAS_LIMITE_CADUCIDAD)
+
+            if (this.filtros.caducidad === 'Caducado') return fechaCad < hoy
+            if (this.filtros.caducidad === 'Próximo vencer') return fechaCad >= hoy && fechaCad <= enTreintaDias
+            if (this.filtros.caducidad === 'Vigente') return fechaCad > enTreintaDias
+            return true
+        },
+
+        // ═══════════════════════════════════════
+        // EXPORTAR
+        // ═══════════════════════════════════════
+        exportarCSV(){
+            if (this.medicamentosFiltrados.length === 0) {
+                this.mostrarMensaje('No hay datos para exportar con los filtros actuales.', 'warning')
+                return
+            }
+
+            const filas = this.medicamentosFiltrados.map(m => ({
+                Codigo: m.codigo ?? '',
+                Nombre: m.nombre ?? '',
+                Generico: m.nombre_generico ?? '',
+                Presentacion: m.presentacion ?? '',
+                Lote: m.ultimo_movimiento?.lote ?? '',
+                Stock: m.inventario?.stock_actual ?? 0,
+                StockMinimo: m.inventario?.stock_minimo ?? 0,
+                Caducidad: m.inventario?.fecha_caducidad ?? '',
+                Estado: this.estadoStock(m)
+            }))
+
+            const encabezados = Object.keys(filas[0]).join(',')
+            const cuerpo = filas.map(f => Object.values(f).join(',')).join('\n')
+            const csv = encabezados + '\n' + cuerpo
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `inventario_medicamentos_${new Date().toISOString().slice(0,10)}.csv`
+            link.click()
+            URL.revokeObjectURL(url)
+        },
+
+        // ═══════════════════════════════════════
+        // MODALES (control manual con jQuery + Bootstrap 4)
+        // ═══════════════════════════════════════
+        // Centralizamos apertura/cierre aquí en vez de usar
+        // data-toggle/data-target, porque el @click.stop en la celda
+        // de acciones impide que el evento llegue al listener delegado que
+        // Bootstrap registra en el document.
+        //
+        // IMPORTANTE: este proyecto usa Bootstrap 4 (jQuery presente). El
+        // objeto global `bootstrap` en BS4 SÍ existe pero su clase Modal no
+        // tiene el método estático `getOrCreateInstance` (eso es exclusivo
+        // de Bootstrap 5), por eso se prioriza jQuery aquí.
+        abrirModal(id){
+            // $nextTick asegura que Vue ya actualizó el DOM con los datos
+            // (medicamentoDetalle, medicamentoSeleccionado, etc.) antes de
+            // mostrar el modal.
+            this.$nextTick(() => {
+                const el = document.getElementById(id)
+                if (!el) {
+                    console.error('No se encontró el modal con id: ' + id)
+                    return
                 }
+                if (window.jQuery) {
+                    $('#' + id).modal('show')
+                } else if (window.bootstrap && window.bootstrap.Modal) {
+                    // Fallback Bootstrap 4/5 sin jQuery: instanciar directamente.
+                    new bootstrap.Modal(el).show()
+                } else {
+                    console.error('No se encontró jQuery ni Bootstrap JS cargado en la página.')
+                }
+            })
+        },
+
+        cerrarModal(id){
+            const el = document.getElementById(id)
+            if (!el) return
+
+            if (window.jQuery) {
+                $('#' + id).modal('hide')
+            } else if (window.bootstrap && window.bootstrap.Modal) {
+                new bootstrap.Modal(el).hide()
             }
+
+            // Salvaguarda: si por alguna razón el plugin no limpia el
+            // backdrop/clases del <body> (p. ej. porque el listener
+            // data-dismiss no se disparó y solo se ejecutó este @click),
+            // lo forzamos manualmente para que la página no quede bloqueada.
+            setTimeout(() => {
+                el.classList.remove('show')
+                el.style.display = 'none'
+                el.setAttribute('aria-hidden', 'true')
+                el.removeAttribute('aria-modal')
+
+                const siguenAbiertos = document.querySelectorAll('.modal.show').length > 0
+                if (!siguenAbiertos) {
+                    document.body.classList.remove('modal-open')
+                    document.body.style.removeProperty('overflow')
+                    document.body.style.removeProperty('padding-right')
+                    document.querySelectorAll('.modal-backdrop').forEach(bd => bd.remove())
+                }
+            }, 350) // deja correr la transición fade de Bootstrap antes de forzar
+        },
+
+        // ═══════════════════════════════════════
+        // FEEDBACK VISUAL
+        // ═══════════════════════════════════════
+        // Cada llamada agrega un toast independiente al array 'mensajes',
+        // con un id único, y se autoelimina solo a sí mismo tras 3.5s.
+        // Así varios mensajes seguidos se apilan en vez de pisarse.
+        mostrarMensaje(texto, tipo = 'success'){
+            const id = Date.now() + Math.random()
+            this.mensajes.push({ id, texto, tipo })
+            setTimeout(() => {
+                this.mensajes = this.mensajes.filter(m => m.id !== id)
+            }, 3500)
+        },
+
+        cerrarMensaje(id){
+            this.mensajes = this.mensajes.filter(m => m.id !== id)
+        }
     }
 }
 </script>
+
+<style scoped>
+.sortable-th {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable-th:hover {
+    color: #007bff;
+}
+.fila-clicable {
+    cursor: pointer;
+}
+.fila-clicable:hover {
+    background-color: #f8f9fa;
+}
+</style>

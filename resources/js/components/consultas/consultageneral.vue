@@ -61,53 +61,42 @@
             <div class="card-body">
 
                 <h5 class="fw-bold mb-4">
-                    <i class="fas fa-chart-line text-primary"></i>
+                   <i class="fas fa-clipboard-list text-primary"></i>
                     Información rápida
                 </h5>
 
-                <div class="quick-info">
-
-                    <div class="quick-item">
-
-                        <i class="fas fa-user-md text-primary"></i>
-
-                        <div>
-                            <small>Médico</small>
-                            <h6>{{ medico }}</h6>
-                        </div>
-
+                <div class="quick-item">
+                    <i class="fas fa-user-md text-primary"></i>
+                    <div>
+                        <medium>Médico</medium>
+                        <p class="mb-0 fw-semibold">
+                            {{ doctor.nombre || 'Sin asignar' }}
+                        </p>
                     </div>
-
-                    <div class="quick-item">
-
-                        <i class="fas fa-calendar text-success"></i>
-
-                        <div>
-                            <small>Fecha</small>
-                            <h6>{{ fecha }}</h6>
-                        </div>
-
-                    </div>
-
-                    <div class="quick-item">
-
-                        <i class="fas fa-heartbeat text-danger"></i>
-
-                        <div>
-                            <small>Estado</small>
-                            <h6>{{ estado }}</h6>
-                        </div>
-
-                    </div>
-
                 </div>
 
+                <div class="quick-item">
+                    <i class="fas fa-stethoscope text-success"></i>
+                    <div>
+                        <medium>Especialidad</medium>
+                        <p class="mb-0 fw-semibold">
+                            {{ doctor.especialidad || 'No especificada' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="quick-item">
+                    <i class="fas fa-calendar-alt text-danger"></i>
+                    <div>
+                        <medium>Fecha</medium>
+                        <p class="mb-0 fw-semibold">
+                            {{ fechaActual }}
+                        </p>
+                    </div>
+                </div>
             </div>
-
         </div>
-
     </div>
-
 </div>
 
 </template>
@@ -118,12 +107,16 @@
 export default {
 
     name: 'NuevaConsulta',
-
+    props: {
+        doctor: {
+            type: Object,
+            default: () => ({})
+        }
+    },
     data() {
         return {
-            medico: 'Dr. Martínez',
-            fecha: '22 Mayo 2026',
-            estado: 'En evaluación',
+            
+            fechaActual: '',
             guardando: false,
             form: {
                 motivo: '',
@@ -141,7 +134,21 @@ export default {
         }
     },
 
+    mounted(){
+        this.obtenerFechaActual();
+    },
+            
     methods: {
+
+        obtenerFechaActual() {
+            const fecha = new Date();
+            this.fechaActual = fecha.toLocaleDateString('es-MX', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+        },
+
 
         validarFormulario() {
 
@@ -302,6 +309,45 @@ export default {
 
 .quick-item i {
     font-size: 24px;
+}
+
+.quick-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+}
+
+.quick-item:not(:last-child) {
+    border-bottom: 1px solid #eef2f7;
+}
+
+.quick-item i {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.quick-item div {
+    display: flex;
+    flex-direction: column;
+}
+
+.quick-item small {
+    color: #6c757d;
+    font-size: .78rem;
+}
+
+.quick-item p {
+    margin: 0;
+    font-weight: 600;
+    color: #212529;
 }
 
 .form-control {

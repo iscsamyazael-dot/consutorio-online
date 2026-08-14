@@ -1,4 +1,6 @@
 <template>
+  <!-- // cSpell:disable -->
+
   <div class="calendar-container">
 
     <!-- TOPBAR -->
@@ -191,24 +193,14 @@ export default {
   components: { FullCalendar },
 
   props: {
-    // ID del médico seleccionado en la barra de filtros (viene del padre)
-    medicoId: {
-      type: [String, Number],
-      default: ''
-    },
-    // ID de la especialidad seleccionada en la barra de filtros (viene del padre)
-    especialidadId: {
-      type: [String, Number],
-      default: ''
-    },
-    // Citas ya cargadas por el padre (única fuente de la verdad)
+    // Citas ya filtradas y cargadas por el padre (única fuente de la verdad)
     citas: {
       type: Array,
       default: () => []
     }
   },
 
-  emits: ['cita-actualizada'],
+  emits: ['cita-actualizada', 'citas-visibles-cambiadas'],
 
   data() {
     return {
@@ -225,30 +217,21 @@ export default {
       // Toast
       toast:              null,
       toastTimer:         null,
-// Estados disponibles para cambiar
+
+      // Estados disponibles para cambiar
       estadosDisponibles: [
         { valor: 'Agendado',     color: '#3b82f6', icono: 'fas fa-calendar-alt' },
+        { valor: 'Confirmada',   color: '#8b5cf6', icono: 'fas fa-check-double' },
         { valor: 'Finalizada',   color: '#10b981', icono: 'fas fa-check' },
         { valor: 'Cancelada',    color: '#ef4444', icono: 'fas fa-times' },
         { valor: 'Inasistencia', color: '#f59e0b', icono: 'fas fa-user-slash' },
       ],
     }
   },
-//colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
-  computed: {
-    // NUEVO: aplica el filtro de médico/especialidad sobre todas las citas cargadas
-    citasFiltradas() {
-      return this.citas.filter(c => {
-        const medicoOk = !this.medicoId ||
-          (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoId)
-        const especialidadOk = !this.especialidadId ||
-          (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadId)
-        return medicoOk && especialidadOk
-      })
-    },
 
+  computed: {
     eventos() {
-      return this.citasFiltradas.map(cita => ({
+      return this.citas.map(cita => ({
         id:    cita.id,
         title: (cita.paciente && cita.paciente.nombre) ? cita.paciente.nombre : 'Paciente',
         start: `${cita.fecha}T${cita.hora}`,
@@ -256,21 +239,23 @@ export default {
         extendedProps: { estado: cita.estado, hora: cita.hora },
       }))
     },
-// obtiene las citas del día seleccionado, ordenadas por hora
+
+    // obtiene las citas del día seleccionado, ordenadas por hora
     citasDelDia() {
       if (!this.fechaSeleccionada) return []
-      return this.citasFiltradas
+      return this.citas
         .filter(c => c.fecha === this.fechaSeleccionada)
         .sort((a, b) => a.hora.localeCompare(b.hora))
     },
-// formatea la fecha seleccionada a un formato legible
+
+    // formatea la fecha seleccionada a un formato legible
     fechaSeleccionadaFormateada() {
       if (!this.fechaSeleccionada) return ''
       const [y, m, d] = this.fechaSeleccionada.split('-')
       const fecha = new Date(y, m - 1, d)
       return fecha.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     },
-//opcionesCalendario, colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
+
     opcionesCalendario() {
       return {
         plugins:     [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -284,7 +269,7 @@ export default {
         },
         buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' },
         events: this.eventos,
-//eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
+
         eventContent: (arg) => {
           const estado = arg.event.extendedProps.estado
           const color  = this.colorPorEstado(estado)
@@ -314,12 +299,12 @@ export default {
 
           return { domNodes: [wrapper] }
         },
-//eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
+
         dateClick: (info) => {
           this.fechaSeleccionada = info.dateStr
           this.vistaDetalle      = true
         },
-//fechaClick, eventContent, eventDidMount, eventMouseEnter, eventMouseLeave
+
         eventClick: (info) => {
           this.fechaSeleccionada = info.event.startStr.split('T')[0]
           this.vistaDetalle      = true
@@ -327,14 +312,49 @@ export default {
       }
     },
   },
-//colorPorEstado, iconoPorEstado, normalizarEstado, formatearHora, inicialesPaciente, filtrarEventos, datosPacienteIncompletos, irACompletarPaciente, mostrarToast, abrirModalEstado, cerrarModal, confirmarCambioEstado
+
+  watch: {
+    // Cada vez que se entra/sale de la vista de detalle, avisamos al padre
+    // qué conjunto de citas está "activo" para que el resumen se recalcule.
+    vistaDetalle() {
+      this.emitirCitasVisibles()
+    },
+    // Si cambia el día seleccionado estando en detalle, también recalculamos.
+    fechaSeleccionada() {
+      this.emitirCitasVisibles()
+    },
+    // Si el padre actualiza la lista de citas (ej. cambia filtro médico/especialidad
+    // o se refresca tras un PATCH), recalculamos también.
+    citas: {
+      handler() {
+        this.emitirCitasVisibles()
+      },
+      deep: true,
+    },
+  },
+
+  mounted() {
+    // Emitimos el estado inicial (todas las citas, porque arrancamos en vista mes)
+    this.emitirCitasVisibles()
+  },
+
   methods: {
+    // Emite al padre el conjunto de citas que debe usarse para el resumen:
+    // - Si estamos en el detalle de un día -> solo las citas de ese día (puede ser []).
+    // - Si estamos en la vista de calendario -> todas las citas (ya filtradas por el padre).
+    emitirCitasVisibles() {
+      const citasVisibles = this.vistaDetalle ? this.citasDelDia : this.citas
+      this.$emit('citas-visibles-cambiadas', citasVisibles)
+    },
+
     colorPorEstado(estado) {
       const clave = this.normalizarEstado(estado)
       const colores = {
         agendado:     '#3b82f6',
         programada:   '#3b82f6',
         programado:   '#3b82f6',
+        confirmada:   '#8b5cf6',
+        confirmado:   '#8b5cf6',
         finalizada:   '#10b981',
         finalizado:   '#10b981',
         completada:   '#10b981',
@@ -349,13 +369,16 @@ export default {
       }
       return colores[clave] ?? '#94a3b8'
     },
-// obtiene el icono correspondiente al estado
+
+    // obtiene el icono correspondiente al estado
     iconoPorEstado(estado) {
       const clave = this.normalizarEstado(estado)
       const iconos = {
         agendado:     'fa-calendar-alt',
         programada:   'fa-calendar-alt',
         programado:   'fa-calendar-alt',
+        confirmada:   'fa-check-double',
+        confirmado:   'fa-check-double',
         finalizada:   'fa-check',
         finalizado:   'fa-check',
         completada:   'fa-check',
@@ -370,7 +393,8 @@ export default {
       }
       return iconos[clave] ?? 'fa-calendar-alt'
     },
-// normaliza el estado para comparación
+
+    // normaliza el estado para comparación
     normalizarEstado(estado) {
       if (!estado) return ''
       return estado
@@ -380,7 +404,8 @@ export default {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '') // quita acentos para comparar mejor
     },
-// formatea la hora de 24h a 12h con AM/PM
+
+    // formatea la hora de 24h a 12h con AM/PM
     formatearHora(hora) {
       if (!hora) return ''
       const [h, m] = hora.split(':')
@@ -389,12 +414,14 @@ export default {
       const h12  = hr % 12 || 12
       return `${h12}:${m} ${ampm}`
     },
-// obtiene las iniciales del paciente
+
+    // obtiene las iniciales del paciente
     inicialesPaciente(cita) {
       const nombre = cita.paciente?.nombre ?? 'P'
       return nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
     },
-// filtra los eventos según el término de búsqueda
+
+    // filtra los eventos según el término de búsqueda
     filtrarEventos() {
       const api = this.$refs.calendarRef?.getApi()
       if (!api) return
@@ -404,14 +431,16 @@ export default {
         event.setProp('display', coincide || termino === '' ? 'auto' : 'none')
       })
     },
-// verifica si los datos del paciente están incompletos
+
+    // verifica si los datos del paciente están incompletos
     datosPacienteIncompletos(cita) {
       const p = cita.paciente
       if (!p) return true
       const camposRequeridos = ['nombre', 'sexo', 'telefono', 'email', 'direccion', 'curp', 'tipo_sangre', 'alergias']
       return camposRequeridos.some(campo => !p[campo] || p[campo].toString().trim() === '')
     },
-// redirige a la página de completar datos del paciente
+
+    // redirige a la página de completar datos del paciente
     irACompletarPaciente(cita) {
       const p = cita.paciente
       if (!p) return
@@ -421,7 +450,6 @@ export default {
 
     // ── TOAST ──
     mostrarToast(mensaje, tipo = 'exito') {
-      // Cancela el timer anterior si hay uno activo
       if (this.toastTimer) clearTimeout(this.toastTimer)
 
       this.toast = {
@@ -448,7 +476,8 @@ export default {
       this.citaSeleccionada   = null
       this.nuevoEstado        = ''
     },
-// confirma el cambio de estado y avisa al padre para que refresque
+
+    // confirma el cambio de estado y avisa al padre para que refresque
     async confirmarCambioEstado() {
       if (!this.citaSeleccionada || this.nuevoEstado === this.citaSeleccionada.estado) return
 
@@ -518,17 +547,25 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: none;
   border-radius: 10px;
   padding: 8px 14px;
   font-size: .82rem;
   font-weight: 700;
-  color: #334155;
+  color: #ffffff;
   cursor: pointer;
-  transition: background .2s;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, .25);
+  transition: opacity .2s, transform .15s, box-shadow .2s;
 }
-.btn-volver:hover { background: #e2e8f0; }
+.btn-volver:hover {
+  opacity: .9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, .35);
+}
+.btn-volver:active {
+  transform: translateY(0);
+}
 
 .calendar-search {
   position: relative;

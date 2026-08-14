@@ -31,6 +31,25 @@ class MovimientoInventarioController extends Controller
     public function store(Request $request)
     {
         // ======================================
+        // VALIDAR TIPO DE MOVIMIENTO
+        // ======================================
+        // NUEVO: antes, si tipo_movimiento no era 'entrada'/'salida'/'ajuste',
+        // $stockNuevo quedaba sin definir y rompía el create()/update() de abajo.
+        if (!in_array($request->tipo_movimiento, ['entrada', 'salida', 'ajuste'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tipo de movimiento inválido. Debe ser entrada, salida o ajuste.'
+            ], 422);
+        }
+
+        if (!$request->cantidad || $request->cantidad <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La cantidad debe ser mayor a cero.'
+            ], 422);
+        }
+
+        // ======================================
         // BUSCAR EL INVENTARIO DEL MEDICAMENTO
         // ======================================
         $inventario = Inventario::where(
@@ -97,7 +116,13 @@ class MovimientoInventarioController extends Controller
             // Configuramos el stock minimo
             'stock_minimo' => $request->stock_minimo,
             // Actualizamos ubicación
-            'ubicacion' => $request->ubicacion
+            'ubicacion' => $request->ubicacion,
+            // NUEVO: sincronizamos la fecha de caducidad del lote más
+            // reciente en inventario, que es de donde lee resumen() para
+            // la tarjeta KPI "Próximos a Caducar". Antes solo quedaba
+            // guardada en el historial de movimientos y el KPI nunca
+            // se enteraba de un lote nuevo.
+            'fecha_caducidad' => $request->fecha_caducidad ?? $inventario->fecha_caducidad,
         ]);
 
         // ======================================

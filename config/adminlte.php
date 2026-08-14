@@ -323,8 +323,10 @@ return [
         // 📋 MOVIMIENTOS GENERALES (COMPARTIDOS)
         // ==========================================
         [
-            'header' => 'MOVIMIENTOS DEL SISTEMA',
+            'header' => 'MOVIMIENTOS DEL SISTEMA', //original
+            'can' => 'rol-asistente-medico',
         ],
+        
         [
             'text' => 'Pacientes',
             'icon' => 'fas fa-fw fa-user',
@@ -348,20 +350,20 @@ return [
             'can' => 'acceso-general',
             'submenu' => [
                 [
-                    'text' => 'Lista de consulta',
+                    'text' => 'Lista de consulta', 
                     'url'  => 'ListaConsultas', // Visible para Asistente y Médico
                     'icon' => 'fas fa-fw fa-notes-medical',
                 ],
                 [
                     'text' => 'Nueva consulta',
                     'url'  => 'NuevaConsulta',
-                    'icon' => 'fas fa-plus-circle',
+                    'icon' => 'fas fa-plus-circle', 
                     'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
                 ],
                 [
                     'text' => 'Consulta Inteligente',
                     'icon' => 'fas fa-network-wired',
-                    'url'  => 'ConsultaInteligente',
+                    'url'  => 'ConsultaInteligenteNueva',
                     'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
                 ],
             ],
@@ -417,7 +419,7 @@ return [
             'submenu' => [
                 [
                     'text' => 'Historial de recetas',
-                    'icon' => 'fas fa-fw fa-book-medical',
+                    'icon' => 'fas fa-fw fa-book-medical', //original
                     'url' => 'HistorialRecetas',
                 ],
             ],
@@ -438,7 +440,6 @@ return [
         // ==========================================
         // 🩺 CONFIGURACIÓN EXCLUSIVA MÉDICA
         // ==========================================
-     
         [   'header' => 'CONFIGURACIÓN MÉDICA',
             'can' => 'acceso-medico-admin',
         ],
@@ -448,13 +449,15 @@ return [
             'icon' => 'fas fa-fw fa-user',
             'can' => 'acceso-medico-admin', // 🔒 Oculto para asistente
             
+            
         ],
        
         [
             'text' => 'Médicos',
             'url'  => 'MedicosAlta', 
             'icon' => 'fas fa-fw fa-user-md',
-            'can'  => 'ver-admin',
+            'can' => 'acceso-medico-admin',
+            
             
             
         ],
@@ -478,6 +481,13 @@ return [
         ['header' => 'CONFIGURACIÓN DEL SISTEMA',
          'can'    => 'admin', // 🔒 Oculta el encabezado para Asistente y Médico
         ],
+        
+
+        [
+            'url'  => 'ConsultarEspecialidades', // O 'admin/specialties' si tu ruta tiene prefijo
+            'icon' => 'fas fa-fw fa-user',  
+        ],
+
         
         ['text' => 'Perfil',
             'icon' => 'fas fa-fw fa-user',
@@ -508,9 +518,9 @@ return [
             'url'  => 'logout',
             'icon' => 'fas fa-sign-out-alt',
             'can'  => 'ver-admin', // 🔒 Oculta el botón
-        ], 
-
-    ],
+        ],
+    ],                   
+    
     /*
     |--------------------------------------------------------------------------
     | Menu Filters
