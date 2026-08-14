@@ -334,7 +334,6 @@ export default {
 
     data() {
         return {
-            totalConsultasFinalizadasHoy:0,
             resumen: {
                 pacientesRegistrados: 0,
                 triageHoy: 0,
@@ -459,23 +458,13 @@ export default {
         async cargarResumen() {
             this.actualizando = true;
 
-            const [pacientes, triage, citas, medicamentos, totalFinalizadas] = await Promise.all([
-            //const [pacientes, triage, citas, medicamentos, consultasResumen] = await Promise.all([
+            const [pacientes, triage, citas, medicamentos, consultasResumen] = await Promise.all([
                 this.obtenerPacientes(),
                 this.obtenerTriage(),
                 this.obtenerCitas(),
                 this.obtenerMedicamentos(),
-                this.obtenerTotalConsultasFinalizadas()
-            ]);
-
-            // 🔍 DEBUG TEMPORAL
-            window.debugCitas = citas;
-            window.debugTriage = triage;
-
-            this.totalConsultasFinalizadasHoy = totalFinalizadas;
-            this.procesarTarjetasSuperiores(pacientes, triage, citas);
                 this.obtenerResumenConsultas()
-        
+            ]);
 
             this.procesarTarjetasSuperiores(pacientes, triage, citas, consultasResumen);
             this.procesarProximasConsultas(citas);
@@ -485,25 +474,6 @@ export default {
 
             this.ultimaActualizacion = new Date();
             this.actualizando = false;
-        },
-
-        //Metodo para obtener el total de las consultas finalizadas del día de hoy//
-        async obtenerTotalConsultasFinalizadas() {
-            try {
-                const hoy = this.formatoFechaLocal(new Date());
-                console.log('[TotalConsultasFinalizadas] Solicitando total para fecha:', hoy);
-                const response = await ApiService.get('/total-consultas-finalizadas', {
-                    params: { fecha: hoy }
-                });
-                console.log('[TotalConsultasFinalizadas] Respuesta cruda del backend:', response.data);
-                const total = response.data?.total_finalizadas ?? 0;
-                console.log('[TotalConsultasFinalizadas] Total procesado:', total);
-                return total;
-            } catch (error) {
-                console.error('[TotalConsultasFinalizadas] Error al cargar total de consultas finalizadas:', error);
-                console.error('[TotalConsultasFinalizadas] Detalle del error:', error.response?.data || error.message);
-                return 0;
-            }
         },
 
         // ─── OBTENCIÓN DE DATOS BASE (una sola vez por refresh) ───────────
@@ -698,20 +668,6 @@ export default {
                 const esGraveHoy = this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
                 return esGraveHoy && !pacientesFinalizadosHoy.has(String(p.id));
             });
-            
-            // 🔍 DEBUG TEMPORAL — quitar después de diagnosticar
-            console.log('--- DEBUG ALERTAS ---');
-            console.log('Citas de hoy (raw):', citas.filter(c => this.esHoy(c.fecha || c.created_at)));
-            console.log('Pacientes finalizados hoy (Set):', [...pacientesFinalizadosHoy]);
-            console.log('Triage grave (antes de excluir):', triage.filter(p => {
-                const t = this.ultimoTriage(p);
-                return this.triageEsDeHoy(t) && (t?.estado || '').toLowerCase() === 'grave';
-            }).map(p => ({ id: p.id, nombre: p.nombre })));
-            console.log('--- FIN DEBUG ---');
-            
-            console.log("Citas que llegaron:", citas);
-            console.log("Citas finalizadas detectadas:", Array.from(pacientesFinalizadosHoy));
-            console.log("Pacientes graves encontrados:", graves.map(p => p.id));
 
             if (graves.length > 0) {
                 alertas.push({
@@ -777,13 +733,12 @@ export default {
                 return this.esHoy(c.fecha || c.created_at) &&
                        (estado === 'finalizada' || estado === 'completada');
             });
-            
-            if (this.totalConsultasFinalizadasHoy > 0) {
+            if (finalizadasHoy.length > 0) {
                 alertas.push({
                     nivel: 'info',
                     icono: 'fas fa-info-circle',
                     titulo: 'Información',
-                    descripcion: `${this.totalConsultasFinalizadasHoy} consulta${this.totalConsultasFinalizadasHoy > 1 ? 's' : ''} finalizada${this.totalConsultasFinalizadasHoy > 1 ? 's' : ''} el día de hoy.`
+                    descripcion: `${finalizadasHoy.length} consulta${finalizadasHoy.length > 1 ? 's' : ''} finalizada${finalizadasHoy.length > 1 ? 's' : ''} el día de hoy.`
                 });
             }
 
@@ -833,19 +788,13 @@ export default {
             const enConsulta = citasHoy.filter(c =>
                 this.normalizarEstado(c.estado) === 'en_proceso'
             ).length;
-            
-            const finalizados = this.totalConsultasFinalizadasHoy;
-            // const finalizados = citasHoy.filter(c => {
-            //     const estado = this.normalizarEstado(c.estado);
-            //     return estado === 'finalizada' || estado === 'completada';
-            // }).length;
 
             // Antes se contaban las citas de hoy en estado
             // finalizada/completada, pero el número real de consultas
             // finalizadas hoy (tabla `consultas`) es distinto. Se usa el
             // mismo resumen de /api/dashboard/consultas-hoy que ya
             // alimenta la tarjeta "Consultas de hoy".
-            // const finalizados = consultasResumen.finalizadas_hoy;
+            const finalizados = consultasResumen.finalizadas_hoy;
 
             const totalPasos = Math.max(registrados, 1);
             const progreso = Math.min(100, Math.round((finalizados / totalPasos) * 100));
