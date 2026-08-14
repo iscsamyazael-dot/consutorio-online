@@ -210,14 +210,15 @@ export default {
             return null;
         },
         // Hay datos si al menos un campo de triage viene con valor
-        tieneDatos() {
+       tieneDatos() {
             const t = this.ultimoTriage;
             if (!t) return false;
-            return !!(
-                t.presion || t.saturacion || t.temperatura ||
-                t.frecuencia_cardiaca || t.frecuencia_respiratoria ||
-                t.peso || t.talla
-            );
+            const campos = [
+                t.presion, t.saturacion, t.temperatura,
+                t.frecuencia_cardiaca, t.frecuencia_respiratoria,
+                t.peso, t.talla
+            ];
+            return campos.some(v => v !== null && v !== undefined && v !== '');
         },
         presionStatus() {
             const raw = this.ultimoTriage?.presion;
