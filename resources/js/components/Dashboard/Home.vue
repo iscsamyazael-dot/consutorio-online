@@ -8,9 +8,6 @@
                 <p class="text-muted mb-0">Resumen de la actividad del consultorio</p>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <!-- NUEVO: indicador de última actualización, para que el usuario
-                     sepa qué tan "frescos" están los datos mientras espera el
-                     próximo refresco automático -->
                 <small class="text-muted ultima-actualizacion" v-if="ultimaActualizacionTexto">
                     <i class="fas fa-sync-alt me-1" :class="{ 'fa-spin': actualizando }"></i>
                     {{ ultimaActualizacionTexto }}
@@ -64,7 +61,7 @@
                     <div class="stat-info">
                         <h6 class="mb-0">Consultas de hoy</h6>
                         <h3 class="fw-bold mb-0 counter-number">{{ resumen.consultasHoy }}</h3>
-                        <small class="text-muted">Consultas programadas</small>
+                        <small class="text-muted">Consultas agregadas hoy</small>
                     </div>
                     <a href="/ListaConsultas" class="stat-link text-purple">
                         Ver consultas <i class="fas fa-chevron-right"></i>
@@ -327,10 +324,9 @@
 <script>
 import ApiService from '../../services/ApiService.js'
 import axios from 'axios'
-// NUEVO: event bus para refrescar el dashboard al instante cuando otra
-// vista (ej. ConsultaClinica.vue) finaliza una consulta, en vez de
+// Event bus para refrescar el dashboard al instante cuando otra vista
+// (ej. ConsultaClinica.vue) finaliza o agrega una consulta, en vez de
 // esperar hasta 60s al próximo setInterval.
-// Requiere `npm i mitt`. Ver src/utils/eventBus.js
 import eventBus from '../../utils/eventBus.js'
 
 export default {
@@ -374,7 +370,7 @@ export default {
 
             intervaloRefresco: null,
 
-            // NUEVO: soporte para el indicador "Actualizado hace X"
+            // Soporte para el indicador "Actualizado hace X"
             actualizando: false,
             ultimaActualizacion: null,
             tickerReloj: null,
@@ -393,11 +389,10 @@ export default {
             });
         },
 
-        // NUEVO: texto relativo ("hace 5s", "hace 2 min") recalculado cada
-        // vez que cambia ultimaActualizacion o el tickerReloj (ver mounted).
+        // Texto relativo ("hace 5s", "hace 2 min") recalculado cada vez
+        // que cambia ultimaActualizacion o el tickerReloj (ver mounted).
         ultimaActualizacionTexto() {
             if (!this.ultimaActualizacion) return '';
-            // dependencia reactiva "muda" para forzar recálculo cada segundo
             void this.tickerReloj;
 
             const segundos = Math.floor((Date.now() - this.ultimaActualizacion.getTime()) / 1000);
@@ -406,28 +401,26 @@ export default {
             const minutos = Math.floor(segundos / 60);
             return `Actualizado hace ${minutos} min`;
         },
-       // NUEVO: filtra únicamente la alerta de prioridad alta para que desaparezca después de 5 minutos
-       // NUEVO: oculta únicamente la alerta de prioridad alta después de 5 minutos
+
+        // Oculta únicamente la alerta de prioridad alta después de un
+        // tiempo, para no dejarla parpadeando indefinidamente.
         alertasClinicasFiltradas() {
             void this.tickerReloj; // Mantiene el conteo reactivo cada segundo
             if (!this.tiempoCreacionAlertas) return this.alertasClinicas;
-            
+
             const ahora = Date.now();
             const TIEMPO_EXPIRACION = 10 * 1000; // Ponlo en 10 segundos para probar rápido
             const expirado = (ahora - this.tiempoCreacionAlertas) >= TIEMPO_EXPIRACION;
-            
+
             return this.alertasClinicas.filter(alerta => {
-                // Verificamos si la alerta es la de prioridad alta (ya sea por nivel o por su título)
-                const esPrioridadAlta = 
-                    (alerta.nivel && alerta.nivel.toLowerCase() === 'danger') || 
+                const esPrioridadAlta =
+                    (alerta.nivel && alerta.nivel.toLowerCase() === 'danger') ||
                     (alerta.titulo && alerta.titulo.toLowerCase().includes('prioridad alta'));
 
-                // Si es prioridad alta y ya pasó el tiempo, la filtramos (ocultamos)
                 if (esPrioridadAlta && expirado) {
                     return false;
                 }
-                
-                // Las demás alertas se quedan siempre visibles
+
                 return true;
             });
         }
@@ -440,13 +433,13 @@ export default {
             this.cargarResumen();
         }, 60000);
 
-        // NUEVO: refresco inmediato cuando cualquier vista avisa que
-        // finalizó (o cambió el estado de) una consulta.
+        // Refresco inmediato cuando cualquier vista avisa que finalizó (o
+        // agregó) una consulta.
         eventBus.on('consulta-finalizada', this.cargarResumen);
         eventBus.on('consulta-actualizada', this.cargarResumen);
 
-        // NUEVO: ticker cada segundo solo para refrescar el texto de
-        // "Actualizado hace X" sin volver a pedir datos al servidor.
+        // Ticker cada segundo solo para refrescar el texto de "Actualizado
+        // hace X" sin volver a pedir datos al servidor.
         this.tickerReloj = 0;
         this._intervaloTicker = setInterval(() => {
             this.tickerReloj++;
@@ -467,6 +460,7 @@ export default {
             this.actualizando = true;
 
             const [pacientes, triage, citas, medicamentos, totalFinalizadas] = await Promise.all([
+            //const [pacientes, triage, citas, medicamentos, consultasResumen] = await Promise.all([
                 this.obtenerPacientes(),
                 this.obtenerTriage(),
                 this.obtenerCitas(),
@@ -480,9 +474,13 @@ export default {
 
             this.totalConsultasFinalizadasHoy = totalFinalizadas;
             this.procesarTarjetasSuperiores(pacientes, triage, citas);
+                this.obtenerResumenConsultas()
+        
+
+            this.procesarTarjetasSuperiores(pacientes, triage, citas, consultasResumen);
             this.procesarProximasConsultas(citas);
             this.procesarAlertasClinicas(triage, citas, medicamentos);
-            this.procesarFlujoAtencion(pacientes, triage, citas);
+            this.procesarFlujoAtencion(pacientes, triage, citas, consultasResumen);
             this.procesarActividadReciente(pacientes, triage, citas);
 
             this.ultimaActualizacion = new Date();
@@ -550,6 +548,25 @@ export default {
             }
         },
 
+        // Cifras reales de la tabla `consultas` (no `citas`).
+        // GET /api/dashboard/consultas-hoy -> { usadas_hoy, finalizadas_hoy, pendientes_hoy }
+        // (ver DashboardController@consultasHoy). Las 3 tarjetas de arriba
+        // relacionadas con consultas salen de aquí, así siempre cuadran
+        // entre sí: usadas_hoy = finalizadas_hoy + pendientes_hoy.
+        async obtenerResumenConsultas() {
+            try {
+                const response = await axios.get('/api/dashboard/consultas-hoy');
+                return {
+                    usadas_hoy: response.data?.usadas_hoy || 0,
+                    finalizadas_hoy: response.data?.finalizadas_hoy || 0,
+                    pendientes_hoy: response.data?.pendientes_hoy || 0
+                };
+            } catch (error) {
+                console.error('Error al cargar resumen de consultas:', error);
+                return { usadas_hoy: 0, finalizadas_hoy: 0, pendientes_hoy: 0 };
+            }
+        },
+
         // ─── UTILIDADES DE FECHA (hora LOCAL, no UTC) ──────────────────
 
         formatoFechaLocal(date) {
@@ -606,17 +623,25 @@ export default {
 
         // ─── TARJETAS SUPERIORES ────────────────────────────────────────
 
-        procesarTarjetasSuperiores(pacientes, triage, citas) {
+        procesarTarjetasSuperiores(pacientes, triage, citas, consultasResumen) {
             this.resumen.pacientesRegistrados = pacientes.length;
 
             this.resumen.triageHoy = triage.filter(p =>
                 this.triageEsDeHoy(this.ultimoTriage(p))
             ).length;
 
+            this.resumen.consultasHoy = consultasResumen.usadas_hoy;
+
+            // CORREGIDO: "Pendientes" debe coincidir con la lista de
+            // espera real que se ve en ConsultaClinica.vue
+            // (pacientesFiltrados), la cual sale de la tabla `citas`, NO
+            // de `consultas`. Son dos tablas distintas con datos propios;
+            // usar consultasResumen.pendientes_hoy aquí hacía que la
+            // tarjeta mostrara un número que no existía en ninguna lista
+            // real que el usuario pudiera revisar.
             const citasHoy = citas.filter(c =>
                 this.esHoy(c.fecha || c.created_at)
             );
-            this.resumen.consultasHoy = citasHoy.length;
 
             this.resumen.pendientes = citasHoy.filter(c => {
                 const estado = this.normalizarEstado(c.estado);
@@ -656,13 +681,6 @@ export default {
             this.tiempoCreacionAlertas = Date.now();
             const alertas = [];
 
-            // CORREGIDO: se normalizan los ids a String() en ambos lados
-            // de la comparación (al construir el Set y al hacer .has()).
-            // Antes, si idPacienteCita(c) devolvía un id como string
-            // (ej. "12") y p.id venía como number (ej. 12), el Set.has()
-            // fallaba silenciosamente por comparación estricta de tipos,
-            // y un paciente grave con consulta ya finalizada NUNCA se
-            // quitaba de "Prioridad alta".
             const pacientesFinalizadosHoy = new Set(
                 citas
                     .filter(c => this.esHoy(c.fecha || c.created_at))
@@ -807,7 +825,7 @@ export default {
 
         // ─── FLUJO DE ATENCION DEL DIA ──────────────────────────────────
 
-        procesarFlujoAtencion(pacientes, triage, citas) {
+        procesarFlujoAtencion(pacientes, triage, citas, consultasResumen) {
             const registrados = pacientes.filter(p => this.esHoy(p.created_at)).length;
             const triageRealizado = triage.filter(p => this.triageEsDeHoy(this.ultimoTriage(p))).length;
 
@@ -821,6 +839,13 @@ export default {
             //     const estado = this.normalizarEstado(c.estado);
             //     return estado === 'finalizada' || estado === 'completada';
             // }).length;
+
+            // Antes se contaban las citas de hoy en estado
+            // finalizada/completada, pero el número real de consultas
+            // finalizadas hoy (tabla `consultas`) es distinto. Se usa el
+            // mismo resumen de /api/dashboard/consultas-hoy que ya
+            // alimenta la tarjeta "Consultas de hoy".
+            // const finalizados = consultasResumen.finalizadas_hoy;
 
             const totalPasos = Math.max(registrados, 1);
             const progreso = Math.min(100, Math.round((finalizados / totalPasos) * 100));
@@ -992,7 +1017,7 @@ export default {
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* ─── INDICADOR "ACTUALIZADO HACE X" (NUEVO) ─────────────────────── */
+/* ─── INDICADOR "ACTUALIZADO HACE X" ─────────────────────── */
 
 .ultima-actualizacion {
     white-space: nowrap;
@@ -1458,4 +1483,4 @@ export default {
         animation: none !important;
     }
 }
-</style>
+</style> 

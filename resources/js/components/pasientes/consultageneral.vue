@@ -72,7 +72,11 @@
                     </div>
                     <div class="info-text">
                         <small>Médico</small>
-                        <h6>Dr. Martínez</h6>
+                        <!-- FIX: antes "Dr. Martínez" fijo. Ahora se usa el
+                             nombre real del usuario logueado, obtenido de
+                             GET /perfil-usuario (ProfileController@obtenerPerfil,
+                             que devuelve Auth::user()). -->
+                        <h6>{{ medicoNombre || 'Cargando...' }}</h6>
                     </div>
                 </div>
 
@@ -84,7 +88,9 @@
                     </div>
                     <div class="info-text">
                         <small>Fecha</small>
-                        <h6>22 Mayo 2026</h6>
+                        <!-- FIX: antes "22 Mayo 2026" fijo. Ahora se usa la
+                             fecha real de hoy (no depende del backend). -->
+                        <h6>{{ fechaHoy }}</h6>
                     </div>
                 </div>
 
@@ -108,8 +114,46 @@
 </template>
 
 <script>
+import ApiService from '../../services/ApiService.js'
+
 export default {
-    name: 'HorizontalProfileCard'
+    name: 'HorizontalProfileCard',
+    data() {
+        return {
+            medicoNombre: '',
+            fechaHoy: ''
+        }
+    },
+    mounted() {
+        this.obtenerMedicoLogueado()
+        this.fechaHoy = this.formatearFechaHoy()
+    },
+    methods: {
+        // Trae el usuario autenticado real desde el backend
+        // (GET /perfil-usuario -> ProfileController@obtenerPerfil).
+        async obtenerMedicoLogueado() {
+            try {
+                const response = await ApiService.get('/perfil-usuario')
+                // obtenerPerfil() devuelve el modelo User completo
+                // (Auth::user()); solo usamos el nombre aquí.
+                this.medicoNombre = response.data.name || 'Sin nombre registrado'
+            } catch (error) {
+                console.error('Error al obtener el usuario logueado:', error)
+                this.medicoNombre = 'No disponible'
+            }
+        },
+        // Fecha real de hoy, formateada igual que el resto del sistema
+        // (ej. "22 de mayo de 2026" -> se ajusta a "22 Mayo 2026" para
+        // mantener el mismo formato visual que tenía el dato estático).
+        formatearFechaHoy() {
+            const hoy = new Date()
+            const dia = hoy.getDate()
+            const mes = hoy.toLocaleDateString('es-MX', { month: 'long' })
+            const anio = hoy.getFullYear()
+            const mesCapitalizado = mes.charAt(0).toUpperCase() + mes.slice(1)
+            return `${dia} ${mesCapitalizado} ${anio}`
+        }
+    }
 }
 </script>
 
