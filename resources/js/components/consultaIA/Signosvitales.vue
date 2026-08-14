@@ -708,4 +708,4 @@ export default {
 .modal-fade-leave-to {
     opacity: 0;
 }
-</style>
+</style> 
