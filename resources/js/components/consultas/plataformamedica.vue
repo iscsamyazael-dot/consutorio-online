@@ -11,9 +11,10 @@
         <p class="main-sub">Plataforma médica de monitoreo clínico y flujos en tiempo real.</p>
       </div>
       <div class="right-actions">
-        <button class="btn-ghost">
-          <i class="ti ti-adjustments-horizontal"></i> Filtros
-        </button>
+        <!-- Ahora navega a la vista de Historial de consulta -->
+        <a href="/HistorialConsultas" class="btn-ghost">
+          <i class="ti ti-history"></i> Historial de consulta
+        </a>
 
         <!-- ▼ Botón "Nueva consulta" convertido en select/dropdown ▼ -->
         <div class="new-consulta-dropdown" ref="dropdownRef">
@@ -56,7 +57,7 @@
     </div>
 
     <!-- STAT CARDS -->
-    <!-- Los números ya NO vienen de un prop estático: se calculan a partir
+    <!-- Los números NO vienen de un prop estático: se calculan a partir
          de /api/citas y /pacientes, filtrando solo lo del día de hoy
          (ver statsFinal más abajo). Mientras carga, se muestra "—". -->
     <div class="stat-grid">
@@ -67,8 +68,6 @@
         </div>
         <span class="scard-icon"><i class="ti ti-stethoscope"></i></span>
       </div>
-
-     
 
       <div class="scard scard-amber">
         <div class="scard-text">

@@ -255,6 +255,41 @@ class ConsultaController extends Controller
     }
 
     /**
+     * Actualiza solamente el estado de la consulta.
+     *
+     * NUEVO: se agrega para que HistorialConsulta.vue pueda cambiar el
+     * estado de las consultas "tradicionales" (tabla `consultas`) desde
+     * el mismo chip clickeable que ya usa para las citas de Agenda.
+     * El frontend maneja las etiquetas en español con mayúscula/espacio
+     * ('Agendado', 'En proceso', 'Finalizada', 'Cancelada'), así que aquí
+     * se traducen a los valores internos que usa `estado_consulta`.
+     */
+    public function actualizarEstado(Request $request, $id)
+    {
+        $request->validate([
+            'estado' => 'required|in:Agendado,En proceso,Finalizada,Cancelada',
+        ]);
+
+        $consulta = Consulta::findOrFail($id);
+
+        $mapaEstados = [
+            'Agendado'    => 'activa',
+            'En proceso'  => 'en_proceso',
+            'Finalizada'  => 'finalizada',
+            'Cancelada'   => 'cancelada',
+        ];
+
+        $consulta->estado_consulta = $mapaEstados[$request->estado] ?? $request->estado;
+        $consulta->save();
+
+        return response()->json([
+            'success'  => true,
+            'message'  => 'Estado actualizado correctamente.',
+            'consulta' => $consulta,
+        ]);
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)

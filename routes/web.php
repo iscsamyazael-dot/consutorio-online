@@ -154,6 +154,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendario / lista de espera
 
 
+        Route::patch('/api/consultas/{id}/estado', [ConsultaController::class, 'actualizarEstado'])->name('consultas.estado.api');// Historial: cambiar estado de consulta tradicional
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
         // GET /api/citas apuntando a controladores distintos
@@ -220,6 +221,9 @@ Route::middleware('auth')->group(function () {
             // Se dejó opcional para no romper otros lugares que ya enlazan a
             // esta ruta sin id.
             Route::get('HistorialConsulta/{id?}', function($id = null) { return view('consultas.consultaIndividual', compact('id')); })->name('consultas.consultaIndividual');
+            Route::get('HistorialConsultas', function () {
+                return view('historialconsultas.index');
+            });
             Route::get('NuevaConsulta', [ConsultaController::class, 'create'])->name('consultas.create');
             //Route::get('NuevaConsulta', function () { return view('consultas.create'); })->name('consultas.create');
             Route::get('ConsultaInteligenteNueva', function() { 
