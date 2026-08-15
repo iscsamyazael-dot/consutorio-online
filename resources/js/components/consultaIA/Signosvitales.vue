@@ -5,13 +5,17 @@
             <span class="vitals-panel-sub">Rangos evaluados para adulto</span>
         </div>
 
-        <!-- NOTIFICACIÓN: paciente sin triage -->
-        <div v-if="!tieneDatos" class="vitals-empty-wrap">
+        <!-- NOTIFICACIÓN: solo se muestra si NO hay triage guardado
+             en esta visita a la vista (triageGuardadoLocal === null).
+             Se reinicia cada vez que el componente se vuelve a montar,
+             sin importar los triages históricos que ya existan en
+             paciente.triages. -->
+        <div v-if="!triageGuardadoLocal" class="vitals-empty-wrap">
             <button type="button" class="vitals-notice" @click="abrirModalTriage">
                 <span class="vitals-notice-icon">⚠️</span>
                 <span class="vitals-notice-text">
-                    <strong>Este paciente aún no tiene un triage registrado.</strong>
-                    <small>Click para agregarlo ahora</small>
+                    <strong>Agrega los signos vitales de esta consulta.</strong>
+                    <small>Click para registrarlos ahora</small>
                 </span>
                 <span class="vitals-notice-arrow">
                     <i class="fas fa-chevron-right"></i>
@@ -19,69 +23,36 @@
             </button>
         </div>
 
+        <!-- PANEL: triage ya registrado en esta visita -->
         <div v-else class="vitals-grid">
-
-            <div class="vital-card" :class="'v-' + presionStatus" style="--delay:.03s">
-                <div class="vital-label">Presión arterial</div>
-                <div class="vital-readout">
-                    <span class="vital-value">{{ ultimoTriage.presion || '--' }}</span>
-                    <span class="vital-unit">mmHg</span>
-                </div>
-                <span class="vital-status-tag" v-if="presionStatus">{{ statusLabel(presionStatus) }}</span>
+            <div class="vital-item" v-if="triageGuardadoLocal.presion">
+                <span class="vital-label">Presión arterial</span>
+                <span class="vital-value">{{ triageGuardadoLocal.presion }}</span>
             </div>
-
-            <div class="vital-card" :class="'v-' + saturacionStatus" style="--delay:.06s">
-                <div class="vital-label">Saturación O₂</div>
-                <div class="vital-readout">
-                    <span class="vital-value">{{ formatNum(ultimoTriage.saturacion) }}</span>
-                    <span class="vital-unit">%</span>
-                </div>
-                <span class="vital-status-tag" v-if="saturacionStatus">{{ statusLabel(saturacionStatus) }}</span>
+            <div class="vital-item" v-if="triageGuardadoLocal.saturacion !== null && triageGuardadoLocal.saturacion !== undefined && triageGuardadoLocal.saturacion !== ''">
+                <span class="vital-label">Saturación O₂</span>
+                <span class="vital-value">{{ triageGuardadoLocal.saturacion }}%</span>
             </div>
-
-            <div class="vital-card" :class="'v-' + temperaturaStatus" style="--delay:.09s">
-                <div class="vital-label">Temperatura</div>
-                <div class="vital-readout">
-                    <span class="vital-value">{{ formatNum(ultimoTriage.temperatura) }}</span>
-                    <span class="vital-unit">°C</span>
-                </div>
-                <span class="vital-status-tag" v-if="temperaturaStatus">{{ statusLabel(temperaturaStatus) }}</span>
+            <div class="vital-item" v-if="triageGuardadoLocal.temperatura !== null && triageGuardadoLocal.temperatura !== undefined && triageGuardadoLocal.temperatura !== ''">
+                <span class="vital-label">Temperatura</span>
+                <span class="vital-value">{{ triageGuardadoLocal.temperatura }}°C</span>
             </div>
-
-            <div class="vital-card" :class="'v-' + frecuenciaCardiacaStatus" style="--delay:.12s">
-                <div class="vital-label">Frec. cardíaca</div>
-                <div class="vital-readout">
-                    <span class="vital-value">{{ formatNum(ultimoTriage.frecuencia_cardiaca) }}</span>
-                    <span class="vital-unit">lpm</span>
-                </div>
-                <span class="vital-status-tag" v-if="frecuenciaCardiacaStatus">{{ statusLabel(frecuenciaCardiacaStatus) }}</span>
+            <div class="vital-item" v-if="triageGuardadoLocal.frecuencia_cardiaca !== null && triageGuardadoLocal.frecuencia_cardiaca !== undefined && triageGuardadoLocal.frecuencia_cardiaca !== ''">
+                <span class="vital-label">Frec. cardíaca</span>
+                <span class="vital-value">{{ triageGuardadoLocal.frecuencia_cardiaca }} lpm</span>
             </div>
-
-            <div class="vital-card" :class="'v-' + frecuenciaRespiratoriaStatus" style="--delay:.15s">
-                <div class="vital-label">Frec. respiratoria</div>
-                <div class="vital-readout">
-                    <span class="vital-value">{{ formatNum(ultimoTriage.frecuencia_respiratoria) }}</span>
-                    <span class="vital-unit">rpm</span>
-                </div>
-                <span class="vital-status-tag" v-if="frecuenciaRespiratoriaStatus">{{ statusLabel(frecuenciaRespiratoriaStatus) }}</span>
+            <div class="vital-item" v-if="triageGuardadoLocal.frecuencia_respiratoria !== null && triageGuardadoLocal.frecuencia_respiratoria !== undefined && triageGuardadoLocal.frecuencia_respiratoria !== ''">
+                <span class="vital-label">Frec. respiratoria</span>
+                <span class="vital-value">{{ triageGuardadoLocal.frecuencia_respiratoria }} rpm</span>
             </div>
-
-            <div class="vital-card" style="--delay:.18s">
-                <div class="vital-label">Peso</div>
-                <div class="vital-readout">
-                    <span class="vital-value">{{ formatNum(ultimoTriage.peso) }}</span>
-                    <span class="vital-unit">kg</span>
-                </div>
+            <div class="vital-item" v-if="triageGuardadoLocal.peso !== null && triageGuardadoLocal.peso !== undefined && triageGuardadoLocal.peso !== ''">
+                <span class="vital-label">Peso</span>
+                <span class="vital-value">{{ triageGuardadoLocal.peso }} kg</span>
             </div>
-
-            <div class="vital-card" style="--delay:.21s">
-                <div class="vital-label">Talla</div>
-                <div class="vital-readout">
-                    <span class="vital-value">{{ formatNum(ultimoTriage.talla) }}</span>
-                    <span class="vital-unit">cm</span>
-                </div>
+            <div class="vital-item" v-if="triageGuardadoLocal.talla !== null && triageGuardadoLocal.talla !== undefined && triageGuardadoLocal.talla !== ''">
+                <span class="vital-label">Talla</span>
+                <span class="vital-value">{{ triageGuardadoLocal.talla }} cm</span>
             </div>
-
         </div>
 
         <!-- MODAL: agregar triage nuevo -->
@@ -189,99 +160,16 @@ export default {
             mostrarModalTriage: false,
             guardandoTriage: false,
             errorTriage: '',
-            // Guarda el triage recién creado para reflejarlo de inmediato
-            // en la UI sin depender de que el padre recargue `paciente`.
+            // Guarda el triage recién creado en ESTA visita a la vista.
+            // Se reinicia a null cada vez que el componente se monta de
+            // nuevo (al salir y volver a entrar), sin importar los
+            // triages históricos que ya existan en paciente.triages.
+            // Esto es lo que controla si se muestra el aviso o el panel.
             triageGuardadoLocal: null,
             formTriage: this.formTriageVacio()
         }
     },
-    computed: {
-        // El backend entrega los signos vitales dentro de un arreglo
-        // "triages"; tomamos el más reciente (el primero de la lista).
-        // Si se acaba de guardar uno nuevo en esta sesión, ese tiene
-        // prioridad mientras el padre no refresque `paciente`.
-        ultimoTriage() {
-            if (this.triageGuardadoLocal) return this.triageGuardadoLocal
-
-            const triages = this.paciente?.triages;
-            if (Array.isArray(triages) && triages.length > 0) {
-                return triages[0];
-            }
-            return null;
-        },
-        // Hay datos si al menos un campo de triage viene con valor
-       tieneDatos() {
-            const t = this.ultimoTriage;
-            if (!t) return false;
-            const campos = [
-                t.presion, t.saturacion, t.temperatura,
-                t.frecuencia_cardiaca, t.frecuencia_respiratoria,
-                t.peso, t.talla
-            ];
-            return campos.some(v => v !== null && v !== undefined && v !== '');
-        },
-        presionStatus() {
-            const raw = this.ultimoTriage?.presion;
-            if (raw === null || raw === undefined || raw === '') return '';
-
-            // Puede venir como "120/80" (sistólica/diastólica) o como
-            // un solo número (solo sistólica, como entrega este backend).
-            if (String(raw).includes('/')) {
-                const [sysStr, diaStr] = String(raw).split('/');
-                const sys = parseInt(sysStr, 10);
-                const dia = parseInt(diaStr, 10);
-                if (isNaN(sys) || isNaN(dia)) return '';
-                if (sys >= 180 || dia >= 120 || sys < 90) return 'critical';
-                if (sys >= 140 || dia >= 90) return 'warning';
-                return 'normal';
-            }
-
-            const sys = parseInt(raw, 10);
-            if (isNaN(sys)) return '';
-            if (sys >= 180 || sys < 90) return 'critical';
-            if (sys >= 140) return 'warning';
-            return 'normal';
-        },
-        saturacionStatus() {
-            const v = this.ultimoTriage?.saturacion;
-            if (v === null || v === '' || v === undefined) return '';
-            if (v < 90) return 'critical';
-            if (v < 95) return 'warning';
-            return 'normal';
-        },
-        temperaturaStatus() {
-            const v = this.ultimoTriage?.temperatura;
-            if (v === null || v === '' || v === undefined) return '';
-            if (v >= 38.5 || v < 35.5) return 'critical';
-            if (v >= 37.6) return 'warning';
-            return 'normal';
-        },
-        frecuenciaCardiacaStatus() {
-            const v = this.ultimoTriage?.frecuencia_cardiaca;
-            if (v === null || v === '' || v === undefined) return '';
-            if (v < 50 || v > 120) return 'critical';
-            if (v < 60 || v > 100) return 'warning';
-            return 'normal';
-        },
-        frecuenciaRespiratoriaStatus() {
-            const v = this.ultimoTriage?.frecuencia_respiratoria;
-            if (v === null || v === '' || v === undefined) return '';
-            if (v < 8 || v > 24) return 'critical';
-            if (v < 12 || v > 20) return 'warning';
-            return 'normal';
-        }
-    },
     methods: {
-        formatNum(v) {
-            return (v === null || v === undefined || v === '') ? '--' : v;
-        },
-        statusLabel(status) {
-            if (status === 'critical') return 'Fuera de rango';
-            if (status === 'warning') return 'Vigilar';
-            if (status === 'normal') return 'Normal';
-            return '';
-        },
-
         formTriageVacio() {
             return {
                 presion: '',
@@ -393,7 +281,7 @@ export default {
     color: var(--ink-faint);
 }
 
-/* ─── NOTIFICACIÓN: sin triage ──────────────────────────────────── */
+/* ─── NOTIFICACIÓN: agregar triage nuevo ────────────────────────── */
 
 .vitals-empty-wrap {
     padding: 4px 2px 2px;
@@ -459,80 +347,38 @@ export default {
     .vitals-notice { animation: none !important; }
 }
 
+/* ─── PANEL: triage guardado en esta visita ─────────────────────── */
+
 .vitals-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 4px 2px 2px;
 }
 
-.vital-card {
+.vital-item {
     background: var(--paper);
     border: 1px solid var(--line);
-    border-radius: 13px;
-    padding: 14px 16px;
-    animation: fadeUp .4s cubic-bezier(.22,1,.36,1) both;
-    animation-delay: var(--delay, 0s);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .vital-label {
     font-size: .68rem;
     font-weight: 600;
-    color: var(--ink-faint);
-    letter-spacing: .3px;
-    margin-bottom: 8px;
+    color: var(--ink-soft);
     text-transform: uppercase;
-}
-
-.vital-readout {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
+    letter-spacing: .3px;
 }
 
 .vital-value {
     font-family: 'IBM Plex Mono', monospace;
+    font-size: .95rem;
     font-weight: 600;
-    font-size: 1.3rem;
     color: var(--ink);
-}
-
-.vital-unit {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .68rem;
-    color: var(--ink-faint);
-    flex-shrink: 0;
-}
-
-.vital-status-tag {
-    display: inline-block;
-    margin-top: 9px;
-    font-size: .64rem;
-    font-weight: 700;
-    letter-spacing: .3px;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 999px;
-}
-
-.v-normal { background: var(--status-normal-soft); border-color: rgba(14,159,110,.3); }
-.v-normal .vital-value { color: #067A56; }
-.v-normal .vital-status-tag { background: rgba(14,159,110,.14); color: #067A56; }
-
-.v-warning { background: var(--status-warning-soft); border-color: rgba(217,119,6,.3); }
-.v-warning .vital-value { color: #A15A05; }
-.v-warning .vital-status-tag { background: rgba(217,119,6,.16); color: #A15A05; }
-
-.v-critical { background: var(--status-critical-soft); border-color: rgba(220,38,38,.35); }
-.v-critical .vital-value { color: #B31414; }
-.v-critical .vital-status-tag { background: rgba(220,38,38,.16); color: #B31414; }
-
-@keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .vital-card { animation: none !important; }
 }
 
 /* ─── MODAL: agregar triage ──────────────────────────────────────── */
@@ -709,4 +555,4 @@ export default {
 .modal-fade-leave-to {
     opacity: 0;
 }
-</style> 
+</style>

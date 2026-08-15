@@ -394,7 +394,7 @@
                       <input type="text" v-model="triageForm.presion" class="cc-vital-input" placeholder="120/80" maxlength="7">
                       <span class="cc-vital-unit">mmHg</span>
                     </div>
-                    <span class="cc-vital-status-tag" v-if="presionStatus">{{ statusLabel(presionStatus) }}</span>
+                    <span class="cc-vital-status-tag" v-if="presionMensaje">{{ presionMensaje }}</span>
                   </div>
 
                   <div class="cc-vital-card" :class="'cc-v-' + saturacionStatus">
@@ -403,7 +403,7 @@
                       <input type="number" v-model.number="triageForm.saturacion" class="cc-vital-input" placeholder="98" min="0" max="100">
                       <span class="cc-vital-unit">%</span>
                     </div>
-                    <span class="cc-vital-status-tag" v-if="saturacionStatus">{{ statusLabel(saturacionStatus) }}</span>
+                    <span class="cc-vital-status-tag" v-if="saturacionMensaje">{{ saturacionMensaje }}</span>
                   </div>
 
                   <div class="cc-vital-card" :class="'cc-v-' + temperaturaStatus">
@@ -412,7 +412,7 @@
                       <input type="number" v-model.number="triageForm.temperatura" class="cc-vital-input" placeholder="36.5" min="30" max="45" step="0.1">
                       <span class="cc-vital-unit">°C</span>
                     </div>
-                    <span class="cc-vital-status-tag" v-if="temperaturaStatus">{{ statusLabel(temperaturaStatus) }}</span>
+                    <span class="cc-vital-status-tag" v-if="temperaturaMensaje">{{ temperaturaMensaje }}</span>
                   </div>
 
                   <div class="cc-vital-card" :class="'cc-v-' + frecuenciaCardiacaStatus">
@@ -421,7 +421,7 @@
                       <input type="number" v-model.number="triageForm.frecuencia_cardiaca" class="cc-vital-input" placeholder="72" min="0" max="300">
                       <span class="cc-vital-unit">lpm</span>
                     </div>
-                    <span class="cc-vital-status-tag" v-if="frecuenciaCardiacaStatus">{{ statusLabel(frecuenciaCardiacaStatus) }}</span>
+                    <span class="cc-vital-status-tag" v-if="frecuenciaCardiacaMensaje">{{ frecuenciaCardiacaMensaje }}</span>
                   </div>
 
                   <div class="cc-vital-card" :class="'cc-v-' + frecuenciaRespiratoriaStatus">
@@ -430,7 +430,7 @@
                       <input type="number" v-model.number="triageForm.frecuencia_respiratoria" class="cc-vital-input" placeholder="16" min="0" max="60">
                       <span class="cc-vital-unit">rpm</span>
                     </div>
-                    <span class="cc-vital-status-tag" v-if="frecuenciaRespiratoriaStatus">{{ statusLabel(frecuenciaRespiratoriaStatus) }}</span>
+                    <span class="cc-vital-status-tag" v-if="frecuenciaRespiratoriaMensaje">{{ frecuenciaRespiratoriaMensaje }}</span>
                   </div>
 
                   <div class="cc-vital-card">
@@ -1015,6 +1015,57 @@ export default {
     },
     overallTriageLabel() {
       return this.statusLabel(this.overallTriageStatus)
+    },
+
+    // ── Mensajes de clasificación clínica por signo vital ──
+    // Reemplazan el genérico "Fuera de rango" / "Vigilar" / "Normal" por
+    // una etiqueta específica según el valor capturado, usando los mismos
+    // umbrales que ya definen *Status arriba (no se tocan esos umbrales,
+    // solo se les da un mensaje más descriptivo).
+    presionMensaje() {
+      const raw = this.triageForm.presion
+      if (!raw || !raw.includes('/')) return ''
+      const [sysStr, diaStr] = raw.split('/')
+      const sys = parseInt(sysStr, 10)
+      const dia = parseInt(diaStr, 10)
+      if (isNaN(sys) || isNaN(dia)) return ''
+      if (sys >= 180 || dia >= 120) return 'Crisis hipertensiva'
+      if (sys < 90) return 'Hipotensión'
+      if (sys >= 140 || dia >= 90) return 'Hipertensión leve'
+      return 'Presión normal'
+    },
+    saturacionMensaje() {
+      const v = this.triageForm.saturacion
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 90) return 'Hipoxemia grave'
+      if (v < 95) return 'Hipoxemia leve'
+      return 'Saturación normal'
+    },
+    temperaturaMensaje() {
+      const v = this.triageForm.temperatura
+      if (v === null || v === '' || v === undefined) return ''
+      if (v >= 38.5) return 'Fiebre alta'
+      if (v < 35.5) return 'Hipotermia'
+      if (v >= 37.6) return 'Fiebre leve'
+      return 'Temperatura normal'
+    },
+    frecuenciaCardiacaMensaje() {
+      const v = this.triageForm.frecuencia_cardiaca
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 50) return 'Bradicardia'
+      if (v > 120) return 'Taquicardia'
+      if (v < 60) return 'Bradicardia leve'
+      if (v > 100) return 'Taquicardia leve'
+      return 'Frecuencia normal'
+    },
+    frecuenciaRespiratoriaMensaje() {
+      const v = this.triageForm.frecuencia_respiratoria
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 8) return 'Bradipnea'
+      if (v > 24) return 'Taquipnea'
+      if (v < 12) return 'Bradipnea leve'
+      if (v > 20) return 'Taquipnea leve'
+      return 'Respiración normal'
     }
   },
 
@@ -1693,7 +1744,9 @@ export default {
     },
 
     // Traduce el estatus calculado de un signo vital ('normal' | 'warning' | 'critical')
-    // a la etiqueta que se muestra en el panel de signos vitales
+    // a la etiqueta que se muestra en el badge GLOBAL de triaje (cc-overall-badge).
+    // Los badges de cada tarjeta individual ya NO usan esto: usan
+    // presionMensaje / saturacionMensaje / temperaturaMensaje / etc.
     statusLabel(status) {
       if (status === 'critical') return 'Fuera de rango'
       if (status === 'warning') return 'Vigilar'

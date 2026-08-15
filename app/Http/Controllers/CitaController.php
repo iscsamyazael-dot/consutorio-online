@@ -5,6 +5,7 @@ use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\Medico;
 use App\Models\Especialidad;
+use App\Models\Consulta;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -39,85 +40,162 @@ class CitaController extends Controller
     // NOTA: si el calendario ahora consume el endpoint de index() con filtros,
     // este método puede volverse redundante. Se deja intacto por si otra
     // vista todavía lo usa.
+    //
+    // ACTUALIZADO: además de las citas agendadas desde el módulo de Agenda
+    // (tabla `citas`), ahora también incluye las consultas registradas "de
+    // forma tradicional" (tabla `consultas`, creadas por ConsultaController),
+    // que antes no aparecían en HistorialConsulta.vue porque ese componente
+    // solo consume este endpoint. Se combinan ambas fuentes en un mismo
+    // formato para que el frontend no tenga que cambiar su forma de leerlas.
     public function getCitas()
     {
+        // 1) Citas agendadas desde el módulo de Agenda
         $citas = Cita::with([
             'paciente',
             'medico',
             'especialidad'
         ])->get();
 
-        return response()->json(
+        $citasFormateadas = $citas->map(function ($cita) {
 
-            $citas->map(function ($cita) {
+            return [
 
-                return [
+                // Datos principales
+                'id'     => 'cita-' . $cita->id, // prefijo para no chocar con ids de consultas
+                'origen' => 'cita',
+                'title'  => 'Cita: ' . ($cita->paciente->nombre ?? 'Sin paciente'),
+                'start'  => $cita->fecha . 'T' . $cita->hora,
 
-                    // Datos principales
-                    'id'     => $cita->id,
-                    'title'  => 'Cita: ' . ($cita->paciente->nombre ?? 'Sin paciente'),
-                    'start'  => $cita->fecha . 'T' . $cita->hora,
+                // Información de la cita
+                'folio'  => $cita->folio,
+                'fecha'  => $cita->fecha,
+                'hora'   => $cita->hora,
+                'estado' => $cita->estado,
+                'tipo'   => $cita->tipo,
 
-                    // Información de la cita
-                    'folio'  => $cita->folio,
-                    'fecha'  => $cita->fecha,
-                    'hora'   => $cita->hora,
-                    'estado' => $cita->estado,
-                    'tipo'   => $cita->tipo,
+                // Información del paciente
+                // NOTA: se agregan todos los campos que necesita
+                // el formulario de "Registrar Paciente" para poder
+                // precargar los datos cuando están incompletos.
+                'paciente' => $cita->paciente ? [
 
-                    // Información del paciente
-                    // NOTA: se agregan todos los campos que necesita
-                    // el formulario de "Registrar Paciente" para poder
-                    // precargar los datos cuando están incompletos.
-                    'paciente' => $cita->paciente ? [
+                    'id'          => $cita->paciente->id,
+                    'nombre'      => $cita->paciente->nombre,
+                    'sexo'        => $cita->paciente->sexo,
+                    'telefono'    => $cita->paciente->telefono,
+                    'email'       => $cita->paciente->email,
+                    'direccion'   => $cita->paciente->direccion,
+                    'curp'        => $cita->paciente->curp,
+                    'tipo_sangre' => $cita->paciente->tipo_sangre,
+                    'contacto_emergencia' => $cita->paciente->contacto_emergencia,
+                    'alergias' => $cita->paciente->alergias,
+                    'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
+                    'edad'        => $cita->paciente->edad,
+                    'estado'      => $cita->paciente->estado,
+                    'Alergias'     => $cita->paciente->alergias,
+                    'Alergias A medicamentos' => $cita->paciente->alergias_a_medicamentos,
+                    'Antecedentes' => $cita->paciente->antecedentes,
+                    'presion_arterial' => $cita->paciente->presion_arterial,
+                    'saturacion_oxigeno' => $cita->paciente->saturacion_oxigeno,
+                    'frecuencia_cardiaca' => $cita->paciente->frecuencia_cardiaca,
+                    'frecuencia_respiratoria' => $cita->paciente->frecuencia_respiratoria,
+                    'peso' => $cita->paciente->peso,
+                    'talla' => $cita->paciente->talla,
+                    'temperatura' => $cita->paciente->temperatura,
+                    'sintomas' => $cita->paciente->sintomas,
+                    'motivo_consulta' => $cita->paciente->motivo_consulta,
 
-                        'id'          => $cita->paciente->id,
-                        'nombre'      => $cita->paciente->nombre,
-                        'sexo'        => $cita->paciente->sexo,
-                        'telefono'    => $cita->paciente->telefono,
-                        'email'       => $cita->paciente->email,
-                        'direccion'   => $cita->paciente->direccion,
-                        'curp'        => $cita->paciente->curp,
-                        'tipo_sangre' => $cita->paciente->tipo_sangre,
-                        'contacto_emergencia' => $cita->paciente->contacto_emergencia,
-                        'alergias' => $cita->paciente->alergias,
-                        'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
-                        'edad'        => $cita->paciente->edad,
-                        'estado'      => $cita->paciente->estado,
-                        'Alergias'     => $cita->paciente->alergias,
-                        'Alergias A medicamentos' => $cita->paciente->alergias_a_medicamentos,
-                        'Antecedentes' => $cita->paciente->antecedentes,
-                        'presion_arterial' => $cita->paciente->presion_arterial,
-                        'saturacion_oxigeno' => $cita->paciente->saturacion_oxigeno,
-                        'frecuencia_cardiaca' => $cita->paciente->frecuencia_cardiaca,
-                        'frecuencia_respiratoria' => $cita->paciente->frecuencia_respiratoria,
-                        'peso' => $cita->paciente->peso,
-                        'talla' => $cita->paciente->talla,
-                        'temperatura' => $cita->paciente->temperatura,
-                        'sintomas' => $cita->paciente->sintomas,
-                        'motivo_consulta' => $cita->paciente->motivo_consulta,
+                ] : null,
 
-                    ] : null,
+                // Información del médico
+                'medico' => $cita->medico ? [
 
-                    // Información del médico
-                    'medico' => $cita->medico ? [
+                    'id'     => $cita->medico->id,
+                    'nombre' => $cita->medico->nombre,
 
-                        'id'     => $cita->medico->id,
-                        'nombre' => $cita->medico->nombre,
+                ] : null,
 
-                    ] : null,
+                // Información de la especialidad
+                'especialidad' => $cita->especialidad ? [
 
-                    // Información de la especialidad
-                    'especialidad' => $cita->especialidad ? [
+                    'id'     => $cita->especialidad->id,
+                    'nombre' => $cita->especialidad->nombre,
 
-                        'id'     => $cita->especialidad->id,
-                        'nombre' => $cita->especialidad->nombre,
+                ] : null,
 
-                    ] : null,
+            ];
+        });
 
-                ];
-            })
-        );
+        // 2) Consultas registradas "de forma tradicional" (sin pasar por Agenda)
+        $consultas = Consulta::with(['paciente', 'medico'])->get();
+
+        // Traduce estado_consulta -> mismo formato de texto que usa el chip
+        // de HistorialConsulta.vue ('Agendado', 'En proceso', 'Finalizada', 'Cancelada')
+        $mapaEstados = [
+            'en_proceso' => 'En proceso',
+            'finalizada' => 'Finalizada',
+            'cancelada'  => 'Cancelada',
+            'activa'     => 'Agendado',
+        ];
+
+        $consultasFormateadas = $consultas->map(function ($consulta) use ($mapaEstados) {
+
+            return [
+
+                'id'     => 'consulta-' . $consulta->id,
+                'origen' => 'consulta',
+                'title'  => 'Consulta: ' . ($consulta->paciente->nombre ?? 'Sin paciente'),
+                'start'  => optional($consulta->created_at)->toDateTimeString(),
+
+                'folio'  => $consulta->folio,
+                'fecha'  => optional($consulta->created_at)->format('Y-m-d'),
+                'hora'   => optional($consulta->created_at)->format('H:i:s'),
+                'estado' => $mapaEstados[$consulta->estado_consulta] ?? $consulta->estado_consulta,
+                'tipo'   => $consulta->tipo_consulta,
+
+                'paciente' => $consulta->paciente ? [
+
+                    'id'          => $consulta->paciente->id,
+                    'nombre'      => $consulta->paciente->nombre,
+                    'sexo'        => $consulta->paciente->sexo,
+                    'telefono'    => $consulta->paciente->telefono,
+                    'email'       => $consulta->paciente->email,
+                    'direccion'   => $consulta->paciente->direccion,
+                    'curp'        => $consulta->paciente->curp,
+                    'tipo_sangre' => $consulta->paciente->tipo_sangre,
+                    'contacto_emergencia' => $consulta->paciente->contacto_emergencia,
+                    'alergias' => $consulta->paciente->alergias,
+                    'fecha_nacimiento' => $consulta->paciente->fecha_nacimiento,
+                    'edad'        => $consulta->paciente->edad,
+                    'estado'      => $consulta->paciente->estado,
+
+                ] : null,
+
+                // NOTA: Consulta::medico() relaciona por 'user_id' contra
+                // medicos.id (belongsTo(Medico::class, 'user_id')). Revisar
+                // si esto realmente corresponde al médico correcto; se deja
+                // tal cual está definido en el modelo.
+                'medico' => $consulta->medico ? [
+
+                    'id'     => $consulta->medico->id,
+                    'nombre' => $consulta->medico->nombre,
+
+                ] : null,
+
+                // La tabla `consultas` no tiene una columna especialidad_id
+                // fillable/confirmada, así que se deja null por ahora.
+                'especialidad' => null,
+
+            ];
+        });
+
+        // 3) Combinar ambas fuentes y devolver, más recientes primero
+        $todas = $citasFormateadas
+            ->concat($consultasFormateadas)
+            ->sortByDesc('start')
+            ->values();
+
+        return response()->json($todas);
     }
 
    //muestra el formulario para crear una nueva cita.

@@ -63,7 +63,7 @@
                         <h3 class="fw-bold mb-0 counter-number">{{ resumen.consultasHoy }}</h3>
                         <small class="text-muted">Consultas agregadas hoy</small>
                     </div>
-                    <a href="/ListaConsultas" class="stat-link text-purple">
+                    <a href="/HistorialConsultas" class="stat-link text-purple">
                         Ver consultas <i class="fas fa-chevron-right"></i>
                     </a>
                 </div>
@@ -79,7 +79,7 @@
                         <h3 class="fw-bold mb-0 counter-number">{{ resumen.pendientes }}</h3>
                         <small class="text-muted">Pacientes pendientes</small>
                     </div>
-                    <a href="/ListaConsultas" class="stat-link text-warning">
+                    <a href="/HistorialConsultas" class="stat-link text-warning">
                         Ver pendientes <i class="fas fa-chevron-right"></i>
                     </a>
                 </div>
@@ -498,6 +498,12 @@ export default {
             }
         },
 
+        // Trae /api/citas, que desde el ajuste en CitaController@getCitas
+        // ya combina las citas de Agenda (tabla `citas`) con las consultas
+        // registradas "de forma tradicional" (tabla `consultas`), igual que
+        // consume HistorialConsulta.vue. Por eso todo lo que se calcula a
+        // partir de `citas` en este archivo (tarjetas, próximas consultas,
+        // alertas, flujo y actividad reciente) ya refleja ambas fuentes.
         async obtenerCitas() {
             try {
                 const response = await axios.get('/api/citas');
@@ -518,11 +524,14 @@ export default {
             }
         },
 
-        // Cifras reales de la tabla `consultas` (no `citas`).
+        // Cifras de la tabla `consultas` únicamente (no `citas`).
         // GET /api/dashboard/consultas-hoy -> { usadas_hoy, finalizadas_hoy, pendientes_hoy }
-        // (ver DashboardController@consultasHoy). Las 3 tarjetas de arriba
-        // relacionadas con consultas salen de aquí, así siempre cuadran
-        // entre sí: usadas_hoy = finalizadas_hoy + pendientes_hoy.
+        // (ver DashboardController@consultasHoy).
+        // NOTA: la tarjeta "Consultas de hoy" ya NO usa usadas_hoy (ver
+        // procesarTarjetasSuperiores), porque ese número solo contaba
+        // `consultas` y dejaba fuera las citas agendadas desde el módulo
+        // de Agenda. finalizadas_hoy todavía se usa en el flujo de
+        // atención para el paso "Finalizados".
         async obtenerResumenConsultas() {
             try {
                 const response = await axios.get('/api/dashboard/consultas-hoy');
@@ -600,48 +609,72 @@ export default {
                 this.triageEsDeHoy(this.ultimoTriage(p))
             ).length;
 
-            this.resumen.consultasHoy = consultasResumen.usadas_hoy;
-
-            // CORREGIDO: "Pendientes" debe coincidir con la lista de
-            // espera real que se ve en ConsultaClinica.vue
-            // (pacientesFiltrados), la cual sale de la tabla `citas`, NO
-            // de `consultas`. Son dos tablas distintas con datos propios;
-            // usar consultasResumen.pendientes_hoy aquí hacía que la
-            // tarjeta mostrara un número que no existía en ninguna lista
-            // real que el usuario pudiera revisar.
+            // Todas las citas/consultas (Agenda + tradicionales, ya
+            // combinadas por /api/citas) que caen en el día de hoy.
             const citasHoy = citas.filter(c =>
                 this.esHoy(c.fecha || c.created_at)
             );
 
+            // "Consultas de hoy" ahora es el TOTAL combinado del día,
+            // igual que el conteo que muestra HistorialConsulta.vue
+            // cuando el filtro de fecha es "hoy" (historialFiltrado.length).
+            // Antes usaba consultasResumen.usadas_hoy, que solo contaba
+            // la tabla `consultas` y dejaba fuera las citas agendadas
+            // desde el módulo de Agenda.
+            this.resumen.consultasHoy = citasHoy.length;
+
+            // "Pendientes" sigue siendo la lista de espera real que se ve
+            // en ConsultaClinica.vue: todo lo de hoy que no esté
+            // finalizado/completado/cancelado.
             this.resumen.pendientes = citasHoy.filter(c => {
                 const estado = this.normalizarEstado(c.estado);
                 return estado !== 'finalizada' && estado !== 'completada' && estado !== 'cancelada';
             }).length;
         },
 
-        // ─── PROXIMAS CONSULTAS (citas de hoy) ──────────────────────────
+        // ─── CONSULTAS DE HOY (citas + consultas tradicionales) ─────────
 
+        // ANTES: solo mostraba las citas "activas" del día (excluía
+        // Finalizada/Cancelada) y forzaba el estado del primer registro a
+        // 'En proceso' aunque su estado real fuera otro. Ahora muestra
+        // TODAS las citas/consultas de hoy (Agenda + tradicionales, ya
+        // combinadas por /api/citas), con su estado real, igual que hace
+        // HistorialConsulta.vue filtrado por hoy.
         procesarProximasConsultas(citas) {
             this.cargandoConsultas = false;
 
-            const activasHoy = citas
+            const citasHoy = citas
                 .filter(c => this.esHoy(c.fecha || c.created_at))
-                .filter(c => {
-                    const estado = this.normalizarEstado(c.estado);
-                    return estado !== 'finalizada' && estado !== 'completada' && estado !== 'cancelada';
-                })
                 .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
 
-            this.proximasConsultas = activasHoy
+            this.proximasConsultas = citasHoy
                 .slice(0, 10)
-                .map((c, i) => ({
-                    id: c.id,
-                    hora: c.hora || '--:--',
-                    paciente: this.nombrePacienteCita(c),
-                    tipo: c.especialidad?.nombre || c.tipo || 'Consulta general',
-                    estado: i === 0 ? 'En proceso' : 'Agendada',
-                    estadoClase: i === 0 ? 'en-proceso' : 'agendada'
-                }));
+                .map(c => {
+                    const estadoNormalizado = this.normalizarEstado(c.estado);
+
+                    let estadoTexto = 'Agendada';
+                    let estadoClase = 'agendada';
+
+                    if (estadoNormalizado === 'finalizada' || estadoNormalizado === 'completada') {
+                        estadoTexto = 'Finalizada';
+                        estadoClase = 'finalizada';
+                    } else if (estadoNormalizado === 'en_proceso') {
+                        estadoTexto = 'En proceso';
+                        estadoClase = 'en-proceso';
+                    } else if (estadoNormalizado === 'cancelada' || estadoNormalizado === 'cancelado') {
+                        estadoTexto = 'Cancelada';
+                        estadoClase = 'cancelada';
+                    }
+
+                    return {
+                        id: c.id,
+                        hora: c.hora || '--:--',
+                        paciente: this.nombrePacienteCita(c),
+                        tipo: c.especialidad?.nombre || c.tipo || 'Consulta general',
+                        estado: estadoTexto,
+                        estadoClase
+                    };
+                });
         },
 
         // ─── ALERTAS CLINICAS ───────────────────────────────────────────
@@ -785,16 +818,18 @@ export default {
             const triageRealizado = triage.filter(p => this.triageEsDeHoy(this.ultimoTriage(p))).length;
 
             const citasHoy = citas.filter(c => this.esHoy(c.fecha || c.created_at));
-            const enConsulta = citasHoy.filter(c =>
-                this.normalizarEstado(c.estado) === 'en_proceso'
-            ).length;
 
-            // Antes se contaban las citas de hoy en estado
-            // finalizada/completada, pero el número real de consultas
-            // finalizadas hoy (tabla `consultas`) es distinto. Se usa el
-            // mismo resumen de /api/dashboard/consultas-hoy que ya
-            // alimenta la tarjeta "Consultas de hoy".
-            const finalizados = consultasResumen.finalizadas_hoy;
+            // Total de citas que llegaron a la etapa de consulta hoy (en proceso
+            // o ya finalizadas), no solo las que están en proceso en este momento.
+            const enConsulta = citasHoy.filter(c => {
+                const estado = this.normalizarEstado(c.estado);
+                return estado === 'en_proceso' || estado === 'finalizada' || estado === 'completada';
+            }).length;
+
+            const finalizados = citasHoy.filter(c => {
+                const estado = this.normalizarEstado(c.estado);
+                return estado === 'finalizada' || estado === 'completada';
+            }).length;
 
             const totalPasos = Math.max(registrados, 1);
             const progreso = Math.min(100, Math.round((finalizados / totalPasos) * 100));
@@ -1432,4 +1467,4 @@ export default {
         animation: none !important;
     }
 }
-</style> 
+</style>
