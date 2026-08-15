@@ -2101,36 +2101,46 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
      * Analiza signos vitales del triage y devuelve prioridad + estado para la tabla
      */
     public function analizarTriage(array $datos): array
-    {
+    {   
+        // Preparamos el texto de cada signo vital: si no viene valor, se manda "No registrada"
+        // en vez de dejar que un null/0 se lea como si fuera una medición real.
+        $presionTxt     = !empty($datos['presion'])     ? $datos['presion']     . ' mmHg' : 'No registrada';
+        $saturacionTxt  = !empty($datos['saturacion'])  ? $datos['saturacion']  . '%'     : 'No registrada';
+        $temperaturaTxt = !empty($datos['temperatura']) ? $datos['temperatura'] . '°C'    : 'No registrada';
+            
         $prompt = "
-    Eres un sistema experto en triage médico de urgencias hospitalarias.
-    Analiza los siguientes signos vitales y síntomas del paciente.
+            Eres un sistema experto en triage médico de urgencias hospitalarias.
+            Analiza los siguientes signos vitales y síntomas del paciente.
+            
+            Síntomas: {$datos['sintomas']}
+            Presión Arterial: {$presionTxt}
+            Saturación O₂: {$saturacionTxt}
+            Temperatura: {$temperaturaTxt}
 
-    Síntomas: {$datos['sintomas']}
-    Presión Arterial: {$datos['presion']}
-    Saturación O₂: {$datos['saturacion']}%
-    Temperatura: {$datos['temperatura']}°C
+            IMPORTANTE: Si un signo vital dice \"No registrada\", significa que NO fue medido todavía.
+            Nunca lo interpretes como un valor real de 0 ni como un dato crítico. Basa tu análisis
+            únicamente en los signos vitales que sí tengan un valor, y en los síntomas descritos.
 
-    Clasifica al paciente según el Sistema de Triage Manchester (MTS) de 5 niveles:
+            Clasifica al paciente según el Sistema de Triage Manchester (MTS) de 5 niveles:
 
-    ROJO     → Nivel 1. Emergencia / Reanimación. Riesgo vital inmediato. Atención en 0 a 3 minutos.
-    NARANJA  → Nivel 2. Muy urgente. Riesgo alto. Atención en menos de 10 a 15 minutos.
-    AMARILLO → Nivel 3. Urgente. Riesgo moderado. Atención en 30 a 60 minutos.
-    VERDE    → Nivel 4. Urgencia menor. Paciente estable. Atención hasta 120 minutos.
-    AZUL     → Nivel 5. No urgente. Puede esperar hasta 180 minutos o derivarse a consulta externa.
+            ROJO     → Nivel 1. Emergencia / Reanimación. Riesgo vital inmediato. Atención en 0 a 3 minutos.
+            NARANJA  → Nivel 2. Muy urgente. Riesgo alto. Atención en menos de 10 a 15 minutos.
+            AMARILLO → Nivel 3. Urgente. Riesgo moderado. Atención en 30 a 60 minutos.
+            VERDE    → Nivel 4. Urgencia menor. Paciente estable. Atención hasta 120 minutos.
+            AZUL     → Nivel 5. No urgente. Puede esperar hasta 180 minutos o derivarse a consulta externa.
 
-    Estado clínico:
-    - grave    → corresponde a ROJO o NARANJA
-    - moderado → corresponde a AMARILLO
-    - leve     → corresponde a VERDE o AZUL
+            Estado clínico:
+            - grave    → corresponde a ROJO o NARANJA
+            - moderado → corresponde a AMARILLO
+            - leve     → corresponde a VERDE o AZUL
 
-    Devuelve EXCLUSIVAMENTE este JSON sin texto adicional ni Markdown:
-    {
-    \"prioridad\": \"rojo|naranja|amarillo|verde|azul\",
-    \"estado\": \"grave|moderado|leve\",
-    \"justificacion\": \"Una sola oración corta explicando la clasificación\"
-    }
-        ";
+            Devuelve EXCLUSIVAMENTE este JSON sin texto adicional ni Markdown:
+            {
+            \"prioridad\": \"rojo|naranja|amarillo|verde|azul\",
+            \"estado\": \"grave|moderado|leve\",
+            \"justificacion\": \"Una sola oración corta explicando la clasificación\"
+            }
+                ";
 
         try {
             $response = Http::withToken(config('services.ai.key'))

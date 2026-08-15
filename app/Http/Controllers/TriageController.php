@@ -383,11 +383,26 @@ class TriageController extends Controller
             ]);
         }
 
+        // Se considera "vital registrado" solo si el campo tiene un valor real (no null/vacío)
+        $tieneVitales = !empty($triage->presion) || !empty($triage->saturacion) || !empty($triage->temperatura);
+
+        if (!$tieneVitales) {
+            return response()->json([
+                'paciente_id'   => $paciente->id,
+                'triage_id'     => $triage->id,
+                'created_at'    => $triage->created_at,
+                'prioridad'     => null,
+                'estado'        => 'sin_datos',
+                'justificacion' => 'No hay signos vitales registrados; se requiere al menos uno para evaluar con IA.',
+                'fuente'        => 'sin_evaluar',
+            ]);
+        }
+
         $resultado = $ia->analizarTriage([
-            'sintomas'    => $triage->sintomas    ?? 'No especificados',
-            'presion'     => $triage->presion     ?? 'No registrada',
-            'saturacion'  => $triage->saturacion  ?? '0',
-            'temperatura' => $triage->temperatura ?? '0',
+            'sintomas'    => $triage->motivo_consulta    ?? 'No especificados',
+            'presion'     => $triage->presion     ?? null,
+            'saturacion'  => $triage->saturacion  ?? null,
+            'temperatura' => $triage->temperatura ?? null,
         ]);
 
         $triage->update([
