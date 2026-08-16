@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\NotaPsoapp;
 use App\Models\Consulta;
 use App\Models\Paciente;
+use App\Models\Medico;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\WhatsAppService;
@@ -305,5 +306,81 @@ class ConsultaController extends Controller
             'message' =>
                 'Consulta eliminada correctamente',
         ]);
+    }
+
+    /**
+ * Historial de consultas reales (tabla `consultas`), para
+ * HistorialConsulta.vue. Reemplaza el uso incorrecto de
+ * CitaController@getCitas, que traía citas de Agenda en vez
+ * de consultas ya registradas.
+ *
+ * Filtros soportados (todos opcionales):
+ *  - fecha            (Y-m-d)  -> WHERE DATE(created_at) = fecha
+ *  - medico_id                 -> WHERE user_id = medico_id (id de medicos, no de users)
+ *  - especialidad_id           -> WHERE medico.especialidad_id = especialidad_id
+ *
+ * NOTA: si consultas.user_id no corresponde a ningún medicos.user_id
+ * (p.ej. consultas creadas/tocadas por un admin), 'medico' y
+ * 'especialidad' regresan null en vez de un dato incorrecto.
+ */
+    public function historial(Request $request)
+    {
+        $query = Consulta::with(['paciente', 'medico.especialidad']);
+
+        if ($request->filled('fecha')) {
+            $query->whereDate('created_at', $request->fecha);
+        }
+
+        if ($request->filled('medico_id')) {
+            $medico = Medico::find($request->medico_id);
+            $query->where('user_id', $medico?->user_id ?? -1);
+        }
+
+        if ($request->filled('especialidad_id')) {
+            $query->whereHas('medico', function ($q) use ($request) {
+                $q->where('especialidad_id', $request->especialidad_id);
+            });
+        }
+
+        $mapaEstadosDisplay = [
+            'activa'     => 'Agendado',
+            'en_proceso' => 'En proceso',
+            'finalizada' => 'Finalizada',
+            'cancelada'  => 'Cancelada',
+        ];
+
+        $consultas = $query->orderBy('created_at')->get()->map(function ($consulta) use ($mapaEstadosDisplay) {
+            return [
+                'id'     => 'consulta-' . $consulta->id,
+                'origen' => 'consulta',
+                'title'  => 'Consulta: ' . ($consulta->paciente->nombre ?? 'Sin paciente'),
+                'folio'  => $consulta->folio,
+                'fecha'  => optional($consulta->created_at)->format('Y-m-d'),
+                'hora'   => optional($consulta->created_at)->format('H:i:s'),
+                'estado' => $mapaEstadosDisplay[$consulta->estado_consulta] ?? $consulta->estado_consulta,
+                'tipo'   => 'Consulta',
+
+                'paciente' => $consulta->paciente ? [
+                    'id'     => $consulta->paciente->id,
+                    'nombre' => trim(implode(' ', array_filter([
+                        $consulta->paciente->nombre,
+                        $consulta->paciente->apellido_paterno,
+                        $consulta->paciente->apellido_materno,
+                    ]))),
+                ] : null,
+
+                'medico' => $consulta->medico ? [
+                    'id'     => $consulta->medico->id,
+                    'nombre' => $consulta->medico->nombre,
+                ] : null,
+
+                'especialidad' => $consulta->medico?->especialidad ? [
+                    'id'     => $consulta->medico->especialidad->id,
+                    'nombre' => $consulta->medico->especialidad->nombre,
+                ] : null,
+            ];
+        });
+
+        return response()->json($consultas);
     }
 }

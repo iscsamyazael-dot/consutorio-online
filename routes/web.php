@@ -152,7 +152,11 @@ Route::middleware('auth')->group(function () {
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
         Route::resource('citas', CitaController::class);// Agenda: CRUD de citas
         Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendario / lista de espera
-
+        
+        //Ruta para ver el historial de una consulta de una determinada fecha //
+        Route::get('VerHistorialConsultas', [ConsultaController::class, 'historial']);
+        // Ruta para cambiar el estado de una consulta (ej. En proceso -> Finalizada)
+        Route::patch('ActualizarEstadoConsulta/{id}', [ConsultaController::class, 'actualizarEstado']);
 
         Route::patch('/api/consultas/{id}/estado', [ConsultaController::class, 'actualizarEstado'])->name('consultas.estado.api');// Historial: cambiar estado de consulta tradicional
         // ─────────────────────────────────────────────────────────────
@@ -167,7 +171,7 @@ Route::middleware('auth')->group(function () {
         // que se conserva aquí.
         // ─────────────────────────────────────────────────────────────
         Route::get('/api/citas', [CitaController::class, 'getCitas']);// Agenda: lista de citas con paciente/medico/especialidad (ConsultaClinica.vue, ConsultaInteligente.vue)
-         Route::get('/api/dashboard/consultas-hoy', [DashboardController::class, 'consultasHoy']); // Dashboard SPA: consultas usadas y finalizadas hoy (Home.vue)
+        Route::get('/api/dashboard/consultas-hoy', [DashboardController::class, 'consultasHoy']); // Dashboard SPA: consultas usadas y finalizadas hoy (Home.vue)
         // Agenda: actualizar datos del paciente
         // Cambias 'SubirArchivosControlador' por el que ya tengas
         Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);

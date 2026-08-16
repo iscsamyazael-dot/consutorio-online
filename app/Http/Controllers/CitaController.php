@@ -49,7 +49,13 @@ class CitaController extends Controller
     // formato para que el frontend no tenga que cambiar su forma de leerlas.
     public function getCitas()
     {
-        // 1) Citas agendadas desde el módulo de Agenda
+        // Citas agendadas desde el módulo de Agenda (tabla `citas`).
+        // Ya NO se combinan aquí las consultas de la tabla `consultas`:
+        // ese comportamiento era un parche temporal para que
+        // HistorialConsulta.vue mostrara datos de ambas tablas antes de
+        // que existiera su propio endpoint dedicado
+        // (VerHistorialConsultas -> ConsultaController@historial()).
+        // /api/citas vuelve a ser exclusivamente para Agenda.
         $citas = Cita::with([
             'paciente',
             'medico',
@@ -61,7 +67,7 @@ class CitaController extends Controller
             return [
 
                 // Datos principales
-                'id'     => 'cita-' . $cita->id, // prefijo para no chocar con ids de consultas
+                'id'     => 'cita-' . $cita->id,
                 'origen' => 'cita',
                 'title'  => 'Cita: ' . ($cita->paciente->nombre ?? 'Sin paciente'),
                 'start'  => $cita->fecha . 'T' . $cita->hora,
@@ -126,78 +132,10 @@ class CitaController extends Controller
             ];
         });
 
-        // 2) Consultas registradas "de forma tradicional" (sin pasar por Agenda)
-        $consultas = Consulta::with(['paciente', 'medico'])->get();
-
-        // Traduce estado_consulta -> mismo formato de texto que usa el chip
-        // de HistorialConsulta.vue ('Agendado', 'En proceso', 'Finalizada', 'Cancelada')
-        $mapaEstados = [
-            'en_proceso' => 'En proceso',
-            'finalizada' => 'Finalizada',
-            'cancelada'  => 'Cancelada',
-            'activa'     => 'Agendado',
-        ];
-
-        $consultasFormateadas = $consultas->map(function ($consulta) use ($mapaEstados) {
-
-            return [
-
-                'id'     => 'consulta-' . $consulta->id,
-                'origen' => 'consulta',
-                'title'  => 'Consulta: ' . ($consulta->paciente->nombre ?? 'Sin paciente'),
-                'start'  => optional($consulta->created_at)->toDateTimeString(),
-
-                'folio'  => $consulta->folio,
-                'fecha'  => optional($consulta->created_at)->format('Y-m-d'),
-                'hora'   => optional($consulta->created_at)->format('H:i:s'),
-                'estado' => $mapaEstados[$consulta->estado_consulta] ?? $consulta->estado_consulta,
-                'tipo'   => $consulta->tipo_consulta,
-
-                'paciente' => $consulta->paciente ? [
-
-                    'id'          => $consulta->paciente->id,
-                    'nombre'      => $consulta->paciente->nombre,
-                    'sexo'        => $consulta->paciente->sexo,
-                    'telefono'    => $consulta->paciente->telefono,
-                    'email'       => $consulta->paciente->email,
-                    'direccion'   => $consulta->paciente->direccion,
-                    'curp'        => $consulta->paciente->curp,
-                    'tipo_sangre' => $consulta->paciente->tipo_sangre,
-                    'contacto_emergencia' => $consulta->paciente->contacto_emergencia,
-                    'alergias' => $consulta->paciente->alergias,
-                    'fecha_nacimiento' => $consulta->paciente->fecha_nacimiento,
-                    'edad'        => $consulta->paciente->edad,
-                    'estado'      => $consulta->paciente->estado,
-
-                ] : null,
-
-                // NOTA: Consulta::medico() relaciona por 'user_id' contra
-                // medicos.id (belongsTo(Medico::class, 'user_id')). Revisar
-                // si esto realmente corresponde al médico correcto; se deja
-                // tal cual está definido en el modelo.
-                'medico' => $consulta->medico ? [
-
-                    'id'     => $consulta->medico->id,
-                    'nombre' => $consulta->medico->nombre,
-
-                ] : null,
-
-                // La tabla `consultas` no tiene una columna especialidad_id
-                // fillable/confirmada, así que se deja null por ahora.
-                'especialidad' => null,
-
-            ];
-        });
-
-        // 3) Combinar ambas fuentes y devolver, más recientes primero
-        $todas = $citasFormateadas
-            ->concat($consultasFormateadas)
-            ->sortByDesc('start')
-            ->values();
-
-        return response()->json($todas);
+        return response()->json(
+            $citasFormateadas->sortByDesc('start')->values()
+        );
     }
-
    //muestra el formulario para crear una nueva cita.
     public function create()
     {

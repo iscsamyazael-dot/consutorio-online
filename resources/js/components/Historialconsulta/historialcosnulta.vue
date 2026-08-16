@@ -8,7 +8,7 @@
           <span class="brand-label">Sistema activo</span>
         </div>
         <h1 class="main-title"><i class="ti ti-history"></i> Historial de consulta</h1>
-        <p class="main-sub">Consulta y filtra el histórico de citas registradas en el sistema.</p>
+        <p class="main-sub">Consulta y filtra el histórico de consultas registradas en el sistema.</p>
       </div>
       <a href="/ListaConsultas" class="btn-ghost">
         <i class="ti ti-arrow-left"></i> Volver
@@ -27,7 +27,7 @@
           </option>
         </select>
 
-        <select v-model="historialMedico" class="hist-select">
+        <select v-model="historialMedico" class="hist-select" @change="cargarDatos">
           <option value="">Todos los médicos</option>
           <option v-for="med in medicosFiltradosHistorial" :key="med.id" :value="med.id">
             {{ med.nombre }}
@@ -36,14 +36,14 @@
 
         <label class="hist-fecha">
           <i class="ti ti-calendar" aria-hidden="true"></i>
-          <input type="date" v-model="historialFecha" class="hist-fecha-input" />
+          <input type="date" v-model="historialFecha" class="hist-fecha-input" @change="cargarDatos" />
         </label>
 
         <button
           v-if="historialFecha"
           type="button"
           class="hist-toggle"
-          @click="historialFecha = ''"
+          @click="historialFecha = ''; cargarDatos()"
         >
           <i class="ti ti-x" aria-hidden="true"></i> Ver todas las fechas
         </button>
@@ -68,19 +68,23 @@
         <table class="hist-table">
           <thead>
             <tr>
+              <th>#</th>
               <th>Paciente</th>
+              <th>Folio</th>
               <th>Hora</th>
               <th>Estado</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="c in historialFiltrado" :key="c.id">
+            <tr v-for="(c, index) in historialFiltrado" :key="c.id">
+              <td class="hist-mono">{{ index + 1 }}</td>
               <td>
                 <p class="hist-patient-name">{{ nombrePacienteCita(c) }}</p>
                 <p class="hist-patient-sub" v-if="c.especialidad || c.medico">
                   {{ c.especialidad?.nombre }}<template v-if="c.especialidad && c.medico"> · </template>{{ c.medico?.nombre }}
                 </p>
               </td>
+              <td class="hist-mono">{{ c.folio || '—' }}</td>
               <td class="hist-mono">{{ c.hora || '—' }}</td>
               <td>
                 <div class="hist-estado-cell">
@@ -110,7 +114,7 @@
               </td>
             </tr>
             <tr v-if="!cargandoStats && historialFiltrado.length === 0">
-              <td colspan="3" class="hist-empty">No hay consultas con ese criterio.</td>
+              <td colspan="5" class="hist-empty">No hay consultas con ese criterio.</td>
             </tr>
           </tbody>
         </table>
@@ -121,7 +125,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 import ApiService from '../../services/ApiService.js'
 
 function obtenerFechaHoyISO() {
@@ -137,9 +140,22 @@ export default {
 
   data() {
     return {
+      // NOTA: pese al nombre histórico "citas", este arreglo ahora
+      // contiene registros de la tabla `consultas` (ver cargarDatos),
+      // ya no citas de Agenda. Se dejó el nombre para no tocar todos
+      // los computed/template que ya lo referencian.
       citas: [],
       pacientes: [],
       cargandoStats: true,
+
+      // Catálogo SIN filtrar (todas las consultas, sin fecha/médico/
+      // especialidad), usado solo para poblar las opciones de los
+      // selects de especialidad/médico. Se carga una sola vez al
+      // montar, aparte de `citas` (que sí va filtrada según lo elegido
+      // y alimenta la tabla). Sin esto, los selects se "encogen" cada
+      // vez que filtras, porque solo mostrarían lo que ya quedó en
+      // el resultado filtrado.
+      catalogoConsultas: [],
 
       // Filtros del historial: fecha empieza en hoy por defecto.
       historialFecha: obtenerFechaHoyISO(),
@@ -152,10 +168,11 @@ export default {
   },
 
   computed: {
-    // Lista única de especialidades a partir de todas las citas cargadas
+    // Lista única de especialidades a partir del catálogo SIN filtrar
+    // (no de `citas`, que ya viene acotada por los filtros elegidos).
     especialidadesDisponiblesHistorial() {
       const mapa = new Map()
-      this.citas.forEach(c => {
+      this.catalogoConsultas.forEach(c => {
         if (!c.especialidad) return
         const id = c.especialidad.id ?? c.especialidad.nombre
         if (!mapa.has(id)) mapa.set(id, { id, nombre: c.especialidad.nombre })
@@ -163,10 +180,11 @@ export default {
       return Array.from(mapa.values())
     },
 
-    // Lista única de médicos, con las especialidades que se les ha visto atender
+    // Lista única de médicos, con las especialidades que se les ha visto
+    // atender — también a partir del catálogo SIN filtrar.
     medicosDisponiblesHistorial() {
       const mapa = new Map()
-      this.citas.forEach(c => {
+      this.catalogoConsultas.forEach(c => {
         if (!c.medico) return
         const id = c.medico.id ?? c.medico.nombre
         const espId = c.especialidad ? (c.especialidad.id ?? c.especialidad.nombre) : ''
@@ -187,8 +205,14 @@ export default {
       )
     },
 
-    // Citas filtradas por fecha / especialidad / médico, ordenadas por hora.
+    // Consultas filtradas por fecha / especialidad / médico, ordenadas por hora.
     // Si historialFecha está vacío, muestra todas las fechas.
+    //
+    // NOTA: el filtro de fecha/médico/especialidad ya se aplica también
+    // en el backend (ver cargarDatos), así que aquí vuelve a filtrar
+    // sobre un conjunto ya acotado — se deja por si se cambian los
+    // selects sin recargar de inmediato, y por consistencia con el
+    // orden por hora que sigue haciendo falta en el cliente.
     historialFiltrado() {
       let lista = this.citas
 
@@ -211,19 +235,44 @@ export default {
   },
 
   mounted() {
+    this.cargarCatalogoFiltros()
     this.cargarDatos()
   },
 
   methods: {
+    // Trae TODAS las consultas (sin filtros) una sola vez, solo para
+    // poblar los selects de especialidad/médico con el catálogo
+    // completo del sistema — independiente de lo que esté filtrado
+    // en la tabla en un momento dado.
+    async cargarCatalogoFiltros() {
+      try {
+        const resp = await ApiService.get('/VerHistorialConsultas')
+        this.catalogoConsultas = resp.data || []
+      } catch (error) {
+        console.error('Error al cargar el catálogo de especialidades/médicos:', error)
+      }
+    },
+
+    // Trae el historial real de CONSULTAS (tabla `consultas`, vía
+    // ConsultaController@historial), ya no citas de Agenda. Los filtros
+    // de fecha/médico/especialidad se mandan al backend como query string,
+    // siguiendo el mismo patrón que ya usa ApiService en el resto del
+    // proyecto (ej. obtenerConsultas() de historial clínico).
     async cargarDatos() {
       this.cargandoStats = true
       try {
-        const [respCitas, respPacientes] = await Promise.all([
-          axios.get('/api/citas'),
+        const query = []
+        if (this.historialFecha) query.push('fecha=' + this.historialFecha)
+        if (this.historialMedico) query.push('medico_id=' + this.historialMedico)
+        if (this.historialEspecialidad) query.push('especialidad_id=' + this.historialEspecialidad)
+        const qs = query.length ? '?' + query.join('&') : ''
+
+        const [respConsultas, respPacientes] = await Promise.all([
+          ApiService.get('/VerHistorialConsultas' + qs),
           ApiService.get('/pacientes'),
         ])
 
-        this.citas = respCitas.data || []
+        this.citas = respConsultas.data || []
         this.pacientes = respPacientes.data || []
       } catch (error) {
         console.error('Error al cargar el historial de consultas:', error)
@@ -238,6 +287,9 @@ export default {
         const sigueSiendoValido = this.medicosFiltradosHistorial.some(m => m.id === this.historialMedico)
         if (!sigueSiendoValido) this.historialMedico = ''
       }
+      // Como el filtro también se aplica en el backend, se recarga con
+      // el nuevo criterio en vez de depender solo del filtrado en cliente.
+      this.cargarDatos()
     },
 
     nombrePacienteCita(c) {
@@ -266,29 +318,9 @@ export default {
       }
     },
 
-    // Devuelve { endpoint, idReal } según de dónde viene el registro.
-    // Desde que /api/citas combina 'citas' y 'consultas' tradicionales,
-    // el backend prefija los ids como 'cita-123' o 'consulta-456' para
-    // que no choquen entre sí (ver CitaController@getCitas). Aquí se
-    // quita el prefijo y se decide a qué endpoint mandar el PATCH.
-    endpointEstadoCita(cita) {
-      const idStr = String(cita.id)
-
-      if (cita.origen === 'consulta' || idStr.startsWith('consulta-')) {
-        return {
-          url: `/api/consultas/${idStr.replace('consulta-', '')}/estado`,
-        }
-      }
-
-      return {
-        url: `/api/citas/${idStr.replace('cita-', '')}/estado`,
-      }
-    },
-
-    // Cambia el estado de una cita o de una consulta tradicional.
-    // Usa PATCH /api/citas/{id}/estado para las citas de Agenda, y
-    // PATCH /api/consultas/{id}/estado para las consultas tradicionales
-    // (ver ConsultaController@actualizarEstado).
+    // Cambia el estado de una consulta (ej. 'En proceso' -> 'Finalizada').
+    // Usa PATCH /ActualizarEstadoConsulta/{id} (ver ConsultaController@actualizarEstado),
+    // vía ApiService en vez de axios directo.
     async cambiarEstadoCita(cita, nuevoEstado) {
       if (!nuevoEstado || nuevoEstado === cita.estado) {
         return
@@ -296,8 +328,8 @@ export default {
 
       this.guardandoEstadoId = cita.id
       try {
-        const { url } = this.endpointEstadoCita(cita)
-        await axios.patch(url, { estado: nuevoEstado })
+        const idReal = String(cita.id).replace('consulta-', '')
+        await ApiService.patch('/ActualizarEstadoConsulta/' + idReal, { estado: nuevoEstado })
         cita.estado = nuevoEstado
 
         if (window.Swal) {
