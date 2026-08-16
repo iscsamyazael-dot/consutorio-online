@@ -1294,9 +1294,27 @@ export default {
     // Finalizar / quitar paciente de la lista de espera (botón de basura)
     // ──────────────────────────────────────────
 
+    // Devuelve la URL correcta para actualizar el estado de un registro
+    // que viene de /api/citas. Ese endpoint combina 'citas' y 'consultas'
+    // tradicionales prefijando los ids como 'cita-123' o 'consulta-456'
+    // (ver CitaController@getCitas) para que no choquen entre sí. Aquí se
+    // quita el prefijo y se decide a qué endpoint mandar el PATCH: mandar
+    // 'cita-113' tal cual a /api/citas/{id}/estado da 404, porque
+    // Cita::findOrFail busca ese string literal como si fuera el id.
+    endpointEstadoCita(cita) {
+      const idStr = String(cita.id)
+
+      if (cita.origen === 'consulta' || idStr.startsWith('consulta-')) {
+        return `/api/consultas/${idStr.replace('consulta-', '')}/estado`
+      }
+
+      return `/api/citas/${idStr.replace('cita-', '')}/estado`
+    },
+
     // No borra al paciente ni su historial: solo marca su cita de HOY
-    // como 'Finalizada' vía PATCH /api/citas/{id}/estado (mismo endpoint
-    // que ya usa ConsultaInteligente.vue). Como pacientesFiltrados excluye
+    // como 'Finalizada' vía PATCH /api/citas/{id}/estado o
+    // /api/consultas/{id}/estado, según de dónde venga el registro (ver
+    // endpointEstadoCita arriba). Como pacientesFiltrados excluye
     // citas 'Finalizada'/'Cancelada', el paciente desaparece de la lista
     // de espera en cuanto se refresca `citas`.
     async finalizarPaciente(paciente) {
@@ -1334,7 +1352,8 @@ export default {
 
       this.finalizandoId = paciente.id
       try {
-        await axios.patch(`/api/citas/${cita.id}/estado`, { estado: 'Finalizada' })
+        const url = this.endpointEstadoCita(cita)
+        await axios.patch(url, { estado: 'Finalizada' })
 
         // Refresca citas para que pacientesFiltrados excluya esta cita ya
         await this.obtenerCitas()

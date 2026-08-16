@@ -47,7 +47,13 @@ class CitaController extends Controller
     // que antes no aparecían en HistorialConsulta.vue porque ese componente
     // solo consume este endpoint. Se combinan ambas fuentes en un mismo
     // formato para que el frontend no tenga que cambiar su forma de leerlas.
-    public function getCitas()
+    //
+    // NUEVO: acepta el query param opcional ?origen=cita|consulta para que
+    // el frontend pueda pedir solo una de las dos fuentes (por ejemplo,
+    // HistorialConsulta.vue usa ?origen=consulta para no traer nunca las
+    // citas de Agenda). Si no se manda el parámetro, se comporta igual que
+    // antes y devuelve ambas fuentes combinadas.
+    public function getCitas(Request $request)
     {
         // 1) Citas agendadas desde el módulo de Agenda
         $citas = Cita::with([
@@ -194,6 +200,15 @@ class CitaController extends Controller
             ->concat($consultasFormateadas)
             ->sortByDesc('start')
             ->values();
+
+        // 4) Filtro opcional por origen: /api/citas?origen=consulta o ?origen=cita
+        // Si no se manda el parámetro (o llega con un valor distinto a estos
+        // dos), se devuelven ambas fuentes, igual que el comportamiento
+        // original de este endpoint.
+        $origen = $request->query('origen');
+        if (in_array($origen, ['cita', 'consulta'], true)) {
+            $todas = $todas->where('origen', $origen)->values();
+        }
 
         return response()->json($todas);
     }

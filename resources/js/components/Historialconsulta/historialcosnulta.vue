@@ -218,8 +218,13 @@ export default {
     async cargarDatos() {
       this.cargandoStats = true
       try {
+        // Le pedimos al backend que devuelva ÚNICAMENTE los registros que
+        // vienen de la tabla 'consultas' (no los de 'citas' / Agenda).
+        // CitaController@getCitas soporta el query param ?origen=consulta
+        // y filtra ahí mismo antes de responder, así que este historial
+        // nunca recibe ni mezcla citas de Agenda, sin importar su estado.
         const [respCitas, respPacientes] = await Promise.all([
-          axios.get('/api/citas'),
+          axios.get('/api/citas', { params: { origen: 'consulta' } }),
           ApiService.get('/pacientes'),
         ])
 
