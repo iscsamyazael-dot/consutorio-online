@@ -191,6 +191,8 @@
         <table class="cc-table">
           <thead>
             <tr>
+              <th style="width: 50px;">#</th>
+              <th>Turno</th>
               <th>Paciente / Diagnóstico</th>
               <th>Folio</th>
               <th>Estado</th>
@@ -203,7 +205,7 @@
             <!-- cc-row--active resalta la fila del paciente seleccionado en el panel -->
             <!-- cc-row--selected resalta la fila seleccionada para "Nueva consulta" (doble clic) -->
             <tr
-              v-for="p in pacientesFiltrados"
+              v-for="(p, index) in pacientesFiltrados"
               :key="p.id"
               class="cc-row"
               :class="{
@@ -212,7 +214,17 @@
               }"
               title="Doble clic para seleccionar este paciente"
               @dblclick="seleccionarParaConsulta(p)"
-            >
+            > 
+              <!-- Número consecutivo de la lista visual -->
+              <td class="font-semibold text-gray-500">
+                {{ index + 1 }}
+              </td>
+              <!-- Número de turno oficial (viene de lista_espera) -->
+              <td>
+                <span class="px-2.5 py-1 text-xs font-bold bg-blue-100 text-blue-800 rounded-full">
+                  #{{ getTurno(p) }}
+                </span>
+              </td>
               <!-- Avatar circular + nombre en negritas + motivo de consulta debajo -->
               <td class="cc-td--patient">
                 <div class="cc-mini-avatar" :style="{ background: avatarColor(nombreCompleto(p)) }">
@@ -728,7 +740,11 @@ export default {
 
       // Citas traídas de /api/citas — es la única fuente que trae médico,
       // especialidad y fecha; se cruza con "pacientes" por id para poder filtrar.
-      citas: [],
+      listaEspera: [],
+
+      loading:{
+        lista:false,
+      },
 
       // Paciente mostrado en el panel izquierdo.
       // Ya NO se asigna automáticamente a pacientes[0] en obtenerPacientes();
@@ -831,27 +847,28 @@ export default {
   },
 
   computed: {
-    // Lista única de especialidades a partir de las citas cargadas
+    // Lista única de especialidades a partir de la lista de espera del día
     especialidadesDisponibles() {
       const mapa = new Map()
-      this.citas.forEach(c => {
-        if (!c.especialidad) return
-        const id = c.especialidad.id ?? c.especialidad.nombre
-        if (!mapa.has(id)) mapa.set(id, { id, nombre: c.especialidad.nombre })
+      const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
+      lista.forEach(item => {
+        if (!item.especialidad) return
+        const id = item.especialidad.id ?? item.especialidad.nombre
+        if (!mapa.has(id)) mapa.set(id, { id, nombre: item.especialidad.nombre })
       })
       return Array.from(mapa.values())
     },
 
-    // Lista única de médicos a partir de las citas cargadas (con las
-    // especialidades que se les ha visto atender, igual que en agendamedica.vue)
+    // Lista única de médicos a partir de la lista de espera del día
     medicosDisponibles() {
       const mapa = new Map()
-      this.citas.forEach(c => {
-        if (!c.medico) return
-        const id = c.medico.id ?? c.medico.nombre
-        const espId = c.especialidad ? (c.especialidad.id ?? c.especialidad.nombre) : ''
+      const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
+      lista.forEach(item => {
+        if (!item.medico) return
+        const id = item.medico.id ?? item.medico.nombre
+        const espId = item.especialidad ? (item.especialidad.id ?? item.especialidad.nombre) : ''
         if (!mapa.has(id)) {
-          mapa.set(id, { id, nombre: c.medico.nombre, especialidadIds: new Set(espId ? [espId] : []) })
+          mapa.set(id, { id, nombre: item.medico.nombre, especialidadIds: new Set(espId ? [espId] : []) })
         } else if (espId) {
           mapa.get(id).especialidadIds.add(espId)
         }
@@ -867,41 +884,27 @@ export default {
       )
     },
 
-    // Agrupa las citas por id de paciente, para poder cruzarlas contra "pacientes"
+    // Agrupa los registros por id de paciente usando la lista de espera del día
     citasPorPacienteId() {
       const mapa = new Map()
-      this.citas.forEach(c => {
-        const pid = c.paciente?.id
+      const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
+      lista.forEach(item => {
+        const pid = item.paciente?.id || item.paciente_id
         if (pid == null) return
         if (!mapa.has(pid)) mapa.set(pid, [])
-        mapa.get(pid).push(c)
+        mapa.get(pid).push(item)
       })
       return mapa
     },
 
     // Indica si el buscador tiene texto. Mientras esto sea true, los
-    // filtros de especialidad/médico/fecha quedan visualmente desactivados
+    // filtros de especialidad/médico quedan visualmente desactivados
     // y se ignoran por completo en pacientesFiltrados.
     busquedaActiva() {
       return this.busqueda.trim().length > 0
     },
 
-    // Filtra la lista de pacientes.
-    // - Si hay texto en el buscador: busca por nombre/folio en TODOS los
-    //   pacientes, sin importar especialidad/médico/fecha.
-    // - Si no hay texto: aplica los filtros de especialidad/médico/fecha
-    //   (cruzando contra las citas de cada paciente) y ordena por hora de
-    //   cita, para que la lista de hoy quede en orden cronológico real y
-    //   cualquier paciente "colado" desde la búsqueda caiga al final.
-    //
-    // FIX: se agregó estadoOk para excluir citas ya cerradas (Finalizada,
-    // Cancelada, Inasistencia) del cruce. Antes solo se comparaba
-    // medico/especialidad/fecha, así que un paciente cuya cita ya se
-    // marcó 'Finalizada' (vía PATCH /api/citas/{id}/estado desde
-    // ConsultaInteligente.vue, o desde el botón de basura de esta misma
-    // vista) seguía "calificando" para la lista de espera y nunca
-    // desaparecía de la tabla aunque el backend ya hubiera guardado el
-    // nuevo estado correctamente.
+    // Filtra la lista de pacientes basándose en la lista de espera del día.
     pacientesFiltrados() {
       const q = this.busqueda.trim().toLowerCase()
 
@@ -912,51 +915,46 @@ export default {
         )
       }
 
-      const hayFiltroDeCitas = !!(this.especialidadSeleccionada || this.medicoSeleccionado || this.fechaFiltro)
+      const hayFiltro = !!(this.especialidadSeleccionada || this.medicoSeleccionado)
       let lista = this.pacientes
 
-      if (hayFiltroDeCitas) {
+      if (hayFiltro) {
         lista = this.pacientes.filter(p => {
-          const citasDelPaciente = this.citasPorPacienteId.get(p.id) || []
-          return citasDelPaciente.some(c => {
+          const registrosPaciente = this.citasPorPacienteId.get(p.id) || []
+          return registrosPaciente.some(item => {
             const medicoOk = !this.medicoSeleccionado ||
-              (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoSeleccionado)
+              (item.medico && (item.medico.id ?? item.medico.nombre) === this.medicoSeleccionado)
             const especialidadOk = !this.especialidadSeleccionada ||
-              (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadSeleccionada)
-            const fechaOk = !this.fechaFiltro || this.fechaSolo(c.fecha) === this.fechaFiltro
-            // Excluye citas ya cerradas de la lista de espera del día
-            const estadoOk = !['Cancelada', 'Finalizada'].includes(c.estado)
-            return medicoOk && especialidadOk && fechaOk && estadoOk
+              (item.especialidad && (item.especialidad.id ?? item.especialidad.nombre) === this.especialidadSeleccionada)
+            // Excluye los ya cancelados o finalizados de la vista principal del día
+            const estadoOk = !['Cancelada', 'Finalizada'].includes(item.estado)
+            return medicoOk && especialidadOk && estadoOk
           })
+        })
+      } else {
+        // Si no hay filtros avanzados, filtramos para mostrar solo los que tienen un estado activo hoy en lista_espera
+        lista = this.pacientes.filter(p => {
+          const registrosPaciente = this.citasPorPacienteId.get(p.id) || []
+          return registrosPaciente.some(item => !['Cancelada', 'Finalizada'].includes(item.estado))
         })
       }
 
-      // Orden cronológico por hora de cita (solo tiene sentido cuando hay
-      // una fecha de referencia): los agendados quedan en su orden normal,
-      // y el paciente agregado desde la búsqueda (con hora = momento en que
-      // se guardó su triage) cae automáticamente al final de la cola.
-      if (this.fechaFiltro || hayFiltroDeCitas) {
-        lista = lista.slice().sort((a, b) => {
-          const ha = this.horaCitaPaciente(a) || 'zzzzzz'
-          const hb = this.horaCitaPaciente(b) || 'zzzzzz'
-          return ha.localeCompare(hb)
-        })
-      }
+      // Orden cronológico por hora de llegada / turno en la lista de espera
+      lista = lista.slice().sort((a, b) => {
+        const regA = (this.citasPorPacienteId.get(a.id) || [])[0]
+        const regB = (this.citasPorPacienteId.get(b.id) || [])[0]
+        const turnoA = regA?.numero_turno || 999999
+        const turnoB = regB?.numero_turno || 999999
+        return turnoA - turnoB
+      })
 
       return lista
     },
 
     // Mensaje mostrado en el panel izquierdo cuando no hay pacienteActivo.
-    // Si no hay ningún paciente en pacientesFiltrados (típicamente porque
-    // no hay citas para la fecha filtrada), se avisa explícitamente en vez
-    // de dejar un genérico "Sin paciente seleccionado" que puede confundirse
-    // con un error.
     mensajeSinPaciente() {
-      if (this.pacientesFiltrados.length === 0 && this.fechaFiltro) {
-        const esHoy = this.fechaFiltro === this.obtenerFechaHoyISO()
-        return esHoy
-          ? 'No hay citas para hoy'
-          : `No hay citas para el ${this.formatearFecha(this.fechaFiltro)}`
+      if (this.pacientesFiltrados.length === 0) {
+        return 'No hay pacientes en la lista de espera para hoy'
       }
       return 'Sin paciente seleccionado'
     },
@@ -1074,12 +1072,32 @@ export default {
   // inicializar el paciente activo, porque este depende de pacientesFiltrados,
   // que a su vez depende de que tanto `pacientes` como `citas` ya estén cargados.
   async mounted() {
-    await Promise.all([this.obtenerPacientes(), this.obtenerCitas()])
+    await Promise.all([this.obtenerPacientes(), this.obtenerListaEspera()])
     this.cargarSeleccionPrevia()
     this.inicializarPacienteActivo()
   },
 
   methods: {
+    
+    getRegistroLE(paciente) {
+      const registros = this.citasPorPacienteId.get(paciente.id) || []
+      return registros[0] || {}
+    },
+
+    getTurno(paciente) {
+      const reg = this.getRegistroLE(paciente)
+      return reg.numero_turno ?? '-'
+    },
+
+    getEstado(paciente) {
+      const reg = this.getRegistroLE(paciente)
+      return reg.estado ?? 'En espera'
+    },
+
+    getFolio(paciente) {
+      const reg = this.getRegistroLE(paciente)
+      return reg.folio || paciente.paciente_id || 'S/F'
+    },
 
     // ──────────────────────────────────────────
     // API
@@ -1106,14 +1124,95 @@ export default {
       }
     },
 
-    async obtenerCitas() {
+    async obtenerListaEspera() {
+      this.loading.lista = true
+      this.loadError = null
+
+      const params = {}
+      if (this.medicoSeleccionado) params.medico_id = this.medicoSeleccionado
+      if (this.especialidadSeleccionada) params.especialidad_id = this.especialidadSeleccionada
+
       try {
-        // Trae médico, especialidad y fecha de cada cita, para poder
-        // cruzarlas contra los pacientes y armar los filtros de arriba
-        const response = await axios.get('/api/citas')
-        this.citas = response.data
-      } catch (error) {
-        console.error('Error al obtener citas:', error)
+        const res = await ApiService.get('/lista-espera', { params })
+        this.listaEspera = res.data.lista || res.data
+        // 👉 AGREGA ESTA LÍNEA PARA INSPECCIONAR EN CONSOLA
+        console.log("📌 Datos de la Lista de Espera recibidos:", this.listaEspera)
+      } catch (err) {
+          this.loadError = "No se pudo cargar la lista de espera."
+          if (typeof this.mostrarToast === 'function') {
+            this.mostrarToast("⚠ Error al cargar lista de espera", "error")
+          }
+          console.error("Error cargando lista de espera:", err)
+        } finally {
+          this.loading.lista = false
+        }
+    },
+
+    async finalizarPaciente(paciente) {
+      if (!paciente) return
+
+      const registroLE = this.listaEspera.find(
+        item => item.paciente_id === paciente.id && item.estado !== 'Cancelada' && item.estado !== 'Finalizada'
+      )
+      
+      if (!registroLE) {
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'info',
+            title: 'Sin registro activo hoy',
+            text: 'Este paciente no se encuentra activo en la lista de espera de hoy.'
+          })
+        }
+        return
+      }
+
+      let confirmado = true
+      if (window.Swal) {
+        const resultado = await window.Swal.fire({
+          icon: 'warning',
+          title: '¿Marcar como no presentado / abandono?',
+          text: `${this.nombreCompleto(paciente)} se cambiará a estado Cancelado en la lista de espera.`,
+          showCancelButton: true,
+          confirmButtonText: 'Sí, cancelar',
+          cancelButtonText: 'Volver',
+          confirmButtonColor: '#dc2626'
+        })
+        confirmado = resultado.isConfirmed
+      } else {
+        confirmado = window.confirm(`¿Marcar como abandonó a ${this.nombreCompleto(paciente)}?`)
+      }
+      if (!confirmado) return
+
+      this.finalizandoId = paciente.id
+
+      try {
+        await ApiService.patch(`/lista-espera/${registroLE.id}/estado`, { estado: 'Cancelada' })
+
+        await this.obtenerListaEspera()
+        eventBus.emit('consulta-finalizada')
+
+        if (this.pacienteActivo && this.pacienteActivo.id === paciente.id) {
+          this.pacienteActivo = this.pacientesFiltrados[0] || null
+        }
+
+        if (window.Swal) {
+          window.Swal.fire({
+            toast: true, position: 'top-end', icon: 'success',
+            title: 'Paciente marcado como cancelado', showConfirmButton: false,
+            timer: 1400, timerProgressBar: true
+          })
+        }
+      } catch (err) {
+        console.error('Error al actualizar el estado en lista de espera:', err)
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'error',
+            title: 'No se pudo actualizar el estado',
+            text: err.response?.data?.message || 'Intenta de nuevo.'
+          })
+        }
+      } finally {
+        this.finalizandoId = null
       }
     },
 
@@ -1247,33 +1346,17 @@ export default {
       }
 
       try {
-        const ahora = new Date()
-        const hora =
-          String(ahora.getHours()).padStart(2, '0') + ':' +
-          String(ahora.getMinutes()).padStart(2, '0') + ':' +
-          String(ahora.getSeconds()).padStart(2, '0')
-
-        await axios.post('/api/citas', {
+        await ApiService.post('/lista-espera', {
           paciente_id:      paciente.id,
           medico_id:        this.medicoSeleccionado,
           especialidad_id:  this.especialidadSeleccionada,
-          fecha:            this.obtenerFechaHoyISO(),
-          hora:             hora,
-          estado:           'Agendado',
-          tipo:             'Consulta',
           observaciones:    'Agregado a la lista de hoy desde la búsqueda de paciente'
         })
 
-        // Refresca citas para que el nuevo registro entre al cruce y al orden
-        await this.obtenerCitas()
+        // Refresca la lista de espera para que el nuevo walk-in aparezca de inmediato
+        await this.obtenerListaEspera()
 
-        // Si el filtro de fecha no era hoy, lo alineamos para que se vea en la lista
-        if (this.fechaFiltro !== this.obtenerFechaHoyISO()) {
-          this.fechaFiltro = this.obtenerFechaHoyISO()
-        }
-
-        // Limpia el buscador para volver a la vista de "lista de hoy"
-        // (donde ya va a aparecer, al final, por hora)
+        // Limpia el buscador para volver a la vista principal
         this.busqueda = ''
 
         return true
