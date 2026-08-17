@@ -195,6 +195,7 @@
               <th>Turno</th>
               <th>Paciente / Diagnóstico</th>
               <th>Folio</th>
+              <th>Médico / Especialidad</th>
               <th>Estado</th>
               <th>Urgencia</th>
               <th class="cc-th--right">Acciones</th>
@@ -222,7 +223,7 @@
               <!-- Número de turno oficial (viene de lista_espera) -->
               <td>
                 <span class="px-2.5 py-1 text-xs font-bold bg-blue-100 text-blue-800 rounded-full">
-                  #{{ getTurno(p) }}
+                  #{{ p.numero_turno }}
                 </span>
               </td>
               <!-- Avatar circular + nombre en negritas + motivo de consulta debajo -->
@@ -239,7 +240,11 @@
                 </div>
               </td>
               <!-- Folio en azul -->
-              <td><span class="cc-mono cc-mono--cell">{{ p.paciente_id }}</span></td>
+              <td><span class="cc-mono cc-mono--cell">{{ p.folio }}</span></td>
+              <td>
+                <div class="text-xs font-medium text-gray-900">{{ p.medico ? p.medico.nombre : 'Sin médico' }}</div>
+                <div class="text-xs text-gray-500">{{ p.especialidad ? p.especialidad.nombre : 'Sin especialidad' }}</div>
+              </td>
               <!-- Chip de estado (Activo, En espera, etc.) -->
               <td><span class="cc-chip" :class="chipClass(p.estado)">{{ p.estado || 'Sin asignar' }}</span></td>
               <!-- Chip de urgencia/triage -->
