@@ -235,7 +235,7 @@ class PacienteController extends Controller
     {
        
         $paciente = Paciente::with([
-            'triages',
+            'triages'=>fn($q) => $q->latest()->limit(1), //Traemos el ultimo triage del paciente es decir el triage actual de la consulta
             'archivos',
             'recetas.detalles',
             'recetas.consulta',
@@ -251,12 +251,37 @@ class PacienteController extends Controller
         return view('pacientes.edit', compact('paciente'));
     }
 
+    /**
+     * Actualiza los datos propios del paciente (no relaciones).
+     *
+     * IMPORTANTE:
+     * - Se usa $request->except([...]) en vez de $request->all() para NO
+     *   intentar guardar 'triages' (ni otros campos que no son columnas
+     *   de la tabla `pacientes`) como si fueran atributos del modelo.
+     *   Antes esto provocaba que Eloquent intentara hacer un UPDATE con
+     *   una columna 'triages' inexistente, rompiendo la petición.
+     * - Se responde con response()->json() en vez de redirect(), porque
+     *   esta ruta es consumida por el frontend Vue vía axios/ApiService,
+     *   que espera JSON. Un redirect() aquí regresaba un 302 hacia una
+     *   vista HTML, lo cual el cliente HTTP no maneja como una actualización
+     *   exitosa (y en algunos casos el navegador reintenta con GET,
+     *   generando comportamientos como el 405 reportado).
+     */
     public function update(Request $request, string $id)
     {
         $paciente = Paciente::findOrFail($id);
-        $paciente->update($request->all());
 
-        return redirect()->route('pacientes.index');
+        // Excluimos relaciones y campos que no deben (o no pueden)
+        // actualizarse por aquí. 'triages' se maneja por separado en
+        // TriageController@guardarTriageRapido.
+        $datos = $request->except(['triages', 'id', 'paciente_id']);
+
+        $paciente->update($datos);
+
+        // Regresamos el paciente actualizado junto con sus triages,
+        // para que el frontend pueda refrescar el panel sin pegarle
+        // de nuevo a /pacientes.
+        return response()->json($paciente->fresh()->load('triages'));
     }
 
     public function destroy(string $id)

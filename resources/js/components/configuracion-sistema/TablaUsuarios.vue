@@ -21,7 +21,6 @@
         </div>
     </div>
 
-
     <div class="container-fluid">
         <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
             <div class="card-body px-4">
@@ -119,29 +118,35 @@
                                     </span>
                                 </td>
 
-                                <!-- ACCIONES -->
+                                <!-- ACCIONES CENTRADAS -->
                                 <td class="text-center">
-                                    <button
-                                        class="btn btn-outline-danger btn-sm rounded-circle"
-                                        title="Eliminar usuario"
-                                        :disabled="eliminando === usuario.id"
-                                        @click="confirmarEliminar(usuario)"
-                                    >
-                                        <span v-if="eliminando === usuario.id">
-                                            <span class="spinner-border spinner-border-sm"></span>
-                                        </span>
-                                        <i v-else class="fas fa-trash"></i>
-                                    </button>
+                                    <div class="d-flex align-items-center justify-content-center gap-2">
+                                        <button
+                                            class="btn btn-edit"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalEditarUsuario"
+                                            data-toggle="modal"
+                                            data-target="#modalEditarUsuario"
+                                            @click="abrirModalEditar(usuario)"
+                                            title="Editar usuario"
+                                        >
+                                            <i class="fas fa-pen"></i>
+                                        </button>
 
-                                    <button
-                                        class="btn btn-edit me-2"
-                                        @click="abrirModalEditar(usuario)"
-                                        title="Editar usuario"
-                                    >
-                                        <i class="fas fa-pen"></i>
-                                    </button>
-
+                                        <button
+                                            class="btn btn-action-delete"
+                                            title="Eliminar usuario"
+                                            :disabled="eliminando === usuario.id"
+                                            @click="confirmarEliminar(usuario)"
+                                        >
+                                            <span v-if="eliminando === usuario.id">
+                                                <span class="spinner-border spinner-border-sm"></span>
+                                            </span>
+                                            <i v-else class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
+
                             </tr>
                         </tbody>
                     </table>
@@ -150,11 +155,12 @@
         </div>
     </div>
 
-    <!--MODAL EDITAR USUARIO-->
+    <!-- MODAL EDITAR USUARIO -->
     <div
         class="modal fade"
         id="modalEditarUsuario"
         tabindex="-1"
+        aria-hidden="true"
     >
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
@@ -164,12 +170,6 @@
                         <i class="fas fa-user-edit me-2"></i>
                         Editar Usuario
                     </h5>
-
-                    <button
-                        type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal">
-                    </button>
                 </div>
 
                 <div class="modal-body p-4">
@@ -182,53 +182,46 @@
                             {{ formEditar.name }}
                         </h4>
                         <span class="badge bg-info mt-2">
-                            <i class="fas fa-user-tag"></i>
+                            <i class="fas fa-user-tag me-1"></i>
                             {{ formEditar.rol }}
                         </span>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-4">
-                            <label class="form-label">
-                                Nombre
-                            </label>
-
+                            <label class="form-label">Nombre</label>
                             <input
                                 class="form-control"
                                 v-model="formEditar.name"
-                                readonly>
+                                readonly
+                            >
                         </div>
 
                         <div class="col-md-6 mb-4">
-                            <label class="form-label">
-                                Rol
-                            </label>
+                            <label class="form-label">Rol</label>
                             <input
                                 class="form-control"
                                 v-model="formEditar.rol"
-                                readonly>
+                                readonly
+                            >
                         </div>
 
                         <div class="col-12 mb-4">
-                            <label class="form-label">
-                                Correo electrónico
-                            </label>
+                            <label class="form-label">Correo electrónico</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fas fa-envelope"></i>
                                 </span>
-
                                 <input
                                     class="form-control"
                                     type="email"
-                                    v-model="formEditar.email">
+                                    v-model="formEditar.email"
+                                >
                             </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">
-                                Nueva contraseña
-                            </label>
+                            <label class="form-label">Nueva contraseña</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fas fa-lock"></i>
@@ -237,51 +230,59 @@
                                     class="form-control"
                                     type="password"
                                     v-model="formEditar.password"
-                                    placeholder="Dejar vacío para no cambiar">
+                                    placeholder="Dejar vacío para no cambiar"
+                                >
                             </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">
-                                Confirmar contraseña
-                            </label>
-
+                            <label class="form-label">Confirmar contraseña</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fas fa-lock"></i>
                                 </span>
-
                                 <input
                                     class="form-control"
                                     type="password"
-                                    v-model="formEditar.password_confirmation">
+                                    v-model="formEditar.password_confirmation"
+                                >
                             </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="modal-footer border-0">
+                    <!-- Botón oculto para simular el cierre desde JS -->
                     <button
-                        ref="btnCerrarModal"
                         type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal">
+                        ref="btnCerrarModal"
+                        class="d-none"
+                        data-bs-dismiss="modal"
+                        data-dismiss="modal"
+                    ></button>
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary px-4 rounded-pill"
+                        data-bs-dismiss="modal"
+                        data-dismiss="modal"
+                    >
                         Cancelar
                     </button>
 
                     <button
-                        class="btn btn-primary px-4"
-                        @click="actualizarUsuario">
-
+                        type="button"
+                        class="btn btn-primary px-4 rounded-pill"
+                        @click="actualizarUsuario"
+                    >
                         <i class="fas fa-save me-2"></i>
-
                         Guardar Cambios
-
                     </button>
                 </div>
+
             </div>
         </div>
     </div>
-
 </template>
 
 <script>
@@ -295,7 +296,7 @@ export default {
             usuarios: [],
             busqueda: '',
             cargando: false,
-            eliminando: null, // id del usuario que se está eliminando
+            eliminando: null,
 
             formEditar: {
                 id: null,
@@ -327,10 +328,9 @@ export default {
                 .split(' ')
                 .map(p => p[0])
                 .join('')
-                .substring(0,2)
+                .substring(0, 2)
                 .toUpperCase()
-        },
-
+        }
     },
 
     mounted() {
@@ -342,22 +342,16 @@ export default {
             this.cargando = true
             try {
                 const response = await ApiService.get('/usuarios')
-                
-                // Verificar qué está devolviendo exactamente
-                console.log('Respuesta API:', response.data)
-
-                // Manejar ambos casos: array directo o envuelto en objeto
                 if (Array.isArray(response.data)) {
                     this.usuarios = response.data
                 } else if (Array.isArray(response.data.data)) {
-                    this.usuarios = response.data.data  // si viene paginado
+                    this.usuarios = response.data.data
                 } else {
                     this.usuarios = []
                 }
-
             } catch (error) {
                 console.error(error)
-                this.usuarios = [] // garantizar que siempre sea array
+                this.usuarios = []
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -377,7 +371,7 @@ export default {
                 showCancelButton: true,
                 confirmButtonText: 'Sí, eliminar',
                 cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#ef4444',
+                confirmButtonColor: '#ef4444'
             })
 
             if (!resultado.isConfirmed) return
@@ -422,11 +416,10 @@ export default {
                 admin:     { label: 'Administrador', icono: 'fas fa-crown',        bg: '#eef2ff', color: '#4f46e5' },
                 medico:    { label: 'Médico',         icono: 'fas fa-user-md',      bg: '#ecfeff', color: '#0891b2' },
                 asistente: { label: 'Asistente',      icono: 'fas fa-calendar-alt', bg: '#ecfdf5', color: '#10b981' },
-                farmacia:  { label: 'Farmacia',       icono: 'fas fa-pills',        bg: '#fffbeb', color: '#d97706' },
+                farmacia:  { label: 'Farmacia',       icono: 'fas fa-pills',        bg: '#fffbeb', color: '#d97706' }
             }
             return config[rol] ?? { label: rol, icono: 'fas fa-user', bg: '#f1f5f9', color: '#64748b' }
         },
-
 
         abrirModalEditar(usuario) {
             this.formEditar = {
@@ -437,14 +430,15 @@ export default {
                 password: '',
                 password_confirmation: ''
             }
-            const modal = new bootstrap.Modal(
-                document.getElementById('modalEditarUsuario')
-            )
-            modal.show()
+        },
+
+        cerrarModal() {
+            if (this.$refs.btnCerrarModal) {
+                this.$refs.btnCerrarModal.click()
+            }
         },
 
         async actualizarUsuario() {
-
             if (
                 this.formEditar.password &&
                 this.formEditar.password !== this.formEditar.password_confirmation
@@ -457,79 +451,84 @@ export default {
             }
 
             try {
+                await ApiService.put(`usuarios/${this.formEditar.id}`, this.formEditar)
 
-                await ApiService.put(`usuarios/${this.formEditar.id}`,this.formEditar)
-
-                const usuario = this.usuarios.find(
-                    u => u.id === this.formEditar.id
-                )
-
-                if(usuario){
+                const usuario = this.usuarios.find(u => u.id === this.formEditar.id)
+                if (usuario) {
                     usuario.email = this.formEditar.email
                 }
 
-                bootstrap.Modal
-                    .getInstance(document.getElementById('modalEditarUsuario'))
-                    .hide()
+                this.cerrarModal()
 
                 Swal.fire({
-                    icon:'success',
-                    title:'Usuario actualizado',
-                    timer:1800,
-                    showConfirmButton:false
+                    icon: 'success',
+                    title: 'Usuario actualizado',
+                    timer: 1800,
+                    showConfirmButton: false
                 })
-
-            } catch(error){
+            } catch (error) {
                 console.error(error)
-
                 Swal.fire({
-                    icon:'error',
-                    title:'Error',
-                    text:'No se pudo actualizar el usuario.'
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo actualizar el usuario.'
                 })
             }
-        },
-
-
-
+        }
     }
 }
 </script>
 
-
-<style>
-.avatar-edit{
-    width:90px;
-    height:90px;
-    border-radius:50%;
-    background:#eef6ff;
-    border:4px solid #d7eaff;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    font-size:30px;
-    font-weight:bold;
-    color:#0d6efd;
-
-    margin:auto;
+<style scoped>
+.avatar-edit {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: #eef6ff;
+    border: 4px solid #d7eaff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: bold;
+    color: #0d6efd;
+    margin: auto;
 }
 
-.btn-edit{
-    width:32px;
-    height:32px;
-    border-radius:50%;
-    border:2px solid #0d6efd;
-    color:#0d6efd;
-    background:white;
-    transition:.25s;
+/* BOTONES CENTRADOS Y ALINEADOS */
+.btn-edit,
+.btn-action-delete {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all .25s ease;
 }
 
-.btn-edit:hover{
-    background:#0d6efd;
-    color:white;
-    transform:scale(1.08);
+.btn-edit {
+    border: 2px solid #0d6efd;
+    color: #0d6efd;
+    background: white;
 }
 
+.btn-edit:hover {
+    background: #0d6efd;
+    color: white;
+    transform: scale(1.08);
+}
+
+.btn-action-delete {
+    border: 2px solid #dc3545;
+    color: #dc3545;
+    background: white;
+}
+
+.btn-action-delete:hover {
+    background: #dc3545;
+    color: white;
+    transform: scale(1.08);
+}
 </style>

@@ -6,19 +6,14 @@
                 <i class="fas fa-bell"></i>
                 Alertas Críticas
             </h5>
-            <button class="btn btn-sm btn-outline-secondary" @click="fetchAlertas" :disabled="loading">
-                <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+            <button class="btn btn-sm btn-outline-secondary" @click="$emit('actualizar-inventario')" :disabled="cargando">
+                <i class="fas fa-sync-alt" :class="{ 'fa-spin': cargando }"></i>
             </button>
         </div>
         <div class="card-body">
             <!-- Estado: cargando -->
-            <div v-if="loading" class="text-center text-muted py-3">
+            <div v-if="cargando" class="text-center text-muted py-3">
                 <i class="fas fa-spinner fa-spin me-2"></i> Cargando alertas...
-            </div>
-
-            <!-- Estado: error -->
-            <div v-else-if="error" class="alert alert-danger mb-0">
-                No se pudieron cargar las alertas. <a href="#" @click.prevent="fetchAlertas">Reintentar</a>
             </div>
 
             <!-- Estado: sin alertas -->
@@ -45,8 +40,6 @@
 </template>
 
 <script>
-import ApiService from '../../services/ApiService.js'
-
 // Umbral de días para considerar "próximo a caducar".
 // Debe coincidir con MedicamentoController@resumen (30 días) y con
 // InventarioMedico.vue / TablaMedicamentos.vue, para que todas las
@@ -54,18 +47,29 @@ import ApiService from '../../services/ApiService.js'
 const DIAS_LIMITE_CADUCIDAD = 30
 
 export default {
-    // Este componente no recibe eventos hacia arriba en el uso actual,
-    // pero se declara vacío explícitamente para que Vue no marque
-    // advertencias si en el futuro el padre le pasa listeners.
-    emits: [],
-
-    data() {
-        return {
-            medicamentos: [],
-            loading: false,
-            error: false
+    // Ya NO hace su propio fetch: recibe 'medicamentos' como prop desde
+    // App.vue, la única fuente de la verdad compartida con la tabla y
+    // las KPI cards. Así, cualquier edición/movimiento/eliminación que
+    // dispare 'actualizar-inventario' en App.vue se refleja aquí al
+    // instante, sin necesidad de recargar la página ni de cambiar de
+    // pestaña para forzar un remount.
+    props: {
+        medicamentos: {
+            type: Array,
+            default: () => []
+        },
+        // Opcional: si el padre expone un estado de carga global,
+        // se puede pasar aquí para mostrar el mismo spinner.
+        cargando: {
+            type: Boolean,
+            default: false
         }
     },
+
+    // Le avisa al padre que el usuario pidió refrescar manualmente
+    // (botón de la campanita/sync), para que App.vue vuelva a pedir
+    // los datos al API igual que hace tras guardar un cambio.
+    emits: ['actualizar-inventario'],
 
     computed: {
         // Misma lógica que MedicamentoController@resumen, pero generando
@@ -73,6 +77,10 @@ export default {
         // IMPORTANTE: la fecha de caducidad se lee siempre de
         // medicamento.inventario.fecha_caducidad (fuente única de verdad,
         // la misma que usa el backend y la tabla de InventarioMedico.vue).
+        //
+        // Al ser un computed sobre la prop 'medicamentos', se recalcula
+        // automáticamente cada vez que App.vue reasigna ese array
+        // (por ejemplo después de guardar una edición), sin fetch propio.
         alertas() {
             const hoy = new Date()
             const limite = new Date()
@@ -127,28 +135,7 @@ export default {
         }
     },
 
-    mounted() {
-        this.fetchAlertas()
-    },
-
     methods: {
-        async fetchAlertas() {
-            this.loading = true
-            this.error = false
-            try {
-                // Trae medicamentos con su relación 'inventario' cargada
-                // (Medicamento::with('inventario','ultimoMovimiento')->get())
-                const response = await ApiService.get('/medicamentos')
-                this.medicamentos = response.data
-                console.log('Medicamentos cargados:', this.medicamentos)
-            } catch (error) {
-                console.error('Error al cargar medicamentos:', error)
-                this.error = true
-            } finally {
-                this.loading = false
-            }
-        },
-
         claseAlerta(tipo) {
             return {
                 stock_critico: 'alert-danger',

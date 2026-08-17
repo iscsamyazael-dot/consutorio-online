@@ -43,6 +43,23 @@
     </div>
     <!-- Con paciente seleccionado: consulta normal -->
    <template v-else>
+    <!-- SIGNOS VITALES DEL TRIAGE -->
+    <div class="row">
+        <div class="col-12">
+            <!--
+                @triage-agregado: SignosVitales.vue emite este evento
+                justo después de guardar un triage nuevo (POST
+                /triage/guardar). Volvemos a pedir el paciente completo
+                para que `paciente.triages` refleje el dato real que
+                regresó el backend (el componente hijo ya lo muestra de
+                inmediato de forma optimista, esto solo lo sincroniza).
+            -->
+            <SignosVitales
+                :paciente="paciente"
+                @triage-agregado="obtenerPaciente"
+            />
+        </div>
+    </div>
     <!-- FILA PRINCIPAL -->
     <div class="row">
         <div class="col-lg-3">
@@ -66,6 +83,7 @@
                 @marcarErrorIa="marcarErrorIa"
                 @actualizarConsultaId="actualizarConsultaId"
                 @archivoSubido="refrescarArchivos"
+                @conversacionFinalizada="manejarConversacionFinalizada"
             />
             <PanelIA
                 :ia-data="iaData"
@@ -97,6 +115,8 @@
 </template>
 <script>
 import ApiService from '../../services/ApiService.js'
+import axios from 'axios'
+import eventBus from '../../utils/eventBus.js'
 import TranscripcionLive from './TranscripcionLive.vue'
 import PanelIA from './PanelIA.vue'
 import HistorialClinico from './HistorialClinico.vue'
@@ -105,6 +125,7 @@ import ArchivosClinicos from './ArchivosClinicos.vue'
 import DerivacionClinica from './DerivacionClinica.vue'
 import RecetaInteligente from './RecetaInteligente.vue'
 import NotaPSOAPP from './NotaPSOAPP.vue'
+import SignosVitales from './SignosVitales.vue'
 export default {
     components: {
         TranscripcionLive,
@@ -114,7 +135,8 @@ export default {
         ArchivosClinicos,
         DerivacionClinica,
         RecetaInteligente,
-        NotaPSOAPP
+        NotaPSOAPP,
+        SignosVitales
     },
     props:{
         pacienteId:{
@@ -248,6 +270,15 @@ export default {
             'Datos recibidos de la IA:',
             iaData
         );
+        // --- IMPRESIÓN DE TOKENS EN LA CONSOLA DEL NAVEGADOR ---
+        if (iaData && iaData.debug_usage) {
+            console.log(
+                '%c [IA] Consumo de Tokens:', 
+                'background: #222; color: #bada55; padding: 2px 5px; border-radius: 3px;',
+                iaData.debug_usage
+            );
+        }
+        // -------------------------------------------------------
     },
     marcarErrorIa() {
 
@@ -275,6 +306,85 @@ export default {
 
             this.$refs.archivosClinicos.cargarArchivos();
         }
+    },
+
+    // Fecha de hoy en formato YYYY-MM-DD, en hora local, para comparar
+    // contra cita.fecha (mismo formato que usa el resto del sistema).
+    obtenerFechaHoyISO() {
+        const hoy = new Date()
+        const y = hoy.getFullYear()
+        const m = String(hoy.getMonth() + 1).padStart(2, '0')
+        const d = String(hoy.getDate()).padStart(2, '0')
+        return `${y}-${m}-${d}`
+    },
+
+    /**
+     * Se dispara cuando TranscripcionLive.vue emite
+     * "conversacionFinalizada" (después de hacer PATCH a /consultaIA
+     * marcando la consulta como finalizada).
+     *
+     * 1. Busca la cita de HOY de este paciente y la marca 'Finalizada'
+     *    con PATCH /api/citas/{id}/estado.
+     * 2. Vuelve a pedir las citas de hoy, toma el siguiente pendiente
+     *    (no Finalizada/Cancelada, ordenado por hora) y navega ahí.
+     * 3. Si no hay siguiente, muestra un aviso de que no hay más
+     *    pacientes en espera.
+     */
+    async manejarConversacionFinalizada() {
+        try {
+            const hoy = this.obtenerFechaHoyISO()
+
+            // CitaController@index no filtra por fecha, así que
+            // filtramos aquí las citas de hoy.
+            const respCitas = await axios.get('/api/citas')
+            const citasHoy = (respCitas.data || []).filter(c => String(c.fecha).slice(0, 10) === hoy)
+
+            // 1. Marca como Finalizada la cita de hoy de este paciente
+            const citaActual = citasHoy.find(
+                c => c.paciente && c.paciente.id == this.pacienteId
+            )
+
+            if (citaActual) {
+                await axios.patch(`/api/citas/${citaActual.id}/estado`, {
+                    estado: 'Finalizada'
+                })
+                 // Avisar al Dashboard/Home que la consulta terminó
+                    eventBus.emit('consulta-finalizada')
+            } else {
+                console.warn('No se encontró una cita de hoy para este paciente; no se pudo marcar como Finalizada.')
+            }
+
+            // 2. Busca el siguiente paciente pendiente de hoy, por hora
+            const pendientes = citasHoy
+                .filter(c => c.id !== citaActual?.id)
+                .filter(c => !['Finalizada', 'Cancelada'].includes(c.estado))
+                .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+
+            const siguiente = pendientes[0]
+
+            if (siguiente && siguiente.paciente) {
+                // Recarga completa, mismo patrón que seleccionarPaciente()
+                window.location.href = '/ConsultaInteligente/' + siguiente.paciente.id
+            } else if (window.Swal) {
+                window.Swal.fire({
+                    icon: 'info',
+                    title: 'No hay más pacientes en espera',
+                    text: 'Ya atendiste a todos los pacientes agendados para hoy.'
+                })
+            } else {
+                alert('No hay más pacientes en espera para hoy.')
+            }
+
+        } catch (error) {
+            console.error('Error al avanzar al siguiente paciente:', error)
+            if (window.Swal) {
+                window.Swal.fire({
+                    icon: 'error',
+                    title: 'No se pudo avanzar al siguiente paciente',
+                    text: 'Intenta de nuevo o vuelve a la lista.'
+                })
+            }
+        }
     }
 }
 }
@@ -287,7 +397,7 @@ export default {
 }
 .psoapp-col {
     width: 100%;
-    max-width: 100%;
+    max-width: 100%; 
     padding-left: 0;
     padding-right: 0;
 }

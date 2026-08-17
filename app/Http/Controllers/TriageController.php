@@ -11,13 +11,39 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Triage;
 use App\Models\Paciente;
+use App\Models\Consulta;
 use App\Models\AlertaClinica;       // Asegúrate de tener o crear este modelo
 use App\Models\RecomendacionIA;     // Asegúrate de tener o crear este modelo
-use App\Models\Consulta;
 use App\Services\IAClinicaService; // Importamos tu servicio estrella
 
 class TriageController extends Controller
 {
+    /**
+     * Mapeo defensivo del nivel que devuelve la IA (Rojo/Naranja/Amarillo/
+     * Verde) hacia los ÚNICOS 4 valores que existen en el ENUM `estado`
+     * real de la tabla triage: leve, estable, grave, urgente.
+     *
+     * Equivalencia clínica confirmada:
+     *   Rojo    -> urgente
+     *   Naranja -> grave
+     *   Amarillo-> estable
+     *   Verde   -> leve
+     *
+     * Si la IA regresa un nivel que no reconocemos, lo tratamos como
+     * 'urgente' para no perder urgencia por un valor inesperado.
+     */
+    private function mapearEstadoIa(?string $nivelIa): string
+    {
+        $mapaEstados = [
+            'rojo'     => 'urgente',
+            'naranja'  => 'grave',
+            'amarillo' => 'estable',
+            'verde'    => 'leve',
+        ];
+
+        return $mapaEstados[strtolower($nivelIa ?? '')] ?? 'urgente';
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -76,9 +102,29 @@ class TriageController extends Controller
         }
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+    //Función para ver el total de las consultas finalizadas del día de hoy//
+    public function totalFinalizadasHoy(Request $request): JsonResponse
+    {
+        try {
+            $fecha = $request->filled('fecha') ? $request->fecha : now()->toDateString();
+
+            $total = Consulta::whereDate('created_at', $fecha)
+                ->where('estado_consulta', 'finalizada')
+                ->count();
+
+            return response()->json([
+                'total_finalizadas' => $total,
+                'fecha'             => $fecha,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error'   => 'Error al consultar total de consultas finalizadas',
+                'detalle' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function create()
     {
         //
@@ -87,11 +133,8 @@ class TriageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    
-
     public function store(Request $request)
     {
-        // 1. Validamos los parámetros que vienen desde el formulario
         $request->validate([
             'paciente_id' => 'required|exists:pacientes,id',
             'presion'     => 'nullable|string|max:20',
@@ -100,7 +143,6 @@ class TriageController extends Controller
             'sintomas'    => 'nullable|string',
         ]);
 
-        // 2. Preparamos el bloque de datos que leerá tu IA para su análisis de triage
         $datosClinicos = [
             "Motivo / Síntomas: " . ($request->sintomas ?? 'No especificados'),
             "Presión Arterial: " . ($request->presion ?? 'No registrada'),
@@ -108,31 +150,31 @@ class TriageController extends Controller
             "Temperatura Corporal: " . ($request->temperatura ? $request->temperatura . '°C' : 'No registrada')
         ];
 
-        // 3. Inicializamos una prioridad por defecto preventiva
-        $estadoDeterminado = 'verde'; 
+        // FIX: la columna `estado` en la BD es un ENUM('leve','estable','grave','urgente').
+        // Usar 'Verde'/'Rojo' truena el insert con "Data truncated for
+        // column 'estado'" (SQLSTATE[01000] 1265) porque esos valores no
+        // existen en el enum real.
+        $estadoDeterminado = 'leve';
 
         try {
-            // Instanciamos tu servicio y llamamos al método sugerirMedicamentoLibre que procesa el JSON de 8 fases
             $iaService = new IAClinicaService();
             $resultadoIa = $iaService->sugerirMedicamentoLibre($datosClinicos);
 
             if ($resultadoIa && isset($resultadoIa['triage']['nivel'])) {
-                // Obtenemos la clasificación clínica real devuelta por la IA: VERDE, AMARILLO, NARANJA o ROJO
-                $estadoDeterminado = strtolower($resultadoIa['triage']['nivel']); 
+                // Rojo/Naranja/Amarillo/Verde -> leve/estable/grave/urgente
+                $estadoDeterminado = $this->mapearEstadoIa($resultadoIa['triage']['nivel']);
             }
         } catch (\Exception $e) {
-            \Log::error("Error de comunicación con DeepSeek al realizar Triage: " . $e->getMessage());
-            // Si la IA falla, continuará con 'verde' de forma segura y no romperá el flujo del sistema
+            Log::error("Error de comunicación con DeepSeek al realizar Triage: " . $e->getMessage());
         }
 
-        // 4. Guardamos en la base de datos con el estado asignado dinámicamente por tu IA
         $id = DB::table('triage')->insertGetId([
             'paciente_id' => $request->paciente_id,
             'presion'     => $request->presion,
             'saturacion'  => $request->saturacion,
             'temperatura' => $request->temperatura,
             'sintomas'    => $request->sintomas,
-            'estado'      => $estadoDeterminado, // Aquí se guarda: 'verde', 'amarillo', 'naranja' o 'rojo'
+            'estado'      => $estadoDeterminado, // leve, estable, grave o urgente
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
@@ -168,11 +210,13 @@ class TriageController extends Controller
             'estado'  => $estadoDeterminado
         ], 201);
     }
-    /**
-     * Display the specified resource.
-     */
+
     public function show(string $id)
     {
+        // return Paciente::with([
+        //     'triages',
+        //     'alertas',
+        //     'recomendaciones'
         $paciente = Paciente::with([
             'triages' => fn($q) => $q->latest(),
             'alertas',
@@ -207,28 +251,132 @@ class TriageController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+    public function edit(string $id) {}
+
+    public function update(Request $request, string $id) {}
+
+    public function destroy(string $id) {}
 
     /**
-     * Update the specified resource in storage.
+     * Guarda los signos vitales de un paciente desde el modal rápido de
+     * "Editar signos vitales" en panelatencion.vue.
+     *
+     * CAMBIO: cada llamada crea un registro NUEVO en `triage` (no
+     * sobreescribe el último, para conservar el histórico).
+     *
+     * MEJORA: si no llega estado_triage explícito, y hay motivo_consulta
+     * o sintomas, se le pregunta a la IA (mismo flujo que store()) y se
+     * usa el nivel que regrese. Si no hay motivo/síntomas o la IA falla,
+     * cae al estado del triage anterior; si nunca hubo uno, 'leve'.
+     *
+     * FIX: enum real de `estado` es leve/estable/grave/urgente (antes
+     * causaba SQLSTATE[01000] 1265 Data truncated al mandar 'Rojo').
+     *
+     * Ruta: POST /triage/guardar/{id?} (nombre: triage.guardarRapido)
      */
-    public function update(Request $request, string $id)
+    public function guardarTriageRapido(Request $request, $id = null)
     {
-        //
+        $pacienteId = $id ?? $request->input('paciente_id');
+
+        if (!$pacienteId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Falta el id del paciente.',
+            ], 422);
+        }
+
+        $paciente = Paciente::findOrFail($pacienteId);
+
+        $data = $request->validate([
+            'presion'                 => 'nullable|string|max:20',
+            'saturacion'              => 'nullable|numeric|min:0|max:100',
+            'temperatura'             => 'nullable|numeric',
+            'frecuencia_cardiaca'     => 'nullable|numeric',
+            'frecuencia_respiratoria' => 'nullable|numeric',
+            'peso'                    => 'nullable|numeric',
+            'talla'                   => 'nullable|numeric',
+            'motivo_consulta'         => 'nullable|string',
+            'sintomas'                => 'nullable|string',
+            'estado_triage'           => 'nullable|string|in:leve,estable,grave,urgente',
+        ]);
+
+        $estadoExplicito = $data['estado_triage'] ?? null;
+        unset($data['estado_triage']);
+
+        try {
+            $triage = DB::transaction(function () use ($paciente, $data, $estadoExplicito) {
+                $claveTriage = $this->generarCodigoTriage();
+
+                $estado = $estadoExplicito;
+
+                if (!$estado) {
+                    $motivo = $data['motivo_consulta'] ?? $data['sintomas'] ?? null;
+
+                    if ($motivo) {
+                        try {
+                            $datosClinicos = [
+                                "Motivo / Síntomas: " . $motivo,
+                                "Presión Arterial: " . ($data['presion'] ?? 'No registrada'),
+                                "Saturación de Oxígeno (SpO2): " . (isset($data['saturacion']) ? $data['saturacion'] . '%' : 'No registrada'),
+                                "Temperatura Corporal: " . (isset($data['temperatura']) ? $data['temperatura'] . '°C' : 'No registrada'),
+                            ];
+
+                            $iaService = new IAClinicaService();
+                            $resultadoIa = $iaService->sugerirMedicamentoLibre($datosClinicos);
+
+                            if ($resultadoIa && isset($resultadoIa['triage']['nivel'])) {
+                                $estado = $this->mapearEstadoIa($resultadoIa['triage']['nivel']);
+                            }
+                        } catch (\Exception $e) {
+                            Log::error('Error de comunicación con DeepSeek en guardarTriageRapido: ' . $e->getMessage());
+                        }
+                    }
+
+                    // Si no hay estado explícito ni evaluado por la IA, asignamos uno por defecto ('leve')
+                    // o puedes cambiarlo según tus requerimientos clínicos.
+                    if (!$estado) {
+                        $estado = 'leve'; 
+                    }
+                }
+
+                return Triage::create(array_merge($data, [
+                    'triage_codigo'   => $claveTriage,
+                    'paciente_id'     => $paciente->id,
+                    'codigo_paciente' => $paciente->paciente_id,
+                    'estado'          => $estado,
+                ]));
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Se agregó un nuevo registro de triage',
+                'triage'  => $triage,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en TriageController@guardarTriageRapido: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudieron guardar los signos vitales.',
+            ], 500);
+        }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    private function generarCodigoTriage(): string
     {
-        //
+        $anioActual = date('Y');
+
+        $ultimoRegistro = Triage::where('triage_codigo', 'LIKE', "TRI-{$anioActual}-%")
+            ->orderBy('id', 'desc')
+            ->lockForUpdate()
+            ->first();
+
+        $numero = $ultimoRegistro
+            ? ((int) substr($ultimoRegistro->triage_codigo, -4)) + 1
+            : 1;
+
+        return 'TRI-' . $anioActual . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
     }
 
     public function analizarIA(int $pacienteId, IAClinicaService $ia): JsonResponse
@@ -247,7 +395,6 @@ class TriageController extends Controller
             return response()->json(['error' => 'Sin triage registrado'], 404);
         }
 
-        // ✅ Si ya fue analizado, devolver desde BD (sin gastar tokens)
         if ($triage->nivel_urgencia && $triage->evaluacion_ia) {
             $evaluacion = json_decode($triage->evaluacion_ia, true);
             return response()->json([
@@ -261,15 +408,28 @@ class TriageController extends Controller
             ]);
         }
 
-        // 🤖 Primera vez: llamar a DeepSeek
+        // Se considera "vital registrado" solo si el campo tiene un valor real (no null/vacío)
+        $tieneVitales = !empty($triage->presion) || !empty($triage->saturacion) || !empty($triage->temperatura);
+
+        if (!$tieneVitales) {
+            return response()->json([
+                'paciente_id'   => $paciente->id,
+                'triage_id'     => $triage->id,
+                'created_at'    => $triage->created_at,
+                'prioridad'     => null,
+                'estado'        => 'sin_datos',
+                'justificacion' => 'No hay signos vitales registrados; se requiere al menos uno para evaluar con IA.',
+                'fuente'        => 'sin_evaluar',
+            ]);
+        }
+
         $resultado = $ia->analizarTriage([
-            'sintomas'    => $triage->sintomas    ?? 'No especificados',
-            'presion'     => $triage->presion     ?? 'No registrada',
-            'saturacion'  => $triage->saturacion  ?? '0',
-            'temperatura' => $triage->temperatura ?? '0',
+            'sintomas'    => $triage->motivo_consulta    ?? 'No especificados',
+            'presion'     => $triage->presion     ?? null,
+            'saturacion'  => $triage->saturacion  ?? null,
+            'temperatura' => $triage->temperatura ?? null,
         ]);
 
-        // 💾 Guardar en BD
         $triage->update([
             'nivel_urgencia' => $resultado['prioridad'],
             'estado'         => $resultado['estado'],
@@ -289,7 +449,4 @@ class TriageController extends Controller
             'fuente'        => $resultado['fuente'],
         ]);
     }
-
-
-
 }

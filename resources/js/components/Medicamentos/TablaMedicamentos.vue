@@ -3,16 +3,19 @@
         <div class="container-fluid">
 
             <!-- ===================================== -->
-            <!-- MENSAJE / TOAST DE FEEDBACK -->
+            <!-- MENSAJES / TOASTS DE FEEDBACK (APILABLES) -->
             <!-- ===================================== -->
-            <div v-if="mensaje"
-                 class="alert alert-dismissible fade show shadow position-fixed"
-                 :class="'alert-' + mensaje.tipo"
-                 style="top:20px; right:20px; z-index:9999; min-width:300px;">
-                {{ mensaje.texto }}
-                <button type="button" class="close" @click="mensaje = null">
-                    <span>&times;</span>
-                </button>
+            <div class="position-fixed d-flex flex-column"
+                 style="top:20px; right:20px; z-index:9999; gap:10px; max-width:320px;">
+                <div v-for="msg in mensajes" :key="msg.id"
+                     class="alert alert-dismissible fade show shadow"
+                     :class="'alert-' + msg.tipo"
+                     style="min-width:300px; margin-bottom:0;">
+                    {{ msg.texto }}
+                    <button type="button" class="close" @click="cerrarMensaje(msg.id)">
+                        <span>&times;</span>
+                    </button>
+                </div>
             </div>
 
             <div class="card shadow-sm border-0 rounded-4 mt-4">
@@ -96,23 +99,31 @@
                 <th>Medicamento</th>
                 <th>Presentación</th>
                 <th>Lote</th>
-                <th>Stock</th>
+                <th class="sortable-th" @click="ordenarPor('stock_actual')">
+                    Stock
+                    <i class="fas" :class="iconoOrden('stock_actual')"></i>
+                </th>
                 <th>Stock Mínimo</th>
-                <th>Caducidad</th>
+                <th class="sortable-th" @click="ordenarPor('fecha_caducidad')">
+                    Caducidad
+                    <i class="fas" :class="iconoOrden('fecha_caducidad')"></i>
+                </th>
                 <th>Estado</th>
                 <th width="180">Acciones</th>
             </tr>
         </thead>
 
         <tbody>
-            <tr v-if="medicamentosFiltrados.length === 0">
+            <tr v-if="medicamentosPaginados.length === 0">
                 <td colspan="9" class="text-center text-muted py-4">
                     <i class="fas fa-search mr-2"></i>
                     No se encontraron medicamentos con esos filtros.
                 </td>
             </tr>
 
-            <tr v-for="medica in medicamentosFiltrados" :key="medica.id">
+            <tr v-for="medica in medicamentosPaginados" :key="medica.id"
+                class="fila-clicable"
+                @click="verMedicamento(medica.id)">
                 <!-- CODIGO -->
                 <td>
                     <span class="font-weight-bold text-primary">
@@ -152,9 +163,11 @@
                     </span>
                 </td>
 
-                <!-- STOCK -->
+                <!-- STOCK (color dinámico según urgencia real, igual que la columna Estado) -->
                 <td>
-                    <span class="badge badge-success px-3 py-2">
+                    <span
+                        class="badge px-3 py-2"
+                        :class="'badge-' + colorEstadoStock(estadoStock(medica))">
                         {{ medica.inventario?.stock_actual ?? 0 }}
                     </span>
                 </td>
@@ -167,13 +180,6 @@
                 </td>
 
                 <!-- CADUCIDAD -->
-                <!-- FIX: antes leía medica.ultimo_movimiento.fecha_caducidad.
-                     Esa relación es independiente del inventario y puede no
-                     traer la fecha del lote vigente (p.ej. si el último
-                     movimiento fue una salida). Ahora usa siempre
-                     medica.inventario.fecha_caducidad, la misma fuente que
-                     usa el backend (MedicamentoController@resumen) y el
-                     componente de Alertas Críticas. -->
                 <td>
                     <span
                         v-if="medica.inventario?.fecha_caducidad"
@@ -183,6 +189,8 @@
                         }"
                         class="font-weight-bold">
                         {{ medica.inventario.fecha_caducidad }}
+                        <br>
+                        <small class="font-weight-normal">{{ textoDiasRestantes(medica) }}</small>
                     </span>
                     <span
                         v-else
@@ -201,47 +209,47 @@
                 </td>
 
                 <!-- ACCIONES -->
-                <td>
+                <td @click.stop>
                     <div class="btn-group shadow-sm">
 
                         <!-- VER DETALLE -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-info"
-                            data-toggle="modal"
-                            data-target="#modalDetalleMedicamento"
                             title="Ver Detalle"
+                            aria-label="Ver detalle del medicamento"
                             @click="verMedicamento(medica.id)">
                             <i class="fas fa-eye"></i>
                         </button>
 
                         <!-- EDITAR -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-primary"
-                            data-toggle="modal"
-                            data-target="#modalEditarMedicamento"
                             title="Editar Medicamento"
+                            aria-label="Editar medicamento"
                             @click="editarMedicamento(medica)">
                             <i class="fas fa-edit"></i>
                         </button>
 
                         <!-- MOVIMIENTO -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-warning text-dark"
-                            data-toggle="modal"
-                            data-target="#modalMovimientoInventario"
                             title="Movimiento Inventario"
+                            aria-label="Registrar movimiento de inventario"
                             @click="abrirMovimiento(medica)">
                             <i class="fas fa-exchange-alt"></i>
                         </button>
 
                         <!-- ELIMINAR -->
                         <button
+                            type="button"
                             class="btn btn-sm btn-danger"
                             title="Eliminar"
-                            :disabled="eliminandoId === medica.id"
-                            @click="eliminarMedicamento(medica)">
-                            <i class="fas fa-spinner fa-spin" v-if="eliminandoId === medica.id"></i>
-                            <i class="fas fa-trash" v-else></i>
+                            aria-label="Eliminar medicamento"
+                            @click="confirmarEliminar(medica)">
+                            <i class="fas fa-trash"></i>
                         </button>
 
                     </div>
@@ -249,6 +257,26 @@
             </tr>
         </tbody>
     </table>
+
+    <!-- PAGINACION -->
+    <div v-if="totalPaginas > 1" class="d-flex justify-content-between align-items-center mt-3 px-2">
+        <small class="text-muted">
+            Mostrando {{ inicioRango }}–{{ finRango }} de {{ medicamentosFiltrados.length }}
+        </small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" :class="{ disabled: paginaActual === 1 }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(paginaActual - 1)">Anterior</a>
+                </li>
+                <li v-for="p in totalPaginas" :key="p" class="page-item" :class="{ active: p === paginaActual }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(p)">{{ p }}</a>
+                </li>
+                <li class="page-item" :class="{ disabled: paginaActual === totalPaginas }">
+                    <a class="page-link" href="#" @click.prevent="irAPagina(paginaActual + 1)">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
 </div>
             </div>
         </div>
@@ -280,15 +308,20 @@
                         </small>
                     </div>
                 </div>
-                <button
-                    type="button"
-                    class="close text-white"
-                    data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalDetalleMedicamento')">
                     <span>&times;</span>
                 </button>
             </div>
             <!-- BODY -->
             <div class="modal-body p-4">
+                <!-- SPINNER DE CARGA -->
+                <div v-if="cargandoDetalle" class="text-center py-5">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="sr-only">Cargando...</span>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Cargando información del medicamento...</p>
+                </div>
+                <div v-else>
                 <!-- ALERTA -->
                 <div class="alert alert-light border-left border-info shadow-sm mb-4">
                     <i class="fas fa-info-circle text-info mr-2"></i>
@@ -403,7 +436,9 @@
                                 <label class="font-weight-bold text-muted">
                                     Stock Actual
                                 </label>
-                                <div class="h4 text-success font-weight-bold">
+                                <!-- Color dinámico: refleja el mismo estado que la columna "Estado Inventario" -->
+                                <div class="h4 font-weight-bold"
+                                     :class="'text-' + colorEstadoStock(estadoStock(medicamentoDetalle))">
                                     {{ medicamentoDetalle.inventario?.stock_actual ?? 0 }}
                                 </div>
                             </div>
@@ -428,6 +463,48 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                <!-- ===================================== -->
+                <!-- HISTORIAL DE MOVIMIENTOS -->
+                <!-- ===================================== -->
+                <div class="card card-outline card-secondary mb-4" v-if="medicamentoDetalle.movimientos_inventario && medicamentoDetalle.movimientos_inventario.length > 0">
+                    <div class="card-header">
+                        <h5 class="card-title font-weight-bold">
+                            <i class="fas fa-history mr-2"></i>
+                            Historial de Movimientos
+                        </h5>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 260px; overflow-y:auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Lote</th>
+                                    <th>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="mov in medicamentoDetalle.movimientos_inventario.slice().reverse()" :key="mov.id">
+                                    <td>{{ mov.fecha_movimiento ? new Date(mov.fecha_movimiento).toLocaleDateString() : '—' }}</td>
+                                    <td>
+                                        <span class="badge"
+                                            :class="{
+                                                'badge-success': mov.tipo_movimiento === 'entrada',
+                                                'badge-danger': mov.tipo_movimiento === 'salida',
+                                                'badge-secondary': mov.tipo_movimiento === 'ajuste'
+                                            }">
+                                            {{ mov.tipo_movimiento }}
+                                        </span>
+                                    </td>
+                                    <td>{{ mov.cantidad }}</td>
+                                    <td>{{ mov.lote || '—' }}</td>
+                                    <td>{{ mov.motivo_movimiento || '—' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 <!-- ===================================== -->
@@ -506,19 +583,18 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
             <!-- FOOTER -->
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalDetalleMedicamento')">
                     <i class="fas fa-times mr-1"></i>
                     Cerrar
                 </button>
                 <button
+                    type="button"
                     class="btn btn-primary"
-                    data-dismiss="modal"
-                    data-toggle="modal"
-                    data-target="#modalEditarMedicamento"
-                    @click="editarMedicamento(medicamentoDetalle)">
+                    @click="pasarAEditarDesdeDetalle">
                     <i class="fas fa-edit mr-1"></i>
                     Editar Medicamento
                 </button>
@@ -556,7 +632,7 @@
                         </small>
                     </div>
                 </div>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalEditarMedicamento')">
                     <span>&times;</span>
                 </button>
             </div>
@@ -765,6 +841,15 @@
                                     <input type="number" class="form-control" v-model="medicamentoSeleccionado.inventario.stock_minimo">
                                 </div>
                             </div>
+                            <!-- FECHA CADUCIDAD -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">
+                                        Fecha de Caducidad
+                                    </label>
+                                    <input type="date" class="form-control" v-model="medicamentoSeleccionado.inventario.fecha_caducidad">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -775,7 +860,7 @@
             <!-- ===================================== -->
 
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalEditarMedicamento')">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
@@ -821,7 +906,7 @@
                         </small>
                     </div>
                 </div>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalMovimientoInventario')">
                     <span>&times;</span>
                 </button>
             </div>
@@ -991,7 +1076,7 @@
             <!-- FOOTER -->
             <!-- ===================================== -->
             <div class="modal-footer bg-light">
-                <button class="btn btn-secondary" data-dismiss="modal">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalMovimientoInventario')">
                     <i class="fas fa-times mr-1"></i>
                     Cancelar
                 </button>
@@ -1007,6 +1092,57 @@
         </div>
     </div>
 </div>
+
+<!-- ============================================= -->
+<!-- MODAL CONFIRMAR ELIMINACIÓN (reemplaza window.confirm) -->
+<!-- ============================================= -->
+<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white border-0" style="background:linear-gradient(135deg,#dc3545,#b02a37);">
+                <div class="d-flex align-items-center">
+                    <div class="mr-3 d-flex justify-content-center align-items-center"
+                        style="
+                            width:45px;
+                            height:45px;
+                            border-radius:50%;
+                            background:rgba(255,255,255,.15);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5 class="mb-0 font-weight-bold">
+                        Confirmar Eliminación
+                    </h5>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" @click="cerrarModal('modalConfirmarEliminar')">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0">
+                    ¿Eliminar el medicamento
+                    <strong>{{ medicamentoAEliminar?.nombre }}</strong>?
+                </p>
+                <p class="text-muted small mt-2 mb-0">
+                    Esta acción no se puede deshacer.
+                </p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button class="btn btn-secondary" data-dismiss="modal" @click="cerrarModal('modalConfirmarEliminar')">
+                    <i class="fas fa-times mr-1"></i>
+                    Cancelar
+                </button>
+                <button
+                    class="btn btn-danger"
+                    :disabled="eliminandoId === medicamentoAEliminar?.id"
+                    @click="ejecutarEliminacion">
+                    <i class="fas fa-spinner fa-spin mr-1" v-if="eliminandoId === medicamentoAEliminar?.id"></i>
+                    <i class="fas fa-trash mr-1" v-else></i>
+                    {{ eliminandoId === medicamentoAEliminar?.id ? 'Eliminando...' : 'Eliminar' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 </template>
 
 <script>
@@ -1016,6 +1152,7 @@ import ApiService from '../../services/ApiService.js'
 // Debe coincidir con MedicamentoController@resumen (30 días) y con
 // AlertasCriticas.vue, para que todas las vistas sean consistentes.
 const DIAS_LIMITE_CADUCIDAD = 30
+const MEDICAMENTOS_POR_PAGINA = 10
 
 export default {
     props: {
@@ -1040,6 +1177,15 @@ export default {
                 categoria: 'Todas',
                 caducidad: 'Todas'
             },
+
+            // ── ORDENAMIENTO ──
+            orden: {
+                campo: null,      // 'stock_actual' | 'fecha_caducidad' | null
+                direccion: 'asc'  // 'asc' | 'desc'
+            },
+
+            // ── PAGINACION ──
+            paginaActual: 1,
 
             // ── DETALLE ──
             medicamentoDetalle:{
@@ -1075,11 +1221,29 @@ export default {
                     observaciones:''
                 },
 
+            // ── ELIMINACION ──
+            // Medicamento pendiente de confirmar en modalConfirmarEliminar.
+            medicamentoAEliminar: null,
+
             // ── FEEDBACK VISUAL ──
-            mensaje: null,          // { texto, tipo } - tipo: success | danger | warning
+            // Array de { id, texto, tipo } - permite mostrar varios toasts
+            // apilados en vez de que uno pise al anterior.
+            mensajes: [],
             guardandoEdicion: false,
             guardandoMovimiento: false,
-            eliminandoId: null
+            eliminandoId: null,
+            cargandoDetalle: false
+        }
+    },
+
+    watch: {
+        // Cualquier cambio de filtro regresa a la página 1, para no
+        // quedarse "varado" en una página que ya no tiene resultados.
+        filtros: {
+            deep: true,
+            handler() {
+                this.paginaActual = 1
+            }
         }
     },
 
@@ -1088,7 +1252,7 @@ export default {
         medicamentosFiltrados() {
             const termino = this.filtros.busqueda.toLowerCase().trim()
 
-            return this.medicamentos.filter(medica => {
+            const resultado = this.medicamentos.filter(medica => {
                 const coincideTexto = !termino ||
                     (medica.nombre ?? '').toLowerCase().includes(termino) ||
                     (medica.codigo ?? '').toLowerCase().includes(termino) ||
@@ -1109,21 +1273,114 @@ export default {
 
                 return coincideTexto && coincideEstado && coincideCategoria && coincideCaducidad
             })
+
+            return this.aplicarOrden(resultado)
+        },
+
+        totalPaginas() {
+            return Math.max(1, Math.ceil(this.medicamentosFiltrados.length / MEDICAMENTOS_POR_PAGINA))
+        },
+
+        medicamentosPaginados() {
+            const inicio = (this.paginaActual - 1) * MEDICAMENTOS_POR_PAGINA
+            return this.medicamentosFiltrados.slice(inicio, inicio + MEDICAMENTOS_POR_PAGINA)
+        },
+
+        inicioRango() {
+            if (this.medicamentosFiltrados.length === 0) return 0
+            return (this.paginaActual - 1) * MEDICAMENTOS_POR_PAGINA + 1
+        },
+
+        finRango() {
+            return Math.min(this.paginaActual * MEDICAMENTOS_POR_PAGINA, this.medicamentosFiltrados.length)
         }
     },
 
     methods: {
         // ═══════════════════════════════════════
+        // ORDENAMIENTO
+        // ═══════════════════════════════════════
+        ordenarPor(campo) {
+            if (this.orden.campo === campo) {
+                this.orden.direccion = this.orden.direccion === 'asc' ? 'desc' : 'asc'
+            } else {
+                this.orden.campo = campo
+                this.orden.direccion = 'asc'
+            }
+            this.paginaActual = 1
+        },
+
+        iconoOrden(campo) {
+            if (this.orden.campo !== campo) return 'fa-sort text-muted'
+            return this.orden.direccion === 'asc' ? 'fa-sort-up' : 'fa-sort-down'
+        },
+
+        aplicarOrden(lista) {
+            if (!this.orden.campo) return lista
+
+            const campo = this.orden.campo
+            const factor = this.orden.direccion === 'asc' ? 1 : -1
+
+            return [...lista].sort((a, b) => {
+                let valA, valB
+
+                if (campo === 'stock_actual') {
+                    valA = a.inventario?.stock_actual ?? 0
+                    valB = b.inventario?.stock_actual ?? 0
+                } else if (campo === 'fecha_caducidad') {
+                    // Sin fecha se manda siempre al final, sin importar la dirección.
+                    const fechaA = a.inventario?.fecha_caducidad
+                    const fechaB = b.inventario?.fecha_caducidad
+                    if (!fechaA && !fechaB) return 0
+                    if (!fechaA) return 1
+                    if (!fechaB) return -1
+                    valA = new Date(fechaA).getTime()
+                    valB = new Date(fechaB).getTime()
+                }
+
+                if (valA < valB) return -1 * factor
+                if (valA > valB) return 1 * factor
+                return 0
+            })
+        },
+
+        // ═══════════════════════════════════════
+        // PAGINACION
+        // ═══════════════════════════════════════
+        irAPagina(p) {
+            if (p < 1 || p > this.totalPaginas) return
+            this.paginaActual = p
+        },
+
+        // ═══════════════════════════════════════
         // VER DETALLE
         // ═══════════════════════════════════════
         async verMedicamento(id){
+            // Abrimos el modal DE INMEDIATO con un estado de carga, en vez
+            // de esperar a que resuelva el fetch. Así el usuario ve
+            // feedback instantáneo aunque el endpoint tarde, en lugar de
+            // sentir que el clic no hizo nada.
+            this.medicamentoDetalle = { inventario: {}, ultimo_movimiento: null }
+            this.cargandoDetalle = true
+            this.abrirModal('modalDetalleMedicamento')
+
             try{
                 const response = await ApiService.get('/medicamentos/' + id)
                 this.medicamentoDetalle = response.data
             }catch(error){
                 console.error(error)
                 this.mostrarMensaje('No se pudo cargar el detalle del medicamento.', 'danger')
+                this.cerrarModal('modalDetalleMedicamento')
+            }finally{
+                this.cargandoDetalle = false
             }
+        },
+
+        // Botón "Editar Medicamento" dentro del modal de Detalle: cierra
+        // ese modal y abre el de edición con los datos ya cargados.
+        pasarAEditarDesdeDetalle(){
+            this.editarMedicamento(this.medicamentoDetalle)
+            this.cerrarModal('modalDetalleMedicamento')
         },
 
         // ═══════════════════════════════════════
@@ -1137,6 +1394,7 @@ export default {
                 ...medica,
                 inventario: { ...(medica.inventario || {}) }
             }
+            this.abrirModal('modalEditarMedicamento')
         },
 
         async actualizarMedicamento(){
@@ -1150,7 +1408,7 @@ export default {
                 // Route::resource('medicamentos', MedicamentoController::class) -> update
                 await ApiService.put('/medicamentos/' + this.medicamentoSeleccionado.id, this.medicamentoSeleccionado)
 
-                $('#modalEditarMedicamento').modal('hide')
+                this.cerrarModal('modalEditarMedicamento')
                 this.mostrarMensaje('Medicamento actualizado correctamente.', 'success')
                 this.$emit('actualizar-inventario')
             }catch(error){
@@ -1185,6 +1443,8 @@ export default {
                 referencia_documento: '',
                 observaciones: ''
             }
+
+            this.abrirModal('modalMovimientoInventario')
         },
 
         async guardarMovimiento(){
@@ -1204,7 +1464,7 @@ export default {
                 // por eso el medicamento_id va dentro del payload.
                 await ApiService.post('/movimientos', this.movimiento)
 
-                $('#modalMovimientoInventario').modal('hide')
+                this.cerrarModal('modalMovimientoInventario')
                 this.mostrarMensaje('Movimiento registrado correctamente.', 'success')
                 this.$emit('actualizar-inventario')
             }catch(error){
@@ -1218,17 +1478,23 @@ export default {
         // ═══════════════════════════════════════
         // ELIMINAR
         // ═══════════════════════════════════════
-        async eliminarMedicamento(medica){
-            const confirmado = window.confirm(
-                `¿Eliminar el medicamento "${medica.nombre}"? Esta acción no se puede deshacer.`
-            )
-            if (!confirmado) return
+        // Ya no usamos window.confirm(): abrimos un modal propio,
+        // estilizado igual que el resto de la app y con estado de
+        // "Eliminando..." mientras corre la petición.
+        confirmarEliminar(medica){
+            this.medicamentoAEliminar = medica
+            this.abrirModal('modalConfirmarEliminar')
+        },
 
-            this.eliminandoId = medica.id
+        async ejecutarEliminacion(){
+            if (!this.medicamentoAEliminar) return
+
+            this.eliminandoId = this.medicamentoAEliminar.id
             try{
                 // Route::resource('medicamentos', MedicamentoController::class) -> destroy
-                await ApiService.delete('/medicamentos/' + medica.id)
+                await ApiService.delete('/medicamentos/' + this.medicamentoAEliminar.id)
 
+                this.cerrarModal('modalConfirmarEliminar')
                 this.mostrarMensaje('Medicamento eliminado correctamente.', 'success')
                 this.$emit('actualizar-inventario')
             }catch(error){
@@ -1236,6 +1502,7 @@ export default {
                 this.mostrarMensaje('No se pudo eliminar el medicamento.', 'danger')
             }finally{
                 this.eliminandoId = null
+                this.medicamentoAEliminar = null
             }
         },
 
@@ -1277,19 +1544,12 @@ export default {
             return colores[estado] ?? 'secondary'
         },
 
-        // FIX: antes leía medica.ultimo_movimiento?.fecha_caducidad.
-        // Ahora usa medica.inventario?.fecha_caducidad, la misma fuente
-        // que usa el backend (MedicamentoController@resumen) y
-        // AlertasCriticas.vue, para que el estado sea consistente en
-        // toda la aplicación.
         estaCaducado(medica){
             const fecha = medica.inventario?.fecha_caducidad
             if (!fecha) return false
             return new Date(fecha) < new Date()
         },
 
-        // NUEVO: determina si el medicamento caduca dentro del umbral
-        // definido (30 días), igual que MedicamentoController@resumen.
         proximoACaducar(medica){
             const fecha = medica.inventario?.fecha_caducidad
             if (!fecha) return false
@@ -1302,10 +1562,28 @@ export default {
             return fechaCad >= hoy && fechaCad <= limite
         },
 
+        // Texto auxiliar bajo la fecha de caducidad ("25 días",
+        // "Caducado hace 3 días", etc.) para no obligar al usuario a
+        // calcular mentalmente cuánto falta.
+        textoDiasRestantes(medica){
+            const fecha = medica.inventario?.fecha_caducidad
+            if (!fecha) return ''
+
+            const fechaCad = new Date(fecha)
+            const hoy = new Date()
+            hoy.setHours(0, 0, 0, 0)
+            fechaCad.setHours(0, 0, 0, 0)
+
+            const dias = Math.round((fechaCad - hoy) / (1000 * 60 * 60 * 24))
+
+            if (dias < 0) return `Caducó hace ${Math.abs(dias)} día(s)`
+            if (dias === 0) return 'Caduca hoy'
+            return `${dias} día(s)`
+        },
+
         coincideFiltroCaducidad(medica){
             if (this.filtros.caducidad === 'Todas') return true
 
-            // FIX: antes leía medica.ultimo_movimiento?.fecha_caducidad
             const fecha = medica.inventario?.fecha_caducidad
             if (!fecha) return false
 
@@ -1355,12 +1633,101 @@ export default {
         },
 
         // ═══════════════════════════════════════
+        // MODALES (control manual con jQuery + Bootstrap 4)
+        // ═══════════════════════════════════════
+        // Centralizamos apertura/cierre aquí en vez de usar
+        // data-toggle/data-target, porque el @click.stop en la celda
+        // de acciones impide que el evento llegue al listener delegado que
+        // Bootstrap registra en el document.
+        //
+        // IMPORTANTE: este proyecto usa Bootstrap 4 (jQuery presente). El
+        // objeto global `bootstrap` en BS4 SÍ existe pero su clase Modal no
+        // tiene el método estático `getOrCreateInstance` (eso es exclusivo
+        // de Bootstrap 5), por eso se prioriza jQuery aquí.
+        abrirModal(id){
+            // $nextTick asegura que Vue ya actualizó el DOM con los datos
+            // (medicamentoDetalle, medicamentoSeleccionado, etc.) antes de
+            // mostrar el modal.
+            this.$nextTick(() => {
+                const el = document.getElementById(id)
+                if (!el) {
+                    console.error('No se encontró el modal con id: ' + id)
+                    return
+                }
+                if (window.jQuery) {
+                    $('#' + id).modal('show')
+                } else if (window.bootstrap && window.bootstrap.Modal) {
+                    // Fallback Bootstrap 4/5 sin jQuery: instanciar directamente.
+                    new bootstrap.Modal(el).show()
+                } else {
+                    console.error('No se encontró jQuery ni Bootstrap JS cargado en la página.')
+                }
+            })
+        },
+
+        cerrarModal(id){
+            const el = document.getElementById(id)
+            if (!el) return
+
+            if (window.jQuery) {
+                $('#' + id).modal('hide')
+            } else if (window.bootstrap && window.bootstrap.Modal) {
+                new bootstrap.Modal(el).hide()
+            }
+
+            // Salvaguarda: si por alguna razón el plugin no limpia el
+            // backdrop/clases del <body> (p. ej. porque el listener
+            // data-dismiss no se disparó y solo se ejecutó este @click),
+            // lo forzamos manualmente para que la página no quede bloqueada.
+            setTimeout(() => {
+                el.classList.remove('show')
+                el.style.display = 'none'
+                el.setAttribute('aria-hidden', 'true')
+                el.removeAttribute('aria-modal')
+
+                const siguenAbiertos = document.querySelectorAll('.modal.show').length > 0
+                if (!siguenAbiertos) {
+                    document.body.classList.remove('modal-open')
+                    document.body.style.removeProperty('overflow')
+                    document.body.style.removeProperty('padding-right')
+                    document.querySelectorAll('.modal-backdrop').forEach(bd => bd.remove())
+                }
+            }, 350) // deja correr la transición fade de Bootstrap antes de forzar
+        },
+
+        // ═══════════════════════════════════════
         // FEEDBACK VISUAL
         // ═══════════════════════════════════════
+        // Cada llamada agrega un toast independiente al array 'mensajes',
+        // con un id único, y se autoelimina solo a sí mismo tras 3.5s.
+        // Así varios mensajes seguidos se apilan en vez de pisarse.
         mostrarMensaje(texto, tipo = 'success'){
-            this.mensaje = { texto, tipo }
-            setTimeout(() => { this.mensaje = null }, 3500)
+            const id = Date.now() + Math.random()
+            this.mensajes.push({ id, texto, tipo })
+            setTimeout(() => {
+                this.mensajes = this.mensajes.filter(m => m.id !== id)
+            }, 3500)
+        },
+
+        cerrarMensaje(id){
+            this.mensajes = this.mensajes.filter(m => m.id !== id)
         }
     }
 }
 </script>
+
+<style scoped>
+.sortable-th {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable-th:hover {
+    color: #007bff;
+}
+.fila-clicable {
+    cursor: pointer;
+}
+.fila-clicable:hover {
+    background-color: #f8f9fa;
+}
+</style>

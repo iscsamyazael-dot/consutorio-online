@@ -39,7 +39,7 @@ class Consulta extends Model
 
     public function medico()
     {
-        return $this->belongsTo(Medico::class, 'user_id');
+        return $this->belongsTo(Medico::class, 'user_id','user_id');
     }
 
     public function sintomas()

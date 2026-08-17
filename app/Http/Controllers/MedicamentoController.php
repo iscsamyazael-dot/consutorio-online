@@ -221,12 +221,27 @@ class MedicamentoController extends Controller
         ]);
 
         // El formulario de edición del frontend también permite ajustar el
-        // stock mínimo, que vive en la tabla de inventario (no en medicamentos).
-        // Viaja como { ..., inventario: { stock_minimo: ... } } en el payload.
-        if ($medicamento->inventario && $request->has('inventario.stock_minimo')) {
-            $medicamento->inventario->update([
-                'stock_minimo' => $request->input('inventario.stock_minimo'),
-            ]);
+        // stock mínimo y la fecha de caducidad, que viven en la tabla de
+        // inventario (no en medicamentos). Viajan como
+        // { ..., inventario: { stock_minimo: ..., fecha_caducidad: ... } }
+        // en el payload.
+        if ($medicamento->inventario) {
+            $datosInventario = [];
+
+            if ($request->has('inventario.stock_minimo')) {
+                $datosInventario['stock_minimo'] = $request->input('inventario.stock_minimo');
+            }
+
+            if ($request->has('inventario.fecha_caducidad')) {
+                // El input type="date" manda "" cuando se deja vacío; lo
+                // convertimos a null para no romper la columna date/datetime.
+                $fechaCaducidad = $request->input('inventario.fecha_caducidad');
+                $datosInventario['fecha_caducidad'] = $fechaCaducidad !== '' ? $fechaCaducidad : null;
+            }
+
+            if (!empty($datosInventario)) {
+                $medicamento->inventario->update($datosInventario);
+            }
         }
 
         return response()->json([

@@ -16,6 +16,7 @@ use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DerivacionController; 
 use App\Http\Controllers\UserRegisterController;
+use App\Http\Controllers\ListaEsperaController;
 use App\Models\Paciente;
 use App\Http\Controllers\CitaController;//agenda        
 use App\Http\Controllers\UbicacionController;//agenda 
@@ -26,6 +27,7 @@ use App\Http\Controllers\EvaluacionesIAController;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+
 
 
 
@@ -104,6 +106,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('recetas', RecetaController::class);
         Route::resource('receta-detalles', RecetaDetalleController::class);
         Route::resource('usuarios', UserController::class);
+        
+        //Ruta para ver el total de las consultas finalizadas el día de hoy
+        Route::get('total-consultas-finalizadas', [TriageController::class, 'totalFinalizadasHoy']);
+
 
         // IMPORTANTE: estas rutas deben ir ANTES de Route::resource('consultaIA', ...)
         // y deben coincidir EXACTAMENTE con la URL que llama el frontend
@@ -144,20 +150,57 @@ Route::middleware('auth')->group(function () {
         //Route::resource('dashboard/citas', CitaController::class hola);
         // Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);//COMNTDAAAAA
         //Route::resource('dashboard/citas', CitaController::class);
-        Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calenda
+        Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calendario (usada por el calendario del dashboard, distinta de /api/citas)
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
         Route::resource('citas', CitaController::class);// Agenda: CRUD de citas
-        Route::get('/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calendario
+        Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendario / lista de espera
+        
+        //Ruta para ver el historial de una consulta de una determinada fecha //
+        Route::get('VerHistorialConsultas', [ConsultaController::class, 'historial']);
+        // Ruta para cambiar el estado de una consulta (ej. En proceso -> Finalizada)
+        Route::patch('ActualizarEstadoConsulta/{id}', [ConsultaController::class, 'actualizarEstado']);
+
+        Route::patch('/api/consultas/{id}/estado', [ConsultaController::class, 'actualizarEstado'])->name('consultas.estado.api');// Historial: cambiar estado de consulta tradicional
+        
+        // Dentro del grupo protegido por auth (mismo patrón que ya usas para 'citas')
+        Route::resource('lista-espera', ListaEsperaController::class)
+             ->parameters(['lista-espera' => 'listaEspera']);
+            
+        Route::patch('lista-espera/{listaEspera}/estado', [ListaEsperaController::class, 'actualizarEstado'])
+            ->name('lista-espera.estado');
+
+        
+        
+        // ─────────────────────────────────────────────────────────────
+        // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
+        // GET /api/citas apuntando a controladores distintos
+        // (getEventos y getCitas); Laravel resolvía la ambigüedad usando
+        // la última definida, lo cual es frágil (cualquier reordenamiento
+        // futuro del archivo puede cambiar en silencio qué método
+        // responde). getCitas() es el que trae la estructura completa
+        // (paciente, medico, especialidad anidados) que consumen
+        // ConsultaClinica.vue y ConsultaInteligente.vue, así que es el
+        // que se conserva aquí.
+        // ─────────────────────────────────────────────────────────────
+        Route::get('/api/citas', [CitaController::class, 'getCitas']);// Agenda: lista de citas con paciente/medico/especialidad (ConsultaClinica.vue, ConsultaInteligente.vue)
+        Route::get('/api/dashboard/consultas-hoy', [DashboardController::class, 'consultasHoy']); // Dashboard SPA: consultas usadas y finalizadas hoy (Home.vue)
+        // Agenda: actualizar datos del paciente
         // Cambias 'SubirArchivosControlador' por el que ya tengas
         Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);
         //Código para hacer el filtro de un paciente mediante un input //
         Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
         //Codigo para las vistas y que son usadas en el menú de adminlte"
         //codigo  de las citas //
-        //actualiza el estado 
-        Route::patch('/citas/{cita}/estado', [App\Http\Controllers\CitaController::class, 'actualizarEstado'])->name('citas.estado');// Agenda: cambiar estado de cita
-        // api de calendario//
-        Route::get('/api/citas', [App\Http\Controllers\CitaController::class, 'getCitas']);
+
+        // ─────────────────────────────────────────────────────────────
+        // ÚNICA definición de PATCH .../citas/{cita}/estado. Antes había
+        // dos rutas casi idénticas (con y sin prefijo /api) apuntando al
+        // mismo método actualizarEstado. Se deja solo la que realmente
+        // usa el frontend: axios.patch('/api/citas/{id}/estado', ...)
+        // en ConsultaInteligente.vue.
+        // ─────────────────────────────────────────────────────────────
+        Route::patch('/api/citas/{cita}/estado', [CitaController::class, 'actualizarEstado'])->name('citas.estado.api');// Agenda: cambiar estado de cita (usada por ConsultaInteligente.vue)
+
         //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
         Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
             ->name('ExpedienteDetalle');
@@ -166,6 +209,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/triage/{pacienteId}/analizar-ia', [TriageController::class, 'analizarIA']);
         Route::get('/triage/{id}', [TriageController::class, 'show']);
         ///*** AQUI TERMINA LAS RUTAS DE LAS LAS APIS Y CONSUMO DE DATOS */
+        // Ruta explícita para manejar la petición POST desde panelatencion.vue
+        Route::post('/triage/guardar/{id?}', [TriageController::class, 'guardarTriageRapido'])->name('triage.guardarRapido');
+        Route::put('/pacientes/{id}', [PacienteController::class, 'update'])->name('pacientes.update');
 
         //**INICIA LAS RUTAS PARA LAS VISTAS DE ACUERDO AL ACESSO DE CADA USUARIO *//
 
@@ -191,6 +237,9 @@ Route::middleware('auth')->group(function () {
             // Se dejó opcional para no romper otros lugares que ya enlazan a
             // esta ruta sin id.
             Route::get('HistorialConsulta/{id?}', function($id = null) { return view('consultas.consultaIndividual', compact('id')); })->name('consultas.consultaIndividual');
+            Route::get('HistorialConsultas', function () {
+                return view('historialconsultas.index');
+            });
             Route::get('NuevaConsulta', [ConsultaController::class, 'create'])->name('consultas.create');
             //Route::get('NuevaConsulta', function () { return view('consultas.create'); })->name('consultas.create');
             Route::get('ConsultaInteligenteNueva', function() { 
@@ -213,9 +262,7 @@ Route::middleware('auth')->group(function () {
             Route::get('ExpedientePacientes/{id}', function ($id) {
                 return view('pacientes.expediente');
             })->name('pacientes.expediente');
-            Route::get('consultaNormal/{id}', function ($id) {
-                return view('consultas.create');
-            })->name('consultas.create');
+           Route::get('consultaNormal/{id}', [ConsultaController::class, 'create']);
             Route::get('ConsultaInteligente/{id}', function ($id) { 
                 $paciente = Paciente::findOrFail($id);
                 return view('consultas.consulta_inteligente', compact('paciente'));
@@ -261,5 +308,9 @@ Route::prefix('api/ionic')
         Route::post('actualizarCita/{id}/estado', [CitaController::class, 'actualizarEstadoCita']);
         Route::put('ActualizarContrasenia', [AuthController::class, 'updatePassword']);
     });
+
+// Fuera del grupo protegido (pantalla pública en sala de espera)
+Route::get('lista-espera-pantalla', [ListaEsperaController::class, 'pantalla'])
+    ->name('lista-espera.pantalla');
 
 require __DIR__.'/auth.php';

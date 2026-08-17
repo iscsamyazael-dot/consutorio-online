@@ -1,10 +1,7 @@
 <template>
-
     <!-- Formulario -->
     <div class="col-lg-8">
-
         <div class="card shadow border-0">
-
             <div class="card-body p-4">
 
                 <h4 class="fw-bold text-primary mb-1">
@@ -15,349 +12,318 @@
                     Ingresa tu contraseña actual y define una nueva contraseña segura.
                 </p>
 
+                <!-- Contraseña Actual -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold"> 
+                        Contraseña Actual
+                    </label>
 
-                
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-lock"></i>
+                        </span>
 
-    <!-- Contraseña Actual -->
-    <div class="mb-4">
+                        <input
+                            id="passwordActual"
+                            type="password"
+                            class="form-control"
+                            v-model="passwordActual"
+                            placeholder="Ingrese su contraseña actual"
+                        >
 
-        <label class="form-label fw-semibold"> 
-            Contraseña Actual
-        </label>
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            @click="togglePassword('passwordActual', $event.currentTarget)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
 
-        <div class="input-group">
+                <!-- Nueva Contraseña -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Nueva Contraseña
+                    </label>
 
-            <span class="input-group-text">
-                <i class="fas fa-lock"></i>
-            </span>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-key"></i>
+                        </span>
 
-            <input
-                id="passwordActual"
-                type="password"
-                class="form-control"
-                v-model="passwordActual"
-                placeholder="Ingrese su contraseña actual"
-            >
+                        <input
+                            id="nuevaPassword"
+                            type="password"
+                            class="form-control"
+                            v-model="nuevaPassword"
+                            placeholder="Ingrese la nueva contraseña"
+                            @keyup="evaluarPassword"
+                        >
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            @click="togglePassword('nuevaPassword', $event.currentTarget)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
 
-            <button
-                type="button"
-                class="btn btn-outline-secondary"
-                @click="togglePassword('passwordActual', $event.currentTarget)">
+                <!-- Confirmar Contraseña -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Confirmar Contraseña
+                    </label>
 
-                <i class="fas fa-eye"></i>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-check-circle"></i>
+                        </span>
+                        <input
+                            id="confirmarPassword"
+                            type="password"
+                            class="form-control"
+                            v-model="confirmarPassword"
+                            placeholder="Confirme la nueva contraseña"
+                        >
 
-            </button>
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            @click="togglePassword('confirmarPassword', $event.currentTarget)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
 
-        </div>
+                <!-- Fortaleza -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Fortaleza de la Contraseña
+                    </label>
 
-    </div>
+                    <div class="progress">
+                        <div
+                            id="passwordStrength"
+                            class="progress-bar"
+                            role="progressbar"
+                            style="width: 0%">
+                        </div>
+                    </div>
 
-    <!-- Nueva Contraseña -->
-    <div class="mb-4">
+                    <small
+                        id="passwordStrengthText"
+                        class="text-muted">
+                        Ingrese una contraseña
+                    </small>
+                </div>
 
-        <label class="form-label fw-semibold">
-            Nueva Contraseña
-        </label>
+                <!-- Requisitos -->
+                <h6 class="fw-bold text-primary">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Requisitos de Seguridad
+                </h6>
 
-        <div class="input-group">
+                <ul class="list-unstyled mb-0">
+                    <li id="reqLength">
+                        <i class="fas fa-times text-danger me-2"></i>
+                        Mínimo 8 caracteres
+                    </li>
+                    <li id="reqUpper">
+                        <i class="fas fa-times text-danger me-2"></i>
+                        Al menos una letra mayúscula
+                    </li>
+                    <li id="reqNumber">
+                        <i class="fas fa-times text-danger me-2"></i>
+                        Al menos un número
+                    </li>
+                    <li id="reqSpecial">
+                        <i class="fas fa-times text-danger me-2"></i>
+                        Al menos un carácter especial
+                    </li>
+                </ul>
 
-            <span class="input-group-text">
-                <i class="fas fa-key"></i>
-            </span>
+                <!-- Botones -->
+                <div class="text-end mt-4">
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary rounded-pill px-4 me-2"
+                        @click="limpiarFormulario">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
 
-            <input
-                id="nuevaPassword"
-                type="password"
-                class="form-control"
-                v-model="nuevaPassword"
-                placeholder="Ingrese la nueva contraseña"
-                @keyup="evaluarPassword"
-            >
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    @click="togglePassword('nuevaPassword', $event.currentTarget)">
-                    <i class="fas fa-eye"></i>
-                </button>
-        </div>
-    </div>
+                    <button
+                        type="button"
+                        class="btn btn-primary btn-lg rounded-pill px-5"
+                        :disabled="cargando"
+                        @click="actualizarPassword">
+                        <span v-if="cargando" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <i v-else class="fas fa-save me-2"></i>
+                        Actualizar Contraseña
+                    </button>
+                </div> 
 
-    <!-- Confirmar Contraseña -->
-    <div class="mb-4">
-        <label class="form-label fw-semibold">
-            Confirmar Contraseña
-        </label>
-
-        <div class="input-group">
-            <span class="input-group-text">
-                <i class="fas fa-check-circle"></i>
-            </span>
-            <input
-                id="confirmarPassword"
-                type="password"
-                class="form-control"
-                v-model="confirmarPassword"
-                placeholder="Confirme la nueva contraseña"
-            >
-
-            <button
-                type="button"
-                class="btn btn-outline-secondary"
-                @click="togglePassword('confirmarPassword', $event.currentTarget)">
-
-                <i class="fas fa-eye"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Fortaleza -->
-    <div class="mb-4">
-
-        <label class="form-label fw-semibold">
-            Fortaleza de la Contraseña
-        </label>
-
-        <div class="progress">
-
-            <div
-                id="passwordStrength"
-                class="progress-bar"
-                role="progressbar"
-                style="width: 0%">
             </div>
-
         </div>
-
-        <small
-            id="passwordStrengthText"
-            class="text-muted">
-
-            Ingrese una contraseña
-
-        </small>
-
-    </div>
-
-    <!-- Requisitos -->
-    
-
-            <h6 class="fw-bold text-primary">
-
-                <i class="fas fa-shield-alt me-2"></i>
-                Requisitos de Seguridad
-
-            </h6>
-
-            <ul class="list-unstyled mb-0">
-
-                <li id="reqLength">
-                    <i class="fas fa-times text-danger me-2"></i>
-                    Mínimo 8 caracteres
-                </li>
-
-                <li id="reqUpper">
-                    <i class="fas fa-times text-danger me-2"></i>
-                    Al menos una letra mayúscula
-                </li>
-
-                <li id="reqNumber">
-                    <i class="fas fa-times text-danger me-2"></i>
-                    Al menos un número
-                </li>
-
-                <li id="reqSpecial">
-                    <i class="fas fa-times text-danger me-2"></i>
-                    Al menos un carácter especial
-                </li>
-
-            </ul>
-
-       
-
-    <!-- Botones -->
-    <div class="text-end">
-
-        <button
-            type="reset"
-            class="btn btn-outline-secondary rounded-pill px-4 me-2">
-
-            <i class="fas fa-times me-2"></i>
-            Cancelar
-
-        </button>
-
-        <button
-            type="button"
-            class="btn btn-primary btn-lg rounded-pill px-5"
-            @click="actualizarPassword">
-
-            <i class="fas fa-save me-2"></i>
-            Actualizar Contraseña
-
-        </button>
-    </div>  
-            
-        </div>
-    </div>
     </div>
 </template>
 
-
 <script>
-import axios from 'axios'
-
+import ApiService from '../../services/ApiService.js'
 
 export default {
-
     data() {
         return {
             passwordActual: '',
             nuevaPassword: '',
             confirmarPassword: '',
-            
-            
+            cargando: false
         }
     },
 
     methods: {
-            //fUNCION PARA ACTUALIZAR LA CONTRASEÑA
+        // FUNCIÓN PARA ACTUALIZAR LA CONTRASEÑA
         async actualizarPassword() {
+            if (!this.passwordActual || !this.nuevaPassword || !this.confirmarPassword) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos incompletos',
+                    text: 'Por favor, llena todos los campos para continuar.',
+                    confirmButtonText: 'Entendido'
+                })
+                return
+            }
+
+            if (this.nuevaPassword !== this.confirmarPassword) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Contraseñas no coinciden',
+                    text: 'La nueva contraseña y su confirmación deben ser iguales.',
+                    confirmButtonText: 'Revisar'
+                })
+                return
+            }
+
+            this.cargando = true
 
             try {
-                
-                console.log({
+                const response = await ApiService.post('/cambiar-password', {
                     current_password: this.passwordActual,
                     password: this.nuevaPassword,
                     password_confirmation: this.confirmarPassword
-                });
+                })
 
-                const response = await axios.post(
-                    '/cambiar-password',
-                    {
-                        current_password: this.passwordActual,
-                        password: this.nuevaPassword,
-                        password_confirmation: this.confirmarPassword
-                    }
-                )
+                // VENTANA EMERGENTE DE ÉXITO
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Contraseña actualizada',
+                    text: response.data?.message || 'Tu contraseña ha sido cambiada correctamente.',
+                    timer: 2500,
+                    showConfirmButton: false
+                })
 
-                alert(response.data.message)
-
-                this.passwordActual = ''
-                this.nuevaPassword = ''
-                this.confirmarPassword = ''
+                this.limpiarFormulario()
 
             } catch (error) {
-
-                alert(
-                    error.response?.data?.message ||
-                    'Ocurrió un error al actualizar la contraseña'
-                )
+                console.error(error)
+                
+                // VENTANA EMERGENTE DE ERROR
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al actualizar',
+                    text: error.response?.data?.message || 'Ocurrió un error al intentar cambiar la contraseña.',
+                    confirmButtonText: 'Aceptar'
+                })
+            } finally {
+                this.cargando = false
             }
         },
-        //FUNCION VER CONTRASEÑA
+
+        limpiarFormulario() {
+            this.passwordActual = ''
+            this.nuevaPassword = ''
+            this.confirmarPassword = ''
+            this.evaluarPassword()
+        },
+
+        // FUNCIÓN VER CONTRASEÑA
         togglePassword(inputId, button) {
-
-            const input = document.getElementById(inputId);
-
-            const icon = button.querySelector('i');
+            const input = document.getElementById(inputId)
+            const icon = button.querySelector('i')
 
             if (input.type === 'password') {
-
-                input.type = 'text';
-
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-
+                input.type = 'text'
+                icon.classList.remove('fa-eye')
+                icon.classList.add('fa-eye-slash')
             } else {
-
-                input.type = 'password';
-
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-
+                input.type = 'password'
+                icon.classList.remove('fa-eye-slash')
+                icon.classList.add('fa-eye')
             }
         },
-        //funcion de requisitos
-        actualizarRequisito(id, cumple) {
 
-            const elemento = document.getElementById(id);
+        // FUNCIÓN DE REQUISITOS
+        actualizarRequisito(id, cumple) {
+            const elemento = document.getElementById(id)
+            if (!elemento) return
 
             if (cumple) {
-
-                elemento.innerHTML =
-                    elemento.innerHTML.replace(
-                        'fa-times text-danger',
-                        'fa-check text-success'
-                    );
-
+                elemento.innerHTML = elemento.innerHTML.replace('fa-times text-danger', 'fa-check text-success')
             } else {
-
-                elemento.innerHTML =
-                    elemento.innerHTML.replace(
-                        'fa-check text-success',
-                        'fa-times text-danger'
-                    );
-
+                elemento.innerHTML = elemento.innerHTML.replace('fa-check text-success', 'fa-times text-danger')
             }
         },
-        //FUNCION PARA VERIFICAR QUE CUMPLA CON LOS REQUISITOS 
+
+        // FUNCIÓN PARA VERIFICAR QUE CUMPLA CON LOS REQUISITOS 
         evaluarPassword() {
+            const password = this.nuevaPassword
+            let score = 0
 
-            const password = this.nuevaPassword;
+            const tieneLongitud = password.length >= 8
+            const tieneMayuscula = /[A-Z]/.test(password)
+            const tieneNumero = /\d/.test(password)
+            const tieneEspecial = /[!@#$%^&*(),.?":{}|<>]/.test(password)
 
-            let score = 0;
+            this.actualizarRequisito('reqLength', tieneLongitud)
+            this.actualizarRequisito('reqUpper', tieneMayuscula)
+            this.actualizarRequisito('reqNumber', tieneNumero)
+            this.actualizarRequisito('reqSpecial', tieneEspecial)
 
-            const tieneLongitud = password.length >= 8;
-            const tieneMayuscula = /[A-Z]/.test(password);
-            const tieneNumero = /\d/.test(password);
-            const tieneEspecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            if (tieneLongitud) score++
+            if (tieneMayuscula) score++
+            if (tieneNumero) score++
+            if (tieneEspecial) score++
 
-            this.actualizarRequisito('reqLength', tieneLongitud);
-            this.actualizarRequisito('reqUpper', tieneMayuscula);
-            this.actualizarRequisito('reqNumber', tieneNumero);
-            this.actualizarRequisito('reqSpecial', tieneEspecial);
+            const barra = document.getElementById('passwordStrength')
+            const texto = document.getElementById('passwordStrengthText')
 
-            if (tieneLongitud) score++;
-            if (tieneMayuscula) score++;
-            if (tieneNumero) score++;
-            if (tieneEspecial) score++;
-
-            const barra =
-                document.getElementById('passwordStrength');
-
-            const texto =
-                document.getElementById('passwordStrengthText');
+            if (!barra || !texto) return
 
             switch(score) {
-
                 case 1:
-                    barra.style.width = '25%';
-                    barra.className = 'progress-bar bg-danger';
-                    texto.textContent = 'Contraseña débil';
-                    break;
-
+                    barra.style.width = '25%'
+                    barra.className = 'progress-bar bg-danger'
+                    texto.textContent = 'Contraseña débil'
+                    break
                 case 2:
-                    barra.style.width = '50%';
-                    barra.className = 'progress-bar bg-warning';
-                    texto.textContent = 'Contraseña regular';
-                    break;
-
+                    barra.style.width = '50%'
+                    barra.className = 'progress-bar bg-warning'
+                    texto.textContent = 'Contraseña regular'
+                    break
                 case 3:
-                    barra.style.width = '75%';
-                    barra.className = 'progress-bar bg-info';
-                    texto.textContent = 'Contraseña buena';
-                    break;
-
+                    barra.style.width = '75%'
+                    barra.className = 'progress-bar bg-info'
+                    texto.textContent = 'Contraseña buena'
+                    break
                 case 4:
-                    barra.style.width = '100%';
-                    barra.className = 'progress-bar bg-success';
-                    texto.textContent = 'Contraseña muy segura';
-                    break;
-
+                    barra.style.width = '100%'
+                    barra.className = 'progress-bar bg-success'
+                    texto.textContent = 'Contraseña muy segura'
+                    break
                 default:
-                    barra.style.width = '0%';
-                    barra.className = 'progress-bar';
-                    texto.textContent = 'Ingrese una contraseña';
+                    barra.style.width = '0%'
+                    barra.className = 'progress-bar'
+                    texto.textContent = 'Ingrese una contraseña'
             }
         }
     }

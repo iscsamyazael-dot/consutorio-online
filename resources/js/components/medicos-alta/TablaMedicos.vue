@@ -21,38 +21,30 @@
 
         </div>
 
+        <!-- Tarjeta Activos -->
         <div class="col-md-4">
-
-            <div class="small-box bg-success">
-
+            <div class="small-box bg-success" @click="filtrarPorEstado('activo')" style="cursor: pointer;">
                 <div class="inner">
                     <h3>{{ cards.activos }}</h3>
                     <p>Activos</p>
                 </div>
-
                 <div class="icon">
                     <i class="fas fa-check-circle"></i>
                 </div>
-
             </div>
-
         </div>
 
+        <!-- Tarjeta Inactivos -->
         <div class="col-md-4">
-
-            <div class="small-box bg-warning">
-
+            <div class="small-box bg-warning" @click="filtrarPorEstado('inactivo')" style="cursor: pointer;">
                 <div class="inner">
                     <h3>{{ cards.inactivos }}</h3>
                     <p>Inactivos</p>
                 </div>
-
                 <div class="icon">
                     <i class="fas fa-user-clock"></i>
                 </div>
-
             </div>
-
         </div>
 
     </div>
@@ -445,7 +437,7 @@ export default {
             diasSeleccionados: [], 
         
        
-    
+            filtroEstado: 'activo', // 'activo' o 'inactivo'
             buscar: '',    // Vinculado al input de texto
             medicos: [],
             especialidades: [],
@@ -474,13 +466,18 @@ export default {
     computed: {
         // Esta función filtra localmente los médicos de la tabla en tiempo real
         medicosFiltrados() {
-            // Si el input está vacío, muestra la lista completa de la tabla
-            if (!this.buscar.trim()) {
-                return this.medicos;
-            }
-            const query = this.buscar.toLowerCase();
-            // Filtra sobre el array de la memoria local
             return this.medicos.filter(medico => {
+                // 1. Validar Filtro de Estado (Activo vs Inactivo)
+                // Asumiendo que medico.activo viene como 1 (Activo) y 0 (Inactivo) o booleano
+                const esActivo = medico.activo == 1 || medico.activo === true;
+                
+                if (this.filtroEstado === 'activo' && !esActivo) return false;
+                if (this.filtroEstado === 'inactivo' && esActivo) return false;
+
+                // 2. Validar Búsqueda por Texto
+                if (!this.buscar.trim()) return true;
+
+                const query = this.buscar.toLowerCase();
                 return medico.nombre && medico.nombre.toLowerCase().includes(query);
             });
         }
@@ -499,8 +496,19 @@ export default {
     },
 
     methods: {
+
+        filtrarPorEstado(estado) {
+            if (estado === 'inactivo') {
+                // Si le vuelve a dar clic a inactivo estando ya en inactivo, regresa a activo
+                this.filtroEstado = this.filtroEstado === 'inactivo' ? 'activo' : 'inactivo';
+            } else {
+                // Si da clic a Activos
+                this.filtroEstado = 'activo';
+            }
+        },
+
         // Trae los datos desde la BD al modal de Editar usando la KEY (id)
-       async editarMedico(id) {
+        async editarMedico(id) {
             try {
                 const response = await ApiService.get(`/medicos/${id}`)
                 const medico = response.data
@@ -668,14 +676,7 @@ export default {
             }
         },
 
-
        
-    
-
-
-
-
-
 
     }
 

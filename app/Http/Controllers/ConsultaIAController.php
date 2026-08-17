@@ -78,7 +78,13 @@ class ConsultaIAController extends Controller
                     // para que quede registrado quién abrió la consulta.
                     'user_id' => auth()->id(),
                     'motivo_consulta' => 'Consulta Inteligente',
-                    'estado' => 'en_proceso',
+                    // NOTA: 'estado' y 'estado_consulta' son columnas
+                    // DISTINTAS en la tabla consultas. El flujo real del
+                    // sistema (Home.vue, finalizarConsulta, etc.) usa
+                    // estado_consulta, con default 'en_proceso'. Se deja
+                    // explícito aquí para que no dependa del default de
+                    // la BD y quede claro cuál es la columna que importa.
+                    'estado_consulta' => 'en_proceso',
                     'consulta_inteligente' => 1,
                     'session_uuid' => Str::uuid()
                 ]);
@@ -101,7 +107,13 @@ class ConsultaIAController extends Controller
             // Una vez que el médico presiona "Finalizar" (finalizarConsulta()),
             // el diagnóstico de esta consulta queda cerrado. No se aceptan
             // más transcripciones para que no se siga modificando.
-            if ($consulta->estado === 'finalizada') {
+            //
+            // FIX: antes se comparaba contra la columna 'estado' (default
+            // 'pendiente', que nunca se actualiza en ningún flujo real).
+            // La columna que realmente se marca como 'finalizada' es
+            // 'estado_consulta' (ver finalizarConsulta() más abajo), así
+            // que el bloqueo debe leer esa misma columna.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => false,
                     'error'   => 'Esta consulta ya fue finalizada. Inicia una nueva consulta para continuar.'
@@ -189,6 +201,13 @@ class ConsultaIAController extends Controller
      * - El diagnóstico/evaluación IA de esta consulta queda tal cual quedó,
      *   sin más actualizaciones.
      *
+     * IMPORTANTE: esto actualiza ÚNICAMENTE la columna estado_consulta
+     * de la tabla `consultas`. NO se toca la tabla `triage` (columna
+     * `estado`, con valores 'leve'/'grave'): ese campo es el nivel de
+     * severidad con el que llegó el paciente y debe conservarse como
+     * parte del historial clínico, sin importar que la consulta ya
+     * haya sido cerrada.
+     *
      * No borra ni modifica nada de lo ya guardado; solo cierra la puerta a
      * seguir enviando mensajes.
      */
@@ -200,19 +219,24 @@ class ConsultaIAController extends Controller
                 return response()->json(['success' => false, 'error' => 'Consulta no encontrada'], 404);
             }
 
-            if ($consulta->estado === 'finalizada') {
+            // FIX: antes se leía/escribía la columna 'estado' (default
+            // 'pendiente', sin uso real en el sistema). La columna que
+            // consulta el resto de la app (y la que se ve en phpMyAdmin
+            // con los valores 'en_proceso'/'finalizada') es
+            // 'estado_consulta'.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => true,
                     'ya_estaba_finalizada' => true,
-                    'estado' => $consulta->estado,
+                    'estado_consulta' => $consulta->estado_consulta,
                 ]);
             }
 
-            $consulta->update(['estado' => 'finalizada']);
+            $consulta->update(['estado_consulta' => 'finalizada']);
 
             return response()->json([
                 'success' => true,
-                'estado' => $consulta->estado,
+                'estado_consulta' => $consulta->estado_consulta,
             ]);
 
         } catch (\Exception $e) {
@@ -248,6 +272,19 @@ class ConsultaIAController extends Controller
      * mismo consecutivo con el que se arma el folio de la consulta
      * (CONS-AAAA-NNNN), para que el nombre del archivo sea legible y
      * fácil de relacionar con la consulta a simple vista.
+     *
+     * FIX (rendimiento): antes esta función llamaba a
+     * IAClinicaService::analizarTranscripcion() DOS VECES para archivos
+     * de imagen: una vez dentro del bloque de Gemini Vision (cuyo
+     * resultado se descartaba por completo, solo se usaba para obtener
+     * $textoExtraido) y otra vez más abajo, en el "mismo pipeline de
+     * análisis que ya usas con texto hablado". Cada llamada a
+     * analizarTranscripcion() dispara internamente una llamada pesada a
+     * DeepSeek (~60-90s), así que el archivo se analizaba dos veces sin
+     * necesidad, duplicando el tiempo total de espera del usuario
+     * (~3 minutos). Ahora solo hay UNA llamada a analizarTranscripcion(),
+     * hecha después de resolver el texto final (ya sea de Gemini Vision
+     * o de extracción directa) y de guardar la transcripción.
      */
     public function subirArchivo(Request $request)
     {
@@ -264,7 +301,10 @@ class ConsultaIAController extends Controller
 
             // Mismo bloqueo que en store(): si la consulta ya fue
             // finalizada, no se procesan más archivos/análisis.
-            if ($consulta->estado === 'finalizada') {
+            //
+            // FIX: misma corrección de columna que en store() y
+            // finalizarConsulta() — se lee estado_consulta, no estado.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => false,
                     'error'   => 'Esta consulta ya fue finalizada. Inicia una nueva consulta para continuar.'
@@ -308,6 +348,31 @@ class ConsultaIAController extends Controller
                 ], 422);
             }
 
+            // --- AQUÍ DECIDIMOS EL CAMINO SEGÚN EL TIPO DE ARCHIVO ---
+            // (Solo resolvemos el texto final. El análisis con IA se hace
+            // UNA SOLA VEZ, más abajo, ya con la transcripción guardada.)
+            if (trim($textoExtraido) === '[DOCUMENTO_ESCANEADO_O_IMAGEN]') {
+                // Llamamos a Gemini para que lea la imagen usando la clave de API que generaste
+                $textoVisionGemini = $this->iaClinicaService->analizarArchivoConVisionGemini(
+                    $rutaCompleta, 
+                    $mime, 
+                    "Analiza esta imagen o estudio médico adjunto para la nota clínica."
+                );
+
+                if (empty($textoVisionGemini)) {
+                    return response()->json([
+                        'success' => false,
+                        'error'   => 'No se pudo analizar la imagen con IA. Intenta nuevamente con otra imagen o mejor calidad.'
+                    ], 422);
+                }
+
+                // Este es el texto final: lo que se guarda en la transcripción
+                // y lo que se manda al pipeline de análisis (más abajo).
+                $textoExtraido = "[Documento visual analizado por Gemini]\n" . $textoVisionGemini;
+            }
+            // Si NO es imagen (PDF con texto normal o Word), $textoExtraido ya
+            // viene listo desde extraerTextoDeArchivo() y no se toca aquí.
+
             // Guardamos como una transcripción más, dejando rastro de que vino de un archivo
             $transcripcion = ConsultaTranscripcion::create([
                 'consulta_id'    => $consulta->id,
@@ -316,7 +381,9 @@ class ConsultaIAController extends Controller
                 'tipo_usuario'   => 'paciente',
             ]);
 
-            // Mismo contexto de continuidad que en store()
+            // Contexto de continuidad: mensajes anteriores de ESTA misma
+            // consulta (ya guardados y analizados) y la última nota PSOAPP
+            // registrada.
             $historial = ConsultaTranscripcion::where('consulta_id', $consulta->id)
                 ->where('id', '!=', $transcripcion->id)
                 ->where('analizado_ia', 1)
@@ -328,7 +395,9 @@ class ConsultaIAController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            // Mismo pipeline de análisis que ya usas con texto hablado
+            // ÚNICA llamada al pipeline de análisis IA (antes se llamaba
+            // dos veces: una dentro del bloque de imagen, cuyo resultado se
+            // descartaba, y otra aquí).
             $iaData = $this->iaClinicaService->analizarTranscripcion(
                 $textoExtraido,
                 $consulta,
@@ -760,6 +829,30 @@ class ConsultaIAController extends Controller
         // columna.
         $medico = \App\Models\User::find($consulta->user_id);
 
+        // -----------------------------------------------------------
+        // UBICACIÓN / SUCURSAL / LOGO DEL MÉDICO (dinámico, ya no fijo)
+        // -----------------------------------------------------------
+        // consultas.user_id -> users.id -> medicos.user_id ->
+        // configuracion_medico_sucursal -> ubicaciones
+        //
+        // $medico (arriba) es el modelo User que atendió la consulta.
+        // Para llegar a su sucursal/logo hay que ubicar su fila
+        // correspondiente en el catálogo "medicos" y de ahí su(s)
+        // configuración(es) de sucursal.
+        $ubicacion = null;
+
+        if ($medico) {
+            $medicoCatalogo = \App\Models\Medico::with('configuraciones.ubicacion')
+                ->where('user_id', $medico->id)
+                ->first();
+
+            // Si un médico llegara a tener varias sucursales configuradas,
+            // por ahora se toma la primera. Avisar si se necesita elegir
+            // la sucursal exacta de esa consulta en vez de la primera.
+            $ubicacion = optional(optional($medicoCatalogo)->configuraciones)->first()?->ubicacion
+                ?? null;
+        }
+
         // Signos vitales: viven en la tabla triage, ligada por
         // paciente_id. Tomamos el triage MÁS RECIENTE de ese
         // paciente, sin filtrar por fecha contra la consulta,
@@ -772,13 +865,42 @@ class ConsultaIAController extends Controller
         $vista = $tipo === 'receta' ? 'pdf.receta' : 'pdf.diagnostico';
 
         // dompdf necesita la ruta ABSOLUTA de disco de la imagen, no una
-        // URL como '/vendor/adminlte/...': al generar el PDF en el
-        // servidor no hay navegador ni sesión que resuelva esa ruta.
-        // Si el archivo no existe, mandamos null y la vista dibuja un
-        // placeholder (mismo comportamiento que el fallback que tenías
-        // en jsPDF con el "LOGO ERROR").
-        $logoPath = public_path('images/logo.png');
-        $logoPath = file_exists($logoPath) ? $logoPath : null;
+        // URL: al generar el PDF en el servidor no hay navegador ni
+        // sesión que resuelva esa ruta.
+        //
+        // 1) Se intenta primero el logo propio de la ubicación del
+        //    médico (ubicaciones.imagen), que es el dinámico.
+        // 2) Si no existe, se cae al logo genérico de siempre
+        //    (public/images/logo.png), igual que antes.
+        //
+        // AJUSTAR: si ubicaciones.imagen NO se guarda bajo
+        // storage/app/public (disco 'public' con symlink), cambiar
+        // la línea de $rutaCandidata por la ubicación física real.
+        $logoPath = null;
+
+        if ($ubicacion && !empty($ubicacion->imagen)) {
+            // Las imágenes de logo NO usan el disco 'storage' de Laravel;
+            // viven directo en public/personalisarperfil/ (igual que
+            // archivos_clinicos vive en public/archivos_clinicos).
+            //
+            // ubicaciones.imagen puede venir guardado de dos formas según
+            // cómo se subió el archivo:
+            //   a) solo el nombre:              logo-consultorio-dr-basto-2026.jfif
+            //   b) con la carpeta incluida:      personalisarperfil/logo-....jfif
+            // Se soportan ambos casos sin duplicar la carpeta.
+            $valorImagen = ltrim($ubicacion->imagen, '/');
+
+            $rutaCandidata = str_starts_with($valorImagen, 'personalisarperfil/')
+                ? public_path($valorImagen)
+                : public_path('personalisarperfil/' . $valorImagen);
+
+            $logoPath = file_exists($rutaCandidata) ? $rutaCandidata : null;
+        }
+
+        if (!$logoPath) {
+            $logoGenerico = public_path('images/logo.png');
+            $logoPath = file_exists($logoGenerico) ? $logoGenerico : null;
+        }
 
         $pdf = Pdf::loadView($vista, [
             'consulta'   => $consulta,
@@ -786,6 +908,7 @@ class ConsultaIAController extends Controller
             'evaluacion' => $evaluacion,
             'receta'     => $receta,
             'medico'     => $medico,
+            'ubicacion'  => $ubicacion,
             'triage'     => $triage,
             'logoPath'   => $logoPath,
         ]);
@@ -885,14 +1008,18 @@ class ConsultaIAController extends Controller
             //    signos de alarma), no buscamos medicamentos.
             if (($respuestaIA['tipo'] ?? null) === 'derivacion') {
                 return response()->json([
-                    'success'                  => true,
-                    'tipo'                     => 'derivacion',
-                    'triage'                   => $respuestaIA['triage'] ?? null,
-                    'diagnosticos_probables'   => $respuestaIA['diagnosticos_probables'] ?? [],
-                    'especialidad_sugerida_ia' => $respuestaIA['especialidad'] ?? null,
-                    'motivo_derivacion'        => $respuestaIA['motivo_derivacion'] ?? null,
-                    'requiere_urgencias'       => $respuestaIA['requiere_urgencias'] ?? false,
-                    'justificacion'            => $respuestaIA['justificacion'] ?? null,
+                    'success'                          => true,
+                    'tipo'                             => 'derivacion',
+                    'triage'                           => $respuestaIA['triage'] ?? null,
+                    'diagnosticos_probables'           => $respuestaIA['diagnosticos_probables'] ?? [],
+                    'especialidad_sugerida_ia'         => $respuestaIA['especialidad'] ?? null,
+                    'motivo_derivacion'                => $respuestaIA['motivo_derivacion'] ?? null,
+                    'requiere_urgencias'               => $respuestaIA['requiere_urgencias'] ?? false,
+                    'justificacion'                    => $respuestaIA['justificacion'] ?? null,
+                    // NUEVO: transparencia cuando la especialidad ideal no
+                    // está en el catálogo de este consultorio.
+                    'especialidad_fuera_catalogo'      => $respuestaIA['especialidad_fuera_catalogo'] ?? false,
+                    'especialidad_ideal_no_disponible' => $respuestaIA['especialidad_ideal_no_disponible'] ?? null,
                 ]);
             }
 
@@ -977,6 +1104,16 @@ class ConsultaIAController extends Controller
      * institucionales (no listas de síntomas), por lo que el respaldo
      * usa un mapa de palabras clave en vez de un LIKE directo contra
      * la columna descripcion.
+     *
+     * NOTA (transparencia de especialidad ideal): cuando la IA detecta
+     * que la especialidad clínicamente ideal para el caso no existe en
+     * el catálogo activo, lo señala mediante 'especialidad_fuera_catalogo'
+     * (true/false) y 'especialidad_ideal_no_disponible' (el nombre de esa
+     * especialidad ideal, ej. "Neumología"), mientras que 'especialidad'
+     * sigue trayendo la mejor alternativa disponible (ej. "Medicina
+     * general"). Estos dos campos solo vienen poblados cuando la fuente
+     * es 'ia_triage'; el mapa de respaldo no tiene esa información, así
+     * que en 'mapa_respaldo' quedan en false/null.
      */
     public function derivacionInteligente(Request $request)
     {
@@ -1007,11 +1144,21 @@ class ConsultaIAController extends Controller
             $especialidad = null;
             $fuente = null;
 
+            // NUEVO: bandera + nombre de la especialidad ideal cuando no
+            // está en el catálogo. Solo se poblarán si la fuente termina
+            // siendo 'ia_triage'.
+            $especialidadFueraCatalogo = false;
+            $especialidadIdealNoDisponible = null;
+
             if ($respuestaIA && ($respuestaIA['tipo'] ?? null) === 'derivacion') {
                 $triage = $respuestaIA['triage'] ?? null;
                 $diagnosticosProbables = $respuestaIA['diagnosticos_probables'] ?? [];
                 $motivoDerivacionIA = $respuestaIA['motivo_derivacion'] ?? null;
                 $requiereUrgencias = $respuestaIA['requiere_urgencias'] ?? false;
+
+                // NUEVO: tomamos directo de la respuesta de la IA
+                $especialidadFueraCatalogo = $respuestaIA['especialidad_fuera_catalogo'] ?? false;
+                $especialidadIdealNoDisponible = $respuestaIA['especialidad_ideal_no_disponible'] ?? null;
 
                 $nombreSugeridoIA = trim((string) ($respuestaIA['especialidad'] ?? ''));
 
@@ -1036,17 +1183,27 @@ class ConsultaIAController extends Controller
             if (!$especialidad) {
                 $especialidad = $this->buscarEspecialidadPorMapaDeRespaldo($sintomas);
                 $fuente = 'mapa_respaldo';
+
+                // NUEVO: si terminamos usando el mapa de respaldo, no hay
+                // forma de saber si la especialidad ideal existía o no en
+                // el catálogo, así que se resetean para no mostrar un
+                // aviso inventado en el frontend.
+                $especialidadFueraCatalogo = false;
+                $especialidadIdealNoDisponible = null;
             }
 
             return response()->json([
-                'success'                => true,
-                'especialidad_sugerida'  => $especialidad,
-                'especialidades'         => $todasLasEspecialidades,
-                'fuente'                 => $fuente,
-                'triage'                 => $triage,
-                'diagnosticos_probables' => $diagnosticosProbables,
-                'motivo_derivacion_ia'   => $motivoDerivacionIA,
-                'requiere_urgencias'     => $requiereUrgencias,
+                'success'                          => true,
+                'especialidad_sugerida'            => $especialidad,
+                'especialidades'                   => $todasLasEspecialidades,
+                'fuente'                           => $fuente,
+                'triage'                           => $triage,
+                'diagnosticos_probables'           => $diagnosticosProbables,
+                'motivo_derivacion_ia'             => $motivoDerivacionIA,
+                'requiere_urgencias'               => $requiereUrgencias,
+                // NUEVO
+                'especialidad_fuera_catalogo'      => $especialidadFueraCatalogo,
+                'especialidad_ideal_no_disponible' => $especialidadIdealNoDisponible,
             ]);
 
         } catch (\Exception $e) {
@@ -1139,6 +1296,19 @@ class ConsultaIAController extends Controller
                 ->first();
     }
 
+    /**
+     * Historial clínico completo de un paciente (todas sus consultas +
+     * transcripciones), usado por ExpedienteTabs.vue -> obtenerConsultas().
+     *
+     * FIX: el select() de $consultas traía la columna 'estado' (sin uso
+     * real en el sistema, nunca se actualiza) en vez de 'estado_consulta'
+     * (la columna que finalizarConsulta() sí marca como 'finalizada' al
+     * presionar el botón "Finalizar" en ConsultaTiempoReal.vue). Sin
+     * 'estado_consulta' en la respuesta, el frontend no tenía forma de
+     * saber si una consulta ya había sido cerrada, y mostraba siempre
+     * "En proceso" para la primera consulta del historial sin importar
+     * su estado real.
+     */
     public function historialClinico(Request $request)
     {
         try {
@@ -1160,7 +1330,7 @@ class ConsultaIAController extends Controller
                         ]);
                 }])
                 ->orderBy('created_at', 'desc')
-                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado', 'created_at']);
+                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado_consulta', 'created_at']);
 
             $evaluaciones = EvaluacionIA::whereIn('consulta_id', $consultas->pluck('id'))
                 ->orderBy('created_at', 'desc')
@@ -1193,4 +1363,5 @@ class ConsultaIAController extends Controller
             ], 500);
         }
     }
+    
 }

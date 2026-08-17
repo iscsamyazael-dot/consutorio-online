@@ -4,6 +4,9 @@ import 'bootstrap';
 import 'admin-lte';
 
 import { createApp } from 'vue';
+import { createPinia } from 'pinia'; // 👈 NUEVO
+import NotificationBell from './components/NotificationBell.vue'; // 👈 NUEVO
+
 // Componentes - Medicamentos
 import medicamentos from './components/Medicamentos/PanelMedicamento.vue'
 // Componentes - Consulta Inteligente
@@ -45,11 +48,14 @@ import PanelTabla from './components/configuracion-sistema/PanelTabla.vue'
 //Modulo de registro de usuario 
 import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
 import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
-
+import DashboardHome from './components/Dashboard/Home.vue'
+import historialcosnulta from './components/Historialconsulta/historialcosnulta.vue';
 // ------------------------------------------------------
 // Instancia única de la app
 // ------------------------------------------------------
 const app = createApp({});
+
+app.use(createPinia()); // 👈 NUEVO
 
 app.component('Especialidades', Especialidades);
 app.component('Ubicacionesmaster', Ubicacionesmaster);
@@ -78,10 +84,29 @@ app.component('configuracion-sistema', ConfiSistema);
 app.component('configuracion-sistema-panelcontrasena', PanelContraseña);
 app.component('registro-usuario', RegistrarUsuario);
 app.component('panel-tabla', PanelTabla);
-    
-
+app.component('dashboard-home', DashboardHome);
+app.component('historial-consulta', historialcosnulta);
 // 3. MONTAJE DE LA APP
 app.mount('#app');
+
+// ------------------------------------------------------
+// 👈 NUEVO: Campanita de notificaciones (vive en la barra de
+// navegación, fuera del #app de cada página, así que se monta aparte)
+// ------------------------------------------------------
+const pinia = createPinia();
+
+function mountBell(selector) {
+    const el = document.querySelector(selector);
+    if (!el) return; // el contenedor no existe en esta página/breakpoint, se omite
+    const bellApp = createApp(NotificationBell);
+    bellApp.use(pinia);
+    bellApp.mount(el);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    mountBell('#notification-bell-app');
+    mountBell('#notification-bell-app-mobile');
+});
 
 // ------------------------------------------------------
 // Otros complementos
