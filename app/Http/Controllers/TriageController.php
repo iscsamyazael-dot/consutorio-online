@@ -164,7 +164,7 @@ class TriageController extends Controller
             'id'              => $paciente->id,
             'nombre'          => trim($paciente->nombre . ' ' . ($paciente->apellido ?? '')),
             'estado_consulta' => $consulta->estado_consulta ?? null,
-            'triages' => $p->triages->map(function ($t) {
+            'triages' => $paciente->triages->map(function ($t) {
                 return [
                     'id'          => $t->id,
                     // Si no hay síntomas ni motivo, asignamos un texto descriptivo por defecto
