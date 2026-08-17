@@ -16,6 +16,7 @@ use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DerivacionController; 
 use App\Http\Controllers\UserRegisterController;
+use App\Http\Controllers\ListaEsperaController;
 use App\Models\Paciente;
 use App\Http\Controllers\CitaController;//agenda        
 use App\Http\Controllers\UbicacionController;//agenda 
@@ -159,6 +160,16 @@ Route::middleware('auth')->group(function () {
         Route::patch('ActualizarEstadoConsulta/{id}', [ConsultaController::class, 'actualizarEstado']);
 
         Route::patch('/api/consultas/{id}/estado', [ConsultaController::class, 'actualizarEstado'])->name('consultas.estado.api');// Historial: cambiar estado de consulta tradicional
+        
+        // Dentro del grupo protegido por auth (mismo patrón que ya usas para 'citas')
+        Route::resource('lista-espera', ListaEsperaController::class)
+             ->parameters(['lista-espera' => 'listaEspera']);
+            
+        Route::patch('lista-espera/{listaEspera}/estado', [ListaEsperaController::class, 'actualizarEstado'])
+            ->name('lista-espera.estado');
+
+        
+        
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
         // GET /api/citas apuntando a controladores distintos
@@ -296,5 +307,9 @@ Route::prefix('api/ionic')
         Route::post('actualizarCita/{id}/estado', [CitaController::class, 'actualizarEstadoCita']);
         Route::put('ActualizarContrasenia', [AuthController::class, 'updatePassword']);
     });
+
+// Fuera del grupo protegido (pantalla pública en sala de espera)
+Route::get('lista-espera-pantalla', [ListaEsperaController::class, 'pantalla'])
+    ->name('lista-espera.pantalla');
 
 require __DIR__.'/auth.php';
