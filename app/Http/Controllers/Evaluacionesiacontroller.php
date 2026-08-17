@@ -8,7 +8,7 @@ use App\Models\Medico;
 use Illuminate\Http\Request;
 use Illuminate\Support\Js;
 
-class EvaluacionesIAController extends Controller
+class EvaluacionesiaController extends Controller
 {
     /**
      * Carga la vista principal de Blade con catálogos
