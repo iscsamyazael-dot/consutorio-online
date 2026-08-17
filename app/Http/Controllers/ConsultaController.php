@@ -130,4 +130,41 @@ class ConsultaController extends Controller
             'message' => 'Consulta eliminada correctamente'
         ]);
     }
+    
+
+    public function actualizarEstadoConsulta(Request $request, string $pacienteId)
+    {
+        $request->validate([
+            'estado_consulta' => 'required|in:en_proceso,excedido,finalizada',
+        ]);
+
+        $paciente = Paciente::findOrFail($pacienteId);
+
+        $consulta = Consulta::where('paciente_id', $paciente->id)
+            ->latest()
+            ->first();
+
+        if (!$consulta) {
+            // Si aún no existe consulta (paciente solo tiene triage), la creamos
+            $consulta = Consulta::create([
+                'folio'           => 'CONS-' . time(),
+                'paciente_id'     => $paciente->id,
+                'user_id'         => Auth::id(),
+                'estado'          => 'activa',
+                'estado_consulta' => $request->estado_consulta,
+            ]);
+        } else {
+            $consulta->update([
+                'estado_consulta' => $request->estado_consulta,
+            ]);
+        }
+
+        return response()->json([
+            'success'          => true,
+            'message'          => 'Estado de consulta actualizado correctamente',
+            'estado_consulta'  => $consulta->estado_consulta,
+        ]);
+    }
+
+
 }

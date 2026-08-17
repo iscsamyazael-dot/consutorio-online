@@ -7,11 +7,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Triage;
 use App\Models\Paciente;
 use App\Models\AlertaClinica;       // Asegúrate de tener o crear este modelo
 use App\Models\RecomendacionIA;     // Asegúrate de tener o crear este modelo
+use App\Models\Consulta;
 use App\Services\IAClinicaService; // Importamos tu servicio estrella
 
 class TriageController extends Controller
@@ -134,6 +136,30 @@ class TriageController extends Controller
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Triage guardado y clasificado mediante IA con éxito',
+            'id'      => $id,
+            'estado'  => $estadoDeterminado
+        ], 201);
+
+        // 5. Aseguramos que exista una consulta "en_proceso" para que el contador
+        //    arranque desde ya y el paciente aparezca en la tabla
+        $consultaEnCurso = Consulta::where('paciente_id', $request->paciente_id)
+            ->whereIn('estado_consulta', ['en_proceso', 'excedido'])
+            ->latest()
+            ->first();
+
+        if (!$consultaEnCurso) {
+            Consulta::create([
+                'folio'           => 'CONS-' . time(),
+                'paciente_id'     => $request->paciente_id,
+                'user_id'         => Auth::id(),
+                'estado'          => 'activa',
+                'estado_consulta' => 'en_proceso',
+            ]);
+        }
 
         return response()->json([
             'success' => true,

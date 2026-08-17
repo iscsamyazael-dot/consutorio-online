@@ -247,12 +247,22 @@
                                         — Sin evaluar
                                     </span>
 
-                                    <span v-else :class="obtenerEspera(paciente.triages?.[0]?.estado, paciente.triages?.[0]?.created_at, paciente.estado_consulta).claseCss">
-                                        {{ obtenerEspera(paciente.triages?.[0]?.estado, paciente.triages?.[0]?.created_at, paciente.estado_consulta).texto }}
-                                    </span>
+                                    <div v-else class="d-flex flex-column align-items-start gap-1">
+                                        <span :class="obtenerEspera(paciente.triages?.[0]?.estado, paciente.triages?.[0]?.created_at, paciente.estado_consulta).claseCss">
+                                            {{ obtenerEspera(paciente.triages?.[0]?.estado, paciente.triages?.[0]?.created_at, paciente.estado_consulta).texto }}
+                                        </span>
+
+                                        <select
+                                            class="form-select form-select-sm mt-1"
+                                            style="max-width: 140px; font-size: 12px;"
+                                            :value="normalizarEstadoConsulta(paciente.estado_consulta)"
+                                            @change="cambiarEstadoConsulta(paciente, $event.target.value)"
+                                        >
+                                            <option value="en_proceso">En proceso</option>
+                                            <option value="finalizada">Finalizada</option>
+                                        </select>
+                                    </div>
                                 </td>
-
-
                                 <!-- ==================================
                                      ACCIÓN
                                 =================================== -->
@@ -1583,11 +1593,37 @@ export default {
 
             }
 
-        }
+        },
 
-    }
 
-};
+        normalizarEstadoConsulta(estadoConsulta) {
+            const estado = String(estadoConsulta || '').toLowerCase().trim();
+            return ['finalizada', 'finalizado', 'atendido'].includes(estado)
+                ? 'finalizada'
+                : 'en_proceso';
+        },
+
+        async cambiarEstadoConsulta(paciente, nuevoEstado) {
+
+            const estadoAnterior = paciente.estado_consulta;
+
+            // Actualización optimista: se refleja de inmediato en la tabla
+            paciente.estado_consulta = nuevoEstado;
+
+            try {
+                await ApiService.patch(`/pacientes/${paciente.id}/estado-consulta`, {
+                    estado_consulta: nuevoEstado
+                });
+            } catch (error) {
+                console.error('Error al actualizar el estado de la consulta:', error);
+                paciente.estado_consulta = estadoAnterior; // revertimos si falla
+            }
+        },
+
+
+    },
+
+}
 
 </script>
 
