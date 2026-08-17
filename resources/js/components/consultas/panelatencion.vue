@@ -202,79 +202,82 @@
             </tr>
           </thead>
           <tbody>
-            <!-- Una fila por cada paciente filtrado -->
-            <!-- cc-row--active resalta la fila del paciente seleccionado en el panel -->
-            <!-- cc-row--selected resalta la fila seleccionada para "Nueva consulta" (doble clic) -->
             <tr
-              v-for="(p, index) in pacientesFiltrados"
-              :key="p.id"
+              v-for="(listaPacientes, index) in pacientesFiltrados"
+              :key="listaPacientes.id || index"
               class="cc-row"
               :class="{
-                'cc-row--active': pacienteActivo && p.paciente_id === pacienteActivo.paciente_id,
-                'cc-row--selected': pacienteSeleccionadoId === p.id
+                'cc-row--active': pacienteActivo && listaPacientes.paciente_id === pacienteActivo.paciente_id,
+                'cc-row--selected': pacienteSeleccionadoId === listaPacientes.id
               }"
               title="Doble clic para seleccionar este paciente"
-              @dblclick="seleccionarParaConsulta(p)"
+              @dblclick="seleccionarParaConsulta(listaPacientes)"
             > 
-              <!-- Número consecutivo de la lista visual -->
+              <!-- Número consecutivo -->
               <td class="font-semibold text-gray-500">
                 {{ index + 1 }}
               </td>
-              <!-- Número de turno oficial (viene de lista_espera) -->
+              
+              <!-- Turno -->
               <td>
                 <span class="px-2.5 py-1 text-xs font-bold bg-blue-100 text-blue-800 rounded-full">
-                  #{{ p.numero_turno }}
+                  #{{ listaPacientes.numero_turno }}
                 </span>
               </td>
-              <!-- Avatar circular + nombre en negritas + motivo de consulta debajo -->
+              
+              <!-- Paciente / Diagnóstico -->
               <td class="cc-td--patient">
-                <div class="cc-mini-avatar" :style="{ background: avatarColor(nombreCompleto(p)) }">
-                  {{ initials(nombreCompleto(p)) }}
+                <div class="cc-mini-avatar" :style="{ background: avatarColor(nombreCompleto(listaPacientes)) }">
+                  {{ initials(nombreCompleto(listaPacientes)) }}
                 </div>
                 <div>
                   <p class="cc-patient-name">
-                    {{ nombreCompleto(p) }}
-                    <i v-if="pacienteSeleccionadoId === p.id" class="ti ti-circle-check cc-selected-icon" aria-hidden="true"></i>
+                    {{ nombreCompleto(listaPacientes) }}
+                    <i v-if="pacienteSeleccionadoId === listaPacientes.id" class="ti ti-circle-check cc-selected-icon" aria-hidden="true"></i>
                   </p>
-                  <p class="cc-patient-diag">{{ ultimoTriage(p)?.motivo_consulta || '—' }}</p>
+                  <p class="cc-patient-diag">{{ ultimoTriage(listaPacientes)?.motivo_consulta || '—' }}</p>
                 </div>
               </td>
-              <!-- Folio en azul -->
-              <td><span class="cc-mono cc-mono--cell">{{ p.folio }}</span></td>
+              
+              <!-- Folio -->
+              <td><span class="cc-mono cc-mono--cell">{{ listaPacientes.folio }}</span></td>
+              
+              <!-- Médico / Especialidad -->
               <td>
-                <div class="text-xs font-medium text-gray-900">{{ p.medico ? p.medico.nombre : 'Sin médico' }}</div>
-                <div class="text-xs text-gray-500">{{ p.especialidad ? p.especialidad.nombre : 'Sin especialidad' }}</div>
+                <div class="text-xs font-medium text-gray-900">{{ listaPacientes.medico ? listaPacientes.medico.nombre : 'Sin médico' }}</div>
+                <div class="text-xs text-gray-500">{{ listaPacientes.especialidad ? listaPacientes.especialidad.nombre : 'Sin especialidad' }}</div>
               </td>
-              <!-- Chip de estado (Activo, En espera, etc.) -->
-              <td><span class="cc-chip" :class="chipClass(p.estado)">{{ p.estado || 'Sin asignar' }}</span></td>
-              <!-- Chip de urgencia/triage -->
-              <td><span class="cc-chip" :class="triageClass(ultimoTriage(p)?.estado)">{{ ultimoTriage(p)?.estado || 'Sin asignar' }}</span></td>
-              <!-- Botones de acción: ojo azul, triage morado, carpeta cyan y basura roja sobre fondo gris neutro -->
+              
+              <!-- Estado -->
+              <td><span class="cc-chip" :class="chipClass(listaPacientes.estado)">{{ listaPacientes.estado || 'Sin asignar' }}</span></td>
+              
+              <!-- Urgencia -->
+              <td><span class="cc-chip" :class="triageClass(ultimoTriage(listaPacientes)?.estado)">{{ ultimoTriage(listaPacientes)?.estado || 'Sin asignar' }}</span></td>
+              
+              <!-- Acciones -->
               <td class="cc-td--actions">
-                <button class="cc-icon-btn cc-icon-btn--view" title="Ver / seleccionar" @click="verPaciente(p)">
+                <button class="cc-icon-btn cc-icon-btn--view" title="Ver / seleccionar" @click="verPaciente(listaPacientes)">
                   <i class="ti ti-eye" aria-hidden="true"></i>
                 </button>
-                <button class="cc-icon-btn cc-icon-btn--triage" title="Editar signos vitales" @click="abrirModal('triage', p)">
+                <button class="cc-icon-btn cc-icon-btn--triage" title="Editar signos vitales" @click="abrirModal('triage', listaPacientes)">
                   <i class="ti ti-shield-half" aria-hidden="true"></i>
                 </button>
-                <button class="cc-icon-btn cc-icon-btn--folder" title="Expediente" @click="abrirExpedienteDesdeFila(p)">
+                <button class="cc-icon-btn cc-icon-btn--folder" title="Expediente" @click="abrirExpedienteDesdeFila(listaPacientes)">
                   <i class="ti ti-folder" aria-hidden="true"></i>
                 </button>
-                <!-- Basura: finaliza la cita de hoy de este paciente (no borra al paciente,
-                     solo lo quita de la lista de espera marcando la cita como 'Finalizada') -->
                 <button
                   class="cc-icon-btn cc-icon-btn--danger"
                   title="Finalizar y quitar de la lista de espera"
-                  :disabled="finalizandoId === p.id"
-                  @click="finalizarPaciente(p)"
+                  :disabled="finalizandoId === listaPacientes.id"
+                  @click="finalizarPaciente(listaPacientes)"
                 >
                   <i class="ti ti-trash" aria-hidden="true"></i>
                 </button>
               </td>
             </tr>
-            <!-- Estado vacío cuando no hay resultados -->
+            
             <tr v-if="pacientesFiltrados.length === 0">
-              <td colspan="5" class="cc-table-empty">No se encontraron pacientes con ese criterio.</td>
+              <td colspan="8" class="cc-table-empty">No se encontraron pacientes con ese criterio.</td>
             </tr>
           </tbody>
         </table>
@@ -1083,7 +1086,11 @@ export default {
   },
 
   methods: {
-    
+    nombreCompleto(p) {
+      const paciente = p.paciente || p;
+      return paciente.nombre || 'Sin nombre';
+    },
+
     getRegistroLE(paciente) {
       const registros = this.citasPorPacienteId.get(paciente.id) || []
       return registros[0] || {}
