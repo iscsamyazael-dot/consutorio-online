@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Consulta;
 use App\Models\Evaluacionesia;
 use App\Models\Especialidad;
 use App\Models\Medico;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Js;
 
-class EvaluacionesIAController extends Controller
+class EvaluacionesiaController extends Controller
 {
     /**
      * Carga la vista principal de Blade con catálogos
@@ -30,29 +32,22 @@ class EvaluacionesIAController extends Controller
         ]);
     }
 
+    /**
+     * Calcula indicadores utilizando la base de datos (Optimizado O(1) memoria)
+     */
     private function calcularIndicadores(): array
     {
-        $vigentes = Evaluacionesia::query()
-            ->with(['consulta.alertasClinicas', 'notaPsoapp'])
-            ->get();
+        $riesgoAlto = Evaluacionesia::whereHas('consulta.alertasClinicas', function ($q) {
+            $q->whereRaw('LOWER(nivel_riesgo) = ?', ['alto']);
+        })->distinct('consulta_id')->count('consulta_id');
 
-        $riesgoAlto = $vigentes->filter(function ($e) {
-            $nivel = strtolower($e->consulta?->alertasClinicas?->last()?->nivel_riesgo ?? '');
-            return $nivel === 'alto';
-        })->count();
+        $evaluacionesHoy = Evaluacionesia::whereDate('created_at', today())->count();
 
-        $evaluacionesHoy = $vigentes->filter(function ($e) {
-            return $e->created_at && $e->created_at->isToday();
-        })->count();
+        $pendientesRevision = Evaluacionesia::whereHas('consulta.alertasClinicas', function ($q) {
+            $q->whereRaw('LOWER(estado) = ?', ['pendiente']);
+        })->distinct('consulta_id')->count('consulta_id');
 
-        $pendientesRevision = $vigentes->filter(function ($e) {
-            $estado = strtolower($e->consulta?->alertasClinicas?->last()?->estado ?? '');
-            return $estado === 'pendiente';
-        })->count();
-
-        $confianzaPromedio = $vigentes->count()
-            ? round($vigentes->avg('confianza'))
-            : 0;
+        $confianzaPromedio = round((float) Evaluacionesia::avg('confianza'));
 
         return [
             [
@@ -93,251 +88,110 @@ class EvaluacionesIAController extends Controller
     public function api(Request $request)
     {
         try {
+            $query = Evaluacionesia::query();
 
-            /*
-            |--------------------------------------------------------------------------
-            | 1. CONSULTAS QUE TIENEN EVALUACIONES IA
-            |--------------------------------------------------------------------------
-            |
-            | La tabla debe mostrar UNA fila por consulta,
-            | aunque esa consulta tenga varias evaluaciones IA.
-            |
-            */
-
-            $query = Evaluacionesia::query()
-                ->with([
-                    'consulta.paciente',
-                    'consulta.medico.especialidad',
-                    'consulta.alertasClinicas'
-                ])
-                ->latest('id');
-
-            // ==========================
-            // FILTRO PACIENTE
-            // ==========================
+            // Aplicación de Filtros
             if ($request->filled('paciente')) {
-
                 $buscar = $request->paciente;
-
-                $query->whereHas('consulta.paciente', function ($q) use ($buscar) {
-                    $q->where('nombre', 'like', "%{$buscar}%");
-                });
+                $query->whereHas('consulta.paciente', fn ($q) => $q->where('nombre', 'like', "%{$buscar}%"));
             }
 
-            // ==========================
-            // FILTRO MÉDICO
-            // ==========================
             if ($request->filled('medico')) {
-
-                $query->whereHas('consulta.medico', function ($q) use ($request) {
-                    $q->where('id', $request->medico);
-                });
+                $query->whereHas('consulta.medico', fn ($q) => $q->where('id', $request->medico));
             }
 
-            // ==========================
-            // FILTRO FECHA
-            // ==========================
             if ($request->filled('fecha')) {
-                // whereDate asegura comparar la fecha sin importar la hora/minutos (HH:mm:ss)
                 $query->whereDate('created_at', $request->fecha);
             }
 
-            // ==========================
-            // FILTRO ESPECIALIDAD
-            // ==========================
             if ($request->filled('especialidad')) {
-
-                $query->whereHas('consulta.medico', function ($q) use ($request) {
-                    $q->where('especialidad_id', $request->especialidad);
-                });
+                $query->whereHas('consulta.medico', fn ($q) => $q->where('especialidad_id', $request->especialidad));
             }
 
-            // ==========================
-            // FILTRO RIESGO
-            // ==========================
             if ($request->filled('riesgo')) {
-
-                $query->whereHas('consulta.alertasClinicas', function ($q) use ($request) {
-                    $q->where('nivel_riesgo', $request->riesgo);
-                });
+                $query->whereHas('consulta.alertasClinicas', fn ($q) => $q->where('nivel_riesgo', $request->riesgo));
             }
 
-            // ==========================
-            // FILTRO ESTADO
-            // ==========================
             if ($request->filled('estado')) {
-
-                $query->whereHas('consulta.alertasClinicas', function ($q) use ($request) {
-                    $q->where('estado', $request->estado);
-                });
+                $query->whereHas('consulta.alertasClinicas', fn ($q) => $q->where('estado', $request->estado));
             }
 
-            // ==========================
-            // FILTRO CONFIANZA
-            // ==========================
             if ($request->filled('confianzaMin')) {
-
                 $query->where('confianza', '>=', $request->confianzaMin);
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 2. OBTENER CONSULTAS ÚNICAS
-            |--------------------------------------------------------------------------
-            */
-
-            $consultasAgrupadas = (clone $query)
-            ->reorder()
-            ->selectRaw('consulta_id, MAX(id) as latest_id')
-            ->groupBy('consulta_id')
-            ->orderByDesc('latest_id')
-            ->get();
-
-            /*
-            |--------------------------------------------------------------------------
-            | 3. PAGINACIÓN POR CONSULTA
-            |--------------------------------------------------------------------------
-            |
-            | IMPORTANTE:
-            | Ya no paginamos evaluaciones individuales.
-            | Paginamos consultas únicas.
-            |
-            */
-
-           $porPagina = 10;
-
+            // Obtener IDs de consultas paginadas a nivel base de datos
+            $porPagina = 10;
             $pagina = (int) $request->get('page', 1);
 
-            $total = $consultasAgrupadas->count();
+            $subQuery = (clone $query)
+                ->selectRaw('consulta_id, MAX(id) as latest_id')
+                ->groupBy('consulta_id');
 
-            $idsPagina = $consultasAgrupadas
-                ->forPage($pagina, $porPagina)
-                ->pluck('consulta_id')
-                ->values();
+            $total = DB::table(DB::raw("({$subQuery->toSql()}) as sub"))
+                ->mergeBindings($subQuery->getQuery())
+                ->count();
 
-            /*
-            |--------------------------------------------------------------------------
-            | 4. CARGAR TODAS LAS EVALUACIONES DE ESAS CONSULTAS
-            |--------------------------------------------------------------------------
-            */
+            $consultasPaginadas = (clone $query)
+                ->selectRaw('consulta_id, MAX(id) as latest_id')
+                ->groupBy('consulta_id')
+                ->orderByDesc('latest_id')
+                ->offset(($pagina - 1) * $porPagina)
+                ->limit($porPagina)
+                ->pluck('consulta_id');
 
-            $evaluaciones = Evaluacionesia::query()
-                ->with([
-                    'consulta.paciente',
-                    'consulta.medico.especialidad',
-                    'consulta.alertasClinicas'
-                ])
-                ->whereIn('consulta_id', $idsPagina)
-                ->latest('id')
-                ->get();
-
-            /*
-            |--------------------------------------------------------------------------
-            | 5. AGRUPAR POR CONSULTA
-            |--------------------------------------------------------------------------
-            */
+            // Cargar evaluaciones completas de los IDs obtenidos
+            $evaluaciones = Evaluacionesia::with([
+                'consulta.paciente',
+                'consulta.medico.especialidad',
+                'consulta.alertasClinicas'
+            ])
+            ->whereIn('consulta_id', $consultasPaginadas)
+            ->latest('id')
+            ->get();
 
             $resultado = $evaluaciones
                 ->groupBy('consulta_id')
                 ->map(function ($grupo) {
-
-                    // Evaluación más reciente de la consulta
                     $evaPrincipal = $grupo->first();
-
                     $consulta = $evaPrincipal->consulta;
-
                     $alertaReciente = $consulta?->alertasClinicas?->last();
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Confianzas de todas las evaluaciones de esta consulta
-                    |--------------------------------------------------------------------------
-                    */
 
                     $confianzas = $grupo
                         ->pluck('confianza')
-                        ->filter(fn ($valor) => $valor !== null)
-                        ->map(fn ($valor) => (float) $valor)
+                        ->reject(fn ($v) => is_null($v))
+                        ->map(fn ($v) => (float) $v)
                         ->values()
                         ->all();
 
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Evaluaciones / diagnósticos
-                    |--------------------------------------------------------------------------
-                    */
-
-                    $evaluacionesData = $grupo->map(function ($eva) {
-
-                        return [
-                            'id' => $eva->id,
-                            'diagnostico' => $eva->diagnostico_probable ?? 'Sin diagnóstico',
-                            'confianza' => (float) ($eva->confianza ?? 0),
-                            'riesgo' => $eva->riesgo ?? 'Bajo',
-                        ];
-
-                    })->values()->all();
+                    $evaluacionesData = $grupo->map(fn ($eva) => [
+                        'id' => $eva->id,
+                        'diagnostico' => $eva->diagnostico_probable ?? 'Sin diagnóstico',
+                        'confianza' => (float) ($eva->confianza ?? 0),
+                        'riesgo' => $eva->riesgo ?? 'Bajo',
+                    ])->values()->all();
 
                     return [
                         'consulta_id' => $consulta?->id,
-
-                        'folio' => $consulta?->paciente?->paciente_id
-                            ?? 'SIN FOLIO',
-
-                        'consulta_folio' => $evaPrincipal->consulta_folio
-                            ?? $consulta?->folio
-                            ?? null,
-
-                        'paciente' => $consulta?->paciente?->nombre
-                            ?? 'Paciente no registrado',
-
-                        'consulta' => $consulta?->folio
-                            ?? 'Sin consulta',
-
-                        'fecha' => optional($evaPrincipal->created_at)
-                            ->format('Y-m-d H:i'),
-
-                        'riesgo' => $alertaReciente?->nivel_riesgo
-                            ?? 'BAJO',
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | TODAS LAS CONFIANZAS
-                        |--------------------------------------------------------------------------
-                        */
+                        'folio' => $consulta?->paciente?->paciente_id ?? 'SIN FOLIO',
+                        'consulta_folio' => $evaPrincipal->consulta_folio ?? $consulta?->folio ?? null,
+                        'paciente' => $consulta?->paciente?->nombre ?? 'Paciente no registrado',
+                        'consulta' => $consulta?->folio ?? 'Sin consulta',
+                        'fecha' => optional($evaPrincipal->created_at)->format('Y-m-d H:i'),
+                        'riesgo' => $alertaReciente?->nivel_riesgo ?? 'BAJO',
                         'confianzas' => $confianzas,
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | TODAS LAS EVALUACIONES
-                        |--------------------------------------------------------------------------
-                        */
                         'evaluaciones' => $evaluacionesData,
-
-                        'estado' => $alertaReciente?->estado
-                            ?? 'pendiente',
-
-                        'medico' => $consulta?->medico?->nombre
-                            ?? '',
-
-                        'especialidad' => $consulta?->medico?->especialidad?->nombre
-                            ?? '',
+                        'estado' => $alertaReciente?->estado ?? 'pendiente',
+                        'medico' => $consulta?->medico?->nombre ?? '',
+                        'especialidad' => $consulta?->medico?->especialidad?->nombre ?? '',
                     ];
                 })
                 ->values();
 
-            /*
-            |--------------------------------------------------------------------------
-            | 6. RESPUESTA CON FORMATO DE PAGINACIÓN
-            |--------------------------------------------------------------------------
-            */
-
             return response()->json([
                 'current_page' => $pagina,
                 'data' => $resultado,
-                'from' => $total > 0
-                    ? (($pagina - 1) * $porPagina) + 1
-                    : null,
+                'from' => $total > 0 ? (($pagina - 1) * $porPagina) + 1 : null,
                 'last_page' => max(1, (int) ceil($total / $porPagina)),
                 'per_page' => $porPagina,
                 'to' => min($pagina * $porPagina, $total),
@@ -345,7 +199,6 @@ class EvaluacionesIAController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-
             return response()->json([
                 'error' => true,
                 'message' => $e->getMessage(),
@@ -361,487 +214,132 @@ class EvaluacionesIAController extends Controller
     public function show(string $folio)
     {
         try {
-
-            /*
-            |--------------------------------------------------------------------------
-            | 1. IDENTIFICAR LA CONSULTA
-            |--------------------------------------------------------------------------
-            |
-            | El botón "Ver" ahora manda el consulta_folio:
-            |
-            | CONS-2026-0822
-            |
-            */
-
             $consulta = null;
+            $relacionesConsulta = [
+                'paciente',
+                'medico.especialidad',
+                'recetas',
+                'derivaciones.especialidad',
+                'alertasClinicas',
+                'notaPsoapp',
+            ];
 
-            /*
-            |--------------------------------------------------------------------------
-            | CASO 1: Viene directamente un folio de consulta
-            |--------------------------------------------------------------------------
-            */
-
+            // CASO 1: Folio de consulta
             if (str_starts_with(strtoupper($folio), 'CONS-')) {
-
-                $consulta = \App\Models\Consulta::with([
-                    'paciente',
-                    'recetas',
-                    'derivaciones.especialidad',
-                    'alertasClinicas',
-                    'notaPsoapp',
-                ])
-                ->where('folio', $folio)
-                ->first();
+                $consulta = Consulta::with($relacionesConsulta)
+                    ->where('folio', $folio)
+                    ->first();
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | CASO 2: Viene un folio de evaluación tipo EV-0001
-            |--------------------------------------------------------------------------
-            */
+            // CASO 2 & 3: Folio EV-0001 o ID numérico directos
+            if (!$consulta) {
+                $evaluacionId = null;
 
-            if (!$consulta && preg_match('/^EV-(\d+)$/i', $folio, $m)) {
+                if (preg_match('/^EV-(\d+)$/i', $folio, $m)) {
+                    $evaluacionId = (int) ltrim($m[1], '0');
+                } elseif (is_numeric($folio)) {
+                    $evaluacionId = (int) $folio;
+                }
 
-                $evaluacionId = (int) ltrim($m[1], '0');
-
-                $evaluacion = Evaluacionesia::with('consulta')
-                    ->find($evaluacionId);
-
-                $consulta = $evaluacion?->consulta;
-
-                if ($consulta) {
-                    $consulta->load([
-                        'paciente',
-                        'recetas',
-                        'derivaciones.especialidad',
-                        'alertasClinicas',
-                        'notaPsoapp',
-                    ]);
+                if ($evaluacionId) {
+                    $evaluacion = Evaluacionesia::with(['consulta' => fn ($q) => $q->with($relacionesConsulta)])
+                        ->find($evaluacionId);
+                    $consulta = $evaluacion?->consulta;
                 }
             }
-
-            /*
-            |--------------------------------------------------------------------------
-            | CASO 3: Viene directamente un ID numérico
-            |--------------------------------------------------------------------------
-            */
-
-            if (!$consulta && is_numeric($folio)) {
-
-                $evaluacion = Evaluacionesia::with('consulta')
-                    ->find((int) $folio);
-
-                $consulta = $evaluacion?->consulta;
-
-                if ($consulta) {
-                    $consulta->load([
-                        'paciente',
-                        'recetas',
-                        'derivaciones.especialidad',
-                        'alertasClinicas',
-                        'notaPsoapp',
-                    ]);
-                }
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | CONSULTA NO ENCONTRADA
-            |--------------------------------------------------------------------------
-            */
 
             if (!$consulta) {
-
-                return response()->json([
-                    'message' => 'Consulta no encontrada.'
-                ], 404);
+                return response()->json(['message' => 'Consulta no encontrada.'], 404);
             }
-
-            /*
-            |--------------------------------------------------------------------------
-            | 2. OBTENER TODAS LAS EVALUACIONES IA DE LA CONSULTA
-            |--------------------------------------------------------------------------
-            |
-            | Aquí está el cambio importante.
-            |
-            | Si CONS-2026-0822 tiene:
-            |
-            | evaluación 1 → 90%
-            | evaluación 2 → 95%
-            |
-            | las obtenemos las dos.
-            |
-            */
 
             $evaluaciones = Evaluacionesia::query()
                 ->where('consulta_id', $consulta->id)
                 ->orderBy('id')
                 ->get();
 
-            /*
-            |--------------------------------------------------------------------------
-            | 3. VALIDAR QUE LA CONSULTA TENGA EVALUACIONES
-            |--------------------------------------------------------------------------
-            */
-
             if ($evaluaciones->isEmpty()) {
-
-                return response()->json([
-                    'message' => 'La consulta no tiene evaluaciones IA registradas.'
-                ], 404);
+                return response()->json(['message' => 'La consulta no tiene evaluaciones IA registradas.'], 404);
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 4. EVALUACIONES IA FORMATEADAS
-            |--------------------------------------------------------------------------
-            */
-
-            $evaluacionesData = $evaluaciones->map(function ($evaluacion) {
-
-                return [
-                    'id' => $evaluacion->id,
-
-                    'diagnostico_probable' =>
-                        $evaluacion->diagnostico_probable
-                        ?? 'Sin diagnóstico',
-
-                    'sintomas_array' =>
-                        $evaluacion->sintomas_array
-                        ?? [],
-
-                    'riesgo' =>
-                        $evaluacion->riesgo
-                        ?? 'Bajo',
-
-                    'confianza' =>
-                        (float) ($evaluacion->confianza ?? 0),
-
-                    'recomendacion' =>
-                        $evaluacion->recomendacion
-                        ?? '',
-
-                    'fecha' =>
-                        optional($evaluacion->created_at)
-                        ->format('Y-m-d H:i'),
-                ];
-
-            })->values();
-
-            /*
-            |--------------------------------------------------------------------------
-            | 5. EVALUACIÓN PRINCIPAL
-            |--------------------------------------------------------------------------
-            |
-            | La usamos únicamente para mantener compatibilidad
-            | con el frontend actual mientras hacemos la transición.
-            |
-            */
+            $evaluacionesData = $evaluaciones->map(fn ($eva) => [
+                'id' => $eva->id,
+                'diagnostico_probable' => $eva->diagnostico_probable ?? 'Sin diagnóstico',
+                'sintomas_array' => $eva->sintomas_array ?? [],
+                'riesgo' => $eva->riesgo ?? 'Bajo',
+                'confianza' => (float) ($eva->confianza ?? 0),
+                'recomendacion' => $eva->recomendacion ?? '',
+                'fecha' => optional($eva->created_at)->format('Y-m-d H:i'),
+            ])->values();
 
             $evaluacionPrincipal = $evaluaciones->first();
-
-            /*
-            |--------------------------------------------------------------------------
-            | 6. DATOS DEL PACIENTE
-            |--------------------------------------------------------------------------
-            */
-
             $paciente = $consulta->paciente;
-
-            /*
-            |--------------------------------------------------------------------------
-            | 7. RECETA
-            |--------------------------------------------------------------------------
-            */
-
             $receta = $consulta->recetas?->last();
 
-            $recetaData = null;
-
-            if ($receta) {
-
-                $meds = $receta->medicamentos;
-
-                $recetaData = [
-                    'id' =>
-                        $receta->id,
-
-                    'fecha' =>
-                        $receta->fecha,
-
-                    'indicaciones_generales' =>
-                        $receta->indicaciones_generales,
-
-                    'observaciones_ia' =>
-                        $receta->observaciones_ia,
-
-                    'medicamentos' =>
-                        is_string($meds)
-                            ? json_decode($meds, true)
-                            : $meds,
-
-                    'estado' =>
-                        $receta->estado,
-                ];
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | 8. DERIVACIÓN
-            |--------------------------------------------------------------------------
-            */
+            $recetaData = $receta ? [
+                'id' => $receta->id,
+                'fecha' => $receta->fecha,
+                'indicaciones_generales' => $receta->indicaciones_generales,
+                'observaciones_ia' => $receta->observaciones_ia,
+                'medicamentos' => is_string($receta->medicamentos) ? json_decode($receta->medicamentos, true) : $receta->medicamentos,
+                'estado' => $receta->estado,
+            ] : null;
 
             $derivacion = $consulta->derivaciones?->last();
+            $derivacionData = $derivacion ? [
+                'especialidad' => $derivacion->especialidad->nombre ?? 'Especialidad General',
+                'hospital' => $derivacion->hospital ?? 'N/A',
+                'motivo' => $derivacion->motivo ?? 'Sin motivo especificado',
+                'prioridad' => strtoupper($derivacion->prioridad ?? 'MEDIA'),
+                'estado' => $derivacion->estado ?? 'Pendiente',
+            ] : null;
 
-            $derivacionData = null;
+            $alertasData = collect($consulta->alertasClinicas ?? [])->map(fn ($alerta) => [
+                'id' => $alerta->id,
+                'titulo' => $alerta->titulo ?? $alerta->tipo_alerta ?? 'Alerta Clínica',
+                'descripcion' => $alerta->descripcion ?? '',
+                'nivel' => strtoupper($alerta->nivel ?? $alerta->nivel_riesgo ?? 'MEDIO'),
+                'observaciones' => $alerta->observaciones ?? '',
+            ])->values();
 
-            if ($derivacion) {
-
-                $derivacionData = [
-                    'especialidad' =>
-                        $derivacion->especialidad->nombre
-                        ?? 'Especialidad General',
-
-                    'hospital' =>
-                        $derivacion->hospital
-                        ?? 'N/A',
-
-                    'motivo' =>
-                        $derivacion->motivo
-                        ?? 'Sin motivo especificado',
-
-                    'prioridad' =>
-                        strtoupper(
-                            $derivacion->prioridad
-                            ?? 'MEDIA'
-                        ),
-
-                    'estado' =>
-                        $derivacion->estado
-                        ?? 'Pendiente',
-                ];
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | 9. ALERTAS CLÍNICAS
-            |--------------------------------------------------------------------------
-            */
-
-            $alertasData = collect(
-                $consulta->alertasClinicas ?? []
-            )->map(function ($alerta) {
-
-                return [
-                    'id' =>
-                        $alerta->id,
-
-                    'titulo' =>
-                        $alerta->titulo
-                        ?? $alerta->tipo_alerta
-                        ?? 'Alerta Clínica',
-
-                    'descripcion' =>
-                        $alerta->descripcion
-                        ?? '',
-
-                    'nivel' =>
-                        strtoupper(
-                            $alerta->nivel
-                            ?? $alerta->nivel_riesgo
-                            ?? 'MEDIO'
-                        ),
-
-                    'observaciones' =>
-                        $alerta->observaciones
-                        ?? '',
-                ];
-
-            })->values();
-
-            /*
-            |--------------------------------------------------------------------------
-            | 10. FOLIO DE SALIDA
-            |--------------------------------------------------------------------------
-            */
-
-            $folioSalida =
-                $consulta->folio
-                ?? $evaluacionPrincipal->consulta_folio
-                ?? ('EV-' . str_pad(
-                    $evaluacionPrincipal->id,
-                    4,
-                    '0',
-                    STR_PAD_LEFT
-                ));
-
-            /*
-            |--------------------------------------------------------------------------
-            | 11. CONFIANZAS
-            |--------------------------------------------------------------------------
-            |
-            | Ejemplo:
-            |
-            | [90, 95]
-            |
-            */
+            $folioSalida = $consulta->folio 
+                ?? $evaluacionPrincipal->consulta_folio 
+                ?? ('EV-' . str_pad($evaluacionPrincipal->id, 4, '0', STR_PAD_LEFT));
 
             $confianzas = $evaluaciones
                 ->pluck('confianza')
-                ->filter(fn ($valor) => $valor !== null)
-                ->map(fn ($valor) => (float) $valor)
+                ->reject(fn ($v) => is_null($v))
+                ->map(fn ($v) => (float) $v)
                 ->values();
 
-            /*
-            |--------------------------------------------------------------------------
-            | 12. RESPUESTA
-            |--------------------------------------------------------------------------
-            */
-
             return response()->json([
-
-                /*
-                |--------------------------------------------------------------------------
-                | INFORMACIÓN GENERAL
-                |--------------------------------------------------------------------------
-                */
-
-                'folio' =>
-                    $folioSalida,
-
-                'consulta_id' =>
-                    $consulta->id,
-
-                'fecha' =>
-                    optional($evaluacionPrincipal->created_at)
-                    ->format('Y-m-d H:i')
-                    ?? 'N/A',
-
-                /*
-                |--------------------------------------------------------------------------
-                | TODAS LAS EVALUACIONES IA
-                |--------------------------------------------------------------------------
-                */
-
-                'evaluaciones' =>
-                    $evaluacionesData,
-
-                'confianzas' =>
-                    $confianzas,
-
-                /*
-                |--------------------------------------------------------------------------
-                | CAMPOS PRINCIPALES
-                |--------------------------------------------------------------------------
-                |
-                | Se mantienen para no romper todavía
-                | el frontend actual.
-                |
-                */
-
-                'diagnostico_probable' =>
-                    $evaluacionPrincipal->diagnostico_probable
-                    ?? 'Sin diagnóstico',
-
-                'sintomas_array' =>
-                    $evaluacionPrincipal->sintomas_array
-                    ?? [],
-
-                'riesgo' =>
-                    $evaluacionPrincipal->riesgo
-                    ?? 'Bajo',
-
-                'confianza' =>
-                    (float) ($evaluacionPrincipal->confianza ?? 0),
-
-                'recomendacion' =>
-                    $evaluacionPrincipal->recomendacion
-                    ?? '',
-
-                /*
-                |--------------------------------------------------------------------------
-                | PACIENTE
-                |--------------------------------------------------------------------------
-                */
-
+                'folio' => $folioSalida,
+                'consulta_id' => $consulta->id,
+                'fecha' => optional($evaluacionPrincipal->created_at)->format('Y-m-d H:i') ?? 'N/A',
+                'evaluaciones' => $evaluacionesData,
+                'confianzas' => $confianzas,
+                'diagnostico_probable' => $evaluacionPrincipal->diagnostico_probable ?? 'Sin diagnóstico',
+                'sintomas_array' => $evaluacionPrincipal->sintomas_array ?? [],
+                'riesgo' => $evaluacionPrincipal->riesgo ?? 'Bajo',
+                'confianza' => (float) ($evaluacionPrincipal->confianza ?? 0),
+                'recomendacion' => $evaluacionPrincipal->recomendacion ?? '',
                 'paciente' => [
-
-                    'id' =>
-                        $paciente->paciente_id
-                        ?? $paciente->id
-                        ?? 'N/A',
-
-                    'nombre' =>
-                        $paciente->nombre
-                        ?? 'Paciente no registrado',
-
-                    'edad' =>
-                        $paciente->edad
-                        ?? null,
-
-                    'sexo' =>
-                        $paciente->sexo
-                        ?? null,
+                    'id' => $paciente->paciente_id ?? $paciente->id ?? 'N/A',
+                    'nombre' => $paciente->nombre ?? 'Paciente no registrado',
+                    'edad' => $paciente->edad ?? null,
+                    'sexo' => $paciente->sexo ?? null,
                 ],
-
-                /*
-                |--------------------------------------------------------------------------
-                | PSOAP
-                |--------------------------------------------------------------------------
-                |
-                | UNO SOLO PARA TODAS LAS EVALUACIONES.
-                |
-                */
-
-                'nota_psoapp' =>
-                    $consulta->notaPsoapp
-                    ?? $evaluacionPrincipal->notaPsoapp
-                    ?? null,
-
-                /*
-                |--------------------------------------------------------------------------
-                | RECETA
-                |--------------------------------------------------------------------------
-                */
-
-                'receta' =>
-                    $recetaData,
-
-                /*
-                |--------------------------------------------------------------------------
-                | DERIVACIÓN
-                |--------------------------------------------------------------------------
-                */
-
-                'derivacion' =>
-                    $derivacionData,
-
-                /*
-                |--------------------------------------------------------------------------
-                | ALERTAS
-                |--------------------------------------------------------------------------
-                */
-
-                'alertas_clinicas' =>
-                    $alertasData,
+                'nota_psoapp' => $consulta->notaPsoapp ?? $evaluacionPrincipal->notaPsoapp ?? null,
+                'receta' => $recetaData,
+                'derivacion' => $derivacionData,
+                'alertas_clinicas' => $alertasData,
             ]);
 
         } catch (\Throwable $e) {
-
             return response()->json([
-
-                'error' =>
-                    'Error interno al cargar la evaluación',
-
-                'message' =>
-                    $e->getMessage(),
-
-                'file' =>
-                    $e->getFile(),
-
-                'line' =>
-                    $e->getLine()
-
+                'error' => 'Error interno al cargar la evaluación',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ], 500);
         }
     }

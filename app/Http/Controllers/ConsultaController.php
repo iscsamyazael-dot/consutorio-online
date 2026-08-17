@@ -27,29 +27,20 @@ class ConsultaController extends Controller
 
     /**
      * Show the form for creating a new resource.
+     * Función para obtener datos del doctor y paciente para ambas vistas (expediente y nueva consulta)
      */
-
-    // Función para obtener datos del doctor y paciente
-    // para ambas vistas (expediente y nueva consulta)
     public function create($id = null)
     {
         $user = auth()->user();
-
         $medico = $user->medico?->load('especialidad');
 
         return view('consultas.create', [
             'pacienteId' => $id,
-
             'doctor' => [
-                'id' => $user->id,
-
-                'nombre' => $user->name,
-
-                'cedula' => $medico?->cedula_profesional ?? 'Pendiente',
-
-                'especialidad' =>
-                    $medico?->especialidad?->nombre
-                    ?? 'Medicina General',
+                'id'           => $user->id,
+                'nombre'       => $user->name,
+                'cedula'       => $medico?->cedula_profesional ?? 'Pendiente',
+                'especialidad' => $medico?->especialidad?->nombre ?? 'Medicina General',
             ],
         ]);
     }
@@ -60,101 +51,57 @@ class ConsultaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-
-            'paciente_id' => 'required|exists:pacientes,id',
-
-            'motivo' => 'nullable',
-
-            'diagnostico' => 'nullable',
-
+            'paciente_id'  => 'required|exists:pacientes,id',
+            'motivo'       => 'nullable',
+            'diagnostico'  => 'nullable',
             'observaciones' => 'nullable',
-
-            'sintomas' => 'nullable',
-
+            'sintomas'     => 'nullable',
             'presentacion' => 'nullable|string',
-
-            'subjetivo' => 'nullable|string',
-
-            'objetivo' => 'nullable|string',
-
-            'analisis' => 'nullable|string',
-
-            'plan' => 'nullable|string',
-
-            'pronostico' => 'nullable|string',
+            'subjetivo'    => 'nullable|string',
+            'objetivo'     => 'nullable|string',
+            'analisis'     => 'nullable|string',
+            'plan'         => 'nullable|string',
+            'pronostico'   => 'nullable|string',
         ]);
 
-        // El paciente ya existe
-        // (viene de la ruta consultaNormal/{id})
-        $paciente = Paciente::findOrFail(
-            $request->paciente_id
-        );
+        $paciente = Paciente::findOrFail($request->paciente_id);
 
         // CREAR CONSULTA
         $consulta = Consulta::create([
-
-            'folio' => 'CONS-' . time(),
-
-            'paciente_id' => $paciente->id,
-
-            'user_id' => Auth::id(),
-
+            'folio'           => 'CONS-' . time(),
+            'paciente_id'     => $paciente->id,
+            'user_id'         => Auth::id(),
             'motivo_consulta' => $request->motivo,
-
-            'diagnostico' => $request->diagnostico,
-
-            'observaciones' => $request->observaciones,
-
-            'estado' => 'activa',
-
+            'diagnostico'     => $request->diagnostico,
+            'observaciones'   => $request->observaciones,
+            'estado'          => 'activa',
             'estado_consulta' => 'finalizada',
         ]);
 
         // CREAR NOTA PSOAPP
         NotaPsoapp::create([
-
-            'consulta_id' => $consulta->id,
-
-            'consulta_folio' => $consulta->folio,
-
+            'consulta_id'      => $consulta->id,
+            'consulta_folio'   => $consulta->folio,
             'evaluacion_ia_id' => $consulta->evaluacion_ia_id,
-
-            'presentacion' => $request->presentacion,
-
-            'subjetivo' => $request->subjetivo,
-
-            'objetivo' => $request->objetivo,
-
-            'analisis' => $request->analisis,
-
-            'plan' => $request->plan,
-
-            'pronostico' => $request->pronostico,
-
-            'estado' => 'completada',
+            'presentacion'     => $request->presentacion,
+            'subjetivo'        => $request->subjetivo,
+            'objetivo'         => $request->objetivo,
+            'analisis'         => $request->analisis,
+            'plan'             => $request->plan,
+            'pronostico'       => $request->pronostico,
+            'estado'           => 'completada',
         ]);
 
-        // ENVIAR WHATSAPP
-        // solo si el paciente tiene teléfono registrado
+        // ENVIAR WHATSAPP (solo si el paciente tiene teléfono)
         if ($paciente->telefono) {
-
             $telefono = '52' . $paciente->telefono;
-
-            $mensaje =
-                "Hola {$paciente->nombre}, tu consulta médica fue registrada correctamente.";
-
-            WhatsAppService::enviar(
-                $telefono,
-                $mensaje
-            );
+            $mensaje = "Hola {$paciente->nombre}, tu consulta médica fue registrada correctamente.";
+            WhatsAppService::enviar($telefono, $mensaje);
         }
 
         return response()->json([
-
-            'success' => true,
-
-            'message' => 'Consulta registrada correctamente',
-
+            'success'  => true,
+            'message'  => 'Consulta registrada correctamente',
             'consulta' => $consulta,
         ]);
     }
@@ -177,93 +124,54 @@ class ConsultaController extends Controller
     public function update(Request $request, string $id)
     {
         try {
-
             $consulta = Consulta::findOrFail($id);
 
-            // Actualizar únicamente los campos
-            // que hayan sido enviados
-
             if ($request->has('motivo')) {
-
-                $consulta->motivo_consulta =
-                    $request->motivo;
+                $consulta->motivo_consulta = $request->motivo;
             }
 
             if ($request->has('diagnostico')) {
-
-                $consulta->diagnostico =
-                    $request->diagnostico;
+                $consulta->diagnostico = $request->diagnostico;
             }
 
             if ($request->has('observaciones')) {
-
-                $consulta->observaciones =
-                    $request->observaciones;
+                $consulta->observaciones = $request->observaciones;
             }
 
             if ($request->has('estado')) {
-
-                $consulta->estado =
-                    $request->estado;
+                $consulta->estado = $request->estado;
             }
 
             if ($request->has('estado_consulta')) {
-
-                $consulta->estado_consulta =
-                    $request->estado_consulta;
+                $consulta->estado_consulta = $request->estado_consulta;
             }
 
             $consulta->save();
 
             return response()->json([
-
-                'success' => true,
-
-                'message' =>
-                    'Consulta actualizada correctamente',
-
+                'success'  => true,
+                'message'  => 'Consulta actualizada correctamente',
                 'consulta' => $consulta,
             ]);
-
         } catch (\Throwable $e) {
-
-            \Log::error(
-                'Error al actualizar consulta',
-                [
-                    'consulta_id' => $id,
-
-                    'user_id' => Auth::id(),
-
-                    'error' => $e->getMessage(),
-
-                    'linea' => $e->getLine(),
-
-                    'archivo' => $e->getFile(),
-                ]
-            );
+            \Log::error('Error al actualizar consulta', [
+                'consulta_id' => $id,
+                'user_id'     => Auth::id(),
+                'error'       => $e->getMessage(),
+                'linea'       => $e->getLine(),
+                'archivo'     => $e->getFile(),
+            ]);
 
             return response()->json([
-
                 'success' => false,
-
-                'message' =>
-                    'Error al actualizar la consulta',
-
-                'error' => $e->getMessage(),
-
+                'message' => 'Error al actualizar la consulta',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Actualiza solamente el estado de la consulta.
-     *
-     * NUEVO: se agrega para que HistorialConsulta.vue pueda cambiar el
-     * estado de las consultas "tradicionales" (tabla `consultas`) desde
-     * el mismo chip clickeable que ya usa para las citas de Agenda.
-     * El frontend maneja las etiquetas en español con mayúscula/espacio
-     * ('Agendado', 'En proceso', 'Finalizada', 'Cancelada'), así que aquí
-     * se traducen a los valores internos que usa `estado_consulta`.
+     * Actualiza solamente el estado de la consulta desde componentes Vue.
      */
     public function actualizarEstado(Request $request, $id)
     {
@@ -274,10 +182,10 @@ class ConsultaController extends Controller
         $consulta = Consulta::findOrFail($id);
 
         $mapaEstados = [
-            'Agendado'    => 'activa',
-            'En proceso'  => 'en_proceso',
-            'Finalizada'  => 'finalizada',
-            'Cancelada'   => 'cancelada',
+            'Agendado'   => 'activa',
+            'En proceso' => 'en_proceso',
+            'Finalizada' => 'finalizada',
+            'Cancelada'  => 'cancelada',
         ];
 
         $consulta->estado_consulta = $mapaEstados[$request->estado] ?? $request->estado;
@@ -291,38 +199,44 @@ class ConsultaController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Actualiza o crea el estado inicial de consulta por paciente (p. ej. desde Triage).
      */
-    public function destroy(string $id)
+    public function actualizarEstadoConsulta(Request $request, string $pacienteId)
     {
-        $consulta = Consulta::findOrFail($id);
+        $request->validate([
+            'estado_consulta' => 'required|in:en_proceso,excedido,finalizada',
+        ]);
 
-        $consulta->delete();
+        $paciente = Paciente::findOrFail($pacienteId);
+
+        $consulta = Consulta::where('paciente_id', $paciente->id)
+            ->latest()
+            ->first();
+
+        if (!$consulta) {
+            $consulta = Consulta::create([
+                'folio'           => 'CONS-' . time(),
+                'paciente_id'     => $paciente->id,
+                'user_id'         => Auth::id(),
+                'estado'          => 'activa',
+                'estado_consulta' => $request->estado_consulta,
+            ]);
+        } else {
+            $consulta->update([
+                'estado_consulta' => $request->estado_consulta,
+            ]);
+        }
 
         return response()->json([
-
-            'success' => true,
-
-            'message' =>
-                'Consulta eliminada correctamente',
+            'success'         => true,
+            'message'         => 'Estado de consulta actualizado correctamente',
+            'estado_consulta' => $consulta->estado_consulta,
         ]);
     }
 
     /**
- * Historial de consultas reales (tabla `consultas`), para
- * HistorialConsulta.vue. Reemplaza el uso incorrecto de
- * CitaController@getCitas, que traía citas de Agenda en vez
- * de consultas ya registradas.
- *
- * Filtros soportados (todos opcionales):
- *  - fecha            (Y-m-d)  -> WHERE DATE(created_at) = fecha
- *  - medico_id                 -> WHERE user_id = medico_id (id de medicos, no de users)
- *  - especialidad_id           -> WHERE medico.especialidad_id = especialidad_id
- *
- * NOTA: si consultas.user_id no corresponde a ningún medicos.user_id
- * (p.ej. consultas creadas/tocadas por un admin), 'medico' y
- * 'especialidad' regresan null en vez de un dato incorrecto.
- */
+     * Historial de consultas con filtros por fecha, médico y especialidad.
+     */
     public function historial(Request $request)
     {
         $query = Consulta::with(['paciente', 'medico.especialidad']);
@@ -351,16 +265,15 @@ class ConsultaController extends Controller
 
         $consultas = $query->orderBy('created_at')->get()->map(function ($consulta) use ($mapaEstadosDisplay) {
             return [
-                'id'     => 'consulta-' . $consulta->id,
-                'origen' => 'consulta',
-                'title'  => 'Consulta: ' . ($consulta->paciente->nombre ?? 'Sin paciente'),
-                'folio'  => $consulta->folio,
-                'fecha'  => optional($consulta->created_at)->format('Y-m-d'),
-                'hora'   => optional($consulta->created_at)->format('H:i:s'),
-                'estado' => $mapaEstadosDisplay[$consulta->estado_consulta] ?? $consulta->estado_consulta,
-                'tipo'   => 'Consulta',
-
-                'paciente' => $consulta->paciente ? [
+                'id'           => 'consulta-' . $consulta->id,
+                'origen'       => 'consulta',
+                'title'        => 'Consulta: ' . ($consulta->paciente->nombre ?? 'Sin paciente'),
+                'folio'        => $consulta->folio,
+                'fecha'        => optional($consulta->created_at)->format('Y-m-d'),
+                'hora'         => optional($consulta->created_at)->format('H:i:s'),
+                'estado'       => $mapaEstadosDisplay[$consulta->estado_consulta] ?? $consulta->estado_consulta,
+                'tipo'         => 'Consulta',
+                'paciente'     => $consulta->paciente ? [
                     'id'     => $consulta->paciente->id,
                     'nombre' => trim(implode(' ', array_filter([
                         $consulta->paciente->nombre,
@@ -368,12 +281,10 @@ class ConsultaController extends Controller
                         $consulta->paciente->apellido_materno,
                     ]))),
                 ] : null,
-
-                'medico' => $consulta->medico ? [
+                'medico'       => $consulta->medico ? [
                     'id'     => $consulta->medico->id,
                     'nombre' => $consulta->medico->nombre,
                 ] : null,
-
                 'especialidad' => $consulta->medico?->especialidad ? [
                     'id'     => $consulta->medico->especialidad->id,
                     'nombre' => $consulta->medico->especialidad->nombre,
@@ -382,5 +293,19 @@ class ConsultaController extends Controller
         });
 
         return response()->json($consultas);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        $consulta = Consulta::findOrFail($id);
+        $consulta->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Consulta eliminada correctamente',
+        ]);
     }
 }
