@@ -12,10 +12,12 @@ class RecetaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        return $Receta = Receta::all();
-    }
+public function index()
+{
+    return Receta::with(['consulta.paciente', 'consulta.medico', 'consulta.especialidad'])
+        ->latest('fecha')
+        ->get();
+}
 
     /**
      * Show the form for creating a new resource.
