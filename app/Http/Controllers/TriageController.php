@@ -293,15 +293,33 @@ class TriageController extends Controller
             'temperatura'             => 'nullable|numeric',
             'frecuencia_cardiaca'     => 'nullable|numeric',
             'frecuencia_respiratoria' => 'nullable|numeric',
-            'peso'                    => 'nullable|numeric',
-            'talla'                   => 'nullable|numeric',
+            'peso'                    => 'nullable|numeric|min:0',
+            'talla'                   => 'nullable|numeric|min:0',
+            'imc'                     => 'nullable|numeric|min:0',
+            'imc_percentil'           => 'nullable|numeric|min:0|max:100',
+            'imc_clasificacion'       => 'nullable|string|max:50',
             'motivo_consulta'         => 'nullable|string',
             'sintomas'                => 'nullable|string',
             'estado_triage'           => 'nullable|string|in:leve,estable,grave,urgente',
         ]);
+            // Calcular IMC automáticamente si existen peso y talla
+        if (
+            isset($data['peso'], $data['talla']) &&
+            $data['peso'] > 0 &&
+            $data['talla'] > 0
+        ) {
+            $talla = (float) $data['talla'];
+            $peso = (float) $data['peso'];
 
-        $estadoExplicito = $data['estado_triage'] ?? null;
-        unset($data['estado_triage']);
+            // Si la talla viene en centímetros, convertir a metros
+            if ($talla > 3) {
+                $talla = $talla / 100;
+            }
+
+            $data['imc'] = round($peso / ($talla * $talla), 2);
+        }
+                $estadoExplicito = $data['estado_triage'] ?? null;
+                unset($data['estado_triage']);
 
         try {
             $triage = DB::transaction(function () use ($paciente, $data, $estadoExplicito) {

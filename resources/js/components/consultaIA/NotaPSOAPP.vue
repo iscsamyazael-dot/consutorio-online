@@ -153,6 +153,8 @@ export default {
       toastTimer: null,
       guardando: false,
       descargando: false,
+      recetaDescargada: false,
+      diagnosticoDescargado: false,
       letras: ['P', 'S', 'O', 'A', 'P', 'P'],
       secciones: [
         {
@@ -249,6 +251,60 @@ export default {
       this.estado[key].completado =
         this.estado[key].texto.trim().length > 0
     },
+    // Llama a este método antes de permitir que el usuario salga de la
+    // vista (cambie de paciente, navegue a otra sección, etc.). Si falta
+    // descargar la receta y/o el diagnóstico, muestra una alerta y solo
+    // ejecuta callbackNavegacion() si el usuario confirma salir de todos
+    // modos. Si ya descargó ambos, ejecuta el callback directo.
+    validarSalida(callbackNavegacion) {
+      const faltaReceta = !this.recetaDescargada;
+      const faltaDiagnostico = !this.diagnosticoDescargado;
+
+      if (!faltaReceta && !faltaDiagnostico) {
+        if (typeof callbackNavegacion === 'function') {
+          callbackNavegacion();
+        }
+        return;
+      }
+
+      let texto;
+      if (faltaReceta && faltaDiagnostico) {
+        texto = 'No has descargado la receta ni el diagnóstico de esta consulta. Si sales ahora, podrías perderlos.';
+      } else if (faltaReceta) {
+        texto = 'No has descargado la receta médica de esta consulta. Si sales ahora, podrías perderla.';
+      } else {
+        texto = 'No has descargado el diagnóstico de esta consulta. Si sales ahora, podrías perderlo.';
+      }
+
+      // FIX: antes era `Swal.fire(...)` sin prefijo, lo que lanzaba un
+      // ReferenceError silencioso si SweetAlert2 solo está registrado
+      // como window.Swal (como en el resto del proyecto) y por eso el
+      // modal nunca resolvía su promesa ni ejecutaba la navegación.
+      window.Swal.fire({
+        title: '¿Estás seguro de salir?',
+        text: texto,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, salir de todos modos',
+        cancelButtonText: 'Cancelar, quedarme',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // El usuario decidió salir bajo su propio riesgo
+          if (typeof callbackNavegacion === 'function') {
+            callbackNavegacion();
+          }
+        }
+      });
+    },
+    // Consulta rápida (sin disparar el modal) de si falta descargar algo.
+    // La usa el padre para decidir si necesita interceptar la navegación
+    // o dejar pasar el clic sin más.
+    tienePendientes() {
+      return !this.recetaDescargada || !this.diagnosticoDescargado;
+    },
     // Recibe el objeto "nota_psoapp" completo tal como lo devuelve el
     // backend (IAClinicaService::consultarIA / analizarTranscripcion) y
     // reparte cada campo a la sección correspondiente del acordeón usando
@@ -311,6 +367,11 @@ export default {
         enlace.click();
         document.body.removeChild(enlace);
 
+        if (tipo === 'receta') {
+          this.recetaDescargada = true;
+        } else if (tipo === 'diagnostico') {
+          this.diagnosticoDescargado = true;
+        }
         this.$emit('psoapp-descargar', { tipo, consultaId: this.consultaId });
       } catch (error) {
         console.error('Error al descargar el PDF:', error);

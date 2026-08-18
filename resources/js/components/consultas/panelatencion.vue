@@ -513,6 +513,26 @@
                     </div>
                   </div>
 
+                  <!-- ═══ NUEVO: Tarjeta de IMC calculado en vivo ═══ -->
+                  <div class="cc-vital-card cc-vital-card-imc" v-if="imcTriage">
+                    <div class="cc-vital-label">
+                      IMC
+                      <span v-if="imcTriage.tipo === 'pediatrico'" class="cc-vital-imc-percentil">
+                        Percentil {{ imcTriage.percentil }}
+                      </span>
+                    </div>
+                    <div class="cc-vital-readout">
+                      <strong class="cc-vital-value-imc">{{ imcTriage.bmi }}</strong>
+                      <span class="cc-vital-imc-badge" :class="claseImc(imcTriage)">
+                        {{ imcTriage.clasificacion }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="cc-vital-card cc-vital-card-imc-vacio" v-else-if="triageForm.peso || triageForm.talla">
+                    <div class="cc-vital-label">IMC</div>
+                    <small class="cc-vital-imc-hint">Captura peso y talla para calcularlo</small>
+                  </div>
+
                 </div>
               </div>
             </div>
@@ -625,19 +645,53 @@
               <p class="cc-section-label">
                 <i class="ti ti-heartbeat" aria-hidden="true"></i> 2. Signos vitales y somatometría
               </p>
-              <div class="cc-form-grid">
-                <div class="cc-field">
-                  <label class="cc-field-label">Peso (kg)</label>
-                  <div class="cc-input-wrap">
-                    <i class="ti ti-scale" aria-hidden="true"></i>
-                    <input type="number" step="0.1" v-model="form.peso" placeholder="0.0" />
-                  </div>
+              <div class="cc-field">
+                <label class="cc-field-label">Peso (kg)</label>
+                <div class="cc-input-wrap">
+                  <i class="ti ti-scale" aria-hidden="true"></i>
+                  <input
+                    type="number"
+                    step="0.1"
+                    v-model.number="form.peso"
+                    placeholder="0.0"
+                  />
                 </div>
-                <div class="cc-field">
-                  <label class="cc-field-label">Talla (cm)</label>
-                  <div class="cc-input-wrap">
-                    <i class="ti ti-ruler" aria-hidden="true"></i>
-                    <input type="number" v-model="form.talla" placeholder="170" />
+              </div>
+
+              <div class="cc-field">
+                <label class="cc-field-label">Talla (cm)</label>
+                <div class="cc-input-wrap">
+                  <i class="ti ti-ruler" aria-hidden="true"></i>
+                  <input
+                    type="number"
+                    step="0.1"
+                    v-model.number="form.talla"
+                    placeholder="170"
+                  />
+                </div>
+              </div>
+
+              <!-- IMC calculado automáticamente -->
+              <div v-if="imcCalculado !== null" class="cc-field cc-field--full">
+                <div class="cc-imc-result">
+                  <div class="cc-imc-result__icon">
+                    <i class="ti ti-scale" aria-hidden="true"></i>
+                  </div>
+
+                  <div class="cc-imc-result__info">
+                    <span class="cc-field-label">Índice de Masa Corporal (IMC)</span>
+
+                    <strong class="cc-imc-value">
+                      {{ imcCalculado }}
+                      <small>kg/m²</small>
+                    </strong>
+
+                    <span
+                      class="cc-imc-status"
+                      :class="'cc-imc-status--' + categoriaImc"
+                    >
+                      {{ categoriaImcTexto }}
+                    </span>
                   </div>
                 </div>
                 <div class="cc-field">
@@ -766,6 +820,8 @@ import axios from 'axios'
 // el dashboard) cuando una consulta se finaliza, sin esperar el
 // setInterval de refresco automático de esa vista.
 import eventBus from '../../utils/eventBus.js'
+import { evaluarIMC } from '@/utils/bmiPercentile.js'
+import lmsTable from '@/data/bmi-lms-cdc.json'
 
 // Clave usada en localStorage para el paciente seleccionado para "Nueva consulta"
 const CLAVE_PACIENTE_SELECCIONADO = 'pacienteSeleccionado'
@@ -799,37 +855,24 @@ export default {
       },
 
       // Paciente mostrado en el panel izquierdo.
-      // Ya NO se asigna automáticamente a pacientes[0] en obtenerPacientes();
-      // la selección inicial la decide inicializarPacienteActivo(), que usa
-      // la cola de HOY (pacientesFiltrados), no la lista completa de pacientes.
       pacienteActivo: null,
 
-      // Texto escrito en el buscador (filtra por nombre o folio, EN TODOS
-      // los pacientes, ignorando especialidad/médico/fecha mientras haya texto)
+      // Texto escrito en el buscador
       busqueda: '',
 
       // Filtros de la tabla de espera.
-      // fechaFiltro empieza en el día de hoy para que la lista de espera
-      // muestre automáticamente las citas de hoy en cuanto se entra a la vista.
-      // Se deja vacío ('') para "ver todas las fechas".
       especialidadSeleccionada: '',
       medicoSeleccionado: '',
       fechaFiltro: obtenerFechaHoyISO(),
 
-      // Catálogo completo (independiente de especialidadesDisponibles/
-      // medicosDisponibles, que solo reflejan quién ya está en la lista de
-      // espera de hoy). Se usa dentro del modal de triage para poder asignar
-      // médico/especialidad a un paciente walk-in, aunque hoy ese médico
-      // todavía no tenga a nadie en la fila.
+      // Catálogo completo (médicos/especialidades) para el modal de triage
       catalogoMedicos: [],
       catalogoEspecialidades: [],
 
       // Controla si el panel izquierdo está en modo edición
       editMode: false,
-      // Indica si se está guardando la edición del panel (deshabilita botones)
       guardandoEdicion: false,
 
-      // Datos temporales del formulario de edición del panel
       editForm: {
         diagnostico: '',
         sintomas: '',
@@ -837,50 +880,45 @@ export default {
         estado: ''
       },
 
-      // Opciones disponibles en los selectores del modo edición
       triageOpciones: ['Rojo', 'Amarillo', 'Verde'],
       estadoOpciones: ['En espera', 'Atendido', 'Cancelado'],
 
-      // Controla qué modal está abierto y a qué paciente pertenece
       modal: {
-        tipo: '',       // 'detalle' | 'triage' | 'expediente' | '' (vacío = cerrado)
+        tipo: '',
         paciente: null
       },
 
       // Formulario del modal de edición rápida de signos vitales (desde la tabla)
       triageForm: {
-        presion: '',
-        saturacion: null,
-        temperatura: null,
-        frecuencia_cardiaca: null,
-        frecuencia_respiratoria: null,
-        peso: null,
-        talla: null,
-        motivo_consulta: '',
-        // Solo se usan cuando el paciente todavía no tiene cita hoy (walk-in)
-        medico_id: '',
-        especialidad_id: ''
-      },
-      // Indica si se está guardando el triage rápido (deshabilita botones)
+      presion: '',
+      saturacion: null,
+      temperatura: null,
+      frecuencia_cardiaca: null,
+      frecuencia_respiratoria: null,
+      peso: null,
+      talla: null,
+
+      // IMC calculado automáticamente
+      imc: null,
+      imc_percentil: null,
+      imc_clasificacion: '',
+
+      motivo_consulta: '',
+      medico_id: '',
+      especialidad_id: ''
+    },
       guardandoTriage: false,
 
       // Imágenes cargadas en el dropzone del expediente (base64)
       previews: [],
 
-      // ID del paciente seleccionado con doble clic para "Nueva consulta"
-      // (se sincroniza con localStorage para resaltar la fila al recargar)
       pacienteSeleccionadoId: null,
-
-      // ID del paciente cuya cita se está finalizando (basura). Deshabilita
-      // el botón de esa fila mientras el PATCH está en vuelo, para evitar
-      // doble clic.
       finalizandoId: null,
 
       // Formulario completo del expediente clínico
       form: {
         paciente_id:              '',
         codigo_paciente:          '',
-        // ── Datos generales
         telefono:                 '',
         email:                    '',
         sexo:                     '',
@@ -890,9 +928,11 @@ export default {
         direccion:                '',
         contacto_emergencia:      '',
         telefono_emergencia:      '',
-        // ── Signos vitales (vienen del triage)
         peso:                     '',
         talla:                    '',
+        imc:                      '',
+        imc_percentil:            '',
+        imc_clasificacion:        '',
         presion:                  '',
         temperatura:              '',
         saturacion:               '',
@@ -900,7 +940,6 @@ export default {
         motivo_consulta:          '',
         sintomas:                 '',
         diagnostico:              '',
-        // ── Antecedentes médicos
         alergias:                 '',
         enfermedades_cronicas:    '',
         medicamentos_actuales:    '',
@@ -910,7 +949,6 @@ export default {
   },
 
   computed: {
-    // Lista única de especialidades a partir de la lista de espera del día
     especialidadesDisponibles() {
       const mapa = new Map()
       const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
@@ -922,7 +960,6 @@ export default {
       return Array.from(mapa.values())
     },
 
-    // Lista única de médicos a partir de la lista de espera del día
     medicosDisponibles() {
       const mapa = new Map()
       const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
@@ -939,7 +976,6 @@ export default {
       return Array.from(mapa.values()).map(m => ({ ...m, especialidadIds: Array.from(m.especialidadIds) }))
     },
 
-    // Si hay especialidad elegida, solo muestra médicos que la atienden
     medicosFiltrados() {
       if (!this.especialidadSeleccionada) return this.medicosDisponibles
       return this.medicosDisponibles.filter(m =>
@@ -947,15 +983,11 @@ export default {
       )
     },
 
-    // Médicos del CATÁLOGO COMPLETO filtrados por la especialidad elegida
-    // dentro del modal de triage (independiente de medicosFiltrados, que
-    // solo conoce a los médicos que ya tienen a alguien en la fila de hoy).
     medicosCatalogoFiltrados() {
       if (!this.triageForm.especialidad_id) return this.catalogoMedicos
       return this.catalogoMedicos.filter(m => m.especialidad_id == this.triageForm.especialidad_id)
     },
 
-    // Agrupa los registros por id de paciente usando la lista de espera del día
     citasPorPacienteId() {
       const mapa = new Map()
       const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
@@ -968,21 +1000,13 @@ export default {
       return mapa
     },
 
-    // Indica si el buscador tiene texto. Mientras esto sea true, los
-    // filtros de especialidad/médico quedan visualmente desactivados
-    // y se ignoran por completo en pacientesFiltrados.
     busquedaActiva() {
       return this.busqueda.trim().length > 0
     },
 
-    // Filtra la lista de pacientes basándose en la lista de espera del día.
     pacientesFiltrados() {
       const q = this.busqueda.trim().toLowerCase()
 
-      // Fusiona cada paciente con su registro activo de lista_espera (si existe).
-      // Los campos del registro se guardan bajo claves propias (turno_*) para
-      // NO pisar los campos originales del paciente (ej. paciente.estado, que
-      // es un campo distinto: Activo/Inactivo del paciente, no el estado del turno).
       const fusionar = (p) => {
         const registros = this.citasPorPacienteId.get(p.id) || []
         const registroActivo = registros.find(r => !['Cancelada', 'Finalizada'].includes(r.estado)) || registros[0] || null
@@ -1038,7 +1062,7 @@ export default {
 
       return lista
     },
-    // Mensaje mostrado en el panel izquierdo cuando no hay pacienteActivo.
+
     mensajeSinPaciente() {
       if (this.pacientesFiltrados.length === 0) {
         return 'No hay pacientes en la lista de espera para hoy'
@@ -1046,9 +1070,6 @@ export default {
       return 'Sin paciente seleccionado'
     },
 
-    // ── Evaluación de signos vitales del modal de edición rápida de triage ──
-    // Mismos umbrales que el paso "Triaje" del alta de paciente, para que
-    // ambos formularios etiqueten los valores de la misma manera.
     presionStatus() {
       const raw = this.triageForm.presion
       if (!raw || !raw.includes('/')) return ''
@@ -1102,11 +1123,6 @@ export default {
       return this.statusLabel(this.overallTriageStatus)
     },
 
-    // ── Mensajes de clasificación clínica por signo vital ──
-    // Reemplazan el genérico "Fuera de rango" / "Vigilar" / "Normal" por
-    // una etiqueta específica según el valor capturado, usando los mismos
-    // umbrales que ya definen *Status arriba (no se tocan esos umbrales,
-    // solo se les da un mensaje más descriptivo).
     presionMensaje() {
       const raw = this.triageForm.presion
       if (!raw || !raw.includes('/')) return ''
@@ -1151,17 +1167,92 @@ export default {
       if (v < 12) return 'Bradipnea leve'
       if (v > 20) return 'Taquipnea leve'
       return 'Respiración normal'
+    },
+
+    // ── IMC calculado en vivo para el modal de triage ──
+    // Usa la misma lógica que SignosVitales.vue: si hay edad y sexo
+    // confiables, aplica la tabla pediátrica CDC (percentil); si no,
+    // devuelve el IMC crudo sin clasificar. El watch de peso/talla
+    // llama a calcularIMCAutomatico() para reflejar esto en triageForm.
+    imcTriage() {
+      const peso = Number(this.triageForm.peso)
+      const talla = Number(this.triageForm.talla)
+
+      if (!peso || !talla || peso <= 0 || talla <= 0) {
+        return null
+      }
+
+      const paciente = this.modal.paciente
+
+      if (!paciente) {
+        return null
+      }
+
+      let edadAnios = Number(paciente.edad) || 0
+      let edadMeses = 0
+
+      // Si tenemos fecha de nacimiento, calculamos la edad con mayor precisión
+      if (paciente.fecha_nacimiento) {
+        const nacimiento = new Date(paciente.fecha_nacimiento)
+        const hoy = new Date()
+
+        if (!isNaN(nacimiento.getTime())) {
+          let meses =
+            (hoy.getFullYear() - nacimiento.getFullYear()) * 12 +
+            (hoy.getMonth() - nacimiento.getMonth())
+
+          if (hoy.getDate() < nacimiento.getDate()) {
+            meses--
+          }
+
+          meses = Math.max(meses, 0)
+
+          edadAnios = Math.floor(meses / 12)
+          edadMeses = meses % 12
+        }
+      }
+
+      const sexo = (paciente.sexo || '').toString().trim().toUpperCase()
+
+      if (!sexo) {
+        return {
+          bmi: Number(
+            (peso / Math.pow(talla / 100, 2)).toFixed(2)
+          ),
+          tipo: 'sin_clasificar',
+          clasificacion: 'Falta sexo del paciente'
+        }
+      }
+
+      return evaluarIMC(
+        {
+          pesoKg: peso,
+          tallaCm: talla,
+          edadAnios,
+          edadMeses,
+          sexo
+        },
+        lmsTable
+      )
     }
   },
 
-  // Al montar el componente, carga pacientes y citas.
-  // Se espera a que ambas peticiones terminen (Promise.all) antes de
-  // inicializar el paciente activo, porque este depende de pacientesFiltrados,
-  // que a su vez depende de que tanto `pacientes` como `citas` ya estén cargados.
   async mounted() {
     await Promise.all([this.obtenerPacientes(), this.obtenerListaEspera(), this.cargarCatalogoAgregar()])
     this.cargarSeleccionPrevia()
     this.inicializarPacienteActivo()
+  },
+  watch: {
+    'triageForm.peso': {
+      handler() {
+        this.calcularIMCAutomatico()
+      }
+    },
+    'triageForm.talla': {
+      handler() {
+        this.calcularIMCAutomatico()
+      }
+    }
   },
 
   methods: {
@@ -1200,22 +1291,51 @@ export default {
       return reg.folio || paciente.paciente_id || 'S/F'
     },
 
+    calcularIMCAutomatico() {
+      const resultado = this.imcTriage
+
+      if (!resultado) {
+        this.triageForm.imc = null
+        this.triageForm.imc_percentil = null
+        this.triageForm.imc_clasificacion = ''
+        return
+      }
+
+      this.triageForm.imc = resultado.bmi ?? null
+
+      this.triageForm.imc_percentil =
+        resultado.percentil ??
+        resultado.percentile ??
+        null
+
+      this.triageForm.imc_clasificacion =
+        resultado.clasificacion ??
+        resultado.tipo ??
+        ''
+    },
+
+    // ── NUEVO: color del badge de IMC según severidad (mismo criterio
+    // que usa SignosVitales.vue en su método claseImc) ──
+    claseImc(info) {
+      if (!info) return ''
+      if (info.tipo === 'sin_clasificar') return 'cc-imc-badge-neutro'
+      const c = (info.clasificacion || '').toLowerCase()
+      if (c.includes('normal')) return 'cc-imc-badge-normal'
+      if (c.includes('bajo')) return 'cc-imc-badge-warning'
+      if (c.includes('sobrepeso')) return 'cc-imc-badge-warning'
+      if (c.includes('obesidad')) return 'cc-imc-badge-critical'
+      return 'cc-imc-badge-neutro'
+    },
+
     // ──────────────────────────────────────────
     // API
     // ──────────────────────────────────────────
 
     async obtenerPacientes() {
       try {
-        // Solicita la lista de pacientes al backend
         const response = await ApiService.get('/pacientes')
         this.pacientes = response.data
 
-        // Si ya había un paciente activo en el panel (ej. tras guardar
-        // cambios), refresca su referencia con los datos nuevos. Ya NO se
-        // asigna automáticamente pacientes[0] cuando no hay paciente activo:
-        // la selección inicial la decide inicializarPacienteActivo(), que
-        // usa la cola de HOY (pacientesFiltrados) en vez de la lista
-        // completa de pacientes.
         if (this.pacienteActivo) {
           const actualizado = this.pacientes.find(p => p.id === this.pacienteActivo.id)
           this.pacienteActivo = actualizado || null
@@ -1236,7 +1356,6 @@ export default {
       try {
         const res = await ApiService.get('/lista-espera', { params })
         this.listaEspera = res.data.lista || res.data
-        // 👉 AGREGA ESTA LÍNEA PARA INSPECCIONAR EN CONSOLA
         console.log("📌 Datos de la Lista de Espera recibidos:", this.listaEspera)
       } catch (err) {
           this.loadError = "No se pudo cargar la lista de espera."
@@ -1249,11 +1368,6 @@ export default {
         }
     },
 
-    // Carga el catálogo completo de médicos y especialidades una sola vez
-    // (GET /lista-espera/create), independiente de especialidadesDisponibles/
-    // medicosDisponibles (que solo reflejan quién ya está en lista_espera hoy).
-    // Se usa dentro del modal de triage para poder asignar a cualquier médico,
-    // aunque hoy todavía no tenga a nadie en la fila.
     async cargarCatalogoAgregar() {
       try {
         const res = await ApiService.get('/lista-espera/create')
@@ -1264,9 +1378,6 @@ export default {
       }
     },
 
-    // Si el médico ya elegido dentro del modal de triage no pertenece a la
-    // nueva especialidad seleccionada, se limpia (mismo criterio que
-    // onEspecialidadChange, pero para el catálogo completo del modal).
     onEspecialidadTriageChange() {
       if (this.triageForm.medico_id) {
         const sigueSiendoValido = this.medicosCatalogoFiltrados.some(m => m.id === this.triageForm.medico_id)
@@ -1342,19 +1453,11 @@ export default {
       }
     },
 
-    // Actualiza SOLO los datos propios del paciente (tabla `pacientes`).
-    // Los signos vitales / triage NUNCA se mandan por aquí: eso vive en
-    // guardarTriageEnBackend(), que pega contra /triage/guardar/{id}.
     async guardarCambiosPaciente(paciente) {
       const objetivo = paciente || this.pacienteActivo
       if (!objetivo) return
       try {
-        // Enviamos solo los campos que corresponden a la tabla `pacientes`;
-        // 'triages' se excluye explícitamente porque el backend ya lo
-        // ignora (y no debe viajar en este PUT).
         const { triages, ...datosPaciente } = objetivo
-
-        // Envía los datos actualizados del paciente al backend
         await ApiService.put('/pacientes/' + objetivo.id, datosPaciente)
         await this.obtenerPacientes()
       } catch (error) {
@@ -1363,63 +1466,31 @@ export default {
       }
     },
 
-    // Punto único para persistir signos vitales / triage en el backend.
-    // Pega contra POST /triage/guardar/{pacienteId} (TriageController@guardarTriageRapido).
-    // 'payload' solo debe traer los campos que acepta ese endpoint
-    // (presion, saturacion, temperatura, frecuencia_cardiaca,
-    // frecuencia_respiratoria, peso, talla, motivo_consulta).
     async guardarTriageEnBackend(pacienteId, payload) {
       const { data } = await axios.post(`/triage/guardar/${pacienteId}`, payload)
       return data
     },
 
-    // ──────────────────────────────────────────
-    // Filtros
-    // ──────────────────────────────────────────
-
     onEspecialidadChange() {
-      // Si el médico elegido no atiende la nueva especialidad, se limpia
       if (this.medicoSeleccionado) {
         const sigueSiendoValido = this.medicosFiltrados.some(m => m.id === this.medicoSeleccionado)
         if (!sigueSiendoValido) this.medicoSeleccionado = ''
       }
     },
 
-    // ──────────────────────────────────────────
-    // Cola de hoy: helpers y alta automática de cita
-    // ──────────────────────────────────────────
-
-    // Fecha de hoy en ISO, para comparar contra citas
     obtenerFechaHoyISO() {
       return obtenerFechaHoyISO()
     },
 
-    // Selecciona como paciente activo inicial al primero de la lista de
-    // espera de HOY (pacientesFiltrados, ya viene ordenada por hora de
-    // cita), no a cualquier paciente de la base de datos completa. Si no
-    // hay citas para la fecha actualmente filtrada, el panel queda vacío
-    // y muestra mensajeSinPaciente ("No hay citas para hoy").
     inicializarPacienteActivo() {
       this.pacienteActivo = this.pacientesFiltrados[0] || null
     },
 
-    // Normaliza cualquier valor de fecha que venga del backend a "YYYY-MM-DD".
-    // El backend a veces serializa la columna `fecha` como datetime completo
-    // (ej. "2026-08-11T00:00:00.000000Z") en vez de solo la fecha; comparar
-    // eso con "===" contra un "YYYY-MM-DD" nunca hace match, por lo que las
-    // citas de hoy "existían" pero no aparecían en la lista filtrada.
     fechaSolo(fecha) {
       if (!fecha) return ''
       return String(fecha).slice(0, 10)
     },
 
-    // Devuelve la cita de HOY de un paciente que aún sigue activa (no
-    // cancelada ni finalizada), respetando el médico/especialidad
-    // actualmente seleccionados en los filtros de la tabla. Si tiene
-    // cita hoy pero con otro médico/especialidad, no cuenta.
-    // Centraliza la lógica que antes solo vivía (duplicada) dentro de
-    // tieneCitaHoy(); ahora también la usa finalizarPaciente() para saber
-    // qué cita hay que marcar como 'Finalizada'.
     obtenerCitaHoyActiva(paciente) {
       if (!paciente) return null
       const hoy = this.obtenerFechaHoyISO()
@@ -1435,15 +1506,10 @@ export default {
       }) || null
     },
 
-    // ¿Este paciente ya tiene una cita para hoy (no cancelada/finalizada)?
-    // Revisa si tiene cita hoy PARA el médico/especialidad
-    // actualmente seleccionados en los filtros de la tabla.
     tieneCitaHoy(paciente) {
       return !!this.obtenerCitaHoyActiva(paciente)
     },
 
-    // Hora de la cita de un paciente para la fecha actualmente filtrada
-    // (o de hoy si no hay fecha elegida). Se usa para ordenar la tabla.
     horaCitaPaciente(p) {
       const fechaObjetivo = this.fechaFiltro || this.obtenerFechaHoyISO()
       const citasDelPaciente = this.citasPorPacienteId.get(p.id) || []
@@ -1454,12 +1520,6 @@ export default {
       return relevantes.map(c => c.hora).sort()[0]
     },
 
-    // Crea la cita de HOY para un paciente que no la tenía (llegó por
-    // búsqueda). Prioriza el médico/especialidad elegidos dentro del modal
-    // de triage (triageForm.medico_id / triageForm.especialidad_id); si no
-    // se eligieron ahí, usa como respaldo los filtros de la tabla
-    // (medicoSeleccionado / especialidadSeleccionada) para no romper otros
-    // flujos que ya dependían de este método.
     async agregarPacienteAListaHoy(paciente) {
       const medicoId = this.triageForm.medico_id || this.medicoSeleccionado
       const especialidadId = this.triageForm.especialidad_id || this.especialidadSeleccionada
@@ -1472,10 +1532,7 @@ export default {
           observaciones:    'Agregado a la lista de hoy desde la búsqueda de paciente'
         })
 
-        // Refresca la lista de espera para que el nuevo walk-in aparezca de inmediato
         await this.obtenerListaEspera()
-
-        // Limpia el buscador para volver a la vista principal
         this.busqueda = ''
 
         return true
@@ -1492,17 +1549,6 @@ export default {
       }
     },
 
-    // ──────────────────────────────────────────
-    // Finalizar / quitar paciente de la lista de espera (botón de basura)
-    // ──────────────────────────────────────────
-
-    // Devuelve la URL correcta para actualizar el estado de un registro
-    // que viene de /api/citas. Ese endpoint combina 'citas' y 'consultas'
-    // tradicionales prefijando los ids como 'cita-123' o 'consulta-456'
-    // (ver CitaController@getCitas) para que no choquen entre sí. Aquí se
-    // quita el prefijo y se decide a qué endpoint mandar el PATCH: mandar
-    // 'cita-113' tal cual a /api/citas/{id}/estado da 404, porque
-    // Cita::findOrFail busca ese string literal como si fuera el id.
     endpointEstadoCita(cita) {
       const idStr = String(cita.id)
 
@@ -1513,20 +1559,6 @@ export default {
       return `/api/citas/${idStr.replace('cita-', '')}/estado`
     },
 
-    // No borra al paciente ni su historial: solo marca su cita de HOY
-    // como 'Finalizada' vía PATCH /api/citas/{id}/estado o
-    // /api/consultas/{id}/estado, según de dónde venga el registro (ver
-    // endpointEstadoCita arriba). Como pacientesFiltrados excluye
-    // citas 'Finalizada'/'Cancelada', el paciente desaparece de la lista
-    // de espera en cuanto se refresca `citas`.
-   
-
-    // ──────────────────────────────────────────
-    // Selección de paciente para "Nueva consulta" (doble clic)
-    // ──────────────────────────────────────────
-
-    // Al recargar la página, si ya había un paciente seleccionado
-    // previamente, resalta esa misma fila en la tabla
     cargarSeleccionPrevia() {
       const guardado = localStorage.getItem(CLAVE_PACIENTE_SELECCIONADO)
       if (!guardado) return
@@ -1538,8 +1570,6 @@ export default {
       }
     },
 
-    // Guarda el paciente elegido en localStorage para que lo recojan
-    // los componentes de "Nueva consulta" y "Consulta inteligente"
     seleccionarParaConsulta(paciente) {
       if (!paciente) return
 
@@ -1552,7 +1582,6 @@ export default {
       localStorage.setItem(CLAVE_PACIENTE_SELECCIONADO, JSON.stringify(payload))
       this.pacienteSeleccionadoId = paciente.id
 
-      // Aviso visual de confirmación (usa SweetAlert2, ya disponible en el proyecto)
       if (window.Swal) {
         window.Swal.fire({
           toast: true,
@@ -1566,20 +1595,13 @@ export default {
       }
     },
 
-    // ──────────────────────────────────────────
-    // Panel izquierdo
-    // ──────────────────────────────────────────
-
     verPaciente(paciente) {
-      // Carga el paciente seleccionado en el panel y sale del modo edición
       this.pacienteActivo = paciente
       this.editMode = false
     },
 
     iniciarEdicion(paciente) {
       if (!paciente) return
-      // Activa el modo edición y precarga el formulario con los datos actuales
-      // (motivo, síntomas y triage viven dentro del último registro de triage)
       const t = this.ultimoTriage(paciente) || {}
       this.editMode = true
       this.editForm = {
@@ -1591,29 +1613,20 @@ export default {
     },
 
     cancelarEdicion() {
-      // Sale del modo edición sin guardar cambios
       this.editMode = false
     },
 
-    // Guarda los cambios del panel izquierdo. Hace DOS llamadas
-    // separadas al backend, porque cada una vive en una tabla distinta:
-    //  1) /triage/guardar/{id} → motivo_consulta, sintomas y estado de triage
-    //     (Rojo/Amarillo/Verde), que se guardan en la tabla `triage`.
-    //  2) PUT /pacientes/{id} → el estado general del paciente
-    //     (En espera/Atendido/Cancelado), que vive en la tabla `pacientes`.
     async guardarEdicion() {
       if (!this.pacienteActivo) return
 
       this.guardandoEdicion = true
       try {
-        // 1) Triage: motivo de consulta, síntomas y nivel de triage
         const triageActualizado = await this.guardarTriageEnBackend(this.pacienteActivo.id, {
           motivo_consulta: this.editForm.diagnostico,
           sintomas:         this.editForm.sintomas,
           estado_triage:    this.editForm.triage
         })
 
-        // 2) Estado general del paciente
         this.pacienteActivo.estado = this.editForm.estado
         await this.guardarCambiosPaciente(this.pacienteActivo)
 
@@ -1636,18 +1649,12 @@ export default {
       }
     },
 
-    // ──────────────────────────────────────────
-    // Modales
-    // ──────────────────────────────────────────
-
     abrirModal(tipo, paciente) {
       if (!paciente) return
       this.modal.tipo    = tipo
       this.modal.paciente = paciente
 
-      // Si se abre la edición rápida de signos vitales, precarga los valores actuales
-           if (tipo === 'triage') {
-        // Inicializa el formulario completamente vacío para una nueva captura
+      if (tipo === 'triage') {
         this.triageForm = {
           presion: '',
           saturacion: null,
@@ -1656,19 +1663,22 @@ export default {
           frecuencia_respiratoria: null,
           peso: null,
           talla: null,
+
+          imc: null,
+          imc_percentil: null,
+          imc_clasificacion: '',
+
           motivo_consulta: '',
           medico_id: '',
           especialidad_id: ''
         }
       }
 
-      // Si se abre el expediente, precarga el formulario con los datos del paciente
       if (tipo === 'expediente') {
         const t = this.ultimoTriage(paciente) || {}
         this.form = {
           paciente_id:              paciente.id                         || '',
           codigo_paciente:          paciente.paciente_id                || '',
-          // datos generales
           telefono:                 paciente.telefono                   || '',
           email:                    paciente.email                      || '',
           sexo:                     paciente.sexo                       || '',
@@ -1678,9 +1688,11 @@ export default {
           direccion:                paciente.direccion                  || '',
           contacto_emergencia:      paciente.contacto_emergencia        || '',
           telefono_emergencia:      paciente.telefono_emergencia        || '',
-          // signos vitales del último triage
           peso:                     t.peso                              || '',
           talla:                    t.talla                             || '',
+          imc:                      t.imc                               || '',
+          imc_percentil:            t.imc_percentil                     || '',
+          imc_clasificacion:        t.imc_clasificacion                 || '',
           presion:                  t.presion                           || '',
           temperatura:              t.temperatura                       || '',
           saturacion:               t.saturacion                        || '',
@@ -1688,7 +1700,6 @@ export default {
           motivo_consulta:          t.motivo_consulta                   || '',
           sintomas:                 t.sintomas                          || '',
           diagnostico:              '',
-          // antecedentes
           alergias:                 paciente.alergias                   || '',
           enfermedades_cronicas:    paciente.enfermedades_cronicas      || '',
           medicamentos_actuales:    paciente.medicamentos_actuales      || '',
@@ -1699,23 +1710,19 @@ export default {
     },
 
     cerrarModal() {
-      // Cierra el modal activo y limpia la referencia al paciente
       this.modal.tipo     = ''
       this.modal.paciente = null
     },
 
     abrirExpedienteDesdeFila(paciente) {
-      // Atajo para abrir el expediente directamente desde la tabla
       this.abrirModal('expediente', paciente)
     },
 
     irAExpediente(paciente) {
-      // Desde el modal de detalle, abre el expediente del mismo paciente
       this.abrirModal('expediente', paciente)
     },
 
     guardarExpediente() {
-      // Aquí conectar con la API para persistir el expediente
       console.log('Expediente guardado:', {
         paciente: this.modal.paciente,
         form:     this.form,
@@ -1724,22 +1731,25 @@ export default {
       this.cerrarModal()
     },
 
-    // Guarda los signos vitales editados desde el ícono de la tabla y los
-    // persiste con POST /triage/guardar/{id} (TriageController@guardarTriageRapido),
-    // en vez de meterlos dentro del paciente y mandarlos por PUT /pacientes/{id}
-    // (ese endpoint ignora 'triages' por diseño, ver PacienteController@update).
-    //
-    // Si el paciente NO tiene cita hoy (llegó por búsqueda), primero se le
-    // crea la cita de hoy (agregarPacienteAListaHoy) usando el médico/
-    // especialidad elegidos en el propio modal (triageForm.medico_id /
-    // triageForm.especialidad_id); ya no depende de los filtros de la tabla.
-    // El nivel de triage (Rojo/Amarillo/Verde) ahora puede venir calculado
-    // por la IA en el backend cuando se escribió un motivo_consulta (ver
-    // TriageController@guardarTriageRapido); si no, sigue viviendo el modo
-    // de edición del panel izquierdo (guardarEdicion).
     async guardarTriageRapido() {
       const paciente = this.modal.paciente
       if (!paciente) return
+
+      const resultadoIMC = this.imcTriage
+
+      if (resultadoIMC) {
+        this.triageForm.imc = resultadoIMC.bmi ?? null
+
+        this.triageForm.imc_percentil =
+          resultadoIMC.percentil ??
+          resultadoIMC.percentile ??
+          null
+
+        this.triageForm.imc_clasificacion =
+          resultadoIMC.clasificacion ??
+          resultadoIMC.tipo ??
+          ''
+      }
 
       if (!this.tieneCitaHoy(paciente)) {
         const seAgrego = await this.agregarPacienteAListaHoy(paciente)
@@ -1748,24 +1758,15 @@ export default {
 
       this.guardandoTriage = true
       try {
-        // Persiste los signos vitales directamente en el backend
         const resultado = await this.guardarTriageEnBackend(paciente.id, this.triageForm)
 
-        // Refleja el triage devuelto por el backend en la copia local del
-        // paciente, para que la tabla/panel se actualicen sin esperar a
-        // un obtenerPacientes() completo
         if (resultado?.triage) {
           if (!paciente.triages) paciente.triages = []
-          
-          // Siempre se agrega como un nuevo registro al historial local
           paciente.triages.push(resultado.triage)
         }
 
-        // Refresca la lista completa para mantener todo sincronizado
         await this.obtenerPacientes()
 
-        // Si el backend (IA) determinó un nivel de triage, se lo mostramos
-        // al médico/enfermera como confirmación de la clasificación de urgencia.
         const nivel = resultado?.triage?.estado
         const iconosPorNivel = { Rojo: '🔴', Amarillo: '🟡', Verde: '🟢' }
 
@@ -1799,37 +1800,24 @@ export default {
       }
     },
 
-    // ──────────────────────────────────────────
-    // Archivos / imágenes (dropzone)
-    // ──────────────────────────────────────────
-
     onFileChange(event) {
-      // Dispara la lectura de archivos seleccionados con el input
       this._leerArchivos(event.target.files)
     },
 
     onDrop(event) {
-      // Dispara la lectura de archivos soltados en la dropzone
       this._leerArchivos(event.dataTransfer.files)
     },
 
     _leerArchivos(files) {
       for (const file of files) {
-        // Solo acepta imágenes (jpg, png, etc.)
         if (!file.type.startsWith('image/')) continue
         const reader = new FileReader()
-        // Agrega la imagen como base64 al array de previews
         reader.onload = e => { this.previews.push(e.target.result) }
         reader.readAsDataURL(file)
       }
     },
 
-    // ──────────────────────────────────────────
-    // Helpers de UI
-    // ──────────────────────────────────────────
-
     formatearFecha(fecha) {
-      // Convierte "2024-03-15" → "15 de marzo de 2024"
       if (!fecha) return '—'
       const [anio, mes, dia] = fecha.split('-')
       const meses = [
@@ -1840,7 +1828,6 @@ export default {
     },
 
     avatarColor(nombre) {
-      // Genera un color consistente para cada nombre (mismo nombre = mismo color siempre)
       const colores = [
         '#185FA5','#059669','#d97706','#dc2626',
         '#7c3aed','#0891b2','#be185d','#65a30d'
@@ -1853,13 +1840,11 @@ export default {
     },
 
     ultimoTriage(paciente) {
-      // Retorna el triage más reciente del paciente (último del array)
       if (!paciente?.triages?.length) return null
       return paciente.triages[paciente.triages.length - 1]
     },
 
     nombreCompleto(p) {
-      // Une nombre + apellido paterno + apellido materno, omitiendo los vacíos
       if (!p) return ''
       return [p.nombre, p.apellido_paterno, p.apellido_materno]
         .filter(Boolean)
@@ -1867,7 +1852,6 @@ export default {
     },
 
     initials(nombre) {
-      // Genera las iniciales del nombre (máx. 2 letras) para el avatar
       if (!nombre) return ''
       return nombre
         .split(' ')
@@ -1878,7 +1862,6 @@ export default {
     },
 
     chipClass(estado) {
-      // Devuelve la clase CSS del chip según el estado del paciente
       switch (estado) {
         case 'Atendido':  return 'cc-chip--green'
         case 'En espera': return 'cc-chip--amber'
@@ -1888,7 +1871,6 @@ export default {
     },
 
     triageClass(estado) {
-      // Devuelve la clase CSS del chip según el nivel de triage
       switch (estado) {
         case 'grave':    case 'Rojo':     return 'cc-chip--red'
         case 'moderado': case 'Amarillo': return 'cc-chip--amber'
@@ -1897,10 +1879,6 @@ export default {
       }
     },
 
-    // Traduce el estatus calculado de un signo vital ('normal' | 'warning' | 'critical')
-    // a la etiqueta que se muestra en el badge GLOBAL de triaje (cc-overall-badge).
-    // Los badges de cada tarjeta individual ya NO usan esto: usan
-    // presionMensaje / saturacionMensaje / temperaturaMensaje / etc.
     statusLabel(status) {
       if (status === 'critical') return 'Fuera de rango'
       if (status === 'warning') return 'Vigilar'
@@ -1918,7 +1896,6 @@ export default {
 /* ─── Reset & base ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Layout principal: panel izquierdo fijo + tabla a la derecha */
 .cc-layout {
   display: grid;
   grid-template-columns: 340px 1fr;
@@ -1930,12 +1907,10 @@ export default {
   min-height: 100vh;
 }
 
-/* En pantallas chicas, apila panel y tabla en una sola columna */
 @media (max-width: 1024px) {
   .cc-layout { grid-template-columns: 1fr; }
 }
 
-/* ─── Superficies compartidas (panel y tabla) ─── */
 .cc-panel,
 .cc-table-section {
   background: #fff;
@@ -1945,7 +1920,6 @@ export default {
   box-shadow: 0 1px 4px rgba(0,0,0,.04);
 }
 
-/* ─── Labels & dots de sección ─── */
 .cc-label { font-size: 13px; font-weight: 600; color: #374151; }
 
 .cc-dot {
@@ -1957,7 +1931,6 @@ export default {
 .cc-dot--blue { background: #185FA5; }
 .cc-dot--gray { background: #9ca3af; }
 
-/* ─── Cabecera del panel izquierdo ─── */
 .cc-panel__head {
   display: flex;
   align-items: center;
@@ -1966,7 +1939,6 @@ export default {
   gap: 10px;
 }
 
-/* Indicador "Editando" que aparece en modo edición */
 .cc-edit-flag {
   margin-left: auto;
   display: inline-flex;
@@ -1980,7 +1952,6 @@ export default {
   border-radius: 99px;
 }
 
-/* ─── Hero: avatar + nombre del paciente activo ─── */
 .cc-hero {
   display: flex;
   align-items: center;
@@ -1990,7 +1961,6 @@ export default {
   border-bottom: 1px solid #f0f2f5;
 }
 
-/* Avatar circular del panel izquierdo */
 .cc-avatar {
   width: 44px; height: 44px;
   border-radius: 50%;
@@ -2007,7 +1977,6 @@ export default {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* ─── Detalles del paciente (dl/dt/dd) ─── */
 .cc-details { padding: 4px 22px; }
 .cc-details__row {
   display: flex;
@@ -2030,7 +1999,6 @@ export default {
 }
 .cc-details__edit { display: flex; justify-content: flex-end; }
 
-/* Inputs pequeños del modo edición del panel */
 .cc-mini-input,
 .cc-mini-select {
   font-size: 12.5px; font-weight: 600; font-family: inherit;
@@ -2045,7 +2013,7 @@ export default {
   border-color: #185FA5;
   box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
 }
-/* ─── Caja de síntomas ─── */
+
 .cc-symptoms {
   margin: 4px 22px 18px;
   padding: 14px;
@@ -2072,7 +2040,6 @@ export default {
   box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
 }
 
-/* ─── Barra de acciones del panel ─── */
 .cc-panel__actions {
   display: flex; gap: 8px;
   padding: 14px 22px;
@@ -2080,7 +2047,6 @@ export default {
   border-top: 1px solid #f0f2f5;
 }
 
-/* ─── Chips de estado y triage ─── */
 .cc-chip {
   display: inline-block;
   font-size: 11px; font-weight: 700;
@@ -2093,17 +2059,14 @@ export default {
 .cc-chip--blue  { background: #dbeafe; color: #1e40af; }
 .cc-chip--red   { background: #fee2e2; color: #991b1b; }
 .cc-chip--amber { background: #fef3c7; color: #92400e; }
-/* Gris-verde suave para "Activo" (como en la foto de referencia) */
 .cc-chip--gray  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
-/* ─── Texto monoespacio (folio) ─── */
 .cc-mono {
   font-family: 'Inter', monospace;
   font-size: 11px; color: #185FA5; font-weight: 600;
 }
 .cc-mono--cell { color: #185FA5; font-size: 11px; font-weight: 600; }
 
-/* ─── Botones generales ─── */
 .cc-btn {
   display: inline-flex; align-items: center; gap: 6px;
   border-radius: 9px;
@@ -2134,11 +2097,6 @@ export default {
 }
 .cc-btn--success:hover:not(:disabled) { background: #047857; }
 
-/* ════════════════════════════════════════
-   TABLA DE ESPERA
-   ════════════════════════════════════════ */
-
-/* Cabecera de la sección tabla: título + contador */
 .cc-table-head {
   display: flex;
   justify-content: space-between; align-items: center;
@@ -2152,7 +2110,6 @@ export default {
   padding: 4px 12px; border-radius: 99px;
 }
 
-/* Buscador integrado como línea con separador inferior */
 .cc-table-search {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 24px;
@@ -2166,7 +2123,6 @@ export default {
 }
 .cc-table-search input::placeholder { color: #9ca3af; }
 
-/* Fila de filtros: especialidad, médico, fecha (calendario) */
 .cc-table-filtros {
   display: flex;
   align-items: center;
@@ -2177,8 +2133,6 @@ export default {
   background: #fafbfc;
   transition: opacity 0.15s;
 }
-/* Mientras hay texto en el buscador, los filtros se ven atenuados
-   (además de estar deshabilitados vía :disabled en el template) */
 .cc-table-filtros--inactivos {
   opacity: 0.5;
 }
@@ -2205,7 +2159,6 @@ export default {
   cursor: not-allowed;
 }
 
-/* Selector de fecha con ícono de calendario (usa el date picker nativo del navegador) */
 .cc-filtro-fecha {
   display: inline-flex;
   align-items: center;
@@ -2270,7 +2223,6 @@ export default {
   cursor: not-allowed;
 }
 
-/* Aviso de "doble clic para seleccionar" / estado del filtro actual */
 .cc-hint {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 24px;
@@ -2282,14 +2234,12 @@ export default {
 
 .cc-table-wrap { overflow-x: auto; }
 
-/* Tabla sin bordes externos, solo separadores entre filas */
 .cc-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
 
-/* Cabecera de columnas */
 .cc-table thead th {
   padding: 10px 24px;
   text-align: left;
@@ -2300,7 +2250,6 @@ export default {
 }
 .cc-th--right { text-align: right; }
 
-/* Filas de datos */
 .cc-row td {
   padding: 16px 24px;
   border-bottom: 1px solid #f3f4f6;
@@ -2309,36 +2258,31 @@ export default {
   background: #fff;
 }
 .cc-row:last-child td { border-bottom: none; }
-.cc-row:hover td      { background: #fafbff; cursor: pointer; }      /* hover sutil */
-.cc-row--active td    { background: #eff6ff; }      /* fila del paciente activo */
+.cc-row:hover td      { background: #fafbff; cursor: pointer; }
+.cc-row--active td    { background: #eff6ff; }
 
-/* Fila seleccionada para "Nueva consulta" (doble clic) */
 .cc-row--selected td {
   background: #ecfdf5;
   box-shadow: inset 3px 0 0 #059669;
 }
 
-/* Ícono de check junto al nombre del paciente seleccionado */
 .cc-selected-icon {
   color: #059669;
   font-size: 14px;
   margin-left: 6px;
 }
 
-/* Estado vacío cuando el buscador no encuentra resultados */
 .cc-table-empty {
   text-align: center; padding: 40px 16px;
   color: #9ca3af; font-size: 13px;
 }
 
-/* Celda paciente: avatar circular + nombre + motivo alineados */
 .cc-td--patient { display: flex; align-items: center; gap: 14px; }
 .cc-td--actions { text-align: right; white-space: nowrap; }
 
-/* Avatar circular en la tabla (igual que en la foto de referencia) */
 .cc-mini-avatar {
   width: 42px; height: 42px;
-  border-radius: 50%;                     /* ← círculo */
+  border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700;
   color: #fff; flex-shrink: 0;
@@ -2349,28 +2293,21 @@ export default {
   border-radius: 50%; font-size: 16px;
 }
 
-/* Nombre del paciente en negritas */
 .cc-patient-name {
   font-weight: 700; color: #111827;
   font-size: 13.5px; line-height: 1.3;
   display: flex; align-items: center;
 }
 
-/* Texto secundario debajo del nombre (motivo de consulta) en azul */
 .cc-patient-diag {
   font-size: 11.5px; color: #185FA5;
   font-weight: 600; margin-top: 2px;
 }
 
-/* ════════════════════════════════════════
-   BOTONES DE ACCIÓN CIRCULARES
-   Fondo gris neutro en reposo,
-   color solo en el ícono (como en la foto)
-   ════════════════════════════════════════ */
 .cc-icon-btn {
   width: 38px; height: 38px;
   border-radius: 50%;
-  background: #f0f2f5;              /* gris neutro — igual en todos */
+  background: #f0f2f5;
   border: none; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 17px;
@@ -2381,32 +2318,24 @@ export default {
 .cc-icon-btn:active { transform: scale(0.94); }
 .cc-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-/* Ojo — azul eléctrico como en la foto */
 .cc-icon-btn--view       { background: #f0f2f5; color: #2563eb; }
 .cc-icon-btn--view:hover { background: #dbeafe; }
 
-/* "+" Agregar a la lista — verde, para pacientes que aún no tienen cita hoy */
 .cc-icon-btn--add       { background: #f0f2f5; color: #059669; }
 .cc-icon-btn--add:hover { background: #d1fae5; }
 
-/* Triage — morado, para diferenciarse de ver/expediente */
 .cc-icon-btn--triage       { background: #f0f2f5; color: #7c3aed; }
 .cc-icon-btn--triage:hover { background: #ede9fe; }
 
-/* Carpeta — cyan/turquesa como en la foto */
 .cc-icon-btn--folder       { background: #f0f2f5; color: #06b6d4; }
 .cc-icon-btn--folder:hover { background: #cffafe; }
 
-/* Editar — ámbar (por si se usa en otro lugar) */
 .cc-icon-btn--edit       { background: #f0f2f5; color: #d97706; }
 .cc-icon-btn--edit:hover { background: #fef3c7; }
 
-/* Basura — rojo. Finaliza la cita de hoy y quita al paciente de la lista */
 .cc-icon-btn--danger       { background: #f0f2f5; color: #ef4444; }
 .cc-icon-btn--danger:hover:not(:disabled) { background: #fee2e2; }
 
-/* ─── Overlay y modales ─── */
-/* Fondo semitransparente que cubre toda la pantalla */
 .cc-overlay {
   position: fixed; inset: 0;
   background: rgba(15, 23, 42, 0.5);
@@ -2415,7 +2344,6 @@ export default {
   padding: 20px;
 }
 
-/* Cuadro blanco del modal */
 .cc-modal {
   background: #fff;
   border-radius: 20px;
@@ -2425,22 +2353,18 @@ export default {
   max-height: 90vh;
   box-shadow: 0 20px 60px rgba(0,0,0,0.18);
 }
-/* Versión grande para el expediente */
 .cc-modal--lg { max-width: 680px; }
-/* Versión mediana para la edición rápida de signos vitales */
 .cc-modal--md { max-width: 620px; }
 
-/* Cabecera del modal con fondo de color */
 .cc-modal__header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 18px 24px;
   font-size: 14px; font-weight: 700; color: #fff;
   gap: 12px; flex-shrink: 0;
 }
-.cc-modal__header--dark { background: #0f172a; }  /* ficha clínica */
-.cc-modal__header--blue { background: #185FA5; }  /* expediente / triage */
+.cc-modal__header--dark { background: #0f172a; }
+.cc-modal__header--blue { background: #185FA5; }
 
-/* Botón circular "×" para cerrar el modal */
 .cc-modal__close {
   background: transparent; border: none;
   color: rgba(255,255,255,0.7);
@@ -2451,10 +2375,8 @@ export default {
 }
 .cc-modal__close:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
-/* Cuerpo scrollable del modal */
 .cc-modal__body { padding: 24px; overflow-y: auto; flex: 1; }
 
-/* Aviso dentro del modal de triage cuando el paciente no tiene cita hoy */
 .cc-triage-aviso {
   display: flex;
   align-items: flex-start;
@@ -2470,7 +2392,6 @@ export default {
 }
 .cc-triage-aviso i { margin-top: 2px; flex-shrink: 0; }
 
-/* Grid 2 columnas para la ficha clínica */
 .cc-modal__grid {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 14px;
@@ -2479,7 +2400,6 @@ export default {
 }
 .cc-modal__grid-full { grid-column: 1 / -1; }
 
-/* Footer del modal: botones Cancelar/Guardar */
 .cc-modal__footer {
   display: flex; justify-content: space-between; gap: 10px;
   padding: 16px 24px;
@@ -2488,7 +2408,6 @@ export default {
   flex-shrink: 0;
 }
 
-/* ─── Campos del expediente ─── */
 .cc-field-label {
   font-size: 11px; font-weight: 600; color: #9ca3af;
   text-transform: uppercase; letter-spacing: 0.06em;
@@ -2498,7 +2417,6 @@ export default {
 .cc-field-value        { font-size: 14px; font-weight: 600; color: #111827; }
 .cc-field-value--muted { font-size: 13px; font-weight: 400; color: #6b7280; line-height: 1.6; }
 
-/* Referencia visual del paciente en el encabezado del expediente / triage */
 .cc-exp-ref {
   display: flex; align-items: center; gap: 14px;
   background: #f8fafc; border: 1px solid #e8eaed;
@@ -2508,7 +2426,6 @@ export default {
 .cc-exp-ref__name  { font-size: 15px; font-weight: 700; color: #111827; }
 .cc-exp-ref__folio { font-size: 12px; color: #9ca3af; margin-top: 2px; }
 
-/* ─── Badge global de estado del triaje (dentro de cc-exp-ref) ─── */
 .cc-overall-badge {
   margin-left: auto;
   display: inline-flex; align-items: center; gap: 7px;
@@ -2526,7 +2443,6 @@ export default {
 
 @keyframes cc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 
-/* ─── Panel de motivo de consulta / síntomas (edición rápida de triage) ─── */
 .cc-motivo-panel {
   background: #fff;
   border: 1px solid #e8eaed;
@@ -2557,7 +2473,6 @@ export default {
   box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
 }
 
-/* ─── Panel de signos vitales (edición rápida de triage) ─── */
 .cc-vitals-panel {
   background: #fff;
   border: 1px solid #e8eaed;
@@ -2587,8 +2502,9 @@ export default {
 .cc-vital-label {
   font-size: 10.5px; font-weight: 600; color: #9ca3af;
   letter-spacing: .3px; margin-bottom: 7px; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
-.cc-vital-readout { display: flex; align-items: baseline; gap: 6px; }
+.cc-vital-readout { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .cc-vital-input {
   width: 100%; background: transparent; border: none; outline: none;
   font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 19px;
@@ -2610,14 +2526,58 @@ export default {
 .cc-v-critical .cc-vital-input { color: #b31414; }
 .cc-v-critical .cc-vital-status-tag { background: rgba(220,38,38,.16); color: #b31414; }
 
-/* Etiqueta de sección dentro del expediente */
+/* ─── NUEVO: Tarjeta de IMC dentro del modal de triage ─── */
+.cc-vital-card-imc {
+  grid-column: span 2;
+}
+
+.cc-vital-imc-percentil {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #9ca3af;
+}
+
+.cc-vital-value-imc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  font-size: 19px;
+  color: #111827;
+}
+
+.cc-vital-imc-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.cc-imc-badge-normal   { background: #e4f7ef; color: #067a56; }
+.cc-imc-badge-warning  { background: #fdf1df; color: #a15a05; }
+.cc-imc-badge-critical { background: #fce8e8; color: #b31414; }
+.cc-imc-badge-neutro   { background: #f8fafc; color: #9ca3af; }
+
+.cc-vital-card-imc-vacio {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cc-vital-imc-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
 .cc-section-label {
   font-size: 13px; font-weight: 700; color: #374151;
   margin-bottom: 14px;
   display: flex; align-items: center; gap: 8px;
 }
 
-/* Grid de 3 columnas para los campos del formulario */
 .cc-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -2626,9 +2586,8 @@ export default {
 }
 
 .cc-field       { display: flex; flex-direction: column; }
-.cc-field--full { grid-column: 1 / -1; }  /* campo que ocupa todo el ancho */
+.cc-field--full { grid-column: 1 / -1; }
 
-/* Input con ícono a la izquierda */
 .cc-input-wrap {
   display: flex; align-items: center;
   border: 1px solid #e5e7eb; border-radius: 10px;
@@ -2647,7 +2606,6 @@ export default {
   width: 100%; color: #111827; background: transparent;
 }
 
-/* Textarea del expediente */
 .cc-field textarea {
   border: 1px solid #e5e7eb; border-radius: 10px;
   padding: 10px 14px;
@@ -2661,7 +2619,6 @@ export default {
   box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
 }
 
-/* ─── Dropzone de imágenes ─── */
 .cc-dropzone {
   border: 2px dashed #d1d5db; border-radius: 12px;
   padding: 28px 20px; text-align: center;
@@ -2674,7 +2631,6 @@ export default {
 .cc-dropzone p    { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
 .cc-dropzone span { font-size: 12px; color: #9ca3af; }
 
-/* Galería de previews de imágenes cargadas */
 .cc-previews { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .cc-preview  { position: relative; width: 86px; height: 86px; }
 .cc-preview img {
@@ -2682,7 +2638,6 @@ export default {
   object-fit: cover; border-radius: 10px;
   border: 1px solid #e5e7eb;
 }
-/* Botón rojo para eliminar una imagen del preview */
 .cc-preview button {
   position: absolute; top: -6px; right: -6px;
   width: 22px; height: 22px; border-radius: 50%;
@@ -2691,7 +2646,6 @@ export default {
   display: flex; align-items: center; justify-content: center;
 }
 
-/* ─── Transición fade para los modales ─── */
 .cc-fade-enter-active, .cc-fade-leave-active { transition: opacity 0.2s; }
 .cc-fade-enter-from,   .cc-fade-leave-to     { opacity: 0; }
 

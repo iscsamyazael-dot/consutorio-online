@@ -185,11 +185,26 @@
             font-style: italic;
         }
 
-        /* ---------- Firma / footer ---------- */
+        /* ---------- Firmas / footer ---------- */
         .firma-wrap { margin-top: 50px; }
-        .firma-box { width: 220px; margin-left: auto; text-align: center; }
-        .firma-linea { border-top: 1px solid #9ca3af; }
-        .firma-texto { font-size: 10px; color: #6b7280; margin-top: 4px; }
+        .firmas-table { width: 100%; }
+        .firmas-table td.firma-box {
+            width: 33.33%;
+            text-align: center;
+            padding: 0 12px;
+        }
+        .firma-linea { border-top: 1px solid #9ca3af; margin: 0 6px; }
+        .firma-texto {
+            font-size: 10px;
+            color: #374151;
+            margin-top: 4px;
+            font-weight: bold;
+        }
+        .firma-subtexto {
+            font-size: 9px;
+            color: #9ca3af;
+            margin-top: 1px;
+        }
 
         .footer-nota {
             margin-top: 24px;
@@ -400,10 +415,25 @@
     @endif
 
     <div class="firma-wrap">
-        <div class="firma-box">
-            <div class="firma-linea"></div>
-            <div class="firma-texto">Firma</div>
-        </div>
+        <table class="firmas-table">
+            <tr>
+                <td class="firma-box">
+                    <div class="firma-linea"></div>
+                    <div class="firma-texto">{{ $medico->name ?? 'Médico' }}</div>
+                    <div class="firma-subtexto">Médico tratante</div>
+                </td>
+                <td class="firma-box">
+                    <div class="firma-linea"></div>
+                    <div class="firma-texto">{{ $nombrePaciente ?: 'Paciente' }}</div>
+                    <div class="firma-subtexto">Paciente</div>
+                </td>
+                <td class="firma-box">
+                    <div class="firma-linea"></div>
+                    <div class="firma-texto">&nbsp;</div>
+                    <div class="firma-subtexto">Testigo</div>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <p class="footer-nota">

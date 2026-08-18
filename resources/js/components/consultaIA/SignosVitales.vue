@@ -53,6 +53,19 @@
                 <span class="vital-label">Talla</span>
                 <span class="vital-value">{{ triageGuardadoLocal.talla }} cm</span>
             </div>
+
+            <!-- NUEVO: IMC calculado, con clasificación pediátrica (percentil CDC)
+                 o de adulto (rangos OMS) según la edad del paciente -->
+            <div class="vital-item vital-item-imc" v-if="imcGuardado">
+                <span class="vital-label">
+                    IMC
+                    <span v-if="imcGuardado.tipo === 'pediatrico'" class="vital-imc-percentil">Percentil {{ imcGuardado.percentil }}</span>
+                </span>
+                <span class="vital-value">
+                    {{ imcGuardado.bmi }}
+                    <span class="vital-imc-badge" :class="claseImc(imcGuardado)">{{ imcGuardado.clasificacion }}</span>
+                </span>
+            </div>
         </div>
 
         <!-- MODAL: agregar triage nuevo -->
@@ -111,6 +124,24 @@
                             <input v-model.number="formTriage.talla" type="number" step="1" placeholder="170" :disabled="guardandoTriage">
                         </label>
 
+                        <!-- NUEVO: vista previa del IMC en vivo mientras se captura peso/talla -->
+                        <div class="campo-triage campo-triage-imc" v-if="imcModalPreview">
+                            <span>IMC (calculado)</span>
+                            <div class="imc-preview">
+                                <strong class="imc-preview-valor">{{ imcModalPreview.bmi }}</strong>
+                                <span class="imc-preview-clasif" :class="claseImc(imcModalPreview)">
+                                    {{ imcModalPreview.clasificacion }}
+                                </span>
+                                <small v-if="imcModalPreview.tipo === 'pediatrico'" class="imc-preview-percentil">
+                                    Percentil {{ imcModalPreview.percentil }} (tabla CDC)
+                                </small>
+                            </div>
+                        </div>
+                        <div class="campo-triage campo-triage-imc campo-triage-imc-vacio" v-else-if="formTriage.peso || formTriage.talla">
+                            <span>IMC (calculado)</span>
+                            <small class="imc-preview-hint">Captura peso y talla para calcularlo</small>
+                        </div>
+
                     </form>
 
                     <div class="modal-triage-actions">
@@ -132,6 +163,8 @@
 
 <script>
 import axios from 'axios'
+import { evaluarIMC } from '@/utils/bmiPercentile.js'
+import lmsTable from '@/data/bmi-lms-cdc.json'
 
 // Mismo patrón de rutas que usa el componente de chat de consulta IA.
 var route = document.querySelector("[name=route]").value
@@ -169,6 +202,47 @@ export default {
             formTriage: this.formTriageVacio()
         }
     },
+    computed: {
+        // Edad del paciente en meses. Preferimos fecha_nacimiento (más
+        // precisa, necesaria para el percentil pediátrico); si no está
+        // disponible, caemos a la columna `edad` (años) del paciente.
+        edadPacienteMeses() {
+            if (this.paciente?.fecha_nacimiento) {
+                const nacimiento = new Date(this.paciente.fecha_nacimiento)
+                if (!isNaN(nacimiento.getTime())) {
+                    const hoy = new Date()
+                    let meses = (hoy.getFullYear() - nacimiento.getFullYear()) * 12
+                    meses += hoy.getMonth() - nacimiento.getMonth()
+                    if (hoy.getDate() < nacimiento.getDate()) meses -= 1
+                    return Math.max(meses, 0)
+                }
+            }
+            if (this.paciente?.edad !== null && this.paciente?.edad !== undefined && this.paciente?.edad !== '') {
+                return Number(this.paciente.edad) * 12
+            }
+            return null
+        },
+
+        // Normaliza el campo `sexo` (texto libre en la BD) a 'M' / 'F'.
+        sexoPacienteNormalizado() {
+            const s = (this.paciente?.sexo || '').toString().trim().toLowerCase()
+            if (!s) return null
+            if (s.startsWith('m')) return 'M' // masculino
+            if (s.startsWith('f')) return 'F' // femenino
+            return null
+        },
+
+        // Vista previa en vivo del IMC mientras se llena el modal
+        imcModalPreview() {
+            return this.calcularIMCInfo(this.formTriage.peso, this.formTriage.talla)
+        },
+
+        // IMC del triage ya guardado, para mostrar en el panel
+        imcGuardado() {
+            if (!this.triageGuardadoLocal) return null
+            return this.calcularIMCInfo(this.triageGuardadoLocal.peso, this.triageGuardadoLocal.talla)
+        }
+    },
     methods: {
         formTriageVacio() {
             return {
@@ -180,6 +254,48 @@ export default {
                 peso: null,
                 talla: null
             }
+        },
+
+        // Calcula el IMC y su clasificación a partir de peso/talla,
+        // usando la edad y sexo del paciente para decidir si aplica
+        // la tabla pediátrica (percentil CDC) o el rango fijo de adulto (OMS).
+        calcularIMCInfo(peso, talla) {
+            const pesoKg = Number(peso)
+            const tallaCm = Number(talla)
+            if (!pesoKg || !tallaCm) return null
+
+            const agemos = this.edadPacienteMeses
+            const sexo = this.sexoPacienteNormalizado
+
+            if (agemos === null || !sexo) {
+                // No hay edad o sexo confiables: mostramos el IMC crudo, sin clasificar
+                const bmi = pesoKg / Math.pow(tallaCm / 100, 2)
+                return {
+                    bmi: Number(bmi.toFixed(2)),
+                    tipo: 'sin_clasificar',
+                    clasificacion: 'Falta edad o sexo del paciente'
+                }
+            }
+
+            return evaluarIMC({
+                pesoKg,
+                tallaCm,
+                edadAnios: Math.floor(agemos / 12),
+                edadMeses: agemos % 12,
+                sexo
+            }, lmsTable)
+        },
+
+        // Color del badge de clasificación según severidad
+        claseImc(info) {
+            if (!info) return ''
+            if (info.tipo === 'sin_clasificar') return 'imc-badge-neutro'
+            const c = (info.clasificacion || '').toLowerCase()
+            if (c.includes('normal')) return 'imc-badge-normal'
+            if (c.includes('bajo')) return 'imc-badge-warning'
+            if (c.includes('sobrepeso')) return 'imc-badge-warning'
+            if (c.includes('obesidad')) return 'imc-badge-critical'
+            return 'imc-badge-neutro'
         },
 
         abrirModalTriage() {
@@ -372,6 +488,10 @@ export default {
     color: var(--ink-soft);
     text-transform: uppercase;
     letter-spacing: .3px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
 }
 
 .vital-value {
@@ -379,6 +499,52 @@ export default {
     font-size: .95rem;
     font-weight: 600;
     color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* NUEVO: tarjeta de IMC dentro del panel guardado */
+.vital-item-imc {
+    grid-column: span 2;
+}
+
+.vital-imc-percentil {
+    font-size: .64rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-faint);
+}
+
+.vital-imc-badge {
+    font-family: 'Inter', sans-serif;
+    font-size: .68rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    letter-spacing: .2px;
+}
+
+.imc-badge-normal {
+    background: var(--status-normal-soft);
+    color: var(--status-normal);
+}
+
+.imc-badge-warning {
+    background: var(--status-warning-soft);
+    color: var(--status-warning);
+}
+
+.imc-badge-critical {
+    background: var(--status-critical-soft);
+    color: var(--status-critical);
+}
+
+.imc-badge-neutro {
+    background: var(--paper);
+    color: var(--ink-faint);
 }
 
 /* ─── MODAL: agregar triage ──────────────────────────────────────── */
@@ -496,6 +662,49 @@ export default {
 
 .campo-triage input:disabled {
     opacity: .6;
+}
+
+/* NUEVO: vista previa de IMC dentro del modal */
+.campo-triage-imc {
+    grid-column: span 2;
+    background: var(--paper, #F5F7FA);
+    border: 1px solid var(--line, #E3E8EF);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.imc-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.imc-preview-valor {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    color: var(--ink, #0F172A);
+}
+
+.imc-preview-clasif {
+    font-family: 'Inter', sans-serif;
+    font-size: .7rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+}
+
+.imc-preview-percentil {
+    font-size: .7rem;
+    color: var(--ink-faint, #94A3B8);
+    width: 100%;
+}
+
+.imc-preview-hint {
+    font-size: .74rem;
+    color: var(--ink-faint, #94A3B8);
+    font-weight: 400;
+    text-transform: none;
 }
 
 .modal-triage-actions {
