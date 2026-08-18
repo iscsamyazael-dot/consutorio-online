@@ -221,7 +221,7 @@
               <!-- Turno -->
               <td>
                 <span class="px-2.5 py-1 text-xs font-bold bg-blue-100 text-blue-800 rounded-full">
-                  #{{ listaPacientes.numero_turno }}
+                  #{{ listaPacientes.turno_numero ?? '—' }}
                 </span>
               </td>
               
@@ -240,16 +240,16 @@
               </td>
               
               <!-- Folio -->
-              <td><span class="cc-mono cc-mono--cell">{{ listaPacientes.folio }}</span></td>
+              <td><span class="cc-mono cc-mono--cell">{{ listaPacientes.turno_folio || '—' }}</span></td>
               
               <!-- Médico / Especialidad -->
-              <td>
-                <div class="text-xs font-medium text-gray-900">{{ listaPacientes.medico ? listaPacientes.medico.nombre : 'Sin médico' }}</div>
-                <div class="text-xs text-gray-500">{{ listaPacientes.especialidad ? listaPacientes.especialidad.nombre : 'Sin especialidad' }}</div>
-              </td>
+             <td>
+              <div class="text-xs font-medium text-gray-900">{{ listaPacientes.turno_medico ? listaPacientes.turno_medico.nombre : 'Sin médico' }}</div>
+              <div class="text-xs text-gray-500">{{ listaPacientes.turno_especialidad ? listaPacientes.turno_especialidad.nombre : 'Sin especialidad' }}</div>
+            </td>
               
               <!-- Estado -->
-              <td><span class="cc-chip" :class="chipClass(listaPacientes.estado)">{{ listaPacientes.estado || 'Sin asignar' }}</span></td>
+             <td><span class="cc-chip" :class="chipClassTurno(listaPacientes.turno_estado)">{{ listaPacientes.turno_estado || 'Sin asignar' }}</span></td>
               
               <!-- Urgencia -->
               <td><span class="cc-chip" :class="triageClass(ultimoTriage(listaPacientes)?.estado)">{{ ultimoTriage(listaPacientes)?.estado || 'Sin asignar' }}</span></td>
@@ -259,7 +259,20 @@
                 <button class="cc-icon-btn cc-icon-btn--view" title="Ver / seleccionar" @click="verPaciente(listaPacientes)">
                   <i class="ti ti-eye" aria-hidden="true"></i>
                 </button>
-                <button class="cc-icon-btn cc-icon-btn--triage" title="Editar signos vitales" @click="abrirModal('triage', listaPacientes)">
+                <button
+                  v-if="!tieneCitaHoy(listaPacientes)"
+                  class="cc-icon-btn cc-icon-btn--add"
+                  title="Agregar a la lista de espera"
+                  @click="abrirModal('triage', listaPacientes)"
+                >
+                  <i class="ti ti-plus" aria-hidden="true"></i>
+                </button>
+                <button
+                  v-else
+                  class="cc-icon-btn cc-icon-btn--triage"
+                  title="Editar signos vitales"
+                  @click="abrirModal('triage', listaPacientes)"
+                >
                   <i class="ti ti-shield-half" aria-hidden="true"></i>
                 </button>
                 <button class="cc-icon-btn cc-icon-btn--folder" title="Expediente" @click="abrirExpedienteDesdeFila(listaPacientes)">
@@ -348,7 +361,7 @@
         <div v-if="modal.tipo === 'triage'" class="cc-overlay" @click.self="cerrarModal">
           <div class="cc-modal cc-modal--md">
             <div class="cc-modal__header cc-modal__header--blue">
-              <span><i class="ti ti-shield-half" aria-hidden="true"></i> Editar signos vitales</span>
+              <span><i class="ti ti-shield-half" aria-hidden="true"></i> {{ tieneCitaHoy(modal.paciente) ? 'Editar signos vitales' : 'Agregar paciente a la lista de espera' }}</span>
               <button class="cc-modal__close" @click="cerrarModal" aria-label="Cerrar">
                 <i class="ti ti-x" aria-hidden="true"></i>
               </button>
@@ -382,6 +395,37 @@
                   {{ overallTriageLabel }}
                 </span>
               </div>
+
+              <!-- Médico / especialidad: solo se pide cuando el paciente aún no tiene
+                   cita hoy (walk-in). Usa el catálogo COMPLETO (catalogoMedicos /
+                   catalogoEspecialidades), no los derivados de la lista de espera de
+                   hoy, para poder asignar a un médico que hoy todavía no tiene a
+                   nadie en la fila. -->
+                <div v-if="modal.paciente && !tieneCitaHoy(modal.paciente)" class="cc-motivo-panel">
+                  <div class="cc-motivo-panel-head">
+                    <span><i class="ti ti-user-plus" aria-hidden="true"></i> Asignación</span>
+                  </div>
+                  <div class="cc-asignacion-grid">
+                    <div class="cc-field">
+                      <label class="cc-field-label">Especialidad</label>
+                      <select class="cc-select-full" v-model="triageForm.especialidad_id" @change="onEspecialidadTriageChange">
+                        <option value="">Sin especialidad asignada</option>
+                        <option v-for="esp in catalogoEspecialidades" :key="esp.id" :value="esp.id">
+                          {{ esp.nombre }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="cc-field">
+                      <label class="cc-field-label">Médico</label>
+                      <select class="cc-select-full" v-model="triageForm.medico_id">
+                        <option value="">Sin médico asignado</option>
+                        <option v-for="med in medicosCatalogoFiltrados" :key="med.id" :value="med.id">
+                          {{ med.nombre }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
 
               <!-- Motivo de consulta / síntomas: la IA usa este texto + los
                    signos vitales para determinar automáticamente el nivel
@@ -772,6 +816,14 @@ export default {
       medicoSeleccionado: '',
       fechaFiltro: obtenerFechaHoyISO(),
 
+      // Catálogo completo (independiente de especialidadesDisponibles/
+      // medicosDisponibles, que solo reflejan quién ya está en la lista de
+      // espera de hoy). Se usa dentro del modal de triage para poder asignar
+      // médico/especialidad a un paciente walk-in, aunque hoy ese médico
+      // todavía no tenga a nadie en la fila.
+      catalogoMedicos: [],
+      catalogoEspecialidades: [],
+
       // Controla si el panel izquierdo está en modo edición
       editMode: false,
       // Indica si se está guardando la edición del panel (deshabilita botones)
@@ -804,7 +856,10 @@ export default {
         frecuencia_respiratoria: null,
         peso: null,
         talla: null,
-        motivo_consulta: ''
+        motivo_consulta: '',
+        // Solo se usan cuando el paciente todavía no tiene cita hoy (walk-in)
+        medico_id: '',
+        especialidad_id: ''
       },
       // Indica si se está guardando el triage rápido (deshabilita botones)
       guardandoTriage: false,
@@ -892,6 +947,14 @@ export default {
       )
     },
 
+    // Médicos del CATÁLOGO COMPLETO filtrados por la especialidad elegida
+    // dentro del modal de triage (independiente de medicosFiltrados, que
+    // solo conoce a los médicos que ya tienen a alguien en la fila de hoy).
+    medicosCatalogoFiltrados() {
+      if (!this.triageForm.especialidad_id) return this.catalogoMedicos
+      return this.catalogoMedicos.filter(m => m.especialidad_id == this.triageForm.especialidad_id)
+    },
+
     // Agrupa los registros por id de paciente usando la lista de espera del día
     citasPorPacienteId() {
       const mapa = new Map()
@@ -916,11 +979,33 @@ export default {
     pacientesFiltrados() {
       const q = this.busqueda.trim().toLowerCase()
 
+      // Fusiona cada paciente con su registro activo de lista_espera (si existe).
+      // Los campos del registro se guardan bajo claves propias (turno_*) para
+      // NO pisar los campos originales del paciente (ej. paciente.estado, que
+      // es un campo distinto: Activo/Inactivo del paciente, no el estado del turno).
+      const fusionar = (p) => {
+        const registros = this.citasPorPacienteId.get(p.id) || []
+        const registroActivo = registros.find(r => !['Cancelada', 'Finalizada'].includes(r.estado)) || registros[0] || null
+
+        return {
+          ...p,
+          _registroLE:         registroActivo,
+          turno_id:            registroActivo?.id ?? null,
+          turno_numero:        registroActivo?.numero_turno ?? null,
+          turno_folio:         registroActivo?.folio ?? null,
+          turno_estado:        registroActivo?.estado ?? null,
+          turno_medico:        registroActivo?.medico ?? null,
+          turno_especialidad:  registroActivo?.especialidad ?? null,
+        }
+      }
+
       if (q) {
-        return this.pacientes.filter(p =>
-          (p.nombre || '').toLowerCase().includes(q) ||
-          (p.paciente_id || '').toLowerCase().includes(q)
-        )
+        return this.pacientes
+          .filter(p =>
+            (p.nombre || '').toLowerCase().includes(q) ||
+            (p.paciente_id || '').toLowerCase().includes(q)
+          )
+          .map(fusionar)
       }
 
       const hayFiltro = !!(this.especialidadSeleccionada || this.medicoSeleccionado)
@@ -934,31 +1019,25 @@ export default {
               (item.medico && (item.medico.id ?? item.medico.nombre) === this.medicoSeleccionado)
             const especialidadOk = !this.especialidadSeleccionada ||
               (item.especialidad && (item.especialidad.id ?? item.especialidad.nombre) === this.especialidadSeleccionada)
-            // Excluye los ya cancelados o finalizados de la vista principal del día
             const estadoOk = !['Cancelada', 'Finalizada'].includes(item.estado)
             return medicoOk && especialidadOk && estadoOk
           })
         })
       } else {
-        // Si no hay filtros avanzados, filtramos para mostrar solo los que tienen un estado activo hoy en lista_espera
         lista = this.pacientes.filter(p => {
           const registrosPaciente = this.citasPorPacienteId.get(p.id) || []
           return registrosPaciente.some(item => !['Cancelada', 'Finalizada'].includes(item.estado))
         })
       }
 
-      // Orden cronológico por hora de llegada / turno en la lista de espera
-      lista = lista.slice().sort((a, b) => {
-        const regA = (this.citasPorPacienteId.get(a.id) || [])[0]
-        const regB = (this.citasPorPacienteId.get(b.id) || [])[0]
-        const turnoA = regA?.numero_turno || 999999
-        const turnoB = regB?.numero_turno || 999999
+      lista = lista.map(fusionar).sort((a, b) => {
+        const turnoA = a.turno_numero ?? 999999
+        const turnoB = b.turno_numero ?? 999999
         return turnoA - turnoB
       })
 
       return lista
     },
-
     // Mensaje mostrado en el panel izquierdo cuando no hay pacienteActivo.
     mensajeSinPaciente() {
       if (this.pacientesFiltrados.length === 0) {
@@ -1080,12 +1159,22 @@ export default {
   // inicializar el paciente activo, porque este depende de pacientesFiltrados,
   // que a su vez depende de que tanto `pacientes` como `citas` ya estén cargados.
   async mounted() {
-    await Promise.all([this.obtenerPacientes(), this.obtenerListaEspera()])
+    await Promise.all([this.obtenerPacientes(), this.obtenerListaEspera(), this.cargarCatalogoAgregar()])
     this.cargarSeleccionPrevia()
     this.inicializarPacienteActivo()
   },
 
   methods: {
+    chipClassTurno(estado) {
+      switch (estado) {
+        case 'En proceso': return 'cc-chip--blue'
+        case 'Llamando':   return 'cc-chip--amber'
+        case 'Finalizada': return 'cc-chip--green'
+        case 'Cancelada':  return 'cc-chip--red'
+        case 'En espera':  return 'cc-chip--gray'
+        default:           return 'cc-chip--gray'
+      }
+    },
     nombreCompleto(p) {
       const paciente = p.paciente || p;
       return paciente.nombre || 'Sin nombre';
@@ -1158,6 +1247,31 @@ export default {
         } finally {
           this.loading.lista = false
         }
+    },
+
+    // Carga el catálogo completo de médicos y especialidades una sola vez
+    // (GET /lista-espera/create), independiente de especialidadesDisponibles/
+    // medicosDisponibles (que solo reflejan quién ya está en lista_espera hoy).
+    // Se usa dentro del modal de triage para poder asignar a cualquier médico,
+    // aunque hoy todavía no tenga a nadie en la fila.
+    async cargarCatalogoAgregar() {
+      try {
+        const res = await ApiService.get('/lista-espera/create')
+        this.catalogoMedicos = res.data.medicos || []
+        this.catalogoEspecialidades = res.data.especialidades || []
+      } catch (error) {
+        console.error('Error al cargar catálogo de médicos/especialidades:', error)
+      }
+    },
+
+    // Si el médico ya elegido dentro del modal de triage no pertenece a la
+    // nueva especialidad seleccionada, se limpia (mismo criterio que
+    // onEspecialidadChange, pero para el catálogo completo del modal).
+    onEspecialidadTriageChange() {
+      if (this.triageForm.medico_id) {
+        const sigueSiendoValido = this.medicosCatalogoFiltrados.some(m => m.id === this.triageForm.medico_id)
+        if (!sigueSiendoValido) this.triageForm.medico_id = ''
+      }
     },
 
     async finalizarPaciente(paciente) {
@@ -1341,27 +1455,20 @@ export default {
     },
 
     // Crea la cita de HOY para un paciente que no la tenía (llegó por
-    // búsqueda). Usa el médico/especialidad que estén elegidos en los
-    // filtros de la tabla; si faltan, pide elegirlos y no guarda nada.
+    // búsqueda). Prioriza el médico/especialidad elegidos dentro del modal
+    // de triage (triageForm.medico_id / triageForm.especialidad_id); si no
+    // se eligieron ahí, usa como respaldo los filtros de la tabla
+    // (medicoSeleccionado / especialidadSeleccionada) para no romper otros
+    // flujos que ya dependían de este método.
     async agregarPacienteAListaHoy(paciente) {
-      if (!this.medicoSeleccionado || !this.especialidadSeleccionada) {
-        if (window.Swal) {
-          window.Swal.fire({
-            icon: 'warning',
-            title: 'Selecciona médico y especialidad',
-            text: 'Para agregar a este paciente a la lista de hoy, primero elige un médico y una especialidad en los filtros de la tabla.'
-          })
-        } else {
-          alert('Selecciona médico y especialidad en los filtros para agregar a este paciente a la lista de hoy.')
-        }
-        return false
-      }
+      const medicoId = this.triageForm.medico_id || this.medicoSeleccionado
+      const especialidadId = this.triageForm.especialidad_id || this.especialidadSeleccionada
 
       try {
         await ApiService.post('/lista-espera', {
           paciente_id:      paciente.id,
-          medico_id:        this.medicoSeleccionado,
-          especialidad_id:  this.especialidadSeleccionada,
+          medico_id:        medicoId || null,
+          especialidad_id:  especialidadId || null,
           observaciones:    'Agregado a la lista de hoy desde la búsqueda de paciente'
         })
 
@@ -1394,77 +1501,7 @@ export default {
     // que ya usa ConsultaInteligente.vue). Como pacientesFiltrados excluye
     // citas 'Finalizada'/'Cancelada', el paciente desaparece de la lista
     // de espera en cuanto se refresca `citas`.
-    async finalizarPaciente(paciente) {
-      if (!paciente) return
-
-      const cita = this.obtenerCitaHoyActiva(paciente)
-      if (!cita) {
-        if (window.Swal) {
-          window.Swal.fire({
-            icon: 'info',
-            title: 'Sin cita activa hoy',
-            text: 'Este paciente no tiene una cita de hoy que finalizar (con el médico/especialidad filtrados).'
-          })
-        }
-        return
-      }
-
-      // Confirmación antes de finalizar, para evitar clics accidentales
-      let confirmado = true
-      if (window.Swal) {
-        const resultado = await window.Swal.fire({
-          icon: 'warning',
-          title: '¿Finalizar esta consulta?',
-          text: `${this.nombreCompleto(paciente)} se quitará de la lista de espera de hoy.`,
-          showCancelButton: true,
-          confirmButtonText: 'Sí, finalizar',
-          cancelButtonText: 'Cancelar',
-          confirmButtonColor: '#dc2626'
-        })
-        confirmado = resultado.isConfirmed
-      } else {
-        confirmado = window.confirm(`¿Finalizar la consulta de ${this.nombreCompleto(paciente)}?`)
-      }
-      if (!confirmado) return
-
-      this.finalizandoId = paciente.id
-      try {
-        await axios.patch(`/api/citas/${cita.id}/estado`, { estado: 'Finalizada' })
-
-        // Refresca citas para que pacientesFiltrados excluya esta cita ya
-        await this.obtenerCitas()
-
-        // Avisa a otras vistas (ej. Home.vue, el dashboard) que una
-        // consulta se finalizó, para que se refresquen al instante en
-        // vez de esperar hasta 60s al próximo setInterval.
-        eventBus.emit('consulta-finalizada')
-
-        // Si el paciente finalizado era el activo en el panel izquierdo,
-        // cae al siguiente de la cola (o al vacío si no queda nadie)
-        if (this.pacienteActivo && this.pacienteActivo.id === paciente.id) {
-          this.pacienteActivo = this.pacientesFiltrados[0] || null
-        }
-
-        if (window.Swal) {
-          window.Swal.fire({
-            toast: true, position: 'top-end', icon: 'success',
-            title: 'Consulta finalizada', showConfirmButton: false,
-            timer: 1400, timerProgressBar: true
-          })
-        }
-      } catch (error) {
-        console.error('Error al finalizar la consulta:', error)
-        if (window.Swal) {
-          window.Swal.fire({
-            icon: 'error',
-            title: 'No se pudo finalizar la consulta',
-            text: error.response?.data?.message || 'Intenta de nuevo.'
-          })
-        }
-      } finally {
-        this.finalizandoId = null
-      }
-    },
+    
 
     // ──────────────────────────────────────────
     // Selección de paciente para "Nueva consulta" (doble clic)
@@ -1601,7 +1638,9 @@ export default {
           frecuencia_respiratoria: null,
           peso: null,
           talla: null,
-          motivo_consulta: ''
+          motivo_consulta: '',
+          medico_id: '',
+          especialidad_id: ''
         }
       }
 
@@ -1673,8 +1712,9 @@ export default {
     // (ese endpoint ignora 'triages' por diseño, ver PacienteController@update).
     //
     // Si el paciente NO tiene cita hoy (llegó por búsqueda), primero se le
-    // crea la cita de hoy (agregarPacienteAListaHoy) para que entre en la
-    // cola; si falta médico/especialidad en los filtros, se cancela el guardado.
+    // crea la cita de hoy (agregarPacienteAListaHoy) usando el médico/
+    // especialidad elegidos en el propio modal (triageForm.medico_id /
+    // triageForm.especialidad_id); ya no depende de los filtros de la tabla.
     // El nivel de triage (Rojo/Amarillo/Verde) ahora puede venir calculado
     // por la IA en el backend cuando se escribió un motivo_consulta (ver
     // TriageController@guardarTriageRapido); si no, sigue viviendo el modo
@@ -1730,6 +1770,7 @@ export default {
         }
 
         this.cerrarModal()
+        this.$emit('triage-guardado')
       } catch (error) {
         console.error('Error al guardar los signos vitales:', error)
         if (window.Swal) {
@@ -2326,6 +2367,10 @@ export default {
 .cc-icon-btn--view       { background: #f0f2f5; color: #2563eb; }
 .cc-icon-btn--view:hover { background: #dbeafe; }
 
+/* "+" Agregar a la lista — verde, para pacientes que aún no tienen cita hoy */
+.cc-icon-btn--add       { background: #f0f2f5; color: #059669; }
+.cc-icon-btn--add:hover { background: #d1fae5; }
+
 /* Triage — morado, para diferenciarse de ver/expediente */
 .cc-icon-btn--triage       { background: #f0f2f5; color: #7c3aed; }
 .cc-icon-btn--triage:hover { background: #ede9fe; }
@@ -2631,4 +2676,28 @@ export default {
 /* ─── Transición fade para los modales ─── */
 .cc-fade-enter-active, .cc-fade-leave-active { transition: opacity 0.2s; }
 .cc-fade-enter-from,   .cc-fade-leave-to     { opacity: 0; }
+
+.cc-asignacion-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.cc-select-full {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cc-select-full:focus {
+  border-color: #185FA5;
+  box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
+}
 </style>

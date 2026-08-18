@@ -1,10 +1,12 @@
 <template>
     <div>
         <Plataformamedica
+        ref="dashboard"
           :paciente-id="pacienteId">
         </Plataformamedica>
         <Panelatencion
-          :paciente-id="pacienteId">
+          :paciente-id="pacienteId"
+          @triage-guardado="onTriageGuardado">
         </Panelatencion>
     </div>
 </template>
@@ -30,6 +32,9 @@ export default {
             this.pacienteId = window.location.pathname.split('/').pop();
             console.log('Paciente ID:',this.pacienteId
             );
+        },
+        onTriageGuardado() {
+            this.$refs.dashboard?.cargarDatos()
         }
     },
     mounted() {

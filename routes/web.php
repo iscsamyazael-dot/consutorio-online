@@ -168,7 +168,9 @@ Route::middleware('auth')->group(function () {
             
         Route::patch('lista-espera/{listaEspera}/estado', [ListaEsperaController::class, 'actualizarEstado'])
             ->name('lista-espera.estado');
-
+        
+        //Ruta para mostrar el resumen de las tarjetas
+        Route::get('Resumen-listaEspera-consultaFinalizadas', [ListaEsperaController::class, 'resumen']);
         
         
         // ─────────────────────────────────────────────────────────────
