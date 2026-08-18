@@ -794,6 +794,7 @@ export default {
 
             // SIRVE PARA VER MODAL
             modalArchivoClinico: false,
+            cargandoArchivo: false,
             detallearchivo: [],
             listaArchivos: [],
             filtrar: [],
@@ -1075,7 +1076,7 @@ export default {
         //  Además: la extensión real se saca de archivo_url (nombre guardado en BD),
         //  no de la URL final mostrada, porque la ruta de descarga no trae extensión.
         
-        verArchivo(documentos){
+        async verArchivo(documentos){
             if (!documentos || !documentos.archivo_url) {
                 Swal.fire({
                     icon: 'warning',
@@ -1085,27 +1086,48 @@ export default {
                 return;
             }
 
-            const baseURL = document
-                .querySelector('meta[name="base-url"]')
-                .getAttribute('content');
-            const base = baseURL.replace(/\/$/, '');
-
-            this.archivoExtension = documentos.archivo_url.split('.').pop().toLowerCase();
-
-            if (documentos.consulta_id) {
-                // Viene del chat de Consulta IA: disco privado 'local',
-                // hay que pasar por la ruta de descarga del backend.
-                this.archivoSeleccionado = `${base}/consultaIA/archivo/${documentos.id}/descargar`;
-            } else {
-                // Subido manualmente: disco público, URL directa.
-                let ruta = documentos.archivo_url;
-                ruta = ruta.startsWith('/') ? ruta : '/' + ruta;
-                this.archivoSeleccionado = base + ruta;
+            // Libera el blob anterior para no dejar memoria colgada
+            if (this.archivoSeleccionado?.startsWith('blob:')) {
+                URL.revokeObjectURL(this.archivoSeleccionado);
             }
 
-            console.log('URL del archivo a mostrar:', this.archivoSeleccionado);
+            this.archivoExtension = documentos.archivo_url.split('.').pop().toLowerCase();
+            this.cargandoArchivo = true;
 
-            $('#modalArchivo').modal('show')
+            try {
+                let ruta;
+
+                if (documentos.consulta_id) {
+                    // Viene del chat de Consulta IA: disco privado 'local'
+                    ruta = `/consultaIA/archivo/${documentos.id}/descargar`;
+                } else {
+                    // Subido manualmente: disco público
+                    ruta = documentos.archivo_url.startsWith('/')
+                        ? documentos.archivo_url
+                        : '/' + documentos.archivo_url;
+                }
+
+                // Pide el archivo como blob (ApiService manda el token de auth)
+                const response = await ApiService.get(ruta, {
+                    responseType: 'blob'
+                });
+
+                this.archivoSeleccionado = URL.createObjectURL(response.data);
+
+                console.log('Blob URL generada:', this.archivoSeleccionado);
+
+                $('#modalArchivo').modal('show');
+
+            } catch (error) {
+                console.error('Error al cargar archivo:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'No se pudo abrir el archivo',
+                    text: 'Intenta descargarlo directamente.'
+                });
+            } finally {
+                this.cargandoArchivo = false;
+            }
         },
         esImagen(){
             return ['jpg','jpeg','png','gif','webp'].includes(this.archivoExtension)

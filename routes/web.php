@@ -75,7 +75,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/evaluaciones-ia/indicadores', [EvaluacionesIAController::class, 'indicadores'])->name('api.evaluaciones-ia.indicadores');
             Route::get('/evaluaciones-ia/{folio}', [EvaluacionesIAController::class, 'show'])->name('api.evaluaciones-ia.show');
         });
-        
+        //RUTA PARA ACTUALIZAR EL ESTADO DE CONSULTA
+        Route::patch('/pacientes/{paciente}/estado-consulta', [ConsultaController::class, 'actualizarEstadoConsulta']);
         //RUTA PARA ACTUALIZAR TIPO Y ESTADO DE ARCHIVO
         Route::put('/archivos-clinicos/{id}', [ArchivosClinicosController::class, 'update']);
         //RUTA PARA ACTUALIZAR EL ESTADO DE DERIVACION
@@ -167,7 +168,9 @@ Route::middleware('auth')->group(function () {
             
         Route::patch('lista-espera/{listaEspera}/estado', [ListaEsperaController::class, 'actualizarEstado'])
             ->name('lista-espera.estado');
-
+        
+        //Ruta para mostrar el resumen de las tarjetas
+        Route::get('Resumen-listaEspera-consultaFinalizadas', [ListaEsperaController::class, 'resumen']);
         
         
         // ─────────────────────────────────────────────────────────────

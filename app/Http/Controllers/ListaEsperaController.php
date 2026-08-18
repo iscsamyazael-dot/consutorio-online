@@ -7,6 +7,8 @@ use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\Medico;
 use App\Models\Specialty;
+use App\Models\Consulta;
+use App\Models\Triage;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -266,5 +268,32 @@ class ListaEsperaController extends Controller
             });
 
         return response()->json($registros);
+    }
+
+    public function resumen()
+    {   
+        $hoy = today();
+        
+        $consultasHoy = Consulta::where('estado', 'Finalizada')
+            ->whereDate('created_at', $hoy)
+            ->count();
+
+        $pendientes = ListaEspera::where('estado', 'En espera')
+            ->whereDate('created_at', $hoy)
+            ->count();
+
+        $urgencias = ListaEspera::where('estado', '!=', 'Cancelada')
+        ->whereDate('fecha', $hoy)
+        ->whereHas('paciente.triages', function ($q) use ($hoy) {
+            $q->where('nivel_urgencia',  ['rojo', 'naranja'])
+              ->whereDate('created_at', $hoy);
+            })
+        ->count();
+
+        return response()->json([
+            'consultas_hoy' => $consultasHoy,
+            'pendientes' => $pendientes,
+            'urgencias' => $urgencias,
+        ]);
     }
 }

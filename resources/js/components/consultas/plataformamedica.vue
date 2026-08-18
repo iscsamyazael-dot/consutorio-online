@@ -133,11 +133,10 @@ export default {
   },
 
   data() {
-    return {
-      citas: [],
-      pacientes: [],
+   return {
+      resumen: { consultas_hoy: 0, pendientes: 0, urgencias: 0 },
       cargandoStats: true,
-      ultimaActualizacion: null, // Date de la última carga exitosa
+      ultimaActualizacion: null,
       minutosDesdeActualizacion: 0,
       intervaloReloj: null,
 
@@ -147,64 +146,13 @@ export default {
   },
 
   computed: {
-    // Índice paciente.id -> paciente completo (para poder leer sus
-    // triages, que /api/citas no trae anidados dentro de cada cita).
-    pacientesPorId() {
-      const mapa = new Map()
-      this.pacientes.forEach(p => mapa.set(p.id, p))
-      return mapa
-    },
-
-    // Citas cuya fecha cae en el día de hoy. Se normaliza con slice(0,10)
-    // porque el backend a veces devuelve la fecha como datetime completo
-    // (ej. "2026-08-11T00:00:00.000000Z") en vez de solo "YYYY-MM-DD".
-    citasHoy() {
-      const hoy = obtenerFechaHoyISO()
-      return this.citas.filter(c => String(c.fecha).slice(0, 10) === hoy)
-    },
-
-    // Estadísticas calculadas a partir de las citas reales de hoy.
-    statsCalculados() {
-      const citasHoy = this.citasHoy
-
-      // Consultas hoy: todas las de hoy, excepto las canceladas
-      // (una cita cancelada no cuenta como "consulta" real del día).
-      const hoy = citasHoy.filter(c => c.estado !== 'Cancelada').length
-
-      // Pacientes activos: pacientes distintos con cita hoy cuyo
-      // estado general (tabla pacientes) es 'Activo'.
-      const activosIds = new Set(
-        citasHoy
-          .filter(c => c.paciente && c.paciente.estado === 'Activo')
-          .map(c => c.paciente.id)
-      )
-      const activos = activosIds.size
-
-      // Pendientes: citas de hoy que siguen 'Agendado' o 'En proceso'
-      // (aún no atendidas ni finalizadas ni canceladas).
-      const pendientes = citasHoy.filter(c =>
-        c.estado === 'Agendado' || c.estado === 'En proceso'
-      ).length
-
-      // Urgencias: citas de hoy cuyo paciente tiene su último triage
-      // marcado como 'urgente' (enum real de la tabla triage:
-      // leve/estable/grave/urgente — ver TriageController@mapearEstadoIa).
-      // El triage vive en /pacientes, no viene anidado en /api/citas,
-      // por eso se cruza con pacientesPorId.
-      const urgencias = citasHoy.filter(c => {
-        if (!c.paciente) return false
-        const pacienteCompleto = this.pacientesPorId.get(c.paciente.id)
-        const triage = this.ultimoTriage(pacienteCompleto)
-        return triage && triage.estado === 'urgente'
-      }).length
-
-      return { hoy, activos, pendientes, urgencias }
-    },
-
-    // Si el padre forzó un objeto "stats", se respeta; si no, se usan
-    // los valores calculados en tiempo real.
     statsFinal() {
-      return this.stats || this.statsCalculados
+      if (this.stats) return this.stats
+          return {
+            hoy: this.resumen.consultas_hoy,
+            pendientes: this.resumen.pendientes,
+            urgencias: this.resumen.urgencias,
+          }
     },
   },
 
@@ -225,24 +173,20 @@ export default {
   methods: {
     // Trae citas (con paciente/medico/especialidad anidados) y la
     // lista completa de pacientes (para poder leer sus triages).
-    async cargarDatos() {
-      this.cargandoStats = true
-      try {
-        const [respCitas, respPacientes] = await Promise.all([
-          axios.get('/api/citas'),
-          ApiService.get('/pacientes'),
-        ])
-
-        this.citas = respCitas.data || []
-        this.pacientes = respPacientes.data || []
-        this.ultimaActualizacion = new Date()
-        this.actualizarMinutosTranscurridos()
-      } catch (error) {
-        console.error('Error al cargar las estadísticas de consultas:', error)
-      } finally {
-        this.cargandoStats = false
-      }
-    },
+      async cargarDatos() {
+          this.cargandoStats = true
+          try {
+            const respuesta = await ApiService.get('Resumen-listaEspera-consultaFinalizadas')
+            console.log('Respuesta Consultas hoy, Pendientes, urgencias:', respuesta)
+            this.resumen = respuesta.data   // <-- aquí estaba el problema
+            this.ultimaActualizacion = new Date()
+            this.actualizarMinutosTranscurridos()
+          } catch (error) {
+            console.error('Error al cargar las estadísticas de consultas:', error)
+          } finally {
+            this.cargandoStats = false
+          }
+      },
 
     actualizarMinutosTranscurridos() {
       if (!this.ultimaActualizacion) {
