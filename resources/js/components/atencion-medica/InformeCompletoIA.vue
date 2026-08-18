@@ -6,6 +6,14 @@
         <i class="fas fa-file-medical-alt mr-1"></i> Informe Completo de Evaluación IA
       </h3>
       <div class="card-tools">
+        <button
+          type="button"
+          class="btn btn-sm btn-info mr-2"
+          @click="imprimirNotaSoapp"
+          :disabled="!detalle"
+        >
+          <i class="fas fa-print mr-1"></i> Imprimir Nota SOAPP
+        </button>
         <button type="button" class="btn btn-sm btn-secondary" @click="$emit('volver')">
           <i class="fas fa-arrow-left mr-1"></i> Volver al listado
         </button>
@@ -331,6 +339,23 @@ export default {
       if (confianza >= 80) return 'Alta confianza';
       if (confianza >= 60) return 'Confianza moderada';
       return 'Baja confianza';
+    },
+
+    imprimirNotaSoapp() {
+      if (!this.detalle?.consulta_id) {
+          alert('No se encontró la consulta.');
+          return;
+      }
+
+      const url = `/consultaIA/${this.detalle.consulta_id}/pdf/nota-soapp/ver`;
+      window.open(url, '_blank');
+    },
+
+    escapeHtml(texto) {
+      if (texto === null || texto === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(texto);
+      return div.innerHTML;
     },
 
   },

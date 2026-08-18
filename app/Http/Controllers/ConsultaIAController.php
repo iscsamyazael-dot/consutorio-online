@@ -799,7 +799,8 @@ class ConsultaIAController extends Controller
      */
     private function armarPdfConsulta($consultaId, $tipo)
     {
-        if (!in_array($tipo, ['receta', 'diagnostico'])) {
+        // 1. Permitimos el nuevo tipo 'nota-soapp'
+        if (!in_array($tipo, ['receta', 'diagnostico', 'nota-soapp'])) {
             abort(404, 'Tipo de PDF no válido.');
         }
 
@@ -816,78 +817,36 @@ class ConsultaIAController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // Receta guardada desde RecetaInteligente.vue (solo aplica
-        // para el PDF de tipo 'receta', pero no cuesta nada cargarla
-        // siempre por si la vista de diagnóstico también la usa).
         $receta = Receta::where('consulta_id', $consulta->id)
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // El médico se toma de consultas.user_id (columna que sí
-        // existe y ya se llena en store() con auth()->id() al
-        // iniciar la consulta) — no de recetas, que no tiene esa
-        // columna.
         $medico = \App\Models\User::find($consulta->user_id);
 
-        // -----------------------------------------------------------
-        // UBICACIÓN / SUCURSAL / LOGO DEL MÉDICO (dinámico, ya no fijo)
-        // -----------------------------------------------------------
-        // consultas.user_id -> users.id -> medicos.user_id ->
-        // configuracion_medico_sucursal -> ubicaciones
-        //
-        // $medico (arriba) es el modelo User que atendió la consulta.
-        // Para llegar a su sucursal/logo hay que ubicar su fila
-        // correspondiente en el catálogo "medicos" y de ahí su(s)
-        // configuración(es) de sucursal.
         $ubicacion = null;
-
         if ($medico) {
             $medicoCatalogo = \App\Models\Medico::with('configuraciones.ubicacion')
                 ->where('user_id', $medico->id)
                 ->first();
 
-            // Si un médico llegara a tener varias sucursales configuradas,
-            // por ahora se toma la primera. Avisar si se necesita elegir
-            // la sucursal exacta de esa consulta en vez de la primera.
             $ubicacion = optional(optional($medicoCatalogo)->configuraciones)->first()?->ubicacion
                 ?? null;
         }
 
-        // Signos vitales: viven en la tabla triage, ligada por
-        // paciente_id. Tomamos el triage MÁS RECIENTE de ese
-        // paciente, sin filtrar por fecha contra la consulta,
-        // porque en el flujo real el triage puede capturarse
-        // antes o después de haberse creado la consulta.
         $triage = \App\Models\Triage::where('paciente_id', $consulta->paciente_id)
             ->orderBy('created_at', 'desc')
             ->first();
 
-        $vista = $tipo === 'receta' ? 'pdf.receta' : 'pdf.diagnostico';
+        // 2. Mapeo de vistas según el tipo solicitado
+        $vista = match ($tipo) {
+            'receta'     => 'pdf.receta',
+            'nota-soapp' => 'pdf.notasoapp',
+            default      => 'pdf.diagnostico',
+        };
 
-        // dompdf necesita la ruta ABSOLUTA de disco de la imagen, no una
-        // URL: al generar el PDF en el servidor no hay navegador ni
-        // sesión que resuelva esa ruta.
-        //
-        // 1) Se intenta primero el logo propio de la ubicación del
-        //    médico (ubicaciones.imagen), que es el dinámico.
-        // 2) Si no existe, se cae al logo genérico de siempre
-        //    (public/images/logo.png), igual que antes.
-        //
-        // AJUSTAR: si ubicaciones.imagen NO se guarda bajo
-        // storage/app/public (disco 'public' con symlink), cambiar
-        // la línea de $rutaCandidata por la ubicación física real.
+        // Procesamiento del logo
         $logoPath = null;
-
         if ($ubicacion && !empty($ubicacion->imagen)) {
-            // Las imágenes de logo NO usan el disco 'storage' de Laravel;
-            // viven directo en public/personalisarperfil/ (igual que
-            // archivos_clinicos vive en public/archivos_clinicos).
-            //
-            // ubicaciones.imagen puede venir guardado de dos formas según
-            // cómo se subió el archivo:
-            //   a) solo el nombre:              logo-consultorio-dr-basto-2026.jfif
-            //   b) con la carpeta incluida:      personalisarperfil/logo-....jfif
-            // Se soportan ambos casos sin duplicar la carpeta.
             $valorImagen = ltrim($ubicacion->imagen, '/');
 
             $rutaCandidata = str_starts_with($valorImagen, 'personalisarperfil/')
@@ -913,7 +872,14 @@ class ConsultaIAController extends Controller
             'logoPath'   => $logoPath,
         ]);
 
-        $nombreArchivo = ($tipo === 'receta' ? 'receta_' : 'diagnostico_') . $consulta->folio . '.pdf';
+        // 3. Formato dinámico del nombre del archivo descargado
+        $prefix = match ($tipo) {
+            'receta'     => 'receta_',
+            'nota-soapp' => 'notasoapp',
+            default      => 'diagnostico_',
+        };
+
+        $nombreArchivo = $prefix . $consulta->folio . '.pdf';
 
         return [$pdf, $nombreArchivo];
     }
