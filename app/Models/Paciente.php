@@ -72,6 +72,14 @@ class Paciente extends Model
     {
         return $this->hasMany(Triage::class, 'paciente_id', 'id');
     }
+    
+    /**
+    * Obtener únicamente el último triaje asignado al paciente
+    */
+    public function ultimoTriage()
+    {
+        return $this->hasOne(Triage::class, 'paciente_id', 'id')->latest();
+    }
 
     // Relación con Alertas (Un paciente tiene muchas alertas)
     public function alertas()

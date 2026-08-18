@@ -61,8 +61,19 @@ class ListaEsperaController extends Controller
 
         $this->sincronizarCitasDelDia($fecha);
 
-        $query = ListaEspera::with(['paciente', 'medico', 'especialidad', 'cita'])
+        $query = ListaEspera::with(['paciente', 
+                                    'medico', 
+                                    'especialidad', 
+                                    'cita',
+                                    'paciente.ultimoTriage'])
             ->where('fecha', $fecha);
+        
+
+        // Si viene "todas_fechas=1", no se filtra por fecha (se listan todos
+        // los registros). Si no viene, se filtra por la fecha indicada (o hoy).
+        if (!$request->boolean('todas_fechas')) {
+            $query->where('fecha', $fecha);
+        }
 
         if ($request->filled('medico_id')) {
             $query->where('medico_id', $request->medico_id);

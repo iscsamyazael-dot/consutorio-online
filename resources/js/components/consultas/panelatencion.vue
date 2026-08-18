@@ -1164,6 +1164,18 @@ export default {
     this.inicializarPacienteActivo()
   },
 
+  watch: {
+      fechaFiltro() {
+        this.obtenerListaEspera()
+      },
+      medicoSeleccionado() {
+        this.obtenerListaEspera()
+      },
+      especialidadSeleccionada() {
+        this.obtenerListaEspera()
+      },
+  },
+
   methods: {
     chipClassTurno(estado) {
       switch (estado) {
@@ -1230,6 +1242,11 @@ export default {
       this.loadError = null
 
       const params = {}
+       if (this.fechaFiltro) {
+          params.fecha = this.fechaFiltro
+      } else {
+          params.todas_fechas = 1
+      }
       if (this.medicoSeleccionado) params.medico_id = this.medicoSeleccionado
       if (this.especialidadSeleccionada) params.especialidad_id = this.especialidadSeleccionada
 

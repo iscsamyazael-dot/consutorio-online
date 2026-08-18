@@ -155,6 +155,17 @@ export default {
             default: () => ({})
         }
     },
+    
+    computed:{
+        //Lee el último triage del historial que llega por prop
+      // (paciente.triages), independientemente de si se guardó
+      // en esta sesión o en una anterior (ej. desde la tabla de
+      // ConsultaClinica.vue).
+     ultimoTriageDelPaciente() {
+        const triages = this.paciente?.triages
+        if (!Array.isArray(triages) || !triages.length) return null
+                      return triages[triages.length - 1]  }
+    },
     data() {
         return {
             mostrarModalTriage: false,
@@ -169,6 +180,24 @@ export default {
             formTriage: this.formTriageVacio()
         }
     },
+
+    mounted() {
+       // Inicializa con el último triage histórico del paciente
+       // (si existe), en vez de arrancar siempre vacío.
+       this.triageGuardadoLocal = this.ultimoTriageDelPaciente
+    },
+    watch: {
+        // Si el padre (ConsultaInteligente.vue) refresca `paciente`
+        // (ej. tras @triage-agregado → obtenerPaciente()), reflejamos
+        // el triage más reciente que venga del backend.
+        paciente: {
+            deep: true,
+            handler() {
+                this.triageGuardadoLocal = this.ultimoTriageDelPaciente
+            }
+        }
+    },
+
     methods: {
         formTriageVacio() {
             return {
