@@ -129,6 +129,7 @@ Route::middleware('auth')->group(function () {
         Route::get('consultaIA/{consultaId}/pdf/{tipo}', [ConsultaIAController::class, 'generarPdf'])->name('consultaIA.generarPdf'); // NUEVO // IA: genera PDF de diagnóstico/receta de la consulta con IA
         Route::get('consultaIA/{consultaId}/pdf/{tipo}/ver', [ConsultaIAController::class, 'verPdf'])->name('consultaIA.verPdf'); // IA: previsualiza el PDF (inline) en el modal de ExpedienteTabs.vue
         Route::post('consultaIA/{consultaId}/receta', [ConsultaIAController::class, 'guardarReceta'])->name('consultaIA.guardarReceta'); // ← NUEVA: guarda la receta de RecetaInteligente.vu
+        Route::post('consultaIA/{consultaId}/evaluacion', [ConsultaIAController::class, 'guardarEvaluacion'])->name('consultaIA.guardarEvaluacion'); // IA: edita diagnóstico/recomendación de la evaluación IA desde el historial (ExpedienteTabs.vue)
         Route::get('medicamentos/prediccion', [MedicamentoController::class, 'prediccion']);// chat de medicamento con IA 
         Route::post('consultaIA/{consultaId}/derivar', [ConsultaIAController::class, 'guardarDerivacion'])
         ->name('consultaIA.guardarDerivacion'); // IA: guarda la derivación generada en Derivacion.vue
@@ -139,6 +140,8 @@ Route::middleware('auth')->group(function () {
         // resource de abajo, pero se deja agrupada aquí por claridad.
         Route::get('historialClinico', [ConsultaIAController::class, 'historialClinico'])->name('consultaIA.historialClinico'); // IA: historial clínico completo generado por el módulo de IA
         Route::post('consultaIA/{consultaId}/finalizar', [ConsultaIAController::class, 'finalizarConsulta'])->name('consultaIA.finalizarConsulta'); // IA: cierra la consulta y bloquea más mensajes
+        Route::get('consultaIA/paciente/{pacienteId}/psoapp', [ConsultaIAController::class, 'notasPsoapp'])
+    ->name('consultaIA.notasPsoapp'); // IA: lista todas las notas PSOAPP de un paciente, para ExpedienteTabs.vue
         Route::resource('consultaIA', ConsultaIAController::class); // IA: CRUD principal del módulo de Consulta Inteligente (IA)
         Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente'); // IA: genera receta con apoyo de IA
         Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente'); // IA: genera derivación con apoyo de IA
