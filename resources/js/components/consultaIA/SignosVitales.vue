@@ -495,8 +495,6 @@ export default {
        z-index queda por debajo del header para que, si llegan a
        solaparse un instante durante el scroll, el header gane. */
     position: sticky;
-    top: var(--header-height, 160px);
-    z-index: 1010;
 }
 
 .vitals-panel-head {
