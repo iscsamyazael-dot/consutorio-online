@@ -105,7 +105,41 @@ class PacienteController extends Controller
     }
 
     /**
+     * Busca un paciente ya registrado con el MISMO nombre y CURP.
+     *
+     * Se usa nombre + CURP (no solo CURP) porque el CURP puede venir
+     * vacío en registros antiguos/incompletos; exigir también el nombre
+     * evita falsos positivos entre dos pacientes distintos sin CURP
+     * capturado. Comparación insensible a mayúsculas/espacios en ambos
+     * campos.
+     *
+     * Si el CURP viene vacío en el formulario, NO se considera para
+     * la búsqueda de duplicados (regresa null): no hay forma confiable
+     * de identificar coincidencia solo por nombre.
+     */
+    private function buscarPacienteDuplicado(string $nombre, ?string $curp): ?Paciente
+    {
+        $nombre = trim($nombre);
+        $curp = trim((string) $curp);
+
+        if ($nombre === '' || $curp === '') {
+            return null;
+        }
+
+        return Paciente::whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower($nombre)])
+            ->whereRaw('UPPER(TRIM(curp)) = ?', [mb_strtoupper($curp)])
+            ->first();
+    }
+
+    /**
      * Guarda un paciente nuevo junto con su primer triage.
+     *
+     * ANTES de crear nada, verifica si ya existe un paciente con el
+     * mismo nombre y CURP (ver buscarPacienteDuplicado()). Si existe,
+     * NO se crea un registro duplicado ni un triage nuevo: se responde
+     * con 'existe' => true y los datos del paciente ya registrado, para
+     * que el frontend redirija a la lista de consultas en vez de abrir
+     * una Consulta Inteligente nueva.
      *
      * Los códigos (paciente_id, triage_codigo) se generan dentro de una
      * transacción con lockForUpdate para que el consecutivo reinicie
@@ -115,6 +149,25 @@ class PacienteController extends Controller
     public function store(Request $request)
     {
         try {
+            // 1. Verificación de duplicado por nombre + CURP, antes de
+            //    tocar la base de datos con cualquier INSERT.
+            $pacienteExistente = $this->buscarPacienteDuplicado(
+                (string) $request->nombre,
+                $request->curp
+            );
+
+            if ($pacienteExistente) {
+                return response()->json([
+                    'success' => true,
+                    'existe'  => true,
+                    'message' => 'Ya existe un paciente registrado con ese nombre y CURP.',
+                    'data' => [
+                        'Paciente' => $pacienteExistente,
+                    ]
+                ]);
+            }
+
+            // 2. No hay duplicado: se crea el paciente + su primer triage.
             $resultado = DB::transaction(function () use ($request) {
 
                 // Generamos el código del paciente (PAC-AÑO-0001)
@@ -172,6 +225,7 @@ class PacienteController extends Controller
 
             return response()->json([
                 'success' => true,
+                'existe'  => false,
                 'message' => 'Paciente y triage creados correctamente',
                 'data' => [
                     'Paciente' => $paciente,

@@ -1363,5 +1363,54 @@ class ConsultaIAController extends Controller
             ], 500);
         }
     }
-    
+
+    /**
+     * Lista todas las notas PSOAPP guardadas de un paciente (de todas sus
+     * consultas), con la fecha de la consulta a la que pertenecen. Usado
+     * por ExpedienteTabs.vue -> pestaña "Notas PSOAPP" (obtenerNotasPsoapp()).
+     *
+     * Se hace JOIN contra `consultas` (en vez de depender de una relación
+     * Eloquent) para no asumir que el modelo NotaPsoapp ya tiene definido
+     * belongsTo(Consulta::class).
+     *
+     * ⚠️ Verificar que el nombre real de la tabla del modelo NotaPsoapp
+     * sea 'notas_psoapp'; si es otro, ajustar el join() y el prefijo de
+     * columnas de abajo.
+     */
+    public function notasPsoapp($pacienteId)
+    {
+        try {
+            $notas = NotaPsoapp::query()
+                ->join('consultas', 'consultas.id', '=', 'notas_psoapp.consulta_id')
+                ->where('consultas.paciente_id', $pacienteId)
+                ->orderBy('consultas.created_at', 'desc')
+                ->get([
+                    'notas_psoapp.id',
+                    'notas_psoapp.consulta_id',
+                    'notas_psoapp.consulta_folio',
+                    'notas_psoapp.presentacion',
+                    'notas_psoapp.subjetivo',
+                    'notas_psoapp.objetivo',
+                    'notas_psoapp.analisis',
+                    'notas_psoapp.plan',
+                    'notas_psoapp.pronostico',
+                    'notas_psoapp.estado',
+                    'consultas.created_at as fecha',
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'notas_psoapp' => $notas,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error en notasPsoapp: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'error' => 'No se pudieron obtener las notas PSOAPP.'
+            ], 500);
+        }
+    }
+
 }

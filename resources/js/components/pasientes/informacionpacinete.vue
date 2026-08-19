@@ -430,18 +430,57 @@ export default {
                 motivo_consulta: ''
             }
         },
-// Guardar paciente en la base de datos
+// Guardar paciente en la base de datos.
+// El backend (PacienteController@store) verifica si ya existe un
+// paciente con el mismo nombre + CURP:
+//   - Si YA EXISTE (data.existe === true): no se crea nada nuevo,
+//     se redirige a ListaConsultas.
+//   - Si es NUEVO (data.existe === false): se crea el paciente
+//     (+ triage) y se redirige a ConsultaInteligente/{id} del
+//     paciente recién creado.
         async guardarPaciente() {
+            if (!this.form.nombre || !this.form.curp) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Datos incompletos',
+                    text: 'El nombre y el CURP son necesarios para verificar si el paciente ya está registrado.',
+                    confirmButtonText: 'Aceptar'
+                })
+                return
+            }
+
             try {
                 const response = await ApiService.post('/pacientes', this.form)
-                console.log('Guardado:', response.data)
+                const data = response.data
+                console.log('Guardado:', data)
+
+                if (data.existe) {
+                    // Paciente ya registrado con ese nombre + CURP: no se
+                    // duplica, se manda directo a la lista de consultas.
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Paciente ya registrado',
+                        text: 'Ya existe un paciente con ese nombre y CURP. Te llevaremos a la lista de consultas.',
+                        confirmButtonText: 'Continuar'
+                    }).then(() => {
+                        window.location.href = '/ListaConsultas'
+                    })
+                    return
+                }
+
+                // Paciente nuevo: se guardó correctamente, se abre
+                // Consulta Inteligente para ese paciente.
+                const pacienteId = data.data.Paciente.id
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Paciente registrado',
                     text: 'El paciente fue guardado exitosamente.',
-                    confirmButtonText: 'Aceptar'
+                    confirmButtonText: 'Continuar'
+                }).then(() => {
+                    window.location.href = '/ConsultaInteligente/' + pacienteId
                 })
-                this.limpiarFormulario()
+
             } catch (error) {
                 console.error(error)
                 Swal.fire({

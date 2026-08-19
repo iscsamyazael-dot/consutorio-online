@@ -42,76 +42,80 @@
         </div>
     </div>
     <!-- Con paciente seleccionado: consulta normal -->
-   <template v-else>
-    <!-- SIGNOS VITALES DEL TRIAGE -->
-    <div class="row">
-        <div class="col-12">
-            <!--
-                @triage-agregado: SignosVitales.vue emite este evento
-                justo después de guardar un triage nuevo (POST
-                /triage/guardar). Volvemos a pedir el paciente completo
-                para que `paciente.triages` refleje el dato real que
-                regresó el backend (el componente hijo ya lo muestra de
-                inmediato de forma optimista, esto solo lo sincroniza).
-            -->
-            <SignosVitales
-                :paciente="paciente"
-                @triage-agregado="obtenerPaciente"
-            />
+    <!--
+        consulta-contenedor: SignosVitales ya NO va envuelto en su
+        propio <div class="row"><div class="col-12">, porque ese row
+        solo lo contenía a él y por lo tanto era tan alto como el
+        panel mismo. El sticky solo tiene "espacio para moverse" si su
+        padre directo es alto, así que SignosVitales ahora es hijo
+        DIRECTO de este div, que también contiene (como hermano) la
+        fila principal de 3 columnas y la nota PSOAPP. Al ser este div
+        el padre directo tanto del panel como de todo el contenido
+        alto de abajo, el sticky sí tiene recorrido para quedarse
+        pegado mientras se hace scroll por Historial/Transcripción/
+        Receta. Mismo patrón que se usó para el header clínico en el
+        blade (que también necesitó ser hijo directo del contenedor
+        alto, no de un wrapper corto).
+    -->
+    <div v-else class="consulta-contenedor">
+
+        <SignosVitales
+            :paciente="paciente"
+            @triage-agregado="obtenerPaciente"
+        />
+
+        <!-- FILA PRINCIPAL -->
+        <div class="row">
+            <div class="col-lg-3">
+                <HistorialClinico
+                    :paciente-id="pacienteId"
+                    :ia-data="iaData"
+                />
+                <AlertasClinicas
+                    :ia-data="iaData"
+                />
+                <ArchivosClinicos
+                    ref="archivosClinicos"
+                    :consulta-id="consultaId"
+                />
+            </div>
+            <div class="col-lg-6">
+                <TranscripcionLive
+                    :paciente-id="pacienteId"
+                    @actualizarSintomas="actualizarSintomas"
+                    @actualizarIaData="actualizarIaData"
+                    @marcarErrorIa="marcarErrorIa"
+                    @actualizarConsultaId="actualizarConsultaId"
+                    @archivoSubido="refrescarArchivos"
+                    @conversacionFinalizada="manejarConversacionFinalizada"
+                />
+                <PanelIA
+                    :ia-data="iaData"
+                    :has-error="iaError"
+                />
+            </div>
+            <div class="col-lg-3">
+                <RecetaInteligente
+                    :sintomas="sintomasDetectados"
+                    :consulta-id="consultaId"
+                />
+                <DerivacionClinica
+                    :sintomas="sintomasDetectados"
+                    :consulta-id="consultaId"
+                />
+            </div>
+        </div>
+        <!-- NOTA PSOAPP A TODO EL ANCHO -->
+        <div class="row psoapp-row">
+            <div class="col-12 psoapp-col">
+                <NotaPSOAPP
+                    ref="notaPsoapp"
+                    :consulta-id="consultaId"
+                    :nota-psoapp="iaData ? iaData.nota_psoapp : null"
+                />
+            </div>
         </div>
     </div>
-    <!-- FILA PRINCIPAL -->
-    <div class="row">
-        <div class="col-lg-3">
-            <HistorialClinico
-                :paciente-id="pacienteId"
-                :ia-data="iaData"
-            />
-            <AlertasClinicas
-                :ia-data="iaData"
-            />
-            <ArchivosClinicos
-                ref="archivosClinicos"
-                :consulta-id="consultaId"
-            />
-        </div>
-        <div class="col-lg-6">
-            <TranscripcionLive
-                :paciente-id="pacienteId"
-                @actualizarSintomas="actualizarSintomas"
-                @actualizarIaData="actualizarIaData"
-                @marcarErrorIa="marcarErrorIa"
-                @actualizarConsultaId="actualizarConsultaId"
-                @archivoSubido="refrescarArchivos"
-                @conversacionFinalizada="manejarConversacionFinalizada"
-            />
-            <PanelIA
-                :ia-data="iaData"
-                :has-error="iaError"
-            />
-        </div>
-        <div class="col-lg-3">
-            <RecetaInteligente
-                :sintomas="sintomasDetectados"
-                :consulta-id="consultaId"
-            />
-            <DerivacionClinica
-                :sintomas="sintomasDetectados"
-                :consulta-id="consultaId"
-            />
-        </div>
-    </div>
-    <!-- NOTA PSOAPP A TODO EL ANCHO -->
-    <div class="row psoapp-row">
-        <div class="col-12 psoapp-col">
-            <NotaPSOAPP
-                ref="notaPsoapp"
-                :consulta-id="consultaId"
-                :nota-psoapp="iaData ? iaData.nota_psoapp : null"
-            />
-        </div>
-    </div>
-</template>
 </template>
 <script>
 import ApiService from '../../services/ApiService.js'
@@ -176,8 +180,46 @@ export default {
         }else{
             this.cargarListaPacientes();
         }
+
+        // Altura real del navbar + header clínico (#headerClinico,
+        // definido en consulta_inteligente.blade.php), para que
+        // SignosVitales.vue se pegue justo debajo de ambos (sticky)
+        // sin dejar un hueco ni encimarse, sin importar si el header
+        // crece (nombre largo, badges que hacen wrap, etc) o si el
+        // navbar cambia de tamaño en responsive.
+        this.ajustarAlturaHeader();
+        window.addEventListener('resize', this.ajustarAlturaHeader);
+    },
+    beforeUnmount(){
+        window.removeEventListener('resize', this.ajustarAlturaHeader);
     },
    methods: {
+    /**
+     * Mide el navbar fijo de AdminLTE + #headerClinico y guarda la
+     * suma (más un pequeño margen) en la variable CSS --header-height
+     * en <html>, que SignosVitales.vue usa como `top` de su propio
+     * `position: sticky`. Se pone en documentElement (no en un
+     * elemento del árbol de Vue) para que la variable esté disponible
+     * aunque el componente que la consume use scoped styles.
+     *
+     * También es la misma altura de navbar que usa el Blade para su
+     * propia variable --navbar-height (ver
+     * consulta_inteligente.blade.php sección de JS), así que si el
+     * navbar cambia de tamaño ambos quedan sincronizados porque cada
+     * uno mide el navbar directamente en el DOM.
+     */
+    ajustarAlturaHeader() {
+        const header = document.getElementById('headerClinico');
+        if (!header) return;
+
+        const navbar = document.querySelector('.main-header.navbar') || document.querySelector('nav.main-header');
+        const alturaNavbar = navbar ? navbar.offsetHeight : 0;
+
+        // +16px de aire entre el header y el panel de signos vitales,
+        // para que no queden pegados visualmente al hacer scroll.
+        const altura = alturaNavbar + header.offsetHeight + 16;
+        document.documentElement.style.setProperty('--header-height', altura + 'px');
+    },
     async obtenerPaciente() {
         try {
             const response = await ApiService.get(
@@ -200,6 +242,12 @@ export default {
                     ' años | ' +
                     this.paciente.sexo;
             }
+
+            // El nombre/edad recién insertados pueden cambiar la altura
+            // del header (ej. un nombre largo que hace wrap a 2 líneas),
+            // así que recalculamos --header-height ya con el DOM
+            // actualizado.
+            this.$nextTick(this.ajustarAlturaHeader);
         } catch (error) {
             console.error(
                 'Error al cargar paciente:',

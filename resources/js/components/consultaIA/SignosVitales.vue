@@ -24,34 +24,63 @@
         </div>
 
         <!-- PANEL: triage ya registrado en esta visita -->
+        <!-- Cada vital-item ahora tiene su valor y unidad en spans
+             separados (vital-value / vital-unit) para poder darle el
+             estilo "atenuado" (valor en gris azulado suave, unidad
+             chiquita alineada a la derecha), en vez de texto negro
+             en negritas todo junto. -->
         <div v-else class="vitals-grid">
-            <div class="vital-item" v-if="triageGuardadoLocal.presion">
+            <div class="vital-item" :class="'vital-item--' + estadoPresion(triageGuardadoLocal.presion)" v-if="triageGuardadoLocal.presion">
                 <span class="vital-label">Presión arterial</span>
-                <span class="vital-value">{{ triageGuardadoLocal.presion }}</span>
+                <div class="vital-value-row">
+                    <span class="vital-value" :class="'vital-value--' + estadoPresion(triageGuardadoLocal.presion)">{{ triageGuardadoLocal.presion }}</span>
+                    <span class="vital-unit">mmHg</span>
+                </div>
             </div>
-            <div class="vital-item" v-if="triageGuardadoLocal.saturacion !== null && triageGuardadoLocal.saturacion !== undefined && triageGuardadoLocal.saturacion !== ''">
+            <div class="vital-item" :class="'vital-item--' + estadoSaturacion(triageGuardadoLocal.saturacion)" v-if="triageGuardadoLocal.saturacion !== null && triageGuardadoLocal.saturacion !== undefined && triageGuardadoLocal.saturacion !== ''">
                 <span class="vital-label">Saturación O₂</span>
-                <span class="vital-value">{{ triageGuardadoLocal.saturacion }}%</span>
+                <div class="vital-value-row">
+                    <span class="vital-value" :class="'vital-value--' + estadoSaturacion(triageGuardadoLocal.saturacion)">{{ triageGuardadoLocal.saturacion }}</span>
+                    <span class="vital-unit">%</span>
+                </div>
             </div>
-            <div class="vital-item" v-if="triageGuardadoLocal.temperatura !== null && triageGuardadoLocal.temperatura !== undefined && triageGuardadoLocal.temperatura !== ''">
+            <div class="vital-item" :class="'vital-item--' + estadoTemperatura(triageGuardadoLocal.temperatura)" v-if="triageGuardadoLocal.temperatura !== null && triageGuardadoLocal.temperatura !== undefined && triageGuardadoLocal.temperatura !== ''">
                 <span class="vital-label">Temperatura</span>
-                <span class="vital-value">{{ triageGuardadoLocal.temperatura }}°C</span>
+                <div class="vital-value-row">
+                    <span class="vital-value" :class="'vital-value--' + estadoTemperatura(triageGuardadoLocal.temperatura)">{{ triageGuardadoLocal.temperatura }}</span>
+                    <span class="vital-unit">°C</span>
+                </div>
             </div>
-            <div class="vital-item" v-if="triageGuardadoLocal.frecuencia_cardiaca !== null && triageGuardadoLocal.frecuencia_cardiaca !== undefined && triageGuardadoLocal.frecuencia_cardiaca !== ''">
+            <div class="vital-item" :class="'vital-item--' + estadoFrecuenciaCardiaca(triageGuardadoLocal.frecuencia_cardiaca)" v-if="triageGuardadoLocal.frecuencia_cardiaca !== null && triageGuardadoLocal.frecuencia_cardiaca !== undefined && triageGuardadoLocal.frecuencia_cardiaca !== ''">
                 <span class="vital-label">Frec. cardíaca</span>
-                <span class="vital-value">{{ triageGuardadoLocal.frecuencia_cardiaca }} lpm</span>
+                <div class="vital-value-row">
+                    <span class="vital-value" :class="'vital-value--' + estadoFrecuenciaCardiaca(triageGuardadoLocal.frecuencia_cardiaca)">{{ triageGuardadoLocal.frecuencia_cardiaca }}</span>
+                    <span class="vital-unit">lpm</span>
+                </div>
             </div>
-            <div class="vital-item" v-if="triageGuardadoLocal.frecuencia_respiratoria !== null && triageGuardadoLocal.frecuencia_respiratoria !== undefined && triageGuardadoLocal.frecuencia_respiratoria !== ''">
+            <div class="vital-item" :class="'vital-item--' + estadoFrecuenciaRespiratoria(triageGuardadoLocal.frecuencia_respiratoria)" v-if="triageGuardadoLocal.frecuencia_respiratoria !== null && triageGuardadoLocal.frecuencia_respiratoria !== undefined && triageGuardadoLocal.frecuencia_respiratoria !== ''">
                 <span class="vital-label">Frec. respiratoria</span>
-                <span class="vital-value">{{ triageGuardadoLocal.frecuencia_respiratoria }} rpm</span>
+                <div class="vital-value-row">
+                    <span class="vital-value" :class="'vital-value--' + estadoFrecuenciaRespiratoria(triageGuardadoLocal.frecuencia_respiratoria)">{{ triageGuardadoLocal.frecuencia_respiratoria }}</span>
+                    <span class="vital-unit">rpm</span>
+                </div>
             </div>
+            <!-- Peso y talla se quedan neutros (sin verde/amarillo/rojo):
+                 no tienen un rango de alerta universal sin más contexto
+                 (edad, IMC objetivo del paciente, etc.). -->
             <div class="vital-item" v-if="triageGuardadoLocal.peso !== null && triageGuardadoLocal.peso !== undefined && triageGuardadoLocal.peso !== ''">
                 <span class="vital-label">Peso</span>
-                <span class="vital-value">{{ triageGuardadoLocal.peso }} kg</span>
+                <div class="vital-value-row">
+                    <span class="vital-value">{{ triageGuardadoLocal.peso }}</span>
+                    <span class="vital-unit">kg</span>
+                </div>
             </div>
             <div class="vital-item" v-if="triageGuardadoLocal.talla !== null && triageGuardadoLocal.talla !== undefined && triageGuardadoLocal.talla !== ''">
                 <span class="vital-label">Talla</span>
-                <span class="vital-value">{{ triageGuardadoLocal.talla }} cm</span>
+                <div class="vital-value-row">
+                    <span class="vital-value">{{ triageGuardadoLocal.talla }}</span>
+                    <span class="vital-unit">cm</span>
+                </div>
             </div>
         </div>
 
@@ -182,6 +211,60 @@ export default {
             }
         },
 
+        // ─── Clasificación clínica (verde / amarillo / rojo) ────────
+        // Rangos de referencia para ADULTO en reposo. Devuelve
+        // 'normal' | 'alerta' | 'critico' | '' (sin clasificar, para
+        // peso/talla que no tienen un rango de alerta universal sin
+        // más contexto como edad o IMC objetivo).
+        // Ajustar aquí si la clínica maneja rangos propios.
+        estadoPresion(presion) {
+            if (!presion || typeof presion !== 'string' || !presion.includes('/')) return ''
+            const partes = presion.split('/')
+            const sistolica = parseFloat(partes[0])
+            const diastolica = parseFloat(partes[1])
+            if (isNaN(sistolica) || isNaN(diastolica)) return ''
+
+            if (sistolica >= 140 || sistolica < 90 || diastolica >= 90 || diastolica < 60) {
+                return 'critico'
+            }
+            if (sistolica >= 121 || diastolica >= 81) {
+                return 'alerta'
+            }
+            return 'normal'
+        },
+
+        estadoSaturacion(valor) {
+            const n = parseFloat(valor)
+            if (isNaN(n)) return ''
+            if (n < 90) return 'critico'
+            if (n < 95) return 'alerta'
+            return 'normal'
+        },
+
+        estadoTemperatura(valor) {
+            const n = parseFloat(valor)
+            if (isNaN(n)) return ''
+            if (n >= 38.5 || n <= 35) return 'critico'
+            if (n >= 37.6 || n < 36.1) return 'alerta'
+            return 'normal'
+        },
+
+        estadoFrecuenciaCardiaca(valor) {
+            const n = parseFloat(valor)
+            if (isNaN(n)) return ''
+            if (n >= 120 || n < 50) return 'critico'
+            if (n >= 101 || n < 60) return 'alerta'
+            return 'normal'
+        },
+
+        estadoFrecuenciaRespiratoria(valor) {
+            const n = parseFloat(valor)
+            if (isNaN(n)) return ''
+            if (n >= 25 || n < 8) return 'critico'
+            if (n >= 21 || n < 12) return 'alerta'
+            return 'normal'
+        },
+
         abrirModalTriage() {
             this.errorTriage = ''
             this.formTriage = this.formTriageVacio()
@@ -254,30 +337,41 @@ export default {
     font-family: 'Inter', system-ui, sans-serif;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 18px;
-    padding: 22px;
+    border-radius: 14px;
+    padding: 14px 16px;
     margin-bottom: 1rem;
     box-shadow: 0 2px 10px rgba(15,23,42,.05);
+
+    /* Se queda fijo debajo del header clínico (sticky-top, z-index:
+       1020, en consulta_inteligente.blade.php) mientras se hace scroll
+       en el contenido de abajo (historial / transcripción / receta).
+       --header-height ahora incluye navbar + header clínico + margen,
+       calculado en ConsultaInteligente.vue -> ajustarAlturaHeader().
+       z-index queda por debajo del header para que, si llegan a
+       solaparse un instante durante el scroll, el header gane. */
+    position: sticky;
+    top: var(--header-height, 160px);
+    z-index: 1010;
 }
 
 .vitals-panel-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
     padding: 0 2px;
 }
 
 .vitals-panel-head > span:first-child {
     font-family: 'Sora', sans-serif;
     font-weight: 700;
-    font-size: .95rem;
+    font-size: .82rem;
     color: var(--ink);
     letter-spacing: .3px;
 }
 
 .vitals-panel-sub {
-    font-size: .72rem;
+    font-size: .65rem;
     color: var(--ink-faint);
 }
 
@@ -291,12 +385,12 @@ export default {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     text-align: left;
     background: var(--status-warning-soft);
     border: 1px solid rgba(217,119,6,.3);
-    border-radius: 14px;
-    padding: 14px 16px;
+    border-radius: 12px;
+    padding: 10px 12px;
     cursor: pointer;
     transition: background .18s ease, box-shadow .18s ease, transform .12s ease;
     animation: noticePulse 2.2s ease-in-out infinite;
@@ -312,7 +406,7 @@ export default {
 }
 
 .vitals-notice-icon {
-    font-size: 1.2rem;
+    font-size: 1rem;
     flex-shrink: 0;
 }
 
@@ -324,12 +418,12 @@ export default {
 }
 
 .vitals-notice-text strong {
-    font-size: .86rem;
+    font-size: .78rem;
     color: #7C4A05;
 }
 
 .vitals-notice-text small {
-    font-size: .74rem;
+    font-size: .68rem;
     color: #A15A05;
 }
 
@@ -348,44 +442,126 @@ export default {
 }
 
 /* ─── PANEL: triage guardado en esta visita ─────────────────────── */
+/* Grid de 3 columnas + valores en gris azulado suave con la unidad
+   chiquita alineada a la derecha. Tamaños reducidos respecto a la
+   versión anterior para que la tarjeta ocupe menos espacio. */
 
 .vitals-grid {
+    /* Grid con columnas del mismo ancho que se reparten TODO el
+       espacio disponible por igual (a diferencia del flex anterior,
+       que dejaba las cajas angostas agrupadas a la izquierda). */
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    padding: 4px 2px 2px;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    padding: 0 2px;
+}
+
+@media (max-width: 900px) {
+    .vitals-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 500px) {
+    .vitals-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .vital-item {
     background: var(--paper);
     border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 10px 12px;
+    border-radius: 9px;
+    padding: 8px 4px;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 3px;
+    text-align: center;
+    /* Ya no aspect-ratio 1:1: con el grid expandido, el cuadrado
+       perfecto se vería demasiado alto. Se deja una altura mínima
+       cómoda y que cada caja crezca en ancho libremente. */
+    min-height: 78px;
 }
 
 .vital-label {
-    font-size: .68rem;
+    font-size: .52rem;
     font-weight: 600;
     color: var(--ink-soft);
     text-transform: uppercase;
-    letter-spacing: .3px;
+    letter-spacing: .2px;
+    line-height: 1.1;
+}
+
+.vital-value-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
 }
 
 .vital-value {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: .95rem;
+    font-size: .92rem;
     font-weight: 600;
-    color: var(--ink);
+    /* Gris azulado suave (atenuado), en vez del negro en negritas
+       que tenía antes. */
+    color: #A0A9BD;
+}
+
+.vital-unit {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: .55rem;
+    font-weight: 500;
+    color: #C2C9D6;
+}
+
+/* ─── Colores por estado clínico ─────────────────────────────────── */
+/* Verde = normal, amarillo = alerta, rojo = crítico. Se aplica un
+   tinte suave al fondo/borde de la caja y un color más saturado al
+   valor numérico para que resalte de inmediato. */
+
+.vital-item--normal {
+    background: var(--status-normal-soft);
+    border-color: rgba(14,159,110,.35);
+}
+
+.vital-item--alerta {
+    background: var(--status-warning-soft);
+    border-color: rgba(217,119,6,.35);
+}
+
+.vital-item--critico {
+    background: var(--status-critical-soft);
+    border-color: rgba(220,38,38,.4);
+}
+
+.vital-value--normal {
+    color: var(--status-normal);
+}
+
+.vital-value--alerta {
+    color: var(--status-warning);
+}
+
+.vital-value--critico {
+    color: var(--status-critical);
 }
 
 /* ─── MODAL: agregar triage ──────────────────────────────────────── */
 
 .modal-overlay {
     position: fixed;
-    inset: 0;
+    /* Empieza DEBAJO del header clínico (misma --header-height que usa
+       .vitals-panel para su sticky), en vez de cubrir toda la pantalla
+       con inset:0. Así el modal se centra solo en el espacio visible
+       que queda debajo del header, sin taparlo ni encimarse con
+       "Signos vitales". */
+    top: var(--header-height, 160px);
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: rgba(15, 23, 42, .5);
     backdrop-filter: blur(2px);
     display: flex;
@@ -393,6 +569,7 @@ export default {
     justify-content: center;
     z-index: 1050;
     padding: 16px;
+    overflow-y: auto;
 }
 
 .modal-triage {
