@@ -163,8 +163,13 @@
 
         /* ---------- Firma / footer ---------- */
         .firma-wrap { margin-top: 50px; }
-        .firma-box { width: 220px; margin-left: auto; text-align: center; }
-        .firma-linea { border-top: 1px solid #9ca3af; }
+        .firma-table td {
+            width: 33.33%;
+            text-align: center;
+            vertical-align: top;
+            padding: 0 8px;
+        }
+        .firma-linea { border-top: 1px solid #9ca3af; margin: 0 4px; }
         .firma-texto { font-size: 10px; color: #6b7280; margin-top: 4px; }
 
         .footer-nota {
@@ -233,9 +238,13 @@
             </td>
             <td style="text-align: right;">
                 @if($nota)
-                    <span class="badge {{ $nota->estado === 'final' ? 'badge-final' : 'badge-borrador' }}">
-                        {{ $nota->estado === 'final' ? 'NOTA FINAL' : 'BORRADOR' }}
-                    </span>
+                    {{-- La nota PSOAPP siempre se guarda y entrega como
+                    definitiva (ya no existe el flujo de "borrador" en el
+                    módulo de Consulta Inteligente), así que el badge del
+                    PDF muestra siempre "NOTA FINAL". Se deja badge-borrador
+                    en el CSS por si algún registro histórico anterior a este
+                    cambio necesitara distinguirse en el futuro. --}}
+                    <span class="badge badge-final">NOTA FINAL</span>
                 @endif
             </td>
         </tr>
@@ -306,11 +315,24 @@
         </div>
     @endif
 
+    {{-- Firmas: médico, paciente y testigo, una junto a otra --}}
     <div class="firma-wrap">
-        <div class="firma-box">
-            <div class="firma-linea"></div>
-            <div class="firma-texto">Firma</div>
-        </div>
+        <table class="firma-table">
+            <tr>
+                <td>
+                    <div class="firma-linea"></div>
+                    <div class="firma-texto">Firma del médico</div>
+                </td>
+                <td>
+                    <div class="firma-linea"></div>
+                    <div class="firma-texto">Firma del paciente</div>
+                </td>
+                <td>
+                    <div class="firma-linea"></div>
+                    <div class="firma-texto">Firma del testigo</div>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <p class="footer-nota">

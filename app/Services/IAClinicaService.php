@@ -580,8 +580,20 @@ class IAClinicaService
      * Comprime y arma los "parts" de imagen en el formato que espera la API
      * de Gemini (inline_data + mime_type/data). Se usa tanto para el modo de
      * llamada única como para el modo de lotes en paralelo.
+     *
+     * ECG-INTEGRACIÓN: se agregaron los parámetros opcionales $anchoMax y
+     * $calidadJpeg (con los mismos valores que antes estaban hardcodeados:
+     * 1200 / 75), para que analizarElectrocardiograma() pueda pedir más
+     * resolución/calidad sin afectar a las llamadas existentes
+     * (analizarArchivoConVisionGemini sigue usando 1200/75 por default).
      */
-    private function prepararPartesImagenesGemini(array $rutas, string $promptClinico, string $etiquetaLote = ''): array
+    private function prepararPartesImagenesGemini(
+        array $rutas,
+        string $promptClinico,
+        string $etiquetaLote = '',
+        int $anchoMax = 1200,
+        int $calidadJpeg = 75
+    ): array
     {
         $contenidoMensaje = [
             ['text' => $promptClinico . ($etiquetaLote !== '' ? " ({$etiquetaLote})" : '')]
@@ -618,7 +630,7 @@ class IAClinicaService
             $anchoOriginal = imagesx($imagenOriginal);
             $altoOriginal = imagesy($imagenOriginal);
 
-            $anchoNuevo = 1200;
+            $anchoNuevo = $anchoMax;
             $altoNuevo = floor($altoOriginal * ($anchoNuevo / $anchoOriginal));
             $imagenModificada = imagecreatetruecolor($anchoNuevo, $altoNuevo);
 
@@ -633,7 +645,7 @@ class IAClinicaService
             imagecopyresampled($imagenModificada, $imagenOriginal, 0, 0, 0, 0, $anchoNuevo, $altoNuevo, $anchoOriginal, $altoOriginal);
 
             ob_start();
-            imagejpeg($imagenModificada, null, 75); // convertimos todo a JPEG para el envío
+            imagejpeg($imagenModificada, null, $calidadJpeg); // convertimos todo a JPEG para el envío
             $binarioComprimido = ob_get_clean();
 
             imagedestroy($imagenOriginal);
@@ -791,36 +803,7 @@ class IAClinicaService
             Log::info('El archivo es una imagen o PDF escaneado. Procesando con Gemini Vision...');
 
             if ($mime === 'application/pdf') {
-                $pdf = (new PdfParser())->parseFile($rutaCompleta);
-                $objects = $pdf->getObjects();
-                $contadorPagina = 0;
-
-                // Buscar por Subtype /Image
-                foreach ($objects as $object) {
-                    $details = $object->getDetails();
-                    if (isset($details['Subtype']) && $details['Subtype'] === '/Image') {
-                        $contadorPagina++;
-                        $imagenBinaria = $object->getContent();
-                        if (!empty($imagenBinaria)) {
-                            $archivoTemporal = sys_get_temp_dir() . '/' . uniqid("pdf_camscanner_{$contadorPagina}_", true) . '.jpg';
-                            file_put_contents($archivoTemporal, $imagenBinaria);
-                            $imagenesTemporales[] = $archivoTemporal;
-                        }
-                    }
-                }
-
-                // Respaldo de flujos binarios JPEG si no encontró por Subtype
-                if (empty($imagenesTemporales)) {
-                    foreach ($objects as $object) {
-                        $content = $object->getContent();
-                        if (str_starts_with($content, "\xFF\xD8\xFF")) {
-                            $contadorPagina++;
-                            $archivoTemporal = sys_get_temp_dir() . '/' . uniqid("pdf_stream_{$contadorPagina}_", true) . '.jpg';
-                            file_put_contents($archivoTemporal, $content);
-                            $imagenesTemporales[] = $archivoTemporal;
-                        }
-                    }
-                }
+                $imagenesTemporales = $this->extraerImagenesDePdf($rutaCompleta, 'pdf');
             } else {
                 $imagenesTemporales[] = $rutaCompleta;
             }
@@ -1008,6 +991,240 @@ class IAClinicaService
             }
         }
     }
+
+    /**
+     * Extrae las imágenes embebidas en un PDF (páginas escaneadas / fotos
+     * pegadas en el documento). Antes esta lógica vivía inline dentro de
+     * analizarArchivoConVisionGemini; se movió aquí como helper para poder
+     * reutilizarla también en analizarElectrocardiograma() sin duplicar el
+     * bloque completo. Comportamiento idéntico al que había antes.
+     *
+     * $prefijo solo cambia el prefijo del nombre de archivo temporal, para
+     * poder distinguir en logs/disco de qué flujo vino cada temporal.
+     */
+    private function extraerImagenesDePdf(string $rutaCompleta, string $prefijo = 'pdf'): array
+    {
+        $imagenes = [];
+        $pdf = (new PdfParser())->parseFile($rutaCompleta);
+        $objects = $pdf->getObjects();
+        $contador = 0;
+
+        // Buscar por Subtype /Image
+        foreach ($objects as $object) {
+            $details = $object->getDetails();
+            if (isset($details['Subtype']) && $details['Subtype'] === '/Image') {
+                $contador++;
+                $imagenBinaria = $object->getContent();
+                if (!empty($imagenBinaria)) {
+                    $archivoTemporal = sys_get_temp_dir() . '/' . uniqid("{$prefijo}_camscanner_{$contador}_", true) . '.jpg';
+                    file_put_contents($archivoTemporal, $imagenBinaria);
+                    $imagenes[] = $archivoTemporal;
+                }
+            }
+        }
+
+        // Respaldo de flujos binarios JPEG si no encontró por Subtype
+        if (empty($imagenes)) {
+            foreach ($objects as $object) {
+                $content = $object->getContent();
+                if (str_starts_with($content, "\xFF\xD8\xFF")) {
+                    $contador++;
+                    $archivoTemporal = sys_get_temp_dir() . '/' . uniqid("{$prefijo}_stream_{$contador}_", true) . '.jpg';
+                    file_put_contents($archivoTemporal, $content);
+                    $imagenes[] = $archivoTemporal;
+                }
+            }
+        }
+
+        return $imagenes;
+    }
+
+    /**
+     * Analiza un electrocardiograma (imagen, foto de trazo o PDF) combinando
+     * lectura visual del trazo y extracción de texto si el documento ya trae
+     * un reporte impreso con valores calculados. Usa Gemini Vision con un
+     * prompt especializado (ver promptElectrocardiograma), distinto del
+     * prompt genérico de analizarArchivoConVisionGemini, porque un ECG
+     * requiere que el modelo intente medir/estimar parámetros propios
+     * (frecuencia, ritmo, intervalos, eje) en vez de solo describir hallazgos.
+     *
+     * $consulta: instrucción adicional opcional del médico (mismo patrón que
+     * usan los otros métodos de este servicio). Puede ser null.
+     *
+     * No guarda nada en base de datos: regresa el arreglo decodificado del
+     * JSON de la IA para que el controlador lo entregue directo al frontend.
+     */
+    public function analizarElectrocardiograma(string $rutaCompleta, string $mime, $consulta = null): ?array
+    {
+        set_time_limit(300);
+        $imagenesTemporales = [];
+
+        try {
+            if (!file_exists($rutaCompleta)) {
+                Log::error("Archivo no encontrado para análisis de ECG: {$rutaCompleta}");
+                return null;
+            }
+
+            // --- PASO 1: texto nativo (reporte ya impreso, si lo hay) ---
+            $textoReportado = '';
+            if ($mime === 'application/pdf') {
+                try {
+                    $parser = new PdfParser();
+                    $pdf = $parser->parseFile($rutaCompleta);
+                    $textoReportado = trim($pdf->getText());
+                } catch (\Exception $e) {
+                    Log::warning('No se pudo extraer texto nativo del PDF de ECG, se analizará solo el trazo visual.');
+                }
+            }
+
+            // --- PASO 2: imágenes del trazo ---
+            if ($mime === 'application/pdf') {
+                $imagenesTemporales = $this->extraerImagenesDePdf($rutaCompleta, 'ecg');
+            } else {
+                $imagenesTemporales[] = $rutaCompleta;
+            }
+
+            if (empty($imagenesTemporales)) {
+                Log::error('No se pudieron extraer imágenes del ECG para análisis visual.');
+                return null;
+            }
+
+            $promptElectro = $this->promptElectrocardiograma($consulta, $textoReportado);
+
+            $apiKey = env('GEMINI_API_KEY');
+            $modelo = 'gemini-3.5-flash-lite';
+            $urlGemini = "https://generativelanguage.googleapis.com/v1beta/models/{$modelo}:generateContent?key={$apiKey}";
+
+            // Más resolución/calidad que el default (1200/75) que usa
+            // analizarArchivoConVisionGemini: el detalle fino del trazo
+            // (cuadrícula, ondas pequeñas) importa más aquí que en un
+            // documento de texto plano.
+            $parts = $this->prepararPartesImagenesGemini($imagenesTemporales, $promptElectro, '', 1800, 90);
+
+            if (count($parts) <= 1) {
+                Log::warning('Ninguna imagen válida de ECG para enviar a Gemini.');
+                return null;
+            }
+
+            $inicio = microtime(true);
+            $response = $this->llamarGeminiConReintentos(
+                $urlGemini,
+                $parts,
+                3,
+                ['responseMimeType' => 'application/json']
+            );
+            $fin = microtime(true);
+
+            Log::info('Tiempo respuesta Gemini (analizarElectrocardiograma)', [
+                'segundos' => round($fin - $inicio, 2)
+            ]);
+
+            if (!$response->successful()) {
+                Log::error('Error HTTP al analizar ECG con Gemini Vision', [
+                    'response' => $response->body()
+                ]);
+                return null;
+            }
+
+            $contenido = $response->json('candidates.0.content.parts.0.text');
+            $data = $this->decodificarJsonDesdeTexto($contenido, 'analizarElectrocardiograma', $response->json() ?? []);
+
+            return is_array($data) ? $data : null;
+
+        } catch (\Throwable $e) {
+            Log::error('Excepción al analizar electrocardiograma', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return null;
+        } finally {
+            foreach ($imagenesTemporales ?? [] as $tempFile) {
+                if ($tempFile !== $rutaCompleta && file_exists($tempFile)) {
+                    @unlink($tempFile);
+                }
+            }
+        }
+    }
+
+    /**
+     * Prompt clínico especializado en lectura de electrocardiogramas.
+     *
+     * A diferencia del prompt genérico de analizarArchivoConVisionGemini,
+     * aquí SÍ se le pide al modelo que intente medir/estimar parámetros
+     * propios de un ECG (frecuencia, ritmo, eje, intervalos, morfología). La
+     * instrucción más importante es que NUNCA invente un valor numérico
+     * exacto si la imagen no tiene calidad/calibración suficiente para
+     * medirlo con confianza real -- en ECG, un intervalo inventado es peor
+     * que no reportarlo, porque puede llevar a una lectura de
+     * bloqueo/arritmia que no existe.
+     */
+    private function promptElectrocardiograma($consulta, string $textoReportado): string
+    {
+        $bloqueTexto = '';
+        if (trim($textoReportado) !== '' && mb_strlen($textoReportado) > 20) {
+            $bloqueTexto = "\n\nTEXTO EXTRAÍDO DEL DOCUMENTO (valores que el equipo o el cardiólogo ya hayan reportado por escrito, si los hay):\n{$textoReportado}\n";
+        }
+
+        return "
+        Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE como apoyo
+        para el médico dentro de un expediente médico digital. Tu tarea es interpretar un
+        electrocardiograma (ECG) a partir de una imagen del trazo y/o de un reporte ya impreso.
+
+        INSTRUCCIÓN ADICIONAL DEL MÉDICO:
+        " . ($consulta ?: 'Ninguna') . "
+        {$bloqueTexto}
+
+        IMPORTANTE:
+        - No reemplazas al cardiólogo ni al médico tratante; tu lectura es una PRIMERA
+          APROXIMACIÓN de apoyo, nunca un diagnóstico definitivo.
+        - Si el documento incluye TEXTO con valores ya calculados por el equipo o reportados
+          por un médico, transcribe esos valores tal cual (no los reinterpretes ni los
+          \"corrijas\" con base en la imagen; el equipo suele medir con más precisión que una
+          lectura visual).
+        - Si solo cuentas con la imagen del trazo (sin texto reportado), estima ritmo,
+          frecuencia, eje y morfología a partir de lo que puedas observar directamente.
+          NUNCA inventes un valor numérico exacto (ej. \"PR de 160 ms\") si la resolución de
+          la imagen o la ausencia de calibración visible (papel milimétrico, marcas de
+          tiempo/amplitud) no permite medirlo con confianza real. En ese caso, da una
+          estimación cualitativa (ej. \"PR aparentemente dentro de límites normales, no
+          medible con precisión en esta imagen\") o escribe \"No medible en esta imagen\".
+        - Declara explícitamente tu nivel de confianza y cualquier limitación de la imagen
+          (mala resolución, trazo incompleto, sin calibración visible, derivaciones no
+          identificables, recorte parcial, etc.) en el campo 'limitaciones'.
+        - Prioriza señalar cualquier patrón que sugiera riesgo vital inmediato (ej. patrón de
+          isquemia/lesión aguda tipo elevación del ST, arritmias potencialmente malignas,
+          bloqueos AV avanzados, QT muy prolongado, fibrilación/flutter con respuesta
+          ventricular rápida) como hallazgo crítico en 'hallazgos_criticos', aunque no estés
+          seguro al 100%. Es preferible sobre-alertar a que un hallazgo así pase
+          desapercibido.
+        - Si la imagen no corresponde en absoluto a un trazo de ECG ni a un reporte de ECG,
+          dilo explícitamente en 'limitaciones' y deja el resto de los campos clínicos como
+          'No aplica'.
+
+        Responde EXCLUSIVAMENTE con el siguiente JSON, sin texto adicional ni Markdown:
+
+        {
+        \"frecuencia_cardiaca\": \"\",
+        \"ritmo\": \"\",
+        \"eje_electrico\": \"\",
+        \"intervalo_pr\": \"\",
+        \"duracion_qrs\": \"\",
+        \"intervalo_qt_qtc\": \"\",
+        \"morfologia_onda_p\": \"\",
+        \"morfologia_qrs\": \"\",
+        \"alteraciones_st_t\": \"\",
+        \"hallazgos\": [\"\"],
+        \"hallazgos_criticos\": [\"\"],
+        \"diagnostico_probable\": \"\",
+        \"nivel_riesgo\": \"bajo|medio|alto\",
+        \"confianza\": 0,
+        \"limitaciones\": \"\",
+        \"fuente_datos\": \"trazo_visual|reporte_texto|ambos\"
+        }
+        ";
+    }
+
     /**
      * Sugerencia de medicamentos con triage completo - LENGUAJE MÉDICO PROFESIONAL
      */
