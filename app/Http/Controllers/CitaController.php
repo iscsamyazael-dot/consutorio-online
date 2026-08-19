@@ -18,44 +18,16 @@ class CitaController extends Controller
     // Muestra todas las citas en la vista.
     // NUEVO: ahora acepta filtros opcionales por medico_id y especialidad_id
     // vía query params (?medico_id=1&especialidad_id=2), que es justo lo que
-    // manda el frontend a través de ApiService.get('citas', { params }).
-    public function index(Request $request)
-    {
-        $query = Cita::with(['paciente', 'medico', 'especialidad']);
-
-        // Si el frontend envía medico_id, filtra por ese médico.
-        if ($request->filled('medico_id')) {
-            $query->where('medico_id', $request->medico_id);
-        }
-
-        // Si el frontend envía especialidad_id, filtra por esa especialidad.
-        if ($request->filled('especialidad_id')) {
-            $query->where('especialidad_id', $request->especialidad_id);
-        }
-
-        return $query->get();
-    }
-
-    // Devuelve todas las citas en formato JSON para el calendario
-    // NOTA: si el calendario ahora consume el endpoint de index() con filtros,
-    // este método puede volverse redundante. Se deja intacto por si otra
-    // vista todavía lo usa.
-    //
-    // ACTUALIZADO: además de las citas agendadas desde el módulo de Agenda
-    // (tabla `citas`), ahora también incluye las consultas registradas "de
-    // forma tradicional" (tabla `consultas`, creadas por ConsultaController),
-    // que antes no aparecían en HistorialConsulta.vue porque ese componente
-    // solo consume este endpoint. Se combinan ambas fuentes en un mismo
-    // formato para que el frontend no tenga que cambiar su forma de leerlas.
-    //
-    // NUEVO: acepta el query param opcional ?origen=cita|consulta para que
-    // el frontend pueda pedir solo una de las dos fuentes (por ejemplo,
-    // HistorialConsulta.vue usa ?origen=consulta para no traer nunca las
-    // citas de Agenda). Si no se manda el parámetro, se comporta igual que
-    // antes y devuelve ambas fuentes combinadas.
     public function getCitas(Request $request)
     {
-        // 1) Citas agendadas desde el módulo de Agenda
+        // Citas agendadas desde el módulo de Agenda (tabla `citas`).
+        // Este endpoint es consumido también por la app móvil Ionic y
+        // debe reflejar EXCLUSIVAMENTE la tabla `citas`. Las consultas
+        // clínicas reales viven en su propio endpoint dedicado:
+        // GET /VerHistorialConsultas -> ConsultaController@historial().
+        // NO reintroducir aquí la combinación con `consultas`: ya se hizo
+        // antes y causó que Agenda Médica mostrara folios CONS- sin
+        // médico/especialidad.
         $citas = Cita::with([
             'paciente',
             'medico',
@@ -63,28 +35,17 @@ class CitaController extends Controller
         ])->get();
 
         $citasFormateadas = $citas->map(function ($cita) {
-
             return [
-
-                // Datos principales
-                'id'     => 'cita-' . $cita->id, // prefijo para no chocar con ids de consultas
+                'id'     => 'cita-' . $cita->id,
                 'origen' => 'cita',
                 'title'  => 'Cita: ' . ($cita->paciente->nombre ?? 'Sin paciente'),
                 'start'  => $cita->fecha . 'T' . $cita->hora,
-
-                // Información de la cita
                 'folio'  => $cita->folio,
                 'fecha'  => $cita->fecha,
                 'hora'   => $cita->hora,
                 'estado' => $cita->estado,
                 'tipo'   => $cita->tipo,
-
-                // Información del paciente
-                // NOTA: se agregan todos los campos que necesita
-                // el formulario de "Registrar Paciente" para poder
-                // precargar los datos cuando están incompletos.
                 'paciente' => $cita->paciente ? [
-
                     'id'          => $cita->paciente->id,
                     'nombre'      => $cita->paciente->nombre,
                     'sexo'        => $cita->paciente->sexo,
@@ -110,109 +71,22 @@ class CitaController extends Controller
                     'temperatura' => $cita->paciente->temperatura,
                     'sintomas' => $cita->paciente->sintomas,
                     'motivo_consulta' => $cita->paciente->motivo_consulta,
-
                 ] : null,
-
-                // Información del médico
                 'medico' => $cita->medico ? [
-
                     'id'     => $cita->medico->id,
                     'nombre' => $cita->medico->nombre,
-
                 ] : null,
-
-                // Información de la especialidad
                 'especialidad' => $cita->especialidad ? [
-
                     'id'     => $cita->especialidad->id,
                     'nombre' => $cita->especialidad->nombre,
-
                 ] : null,
-
             ];
         });
 
-        // 2) Consultas registradas "de forma tradicional" (sin pasar por Agenda)
-        $consultas = Consulta::with(['paciente', 'medico'])->get();
-
-        // Traduce estado_consulta -> mismo formato de texto que usa el chip
-        // de HistorialConsulta.vue ('Agendado', 'En proceso', 'Finalizada', 'Cancelada')
-        $mapaEstados = [
-            'en_proceso' => 'En proceso',
-            'finalizada' => 'Finalizada',
-            'cancelada'  => 'Cancelada',
-            'activa'     => 'Agendado',
-        ];
-
-        $consultasFormateadas = $consultas->map(function ($consulta) use ($mapaEstados) {
-
-            return [
-
-                'id'     => 'consulta-' . $consulta->id,
-                'origen' => 'consulta',
-                'title'  => 'Consulta: ' . ($consulta->paciente->nombre ?? 'Sin paciente'),
-                'start'  => optional($consulta->created_at)->toDateTimeString(),
-
-                'folio'  => $consulta->folio,
-                'fecha'  => optional($consulta->created_at)->format('Y-m-d'),
-                'hora'   => optional($consulta->created_at)->format('H:i:s'),
-                'estado' => $mapaEstados[$consulta->estado_consulta] ?? $consulta->estado_consulta,
-                'tipo'   => $consulta->tipo_consulta,
-
-                'paciente' => $consulta->paciente ? [
-
-                    'id'          => $consulta->paciente->id,
-                    'nombre'      => $consulta->paciente->nombre,
-                    'sexo'        => $consulta->paciente->sexo,
-                    'telefono'    => $consulta->paciente->telefono,
-                    'email'       => $consulta->paciente->email,
-                    'direccion'   => $consulta->paciente->direccion,
-                    'curp'        => $consulta->paciente->curp,
-                    'tipo_sangre' => $consulta->paciente->tipo_sangre,
-                    'contacto_emergencia' => $consulta->paciente->contacto_emergencia,
-                    'alergias' => $consulta->paciente->alergias,
-                    'fecha_nacimiento' => $consulta->paciente->fecha_nacimiento,
-                    'edad'        => $consulta->paciente->edad,
-                    'estado'      => $consulta->paciente->estado,
-
-                ] : null,
-
-                // NOTA: Consulta::medico() relaciona por 'user_id' contra
-                // medicos.id (belongsTo(Medico::class, 'user_id')). Revisar
-                // si esto realmente corresponde al médico correcto; se deja
-                // tal cual está definido en el modelo.
-                'medico' => $consulta->medico ? [
-
-                    'id'     => $consulta->medico->id,
-                    'nombre' => $consulta->medico->nombre,
-
-                ] : null,
-
-                // La tabla `consultas` no tiene una columna especialidad_id
-                // fillable/confirmada, así que se deja null por ahora.
-                'especialidad' => null,
-
-            ];
-        });
-
-        // 3) Combinar ambas fuentes y devolver, más recientes primero
-        $todas = $citasFormateadas
-            ->concat($consultasFormateadas)
-            ->sortByDesc('start')
-            ->values();
-
-        // 4) Filtro opcional por origen: /api/citas?origen=consulta o ?origen=cita
-        // Si no se manda el parámetro (o llega con un valor distinto a estos
-        // dos), se devuelven ambas fuentes, igual que el comportamiento
-        // original de este endpoint.
-        $origen = $request->query('origen');
-        if (in_array($origen, ['cita', 'consulta'], true)) {
-            $todas = $todas->where('origen', $origen)->values();
-        }
-
-        return response()->json($todas);
+        return response()->json(
+            $citasFormateadas->sortByDesc('start')->values()
+        );
     }
-
    //muestra el formulario para crear una nueva cita.
     public function create()
     {

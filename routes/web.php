@@ -186,6 +186,8 @@ Route::middleware('auth')->group(function () {
         // ─────────────────────────────────────────────────────────────
         Route::get('/api/citas', [CitaController::class, 'getCitas']);// Agenda: lista de citas con paciente/medico/especialidad (ConsultaClinica.vue, ConsultaInteligente.vue)
         Route::get('/api/dashboard/consultas-hoy', [DashboardController::class, 'consultasHoy']); // Dashboard SPA: consultas usadas y finalizadas hoy (Home.vue)
+        //Resumen del dia Consultas finalizadas, Lista de espera, Consultas realizadas del día de hoy
+        Route::get('resumen-consultas-finalizadas-pendientes', [DashboardController::class, 'resumenHoy']);
         // Agenda: actualizar datos del paciente
         // Cambias 'SubirArchivosControlador' por el que ya tengas
         Route::post('archivoClinico', [ArchivosClinicosController::class, 'archivoclinico']);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Paciente;
 use App\Models\Consulta;
 use App\Models\Receta;
+use App\Models\ListaEspera;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -37,4 +38,27 @@ class DashboardController extends Controller
             'pendientes_hoy'  => max(0, $usadas - $finalizadas),
         ]);
     }
+
+    public function resumenHoy()
+    {
+        $hoy = now()->toDateString();
+
+        $consultasHoy = Consulta::whereDate('created_at', $hoy)->count();
+
+        $pendientesAtencion = ListaEspera::where('fecha', $hoy)
+            ->where('estado', 'En espera')
+            ->count();
+
+         $finalizados = Consulta::where('estado_consulta', 'finalizada')
+            ->whereDate('updated_at', $hoy)
+            ->count();
+
+        return response()->json([
+            'consultas_hoy'        => $consultasHoy,
+            'pendientes_atencion'  => $pendientesAtencion,
+            'finalizados'          => $finalizados,
+        ]);
+    }
+
+
 }

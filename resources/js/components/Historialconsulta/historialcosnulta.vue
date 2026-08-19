@@ -63,24 +63,28 @@
         </span>
       </div>
 
-      <!-- Tabla: paciente, hora, estado (editable) -->
+      <!-- Tabla: #, paciente, folio, hora, estado (editable) -->
       <div class="hist-table-wrap">
         <table class="hist-table">
           <thead>
             <tr>
+              <th style="width: 50px;">#</th>
               <th>Paciente</th>
+              <th>Folio</th>
               <th>Hora</th>
               <th>Estado</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="c in historialFiltrado" :key="c.id">
+            <tr v-for="(c, index) in historialFiltrado" :key="c.id">
+              <td class="hist-mono">{{ index + 1 }}</td>
               <td>
                 <p class="hist-patient-name">{{ nombrePacienteCita(c) }}</p>
                 <p class="hist-patient-sub" v-if="c.especialidad || c.medico">
                   {{ c.especialidad?.nombre }}<template v-if="c.especialidad && c.medico"> · </template>{{ c.medico?.nombre }}
                 </p>
               </td>
+              <td class="hist-mono">{{ c.folio || '—' }}</td>
               <td class="hist-mono">{{ c.hora || '—' }}</td>
               <td>
                 <div class="hist-estado-cell">
@@ -110,7 +114,7 @@
               </td>
             </tr>
             <tr v-if="!cargandoStats && historialFiltrado.length === 0">
-              <td colspan="3" class="hist-empty">No hay consultas con ese criterio.</td>
+              <td colspan="5" class="hist-empty">No hay consultas con ese criterio.</td>
             </tr>
           </tbody>
         </table>
@@ -121,7 +125,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 import ApiService from '../../services/ApiService.js'
 
 function obtenerFechaHoyISO() {
@@ -218,13 +221,13 @@ export default {
     async cargarDatos() {
       this.cargandoStats = true
       try {
-        // Le pedimos al backend que devuelva ÚNICAMENTE los registros que
-        // vienen de la tabla 'consultas' (no los de 'citas' / Agenda).
-        // CitaController@getCitas soporta el query param ?origen=consulta
-        // y filtra ahí mismo antes de responder, así que este historial
-        // nunca recibe ni mezcla citas de Agenda, sin importar su estado.
+        // Endpoint dedicado: solo consultas reales (tabla `consultas`),
+        // nunca citas de Agenda. Ver ConsultaController@historial().
+        // Este historial NO debe volver a depender de /api/citas: ese
+        // endpoint es exclusivo de la tabla `citas` (Agenda), consumido
+        // también por la app móvil Ionic y por Sofia (n8n).
         const [respCitas, respPacientes] = await Promise.all([
-          axios.get('/api/citas', { params: { origen: 'consulta' } }),
+          ApiService.get('/VerHistorialConsultas'),
           ApiService.get('/pacientes'),
         ])
 
@@ -271,29 +274,12 @@ export default {
       }
     },
 
-    // Devuelve { endpoint, idReal } según de dónde viene el registro.
-    // Desde que /api/citas combina 'citas' y 'consultas' tradicionales,
-    // el backend prefija los ids como 'cita-123' o 'consulta-456' para
-    // que no choquen entre sí (ver CitaController@getCitas). Aquí se
-    // quita el prefijo y se decide a qué endpoint mandar el PATCH.
-    endpointEstadoCita(cita) {
-      const idStr = String(cita.id)
-
-      if (cita.origen === 'consulta' || idStr.startsWith('consulta-')) {
-        return {
-          url: `/api/consultas/${idStr.replace('consulta-', '')}/estado`,
-        }
-      }
-
-      return {
-        url: `/api/citas/${idStr.replace('cita-', '')}/estado`,
-      }
-    },
-
-    // Cambia el estado de una cita o de una consulta tradicional.
-    // Usa PATCH /api/citas/{id}/estado para las citas de Agenda, y
-    // PATCH /api/consultas/{id}/estado para las consultas tradicionales
-    // (ver ConsultaController@actualizarEstado).
+    // Cambia el estado de una consulta. Este historial solo muestra
+    // registros de la tabla `consultas` (ver cargarDatos), así que
+    // siempre usamos PATCH /ActualizarEstadoConsulta/{id}
+    // (ConsultaController@actualizarEstado). El id llega prefijado como
+    // 'consulta-123' desde ConsultaController@historial(); aquí se quita
+    // el prefijo antes de mandarlo.
     async cambiarEstadoCita(cita, nuevoEstado) {
       if (!nuevoEstado || nuevoEstado === cita.estado) {
         return
@@ -301,8 +287,8 @@ export default {
 
       this.guardandoEstadoId = cita.id
       try {
-        const { url } = this.endpointEstadoCita(cita)
-        await axios.patch(url, { estado: nuevoEstado })
+        const idReal = String(cita.id).replace('consulta-', '')
+        await ApiService.patch(`/ActualizarEstadoConsulta/${idReal}`, { estado: nuevoEstado })
         cita.estado = nuevoEstado
 
         if (window.Swal) {

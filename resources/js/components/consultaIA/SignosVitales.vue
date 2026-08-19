@@ -189,16 +189,6 @@ export default {
         }
     },
     
-    computed:{
-        //Lee el último triage del historial que llega por prop
-      // (paciente.triages), independientemente de si se guardó
-      // en esta sesión o en una anterior (ej. desde la tabla de
-      // ConsultaClinica.vue).
-     ultimoTriageDelPaciente() {
-        const triages = this.paciente?.triages
-        if (!Array.isArray(triages) || !triages.length) return null
-                      return triages[triages.length - 1]  }
-    },
     data() {
         return {
             mostrarModalTriage: false,
@@ -232,6 +222,16 @@ export default {
     },
 
     computed: {
+        // Lee el último triage del historial que llega por prop
+        // (paciente.triages), independientemente de si se guardó
+        // en esta sesión o en una anterior (ej. desde la tabla de
+        // ConsultaClinica.vue).
+        ultimoTriageDelPaciente() {
+            const triages = this.paciente?.triages
+            if (!Array.isArray(triages) || !triages.length) return null
+            return triages[triages.length - 1]
+        },
+
         // Edad del paciente en meses. Preferimos fecha_nacimiento (más
         // precisa, necesaria para el percentil pediátrico); si no está
         // disponible, caemos a la columna `edad` (años) del paciente.
@@ -256,8 +256,8 @@ export default {
         sexoPacienteNormalizado() {
             const s = (this.paciente?.sexo || '').toString().trim().toLowerCase()
             if (!s) return null
-            if (s.startsWith('m')) return 'M' // masculino
-            if (s.startsWith('f')) return 'F' // femenino
+            if (s.startsWith('m')) return 'M'
+            if (s.startsWith('f')) return 'F'
             return null
         },
 
