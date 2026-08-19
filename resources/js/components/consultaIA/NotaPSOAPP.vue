@@ -155,6 +155,10 @@ export default {
       descargando: false,
       recetaDescargada: false,
       diagnosticoDescargado: false,
+      // Evita disparar el POST de finalizar más de una vez si el usuario
+      // hace doble click en "Sí, salir de todos modos" o si validarSalida
+      // se invoca varias veces seguidas.
+      finalizando: false,
       letras: ['P', 'S', 'O', 'A', 'P', 'P'],
       secciones: [
         {
@@ -256,14 +260,19 @@ export default {
     // descargar la receta y/o el diagnóstico, muestra una alerta y solo
     // ejecuta callbackNavegacion() si el usuario confirma salir de todos
     // modos. Si ya descargó ambos, ejecuta el callback directo.
+    //
+    // NUEVO: cuando el usuario confirma "Sí, salir de todos modos", antes
+    // de navegar se marca la consulta como finalizada en el backend
+    // (POST consultaIA/{consultaId}/finalizar -> ConsultaIAController::finalizarConsulta),
+    // para que la consulta quede cerrada aunque no se hayan descargado los PDFs.
     validarSalida(callbackNavegacion) {
       const faltaReceta = !this.recetaDescargada;
       const faltaDiagnostico = !this.diagnosticoDescargado;
 
       if (!faltaReceta && !faltaDiagnostico) {
-        if (typeof callbackNavegacion === 'function') {
-          callbackNavegacion();
-        }
+        // Ya descargó ambos: igualmente finalizamos la consulta antes de
+        // salir, para mantener un solo camino de cierre.
+        this.finalizarYNavegar(callbackNavegacion);
         return;
       }
 
@@ -292,12 +301,46 @@ export default {
         reverseButtons: true
       }).then((result) => {
         if (result.isConfirmed) {
-          // El usuario decidió salir bajo su propio riesgo
-          if (typeof callbackNavegacion === 'function') {
-            callbackNavegacion();
-          }
+          // El usuario decidió salir bajo su propio riesgo.
+          this.finalizarYNavegar(callbackNavegacion);
         }
       });
+    },
+    // Marca la consulta como finalizada en el backend y, tanto si el POST
+    // tiene éxito como si falla, ejecuta el callback de navegación (el
+    // usuario ya decidió salir; no lo bloqueamos por un error de red).
+    async finalizarYNavegar(callbackNavegacion) {
+      if (this.finalizando) return;
+
+      if (!this.consultaId) {
+        // Sin consulta activa no hay nada que finalizar en el backend.
+        if (typeof callbackNavegacion === 'function') {
+          callbackNavegacion();
+        }
+        return;
+      }
+
+      this.finalizando = true;
+      try {
+        const respuesta = await window.axios.post(
+          `/consultaIA/${this.consultaId}/finalizar`
+        );
+        this.$emit('psoapp-consulta-finalizada', {
+          consultaId: this.consultaId,
+          data: respuesta.data
+        });
+      } catch (error) {
+        console.error('Error al finalizar la consulta:', error);
+        // No bloqueamos la salida por esto: el usuario ya confirmó que
+        // quiere salir de todos modos. Solo avisamos con un toast, por si
+        // el padre no queda escuchando errores de este método.
+        this.mostrarToast('La consulta no se pudo marcar como finalizada');
+      } finally {
+        this.finalizando = false;
+        if (typeof callbackNavegacion === 'function') {
+          callbackNavegacion();
+        }
+      }
     },
     // Consulta rápida (sin disparar el modal) de si falta descargar algo.
     // La usa el padre para decidir si necesita interceptar la navegación
