@@ -16,6 +16,8 @@ use App\Models\NotaPsoapp;
 use App\Models\Receta;
 use App\Models\Derivacion;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\ListaEspera;
+use Carbon\Carbon; 
 
 use App\Services\IAClinicaService;
 
@@ -233,6 +235,22 @@ class ConsultaIAController extends Controller
             }
 
             $consulta->update(['estado_consulta' => 'finalizada']);
+            
+
+            // NUEVO: reflejar el cierre en lista_espera. ListaEspera no
+            // guarda consulta_id, así que se cruza por paciente_id + fecha
+            // de hoy (que es como sincronizarCitasDelDia() arma el registro
+            // del día). Se excluyen los que ya estén Finalizada/Cancelada
+            // para no pisar un estado terminal existente, y se toma el más
+            // reciente por si hubiera más de un registro del mismo paciente
+            // en el día (poco probable, pero evita ambigüedad).
+            ListaEspera::where('paciente_id', $consulta->paciente_id)
+                ->where('fecha', Carbon::now()->toDateString())
+                ->whereNotIn('estado', ['Finalizada', 'Cancelada'])
+                ->orderBy('id', 'desc')
+                ->limit(1)
+                ->update(['estado' => 'Finalizada']);
+
 
             return response()->json([
                 'success' => true,

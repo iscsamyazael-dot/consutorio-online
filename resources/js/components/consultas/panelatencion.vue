@@ -890,23 +890,23 @@ export default {
 
       // Formulario del modal de edición rápida de signos vitales (desde la tabla)
       triageForm: {
-      presion: '',
-      saturacion: null,
-      temperatura: null,
-      frecuencia_cardiaca: null,
-      frecuencia_respiratoria: null,
-      peso: null,
-      talla: null,
+        presion: '',
+        saturacion: null,
+        temperatura: null,
+        frecuencia_cardiaca: null,
+        frecuencia_respiratoria: null,
+        peso: null,
+        talla: null,
 
-      // IMC calculado automáticamente
-      imc: null,
-      imc_percentil: null,
-      imc_clasificacion: '',
+        // IMC calculado automáticamente
+        imc: null,
+        imc_percentil: null,
+        imc_clasificacion: '',
 
-      motivo_consulta: '',
-      medico_id: '',
-      especialidad_id: ''
-    },
+        motivo_consulta: '',
+        medico_id: '',
+        especialidad_id: ''
+      },
       guardandoTriage: false,
 
       // Imágenes cargadas en el dropzone del expediente (base64)
@@ -944,7 +944,8 @@ export default {
         enfermedades_cronicas:    '',
         medicamentos_actuales:    '',
         antecedentes_quirurgicos: ''
-      }
+      },
+      intervaloRefresco: null
     }
   },
 
@@ -1241,6 +1242,17 @@ export default {
     await Promise.all([this.obtenerPacientes(), this.obtenerListaEspera(), this.cargarCatalogoAgregar()])
     this.cargarSeleccionPrevia()
     this.inicializarPacienteActivo()
+    // NUEVO: refresca la lista de espera cada 15 segundos, para que un
+    // paciente finalizado desde ConsultaTiempoReal.vue (u otra pantalla)
+    // desaparezca de esta tabla sin que el usuario tenga que recargar.
+      this.intervaloRefresco = setInterval(() => {
+      this.obtenerListaEspera()
+    }, 15000)
+  },
+  beforeUnmount() {
+    if (this.intervaloRefresco) {
+      clearInterval(this.intervaloRefresco)
+    }
   },
   watch: {
     'triageForm.peso': {
