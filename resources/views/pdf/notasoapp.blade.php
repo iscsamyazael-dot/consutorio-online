@@ -16,9 +16,9 @@
 
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 10px;
+            font-size: 11.5px;
             color: #263238;
-            line-height: 1.45;
+            line-height: 1.5;
         }
 
         /* =====================================================
@@ -48,20 +48,20 @@
         }
 
         .clinic-title {
-            font-size: 15px;
+            font-size: 17px;
             font-weight: bold;
             color: #087c8c;
             text-transform: uppercase;
         }
 
         .clinic-sub {
-            font-size: 9px;
+            font-size: 10px;
             color: #718096;
             margin-top: 3px;
         }
 
         .clinic-phone {
-            font-size: 9px;
+            font-size: 10px;
             color: #718096;
         }
 
@@ -85,8 +85,8 @@
         ===================================================== */
 
         .logo-img {
-            width: 90px;
-            height: 90px;
+            width: 80px;
+            height: 80px;
         }
 
         .logo-placeholder {
@@ -162,7 +162,7 @@
             padding: 2px 7px;
             border-radius: 3px;
             font-weight: bold;
-            font-size: 8px;
+            font-size: 9.5px;
         }
 
         /* =====================================================
@@ -170,7 +170,7 @@
         ===================================================== */
 
         .section-title {
-            font-size: 11px;
+            font-size: 12.5px;
             font-weight: bold;
             color: #087c8c;
             text-transform: uppercase;
@@ -204,7 +204,7 @@
         }
 
         .soap-label {
-            font-size: 9px;
+            font-size: 10.5px;
             font-weight: bold;
             color: #087c8c;
             text-transform: uppercase;
@@ -212,7 +212,7 @@
         }
 
         .soap-text {
-            font-size: 9.5px;
+            font-size: 11px;
             color: #344054;
             text-align: justify;
         }
@@ -231,7 +231,7 @@
         }
 
         .recipe-title {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: bold;
             color: #a64b00;
             text-transform: uppercase;
@@ -240,7 +240,7 @@
         }
 
         .recipe-subtitle {
-            font-size: 8.5px;
+            font-size: 9.5px;
             font-weight: bold;
             color: #b45309;
             text-transform: uppercase;
@@ -248,32 +248,9 @@
         }
 
         .recipe-text {
-            font-size: 9.5px;
+            font-size: 11px;
             color: #344054;
             text-align: justify;
-        }
-
-        /* =====================================================
-           DOS COLUMNAS
-        ===================================================== */
-
-        .two-columns {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-        }
-
-        .left-column {
-            width: 72%;
-            vertical-align: top;
-            padding-right: 15px;
-        }
-
-        .right-column {
-            width: 28%;
-            vertical-align: top;
-            border-left: 1px solid #e2e8f0;
-            padding-left: 15px;
         }
 
         /* =====================================================
@@ -281,7 +258,7 @@
         ===================================================== */
 
         .med-title {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: bold;
             color: #087c8c;
             text-transform: uppercase;
@@ -299,42 +276,21 @@
             padding: 5px 4px;
             border-bottom: 1px solid #cbd5e0;
             color: #475569;
-            font-size: 8px;
+            font-size: 9px;
             text-transform: uppercase;
         }
 
         .tabla-meds td {
             padding: 6px 4px;
             border-bottom: 1px solid #edf2f7;
-            font-size: 9px;
+            font-size: 10.5px;
             vertical-align: top;
         }
 
         .empty-text {
-            font-size: 9.5px;
+            font-size: 11px;
             color: #475569;
             font-style: italic;
-        }
-
-        /* =====================================================
-           SIGNOS VITALES
-        ===================================================== */
-
-        .vital-item {
-            margin-bottom: 8px;
-        }
-
-        .vital-label {
-            font-size: 7.5px;
-            color: #718096;
-            text-transform: uppercase;
-        }
-
-        .vital-value {
-            font-size: 9px;
-            font-weight: bold;
-            color: #1a202c;
-            margin-top: 1px;
         }
 
         /* =====================================================
@@ -366,7 +322,7 @@
         }
 
         .signature-text {
-            font-size: 8.5px;
+            font-size: 9.5px;
             color: #94a3b8;
             font-family: sans-serif;
             font-weight: normal;
@@ -385,7 +341,7 @@
             border-top: 1px solid #d9e2ec;
             padding-top: 5px;
             text-align: center;
-            font-size: 7.5px;
+            font-size: 8.5px;
             color: #94a3b8;
         }
 
@@ -549,6 +505,66 @@
                 @else
 
                     Sin alergias registradas
+
+                @endif
+
+            </td>
+
+        </tr>
+
+        <tr>
+
+            <td class="patient-label">
+                Signos vitales:
+            </td>
+
+            <td class="patient-value">
+
+                @php
+
+                    $signosVitales = [];
+
+                    if (isset($triage)) {
+
+                        if (!empty($triage->presion_arterial)) {
+                            $signosVitales[] = 'PA: ' . $triage->presion_arterial;
+                        }
+
+                        if (!empty($triage->frecuencia_cardiaca)) {
+                            $signosVitales[] = 'FC: ' . $triage->frecuencia_cardiaca . ' lpm';
+                        }
+
+                        if (!empty($triage->frecuencia_respiratoria)) {
+                            $signosVitales[] = 'FR: ' . $triage->frecuencia_respiratoria . ' rpm';
+                        }
+
+                        if (!empty($triage->spo2)) {
+                            $signosVitales[] = 'SpO2: ' . $triage->spo2;
+                        }
+
+                        if (!empty($triage->temperatura)) {
+                            $signosVitales[] = 'Temp: ' . $triage->temperatura . ' °C';
+                        }
+
+                        if (!empty($triage->peso)) {
+                            $signosVitales[] = 'Peso: ' . number_format($triage->peso, 2) . ' kg';
+                        }
+
+                        if (!empty($triage->talla)) {
+                            $signosVitales[] = 'Talla: ' . number_format($triage->talla, 2) . ' cm';
+                        }
+
+                    }
+
+                @endphp
+
+                @if(count($signosVitales) > 0)
+
+                    {{ implode('  ·  ', $signosVitales) }}
+
+                @else
+
+                    No se registraron signos vitales.
 
                 @endif
 
@@ -744,22 +760,12 @@
     @endphp
 
 
-    <table class="two-columns">
-
-        <tr>
-
-            {{-- =================================================
-                 MEDICAMENTOS
-            ================================================== --}}
-
-            <td class="left-column">
-
-                <div class="med-title">
-                    MEDICAMENTOS
-                </div>
+    <div class="med-title">
+        MEDICAMENTOS
+    </div>
 
 
-                @if(!empty($medicamentos))
+    @if(!empty($medicamentos))
 
                     <table class="tabla-meds">
 
@@ -840,161 +846,13 @@
 
                     </table>
 
-                @else
+    @else
 
-                    <div class="empty-text">
-                        No se registraron medicamentos para esta receta.
-                    </div>
+        <div class="empty-text">
+            No se registraron medicamentos para esta receta.
+        </div>
 
-                @endif
-
-            </td>
-
-
-            {{-- =================================================
-                 SIGNOS VITALES
-            ================================================== --}}
-
-            <td class="right-column">
-
-                <div class="med-title">
-                    SIGNOS VITALES
-                </div>
-
-
-                @if(isset($triage))
-
-                    @if(!empty($triage->presion_arterial))
-
-                        <div class="vital-item">
-
-                            <div class="vital-label">
-                                Presión arterial
-                            </div>
-
-                            <div class="vital-value">
-                                {{ $triage->presion_arterial }}
-                            </div>
-
-                        </div>
-
-                    @endif
-
-
-                    @if(!empty($triage->frecuencia_cardiaca))
-
-                        <div class="vital-item">
-
-                            <div class="vital-label">
-                                Frec. cardiaca
-                            </div>
-
-                            <div class="vital-value">
-                                {{ $triage->frecuencia_cardiaca }} lpm
-                            </div>
-
-                        </div>
-
-                    @endif
-
-
-                    @if(!empty($triage->frecuencia_respiratoria))
-
-                        <div class="vital-item">
-
-                            <div class="vital-label">
-                                Frec. respiratoria
-                            </div>
-
-                            <div class="vital-value">
-                                {{ $triage->frecuencia_respiratoria }} rpm
-                            </div>
-
-                        </div>
-
-                    @endif
-
-
-                    @if(!empty($triage->spo2))
-
-                        <div class="vital-item">
-
-                            <div class="vital-label">
-                                SpO2
-                            </div>
-
-                            <div class="vital-value">
-                                {{ $triage->spo2 }}
-                            </div>
-
-                        </div>
-
-                    @endif
-
-
-                    @if(!empty($triage->temperatura))
-
-                        <div class="vital-item">
-
-                            <div class="vital-label">
-                                Temperatura
-                            </div>
-
-                            <div class="vital-value">
-                                {{ $triage->temperatura }} °C
-                            </div>
-
-                        </div>
-
-                    @endif
-
-
-                    @if(!empty($triage->peso))
-
-                        <div class="vital-item">
-
-                            <div class="vital-label">
-                                Peso
-                            </div>
-
-                            <div class="vital-value">
-                                {{ number_format($triage->peso, 2) }} kg
-                            </div>
-
-                        </div>
-
-                    @endif
-
-
-                    @if(!empty($triage->talla))
-
-                        <div class="vital-item">
-
-                            <div class="vital-label">
-                                Talla
-                            </div>
-
-                            <div class="vital-value">
-                                {{ number_format($triage->talla, 2) }} cm
-                            </div>
-
-                        </div>
-
-                    @endif
-
-                @else
-
-                    <div class="empty-text">
-                        No se registraron signos vitales.
-                    </div>
-
-                @endif
-
-            </td>
-
-        </tr>
-
-    </table>
+    @endif
 
     {{-- =====================================================
         SECCIÓN DE FIRMAS (MÉDICO, PACIENTE, TESTIGO)
