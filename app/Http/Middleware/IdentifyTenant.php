@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class IdentifyTenant
@@ -45,24 +46,25 @@ class IdentifyTenant
         // 3. Si tenemos un nombre de base de datos dinámico, configuramos la conexión 'tenant' al vuelo
         if ($dbName) {
             Config::set('database.connections.mysql.database', $dbName);
-            DB::purge('tenant');
-            DB::reconnect('tenant');
+            DB::purge('mysql');
+            DB::reconnect('mysql');
 
             
+           
             // LOG TEMPORAL 2 - consulta real a MySQL, no metadata
             $real = DB::connection('mysql')->select('select database() as db');
-            \Illuminate\Support\Facades\Log::info('Conexion real tras reconnect (query)', [
+            Log::debug('Conexion real tras reconnect (query)', [
                 'db_real_query' => $real[0]->db ?? null,
             ]);
         }
 
-            // LOG TEMPORAL
-        \Illuminate\Support\Facades\Log::info('IdentifyTenant debug', [
+             // LOG TEMPORAL
+        Log::debug('IdentifyTenant debug', [
             'email' => $request->input('email'),
             'dbName' => $dbName,
             'session_tenant_db' => session('tenant_db'),
             'config_mysql_db' => config('database.connections.mysql.database'),
-        ]);;
+        ]);
 
         return $next($request);
     
