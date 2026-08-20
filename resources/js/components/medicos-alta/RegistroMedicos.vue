@@ -478,11 +478,9 @@ export default {
     },
  
     mounted() {
-
         this.obtenerEspecialidades();
         this.obtenerMedicos();
         this.obtenerSucursales();
-
     },
 
     methods: {

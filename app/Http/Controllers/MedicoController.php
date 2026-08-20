@@ -26,7 +26,7 @@ class MedicoController extends Controller
         $request->validate([
             'nombre'             => 'required|string|max:255',
             'cedula_profesional' => 'nullable|string|max:50',
-            'especialidad'       => 'required|exists:especialidades,id,estado,Activo',
+            'especialidad'       => 'nullable|exists:especialidades,id,estado,Activo',
             'hora_entrada'       => 'required',
             'hora_salida'        => 'required',
             'dias_laborales'     => 'required|array|min:1',
