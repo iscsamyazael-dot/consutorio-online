@@ -1,3 +1,27 @@
+<!--
+    FIX MODAL DE TRIAGE (portal-vue):
+    El overlay (.modal-overlay) usa position:fixed + top/left/right/bottom
+    para cubrir toda la pantalla. Eso deja de funcionar si CUALQUIER
+    ancestro en el árbol del DOM tiene transform, filter, perspective,
+    contain, will-change o backdrop-filter -- el navegador vuelve el
+    "fixed" relativo a ese ancestro en vez de a la ventana, y por eso el
+    modal se veía encogido dentro del layout en vez de cubrir todo.
+
+    En vez de perseguir cuál ancestro específico (Blade/AdminLTE/algún
+    wrapper) es el culpable, se usa <Teleport> -- componente NATIVO de
+    Vue 3 (core, sin instalar nada) -- para montar el modal directo
+    como hijo de <body>, fuera de ese árbol. Así el overlay queda
+    garantizado fuera de cualquier contenedor problemático, sin
+    importar la causa, y sin agregar ninguna dependencia nueva al
+    proyecto (el proyecto usa Vue 3: vue@^3.5.30 en package.json).
+
+    El único cambio dentro de este componente es envolver el bloque del
+    modal en <Teleport to="body">...</Teleport>. Todo lo demás
+    (lógica, estilos, resto del template) queda igual. No requiere
+    ningún paso adicional en el resto del proyecto (a diferencia de
+    portal-vue, que sí necesitaba plugin + un <portal-target> en el
+    layout -- eso era para Vue 2 y aquí no aplica).
+-->
 <template>
     <div class="vitals-panel">
         <div class="vitals-panel-head">
@@ -97,95 +121,101 @@
             </div>
         </div>
 
-        <!-- MODAL: agregar triage nuevo -->
-        <transition name="modal-fade">
-            <div v-if="mostrarModalTriage" class="modal-overlay" @click.self="cerrarModalTriage">
-                <div class="modal-triage">
+        <!-- MODAL: agregar triage nuevo.
+             Envuelto en <Teleport to="body"> para que se monte fuera de
+             este árbol (ver comentario largo al inicio del archivo) y su
+             position:fixed cubra la pantalla completa sin importar qué
+             ancestro tenga transform/filter/sticky/etc. -->
+        <Teleport to="body">
+            <transition name="modal-fade">
+                <div v-if="mostrarModalTriage" class="modal-overlay" @click.self="cerrarModalTriage">
+                    <div class="modal-triage">
 
-                    <div class="modal-triage-head">
-                        <h5>Agregar triage</h5>
-                        <button type="button" class="modal-triage-close" :disabled="guardandoTriage" @click="cerrarModalTriage">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
+                        <div class="modal-triage-head">
+                            <h5>Agregar triage</h5>
+                            <button type="button" class="modal-triage-close" :disabled="guardandoTriage" @click="cerrarModalTriage">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
 
-                    <p class="modal-triage-sub">Registra los signos vitales del paciente.</p>
+                        <p class="modal-triage-sub">Registra los signos vitales del paciente.</p>
 
-                    <div v-if="errorTriage" class="modal-triage-error">
-                        <i class="fas fa-times-circle mr-1"></i>
-                        {{ errorTriage }}
-                    </div>
+                        <div v-if="errorTriage" class="modal-triage-error">
+                            <i class="fas fa-times-circle mr-1"></i>
+                            {{ errorTriage }}
+                        </div>
 
-                    <form class="modal-triage-grid" @submit.prevent="guardarTriage">
+                        <form class="modal-triage-grid" @submit.prevent="guardarTriage">
 
-                        <label class="campo-triage">
-                            <span>Presión arterial</span>
-                            <input v-model="formTriage.presion" type="text" placeholder="120/80" :disabled="guardandoTriage">
-                        </label>
+                            <label class="campo-triage">
+                                <span>Presión arterial</span>
+                                <input v-model="formTriage.presion" type="text" placeholder="120/80" :disabled="guardandoTriage">
+                            </label>
 
-                        <label class="campo-triage">
-                            <span>Saturación O₂ (%)</span>
-                            <input v-model.number="formTriage.saturacion" type="number" step="1" placeholder="98" :disabled="guardandoTriage">
-                        </label>
+                            <label class="campo-triage">
+                                <span>Saturación O₂ (%)</span>
+                                <input v-model.number="formTriage.saturacion" type="number" step="1" placeholder="98" :disabled="guardandoTriage">
+                            </label>
 
-                        <label class="campo-triage">
-                            <span>Temperatura (°C)</span>
-                            <input v-model.number="formTriage.temperatura" type="number" step="0.1" placeholder="36.5" :disabled="guardandoTriage">
-                        </label>
+                            <label class="campo-triage">
+                                <span>Temperatura (°C)</span>
+                                <input v-model.number="formTriage.temperatura" type="number" step="0.1" placeholder="36.5" :disabled="guardandoTriage">
+                            </label>
 
-                        <label class="campo-triage">
-                            <span>Frec. cardíaca (lpm)</span>
-                            <input v-model.number="formTriage.frecuencia_cardiaca" type="number" step="1" placeholder="75" :disabled="guardandoTriage">
-                        </label>
+                            <label class="campo-triage">
+                                <span>Frec. cardíaca (lpm)</span>
+                                <input v-model.number="formTriage.frecuencia_cardiaca" type="number" step="1" placeholder="75" :disabled="guardandoTriage">
+                            </label>
 
-                        <label class="campo-triage">
-                            <span>Frec. respiratoria (rpm)</span>
-                            <input v-model.number="formTriage.frecuencia_respiratoria" type="number" step="1" placeholder="16" :disabled="guardandoTriage">
-                        </label>
+                            <label class="campo-triage">
+                                <span>Frec. respiratoria (rpm)</span>
+                                <input v-model.number="formTriage.frecuencia_respiratoria" type="number" step="1" placeholder="16" :disabled="guardandoTriage">
+                            </label>
 
-                        <label class="campo-triage">
-                            <span>Peso (kg)</span>
-                            <input v-model.number="formTriage.peso" type="number" step="0.1" placeholder="70" :disabled="guardandoTriage">
-                        </label>
+                            <label class="campo-triage">
+                                <span>Peso (kg)</span>
+                                <input v-model.number="formTriage.peso" type="number" step="0.1" placeholder="70" :disabled="guardandoTriage">
+                            </label>
 
-                        <label class="campo-triage">
-                            <span>Talla (cm)</span>
-                            <input v-model.number="formTriage.talla" type="number" step="1" placeholder="170" :disabled="guardandoTriage">
-                        </label>
+                            <label class="campo-triage">
+                                <span>Talla (cm)</span>
+                                <input v-model.number="formTriage.talla" type="number" step="1" placeholder="170" :disabled="guardandoTriage">
+                            </label>
 
-                        <!-- Vista previa del IMC en vivo mientras se captura peso/talla -->
-                        <div class="campo-triage campo-triage-imc" v-if="imcModalPreview">
-                            <span>IMC (calculado)</span>
-                            <div class="imc-preview">
-                                <strong class="imc-preview-valor">{{ imcModalPreview.bmi }}</strong>
-                                <span class="imc-preview-clasif" :class="claseImc(imcModalPreview)">
-                                    {{ imcModalPreview.clasificacion }}
-                                </span>
-                                <small v-if="imcModalPreview.tipo === 'pediatrico'" class="imc-preview-percentil">
-                                    Percentil {{ imcModalPreview.percentil }} (tabla CDC)
-                                </small>
+                            <!-- Vista previa del IMC en vivo mientras se captura peso/talla -->
+                            <div class="campo-triage campo-triage-imc" v-if="imcModalPreview">
+                                <span>IMC (calculado)</span>
+                                <div class="imc-preview">
+                                    <strong class="imc-preview-valor">{{ imcModalPreview.bmi }}</strong>
+                                    <span class="imc-preview-clasif" :class="claseImc(imcModalPreview)">
+                                        {{ imcModalPreview.clasificacion }}
+                                    </span>
+                                    <small v-if="imcModalPreview.tipo === 'pediatrico'" class="imc-preview-percentil">
+                                        Percentil {{ imcModalPreview.percentil }} (tabla CDC)
+                                    </small>
+                                </div>
                             </div>
-                        </div>
-                        <div class="campo-triage campo-triage-imc campo-triage-imc-vacio" v-else-if="formTriage.peso || formTriage.talla">
-                            <span>IMC (calculado)</span>
-                            <small class="imc-preview-hint">Captura peso y talla para calcularlo</small>
+                            <div class="campo-triage campo-triage-imc campo-triage-imc-vacio" v-else-if="formTriage.peso || formTriage.talla">
+                                <span>IMC (calculado)</span>
+                                <small class="imc-preview-hint">Captura peso y talla para calcularlo</small>
+                            </div>
+
+                        </form>
+
+                        <div class="modal-triage-actions">
+                            <button type="button" class="btn-modal btn-modal-secundario" :disabled="guardandoTriage" @click="cerrarModalTriage">
+                                Cancelar
+                            </button>
+                            <button type="button" class="btn-modal btn-modal-primario" :disabled="guardandoTriage" @click="guardarTriage">
+                                <span v-if="guardandoTriage"><i class="fas fa-spinner fa-spin"></i> Guardando...</span>
+                                <span v-else><i class="fas fa-check"></i> Guardar triage</span>
+                            </button>
                         </div>
 
-                    </form>
-
-                    <div class="modal-triage-actions">
-                        <button type="button" class="btn-modal btn-modal-secundario" :disabled="guardandoTriage" @click="cerrarModalTriage">
-                            Cancelar
-                        </button>
-                        <button type="button" class="btn-modal btn-modal-primario" :disabled="guardandoTriage" @click="guardarTriage">
-                            <span v-if="guardandoTriage"><i class="fas fa-spinner fa-spin"></i> Guardando...</span>
-                            <span v-else><i class="fas fa-check"></i> Guardar triage</span>
-                        </button>
                     </div>
-
                 </div>
-            </div>
-        </transition>
+            </transition>
+        </Teleport>
 
     </div>
 </template>
@@ -741,6 +771,12 @@ export default {
 }
 
 /* ─── MODAL: agregar triage ──────────────────────────────────────── */
+/* Estos estilos siguen aplicando igual aunque el modal ahora se monte
+   vía <Teleport>: `scoped` funciona agregando un atributo data-v-xxxx
+   a los elementos en tiempo de compilación, y Teleport mueve el
+   propio nodo del DOM (con ese atributo ya puesto) a su destino -- no
+   re-renderiza el contenido, así que el scoping viaja con él. No se
+   necesita marcar nada como :deep() para esto. */
 
 .modal-overlay {
     position: fixed;
