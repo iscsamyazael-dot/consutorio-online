@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Js;
 
-class EvaluacionesiaController extends Controller
+class EvaluacionesIAController extends Controller
 {
     /**
      * Carga la vista principal de Blade con catálogos
