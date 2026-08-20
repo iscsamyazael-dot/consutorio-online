@@ -5,6 +5,7 @@ use App\Models\Cita;
 use App\Models\Paciente;
 use App\Models\Medico;
 use App\Models\Especialidad;
+use App\Models\Consulta;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -17,109 +18,75 @@ class CitaController extends Controller
     // Muestra todas las citas en la vista.
     // NUEVO: ahora acepta filtros opcionales por medico_id y especialidad_id
     // vía query params (?medico_id=1&especialidad_id=2), que es justo lo que
-    // manda el frontend a través de ApiService.get('citas', { params }).
-    public function index(Request $request)
+    public function getCitas(Request $request)
     {
-        $query = Cita::with(['paciente', 'medico', 'especialidad']);
-
-        // Si el frontend envía medico_id, filtra por ese médico.
-        if ($request->filled('medico_id')) {
-            $query->where('medico_id', $request->medico_id);
-        }
-
-        // Si el frontend envía especialidad_id, filtra por esa especialidad.
-        if ($request->filled('especialidad_id')) {
-            $query->where('especialidad_id', $request->especialidad_id);
-        }
-
-        return $query->get();
-    }
-
-    // Devuelve todas las citas en formato JSON para el calendario
-    // NOTA: si el calendario ahora consume el endpoint de index() con filtros,
-    // este método puede volverse redundante. Se deja intacto por si otra
-    // vista todavía lo usa.
-    public function getCitas()
-    {
+        // Citas agendadas desde el módulo de Agenda (tabla `citas`).
+        // Este endpoint es consumido también por la app móvil Ionic y
+        // debe reflejar EXCLUSIVAMENTE la tabla `citas`. Las consultas
+        // clínicas reales viven en su propio endpoint dedicado:
+        // GET /VerHistorialConsultas -> ConsultaController@historial().
+        // NO reintroducir aquí la combinación con `consultas`: ya se hizo
+        // antes y causó que Agenda Médica mostrara folios CONS- sin
+        // médico/especialidad.
         $citas = Cita::with([
             'paciente',
             'medico',
             'especialidad'
         ])->get();
 
+        $citasFormateadas = $citas->map(function ($cita) {
+            return [
+                'id'     => 'cita-' . $cita->id,
+                'origen' => 'cita',
+                'title'  => 'Cita: ' . ($cita->paciente->nombre ?? 'Sin paciente'),
+                'start'  => $cita->fecha . 'T' . $cita->hora,
+                'folio'  => $cita->folio,
+                'fecha'  => $cita->fecha,
+                'hora'   => $cita->hora,
+                'estado' => $cita->estado,
+                'tipo'   => $cita->tipo,
+                'paciente' => $cita->paciente ? [
+                    'id'          => $cita->paciente->id,
+                    'nombre'      => $cita->paciente->nombre,
+                    'sexo'        => $cita->paciente->sexo,
+                    'telefono'    => $cita->paciente->telefono,
+                    'email'       => $cita->paciente->email,
+                    'direccion'   => $cita->paciente->direccion,
+                    'curp'        => $cita->paciente->curp,
+                    'tipo_sangre' => $cita->paciente->tipo_sangre,
+                    'contacto_emergencia' => $cita->paciente->contacto_emergencia,
+                    'alergias' => $cita->paciente->alergias,
+                    'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
+                    'edad'        => $cita->paciente->edad,
+                    'estado'      => $cita->paciente->estado,
+                    'Alergias'     => $cita->paciente->alergias,
+                    'Alergias A medicamentos' => $cita->paciente->alergias_a_medicamentos,
+                    'Antecedentes' => $cita->paciente->antecedentes,
+                    'presion_arterial' => $cita->paciente->presion_arterial,
+                    'saturacion_oxigeno' => $cita->paciente->saturacion_oxigeno,
+                    'frecuencia_cardiaca' => $cita->paciente->frecuencia_cardiaca,
+                    'frecuencia_respiratoria' => $cita->paciente->frecuencia_respiratoria,
+                    'peso' => $cita->paciente->peso,
+                    'talla' => $cita->paciente->talla,
+                    'temperatura' => $cita->paciente->temperatura,
+                    'sintomas' => $cita->paciente->sintomas,
+                    'motivo_consulta' => $cita->paciente->motivo_consulta,
+                ] : null,
+                'medico' => $cita->medico ? [
+                    'id'     => $cita->medico->id,
+                    'nombre' => $cita->medico->nombre,
+                ] : null,
+                'especialidad' => $cita->especialidad ? [
+                    'id'     => $cita->especialidad->id,
+                    'nombre' => $cita->especialidad->nombre,
+                ] : null,
+            ];
+        });
+
         return response()->json(
-
-            $citas->map(function ($cita) {
-
-                return [
-
-                    // Datos principales
-                    'id'     => $cita->id,
-                    'title'  => 'Cita: ' . ($cita->paciente->nombre ?? 'Sin paciente'),
-                    'start'  => $cita->fecha . 'T' . $cita->hora,
-
-                    // Información de la cita
-                    'folio'  => $cita->folio,
-                    'fecha'  => $cita->fecha,
-                    'hora'   => $cita->hora,
-                    'estado' => $cita->estado,
-                    'tipo'   => $cita->tipo,
-
-                    // Información del paciente
-                    // NOTA: se agregan todos los campos que necesita
-                    // el formulario de "Registrar Paciente" para poder
-                    // precargar los datos cuando están incompletos.
-                    'paciente' => $cita->paciente ? [
-
-                        'id'          => $cita->paciente->id,
-                        'nombre'      => $cita->paciente->nombre,
-                        'sexo'        => $cita->paciente->sexo,
-                        'telefono'    => $cita->paciente->telefono,
-                        'email'       => $cita->paciente->email,
-                        'direccion'   => $cita->paciente->direccion,
-                        'curp'        => $cita->paciente->curp,
-                        'tipo_sangre' => $cita->paciente->tipo_sangre,
-                        'contacto_emergencia' => $cita->paciente->contacto_emergencia,
-                        'alergias' => $cita->paciente->alergias,
-                        'fecha_nacimiento' => $cita->paciente->fecha_nacimiento,
-                        'edad'        => $cita->paciente->edad,
-                        'estado'      => $cita->paciente->estado,
-                        'Alergias'     => $cita->paciente->alergias,
-                        'Alergias A medicamentos' => $cita->paciente->alergias_a_medicamentos,
-                        'Antecedentes' => $cita->paciente->antecedentes,
-                        'presion_arterial' => $cita->paciente->presion_arterial,
-                        'saturacion_oxigeno' => $cita->paciente->saturacion_oxigeno,
-                        'frecuencia_cardiaca' => $cita->paciente->frecuencia_cardiaca,
-                        'frecuencia_respiratoria' => $cita->paciente->frecuencia_respiratoria,
-                        'peso' => $cita->paciente->peso,
-                        'talla' => $cita->paciente->talla,
-                        'temperatura' => $cita->paciente->temperatura,
-                        'sintomas' => $cita->paciente->sintomas,
-                        'motivo_consulta' => $cita->paciente->motivo_consulta,
-
-                    ] : null,
-
-                    // Información del médico
-                    'medico' => $cita->medico ? [
-
-                        'id'     => $cita->medico->id,
-                        'nombre' => $cita->medico->nombre,
-
-                    ] : null,
-
-                    // Información de la especialidad
-                    'especialidad' => $cita->especialidad ? [
-
-                        'id'     => $cita->especialidad->id,
-                        'nombre' => $cita->especialidad->nombre,
-
-                    ] : null,
-
-                ];
-            })
+            $citasFormateadas->sortByDesc('start')->values()
         );
     }
-
    //muestra el formulario para crear una nueva cita.
     public function create()
     {

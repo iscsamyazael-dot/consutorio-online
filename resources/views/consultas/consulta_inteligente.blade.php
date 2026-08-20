@@ -3,16 +3,13 @@
 @section('title', 'Consulta Inteligente')
 
 
-@section('content_header')
-
+@section('content')
 <div class="container-fluid">
 
     <input type="hidden" name="route" value="{{ url('/') }}">
     <meta name="base-url" content="{{ url('/') }}">
 
-
-    <!-- HEADER CLÍNICO -->
-    <div class="card shadow-sm border-0 mb-3">
+    <div class="card shadow-sm border-0 mb-3" id="headerClinico">
 
         <div class="card-body py-3">
 
@@ -92,10 +89,7 @@
             </div>
         </div>
     </div>
-</div>
-@stop
-@section('content')
-<div class="container-fluid">
+
     <div id="app">
         <div class="row">
             <!-- COMPONENTE CONSULTA INTELIGENTE -->
@@ -139,7 +133,6 @@
     border-radius:10px;
 
 }
-
 
 
 </style>

@@ -1,6 +1,5 @@
 <template>
 
-
     <!-- PERFIL -->
     <div class="col-lg-4">
         <div class="card shadow border-0 h-100">
@@ -12,12 +11,13 @@
                     </span>
                 </div>
 
+                <!-- NOMBRE DEL USUARIO DINÁMICO -->
                 <h4 class="fw-bold mb-1">
-                    Dr. Gael 
+                    {{ perfil.nombre || 'Cargando...' }}
                 </h4>
 
                 <p class="text-muted mb-3">
-                    Médico General
+                    {{ perfil.especialidad || 'Sin especialidad' }}
                 </p>
 
                 <span class="badge bg-success mb-4">
@@ -46,19 +46,21 @@
                 <hr>
 
                 <div class="text-start">
+                    <!-- CORREO -->
                     <p class="mb-3">
                         <i class="fas fa-envelope text-primary me-2"></i>
                         {{ perfil.correo }}
                     </p>
 
-                    <p class="mb-3">
+                    <!-- ROL DINÁMICO -->
+                    <p class="mb-3 text-capitalize">
                         <i class="fas fa-user-tag text-primary me-2"></i>
-                        Médico
+                        {{ perfil.rol || 'Sin rol' }}
                     </p>
 
+                    <!-- FECHA DE REGISTRO -->
                     <p class="mb-0">
                         <i class="fas fa-calendar text-primary me-2"></i>
-                        
                         Registrado el: {{ perfil.fechaRegistro }}
                     </p>
                 </div>
@@ -67,26 +69,18 @@
         </div>
     </div>
 
-    
-
-
 </template>
 
 
 <script>
 import ApiService from '../../services/ApiService.js'
 
-
-
 export default {
 
     data() {
-
         return {
-
             // Datos del perfil
             perfil: {
-
                 nombre: '',
                 correo: '',
                 especialidad: '',
@@ -98,73 +92,71 @@ export default {
     },
 
     async mounted() {
-
         // Carga la información del usuario al abrir la página
         await this.obtenerPerfil()
-
-    
-
-    console.log('MOUNTED EJECUTADO')
-
-    
-
     },
 
     methods: {
 
         async obtenerPerfil() {
-
             try {
-
-                // Obtiene los datos desde Laravel
-                const response = await axios.get('perfil-usuario')
-                console.log(response.data)
+                // Obtiene los datos usando ApiService
+                const response = await ApiService.get('perfil-usuario')
 
                 // Llena el objeto perfil
                 this.perfil = {
-
                     nombre: response.data.name,
-
                     correo: response.data.email,
-
                     especialidad: response.data.especialidad,
-
                     cedula: response.data.cedula_profesional,
-
                     rol: response.data.rol,
-
+                    
                     // Formatea la fecha de registro
-                    fechaRegistro: new Date(
-                        response.data.created_at
-                    ).toLocaleDateString('es-MX')
+                    fechaRegistro: response.data.created_at 
+                        ? new Date(response.data.created_at).toLocaleDateString('es-MX')
+                        : ''
                 }
 
             } catch (error) {
-
                 console.error(error)
             }
         },
 
         async guardarPerfil() {
+            try {
+                // Envía los cambios al servidor usando ApiService
+                await ApiService.put('/perfil-usuario', this.perfil)
 
-        try {
+                // Recarga los datos desde la BD
+                await this.obtenerPerfil()
 
-        // Envía los cambios al servidor
-            await axios.put(
-                '/perfil-usuario',
-                this.perfil
-                )
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Perfil actualizado',
+                    timer: 2000,
+                    showConfirmButton: false
+                })
 
-            // Recarga los datos desde la BD
-            await this.obtenerPerfil()
-
-                alert(
-                    'Perfil actualizado correctamente'
-                )
-
-                } catch (error) {
-
+            } catch (error) {
                 console.error(error)
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo actualizar el perfil.'
+                })
+            }
+        },
+
+        abrirSelectorImagen() {
+            if (this.$refs.inputFoto) {
+                this.$refs.inputFoto.click()
+            }
+        },
+
+        seleccionarFoto(event) {
+            const archivo = event.target.files[0]
+            if (archivo) {
+                console.log('Imagen seleccionada:', archivo)
             }
         }
     }

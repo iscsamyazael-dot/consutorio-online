@@ -50,6 +50,8 @@ import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vu
 import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
 import TenantMaster from  './components/superadmin/TenantMaster.vue';
 
+import DashboardHome from './components/Dashboard/Home.vue'
+import historialcosnulta from './components/Historialconsulta/historialcosnulta.vue';
 // ------------------------------------------------------
 // Instancia única de la app
 // ------------------------------------------------------
@@ -85,8 +87,8 @@ app.component('configuracion-sistema-panelcontrasena', PanelContraseña);
 app.component('registro-usuario', RegistrarUsuario);
 app.component('panel-tabla', PanelTabla);
 app.component('tenant-master-contenedor',TenantMaster);
-    
-
+app.component('dashboard-home', DashboardHome);
+app.component('historial-consulta', historialcosnulta);
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 

@@ -1,470 +1,1651 @@
-
 <template>
 
-<!-- Lista -->
+    <div>
 
-<div class="card card-outline card-primary shadow-lg">
+        <!-- =======================================================
+             VISTA A: LISTADO PRINCIPAL
+        ======================================================== -->
+        <div v-if="!pacienteSeleccionado">
 
-    <div class="card-header">
+            <!-- ==========================================
+                 BANNER DE ALERTAS
+            =========================================== -->
+            <div
+                v-if="pacientesVencidos.length"
+                class="alert alert-danger d-flex align-items-center shadow-sm mb-3 alert-blink"
+                role="alert"
+            >
 
-        <h3 class="card-title font-weight-bold">
-            Lista de Pacientes TRIAGE
-        </h3>
+                <i
+                    class="fas fa-exclamation-triangle me-3"
+                    style="font-size: 22px;"
+                ></i>
 
-    </div>
+                <div>
 
-    <div class="card-body table-responsive">
+                    <strong>
+                        ¡Atención doctor!
+                        {{ pacientesVencidos.length }}
+                        paciente(s) con tiempo de espera excedido:
+                    </strong>
 
-        <table class="table table-hover table-bordered">
+                    <span
+                        v-for="(v, idx) in pacientesVencidos"
+                        :key="v.paciente.id"
+                    >
 
-            <thead class="bg-light">
+                        {{ v.paciente.nombre }}
 
-                <tr>
+                        <span
+                            v-if="
+                                idx <
+                                pacientesVencidos.length - 1
+                            "
+                        >
+                            ,
+                        </span>
 
-                    <th>Prioridad</th>
-                    <th>Paciente</th>
-                    <th>Síntomas</th>
-                    <th>Presión</th>
-                    <th>Saturación</th>
-                    <th>Temperatura</th>
-                    <th>Estado</th>
-                    <th>Tiempo</th>
-                    <th>Acciones</th>
+                    </span>
 
-                </tr>
-
-             </thead>
-
-                <tbody>
-                    <tr v-for="paciente in triage" :key="paciente.id">
-
-                        <!-- PRIORIDAD (viene de la IA) -->
-                        <td>
-                            <template v-if="analisisIA[paciente.id]?.loading">
-                                <span class="badge bg-secondary">
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                    Analizando IA...
-                                </span>
-                            </template>
-                            <template v-else>
-                                <span :class="obtenerPrioridad(analisisIA[paciente.id]?.prioridad).clase">
-                                    {{ obtenerPrioridad(analisisIA[paciente.id]?.prioridad).texto }}
-                                </span>
-                                <!-- Icono de fallback si la IA usó BD -->
-                                <i v-if="analisisIA[paciente.id]?.error"
-                                class="fas fa-exclamation-circle text-warning ms-1"
-                                title="IA no disponible, usando datos de BD">
-                                </i>
-                            </template>
-                        </td>
-
-                        <!-- PACIENTE -->
-                        <td class="fw-bold">{{ paciente.nombre }}</td>
-
-                        <!-- SÍNTOMAS -->
-                        <td>{{ paciente.triages[0]?.sintomas }}</td>
-
-                        <!-- PRESIÓN -->
-                        <td>{{ paciente.triages[0]?.presion }}</td>
-
-                        <!-- SATURACIÓN -->
-                        <td>{{ paciente.triages[0]?.saturacion }}</td>
-
-                        <!-- TEMPERATURA -->
-                        <td>{{ paciente.triages[0]?.temperatura }}</td>
-
-                        <!-- ESTADO (IA) -->
-                        <td>
-                            <template v-if="analisisIA[paciente.id]?.loading">
-                                <span class="badge bg-secondary">...</span>
-                            </template>
-                            <template v-else>
-                                <span v-if="analisisIA[paciente.id]?.estado === 'grave'"
-                                    class="badge bg-danger">GRAVE</span>
-                                <span v-else-if="analisisIA[paciente.id]?.estado === 'moderado'"
-                                    class="badge bg-warning text-dark">MODERADO</span>
-                                <span v-else
-                                    class="badge bg-success">LEVE</span>
-                                <!-- Justificación IA en tooltip -->
-                                <br>
-                                <small class="text-muted fst-italic" style="font-size:11px;">
-                                    {{ analisisIA[paciente.id]?.justificacion }}
-                                </small>
-                            </template>
-                        </td>
-
-                        <!-- COUNTDOWN (reactivo cada 30s) -->
-                        <td>
-                            <template v-if="analisisIA[paciente.id]?.loading">
-                                <span class="text-muted">—</span>
-                            </template>
-                            <span v-else
-                                :class="obtenerContadorTiempoIa(
-                                    analisisIA[paciente.id]?.prioridad,
-                                    paciente.triages?.[0]?.created_at
-                                ).claseCss">
-                                {{ obtenerContadorTiempoIa(
-                                    analisisIA[paciente.id]?.prioridad,
-                                    paciente.triages?.[0]?.created_at
-                                ).texto }}
-                            </span>
-                        </td>
-
-                        <!-- ACCIONES -->
-                        <td>
-                            <button
-                                class="btn btn-info btn-sm"
-                                data-toggle="modal"
-                                data-target="#modalVerTriage"
-                                @click="obtenerPacientesIndividual(paciente.id)">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-        </table>
-    </div>
-</div>
-
-
-<!-- =========================================
-MODAL VER TRIAGE PREMIUM
-========================================= -->
-<div
-    class="modal fade"
-    id="modalVerTriage"
-    tabindex="-1"
-    aria-labelledby="modalVerTriageLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content border-0 overflow-hidden rounded-5 shadow-lg">
-
-            <div class="p-4 text-white" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6);">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <div class="rounded-circle d-flex justify-content-center align-items-center me-4" 
-                             style="width:70px; height:70px; background:rgba(255,255,255,.2); border: 2px solid rgba(255,255,255,0.4);">
-                            <i class="fas fa-robot text-warning" style="font-size:32px;"></i>
-                        </div>
-                        <div>
-                            <h2 class="fw-bold mb-1" id="modalVerTriageLabel">Monitoreo Clínico Inteligente</h2>
-                            <p class="mb-0 opacity-75">Análisis de constantes vitales en tiempo real por IA</p>
-                        </div>
-                    </div>
-                    <button type="button" class="close text-white opacity-100" data-dismiss="modal" aria-label="Close" style="font-size: 30px; background: none; border: none;">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="modal-body p-5" style="background:#f8fafc;">
-                
-                <div v-if="!detalletriage || !detalletriage.id" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-                    <h5 class="text-muted mt-3 fw-bold">Procesando diagnóstico de IA...</h5>
                 </div>
 
-                <div v-else class="row">
-                    
-                    <div class="col-md-6 mb-4">
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100 border-start border-primary border-4">
-                            <small class="text-uppercase fw-bold text-muted d-block mb-1">
-                                <i class="fas fa-id-card text-primary me-2"></i> Paciente
-                            </small>
-                            <h4 class="fw-bold text-dark mt-2 mb-0">{{ detalletriage.nombre }}</h4>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100 border-start border-danger border-4">
-                            <small class="text-uppercase fw-bold text-muted d-block mb-1">
-                                <i class="fas fa-brain text-danger me-2"></i> Prioridad Sugerida por IA
-                            </small>
-                            <h4 class="fw-bold mt-2 mb-0">
-                                {{ obtenerPrioridad(detalletriage._ia?.prioridad ?? 
-                                    mapearEstadoAPrioridad(detalletriage.triages?.[0]?.estado)).texto }}
-                            </h4>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4 mb-4">
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100 text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-heartbeat text-danger" style="font-size: 28px;"></i>
-                            </div>
-                            <small class="text-uppercase fw-bold text-muted d-block mb-2">Estado General</small>
-                            <span v-if="detalletriage.triages?.[0]?.estado === 'grave'" class="badge bg-danger px-3 py-2 text-white fw-bold fs-6">GRAVE</span>
-                            <span v-else-if="detalletriage.triages?.[0]?.estado === 'moderado'" class="badge bg-warning px-3 py-2 text-dark fw-bold fs-6">MODERADO</span>
-                            <span v-else class="badge bg-success px-3 py-2 text-white fw-bold fs-6">LEVE</span>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4 mb-4">
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100 text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-stethoscope text-info" style="font-size: 28px;"></i>
-                            </div>
-                            <small class="text-uppercase fw-bold text-muted d-block mb-1">Presión Arterial</small>
-                            <h4 class="fw-bold text-dark mt-2 mb-0">{{ detalletriage.triages?.[0]?.presion || 'N/R' }}</h4>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4 mb-4">
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100 text-center">
-                            <div class="mb-2">
-                                <i class="fas fa-lungs text-teal" style="font-size: 28px; color: #0d9488;"></i>
-                            </div>
-                            <small class="text-uppercase fw-bold text-muted d-block mb-1">Saturación O₂</small>
-                            <h4 class="fw-bold text-dark mt-2 mb-0">
-                                {{ detalletriage.triages?.[0]?.saturacion ? detalletriage.triages[0].saturacion + '%' : 'N/R' }}
-                            </h4>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100 border-start border-warning border-4">
-                            <div class="d-flex align-items-center">
-                                <div class="p-3 bg-warning-light rounded-circle me-3" style="background: #fef9c3;">
-                                    <i class="fas fa-thermometer-high text-warning" style="font-size: 24px;"></i>
-                                </div>
-                                <div>
-                                    <small class="text-uppercase fw-bold text-muted d-block">Temperatura Corporal</small>
-                                    <h4 class="fw-bold text-dark mb-0 mt-1">
-                                        {{ detalletriage.triages?.[0]?.temperatura ? detalletriage.triages[0].temperatura + ' °C' : 'N/R' }}
-                                    </h4>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-                        <div class="bg-white rounded-4 shadow-sm p-4 h-100 border-start border-info border-4">
-                            <div class="d-flex align-items-center">
-                                <div class="p-3 bg-info-light rounded-circle me-3" style="background: #e0f2fe;">
-                                    <i class="fas fa-clock text-info" style="font-size: 24px;"></i>
-                                </div>
-                                <div>
-                                    <small class="text-uppercase fw-bold text-muted d-block">Tiempo Límite Restante</small>
-                                    <h5 :class="obtenerLimiteYEstadoEspera(detalletriage.triages?.[0]?.estado, detalletriage.triages?.[0]?.created_at).claseCss" class="mb-0 mt-1">
-                                        {{ obtenerLimiteYEstadoEspera(detalletriage.triages?.[0]?.estado, detalletriage.triages?.[0]?.created_at).texto }}
-                                    </h5>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-12 mb-5">
-                        <div class="bg-white rounded-4 shadow-sm p-4 border-top border-primary border-3">
-                            <small class="text-uppercase fw-bold text-muted d-block mb-2">
-                                <i class="fas fa-comment-medical text-primary me-2"></i> Motivo de Consulta y Síntomas
-                            </small>
-                            <p class="mt-3 mb-0 text-secondary p-3 bg-light rounded-3" style="line-height:1.8; font-size:16px; border-left: 4px solid #cbd5e1;">
-                                {{ detalletriage.triages?.[0]?.sintomas || 'No se registraron síntomas descriptivos.' }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-                        <AlertasClinicasIA :iaData="{ alertas: detalletriage.alertas || [] }" />
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-                        <RecomendacionesIA :iaData="{ recomendaciones: detalletriage.recomendaciones || [] }" />
-                    </div>
-                    </div> </div>
-
-            <div class="modal-footer bg-light border-0 px-5 py-3">
-                <button type="button" class="btn btn-secondary rounded-pill px-4 fw-bold" data-dismiss="modal">
-                    <i class="fas fa-times me-2"></i> Cerrar Ventana
-                </button>
             </div>
+
+
+            <!-- ==========================================
+                 TABLA
+            =========================================== -->
+            <div class="card card-outline card-primary shadow-lg">
+
+                <div class="card-header">
+
+                    <h3 class="card-title font-weight-bold">
+
+                        <i class="fas fa-notes-medical me-2"></i>
+
+                        Lista de Pacientes TRIAGE
+
+                    </h3>
+
+                </div>
+
+
+                <div class="card-body table-responsive">
+
+                    <table
+                        class="table table-hover table-bordered align-middle"
+                    >
+
+                        <thead class="bg-light">
+
+                            <tr>
+
+                                <th>Prioridad</th>
+
+                                <th>Paciente</th> 
+
+                                <th>Motivo / Síntoma</th>
+
+                                <th>Signos Vitales</th>
+
+                                <th>Estado</th>
+
+                                <th>Espera</th>
+
+                                <th>Acción</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            
+                            <tr
+                                v-for="paciente in pacientesFiltrados"
+                                :key="paciente.id"
+                                :class="{
+                                    'table-danger':
+                                        !analisisIA[paciente.id]?.sinDatos &&
+                                        obtenerEspera(
+                                            paciente.triages?.[0]?.estado,
+                                            paciente.triages?.[0]?.created_at,
+                                            paciente.estado_consulta
+                                        ).vencido
+                                }"
+                            >
+
+                                <!-- ==================================
+                                     PRIORIDAD
+                                =================================== -->
+                                <!-- Columna PRIORIDAD -->
+                                <td>
+                                    <template v-if="analisisIA[paciente.id]?.sinDatos">
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-minus-circle me-1"></i>
+                                            Sin triage
+                                        </span>
+                                    </template>
+
+                                    <template v-else-if="analisisIA[paciente.id]?.loading">
+                                        <span class="badge bg-secondary">
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                            Analizando IA...
+                                        </span>
+                                    </template>
+
+                                    <template v-else>
+                                        <span :class="obtenerPrioridad(analisisIA[paciente.id]?.prioridad || mapearEstadoAPrioridad(paciente.triages?.[0]?.estado)).clase">
+                                            {{ obtenerPrioridad(analisisIA[paciente.id]?.prioridad || mapearEstadoAPrioridad(paciente.triages?.[0]?.estado)).texto }}
+                                        </span>
+                                        <i v-if="analisisIA[paciente.id]?.error" class="fas fa-exclamation-circle text-warning ms-1" title="IA no disponible, usando reglas de respaldo"></i>
+                                    </template>
+                                </td>
+
+
+                                <!-- ==================================
+                                     PACIENTE
+                                =================================== -->
+                                <td class="fw-bold">
+
+                                    {{ paciente.nombre }}
+
+                                </td>
+
+
+                                <!-- ==================================
+                                     MOTIVO
+                                =================================== -->
+                               <td
+                                    class="motivo-columna"
+                                    :title="paciente.triages?.[0]?.sintomas || 'Sin motivo'"
+                                >
+                                    {{ paciente.triages?.[0]?.sintomas ? recortarMotivo(paciente.triages[0].sintomas) : 'Sin motivo' }}
+                                </td>
+
+
+                                <!-- ==================================
+                                     SIGNOS VITALES
+                                =================================== -->
+                                <td style="font-size: 12.5px; white-space: nowrap;">
+    
+                                    <!-- Evaluamos si el paciente no tiene datos de triage cargados -->
+                                    <template v-if="!paciente.triages || paciente.triages.length === 0">
+                                        <span class="badge bg-secondary">Sin triage</span>
+                                    </template>
+
+                                    <template v-else>
+                                        <!-- Presión -->
+                                        <div>
+                                            <i class="fas fa-stethoscope text-info me-1"></i>
+                                            {{ paciente.triages[0].presion || 'Sin triage' }}
+                                        </div>
+
+                                        <!-- Saturación -->
+                                        <div>
+                                            <i class="fas fa-lungs me-1" style="color: #0d9488;"></i>
+                                            {{
+                                                paciente.triages[0].saturacion !== null && paciente.triages[0].saturacion !== undefined && paciente.triages[0].saturacion !== ''
+                                                    ? paciente.triages[0].saturacion + '%'
+                                                    : 'Sin triage'
+                                            }}
+                                        </div>
+
+                                        <div>
+                                            <i class="fas fa-thermometer-half text-warning me-1"></i>
+                                            {{
+                                                paciente.triages[0].temperatura !== null && paciente.triages[0].temperatura !== undefined && paciente.triages[0].temperatura !== ''
+                                                    ? paciente.triages[0].temperatura + ' °C'
+                                                    : 'Sin triage'
+                                            }}
+                                        </div>
+                                    </template>
+                                </td>
+
+
+                                <!-- ==================================
+                                     ESTADO
+                                =================================== -->
+                                <td>
+
+                                    <template
+                                        v-if="
+                                            analisisIA[paciente.id]?.loading
+                                        "
+                                    >
+
+                                        <span class="badge bg-secondary">
+                                            ...
+                                        </span>
+
+                                    </template>
+
+
+                                    <template v-else>
+                                        <span v-if="obtenerEstadoFinal(paciente) === 'sin_datos'" class="badge bg-secondary">SIN TRIAGE</span>
+                                        <span v-else-if="obtenerEstadoFinal(paciente) === 'grave'" class="badge bg-danger">GRAVE</span>
+                                        <span v-else-if="obtenerEstadoFinal(paciente) === 'moderado'" class="badge bg-warning text-dark">MODERADO</span>
+                                        <span v-else class="badge bg-info text-dark">LEVE</span>
+
+                                        <br>
+
+                                        <small class="text-muted fst-italic" style="font-size: 11px;">
+                                            {{ analisisIA[paciente.id]?.justificacion || 'Evaluado por Triage base' }}
+                                        </small>
+                                    </template>
+
+                                </td>
+
+
+                                <!-- ==================================
+                                     ESPERA
+                                =================================== -->
+                                <!-- Columna ESPERA -->
+                                <td>
+                                    <span v-if="analisisIA[paciente.id]?.sinDatos" class="badge bg-secondary">
+                                        — Sin evaluar
+                                    </span>
+
+                                    <div v-else class="d-flex flex-column align-items-start gap-1">
+                                        <span :class="obtenerEspera(paciente.triages?.[0]?.estado, paciente.triages?.[0]?.created_at, paciente.estado_consulta).claseCss">
+                                            {{ obtenerEspera(paciente.triages?.[0]?.estado, paciente.triages?.[0]?.created_at, paciente.estado_consulta).texto }}
+                                        </span>
+
+                                        <select
+                                            class="form-select form-select-sm mt-1"
+                                            style="max-width: 140px; font-size: 12px;"
+                                            :value="normalizarEstadoConsulta(paciente.estado_consulta)"
+                                            @change="cambiarEstadoConsulta(paciente, $event.target.value)"
+                                        >
+                                            <option value="en_proceso">En proceso</option>
+                                            <option value="finalizada">Finalizada</option>
+                                        </select>
+                                    </div>
+                                </td>
+                                <!-- ==================================
+                                     ACCIÓN
+                                =================================== -->
+                                <td>
+
+                                    <button
+                                        class="btn btn-sm btn-info text-white"
+                                        @click="
+                                            verDetallePaciente(paciente.id)
+                                        "
+                                    >
+
+                                        <i
+                                            class="fas fa-id-card me-1"
+                                        ></i>
+
+                                        Ver Detalle
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+
+                            <!-- ==================================
+                                 SIN RESULTADOS
+                            =================================== -->
+                            <tr
+                                v-if="
+                                    !loading &&
+                                    pacientesFiltrados.length === 0
+                                "
+                            >
+
+                                <td
+                                    colspan="7"
+                                    class="text-center py-5"
+                                >
+
+                                    <i
+                                        class="fas fa-filter fa-2x text-muted mb-3"
+                                    ></i>
+
+                                    <p class="text-muted mb-0">
+
+                                        No hay pacientes que coincidan
+                                        con este filtro.
+
+                                    </p>
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
         </div>
-    </div> 
 
-    </div> 
- 
+
+        <!-- =======================================================
+             VISTA B: DETALLE
+        ======================================================== -->
+        <div
+            v-else
+            class="card card-outline card-info shadow-lg"
+        >
+
+            <div class="card-header">
+
+                <h3 class="card-title font-weight-bold m-0">
+
+                    <i class="fas fa-user-md me-2"></i>
+
+                    Expediente Triage:
+                    {{ detalletriage.nombre || 'Cargando...' }}
+
+                </h3>
+
+
+                <div class="card-tools">
+
+                    <button
+                        class="btn btn-secondary btn-sm rounded-pill px-3"
+                        style="
+                            border-radius: 50px !important;
+                            font-weight: 600;
+                        "
+                        @click="cerrarDetalle"
+                    >
+
+                        <i class="fas fa-arrow-left me-1"></i>
+
+                        Volver a la Lista
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="card-body">
+
+                <div
+                    v-if="cargandoDetalle"
+                    class="text-center py-5"
+                >
+
+                    <div
+                        class="spinner-border text-info"
+                        role="status"
+                    >
+
+                        <span class="sr-only">
+                            Cargando expediente...
+                        </span>
+
+                    </div>
+
+                    <p class="mt-2 text-muted">
+
+                        Obteniendo expediente del paciente...
+
+                    </p>
+
+                </div>
+
+
+                <ModalTriage
+                    v-else
+                    :detalletriage="detalletriage"
+                    :obtenerPrioridad="obtenerPrioridad"
+                    :mapearEstadoAPrioridad="mapearEstadoAPrioridad"
+                    :obtenerEspera="obtenerEspera"
+                    @cerrar="cerrarDetalle"
+                />
+
+            </div>
+
+        </div>
+
+    </div>
+
 </template>
 
 
 <script>
+
 import ApiService from '../../services/ApiService.js'
+import ModalTriage from './ModalTriage.vue'
 
 export default {
 
-    data() {
-        return {
-            triage: [],
-            detalletriage: [],
-            analisisIA: {},    // { [paciente.id]: { prioridad, estado, loading, error } }
-            tiempoActual: new Date(), // Ticker reactivo para los countdowns
-        }
+    name: 'ListaPacientesTriage',
+
+    components: {
+        ModalTriage
     },
+
+
+    props: {
+
+        triages: {
+            type: Array,
+            default: () => []
+        },
+
+        loading: {
+            type: Boolean,
+            default: false
+        },
+
+        filtroActivo: {
+            type: String,
+            default: null
+        }
+
+    },
+
+
+    emits: [
+        'actualizar-conteos'
+    ],
+
+
+    data() {
+
+        return {
+
+            triage: [],
+
+            pacienteSeleccionado: null,
+
+            detalletriage: {},
+
+            analisisIA: {},
+
+            tiempoActual: new Date(),
+
+            alertasEnviadas: new Set(),
+
+            cargandoDetalle: false,
+
+            intervalTiempo: null,
+
+            LIMITES_MINUTOS_ESTADO: {
+
+                grave: 5,
+
+                urgente: 15,
+
+                leve: 60,
+
+                estable: 120
+
+            }
+
+        }
+
+    },
+
+
+    computed: {
+
+        /**
+         * ==========================================
+         * PACIENTES FILTRADOS
+         * ==========================================
+         */
+         pacientesFiltrados() {
+
+        // ==========================================
+        // SIN FILTRO
+        // ==========================================
+        if (
+            !this.filtroActivo ||
+            this.filtroActivo === 'todos'
+        ) {
+            return this.triage;
+        }
+
+
+        const filtro =
+            String(this.filtroActivo)
+                .toLowerCase()
+                .trim();
+
+
+        return this.triage.filter(paciente => {
+
+            // ======================================
+            // ESTADO DEL TRIAGE
+            // ======================================
+            const estadoTriage =
+                this.obtenerEstadoFinal(paciente);
+
+
+            // ======================================
+            // ESTADO DE CONSULTA
+            // ======================================
+            const estadoConsulta =
+                String(
+                    paciente.estado_consulta || ''
+                )
+                    .toLowerCase()
+                    .trim();
+
+
+            // ======================================
+            // 🔴 CRÍTICOS
+            // GRAVE
+            //
+            // IMPORTANTE:
+            // NO importa si está finalizado.
+            // Un paciente puede ser GRAVE + FINALIZADO.
+            // ======================================
+            if (filtro === 'critico') {
+
+                return estadoTriage === 'grave';
+
+            }
+
+
+            // ======================================
+            // 🟠 URGENTES
+            // URGENTE
+            // ======================================
+            if (filtro === 'urgente') {
+
+                return estadoTriage === 'urgente';
+
+            }
+
+
+            // ======================================
+            // 🔵 MODERADOS
+            // LEVE
+            // ======================================
+            if (filtro === 'moderado') {
+
+                return estadoTriage === 'leve';
+
+            }
+
+
+            // ======================================
+            // 🟢 ATENDIDOS
+            // FINALIZADO
+            // ======================================
+            if (filtro === 'finalizado') {
+
+                return (
+                    estadoConsulta === 'finalizado' ||
+                    estadoConsulta === 'finalizada' ||
+                    estadoConsulta === 'atendido'
+                );
+
+            }
+
+
+            return false;
+
+        });
+
+    },
+
+
+    // ==========================================
+    // PACIENTES VENCIDOS
+    // ==========================================
+    pacientesVencidos() {
+
+        return this.triage
+            .filter(paciente => {
+
+                // ⛔ Sin datos suficientes: no genera alerta de vencido
+                if (this.analisisIA[paciente.id]?.sinDatos) {
+                    return false;
+                }
+
+                if (!paciente.estado_consulta || !paciente.triages?.[0]) {
+                    return false;
+                }
+
+                const estadoConsulta = String(paciente.estado_consulta).toLowerCase().trim();
+
+                if (['finalizada', 'finalizado', 'atendido'].includes(estadoConsulta)) {
+                    return false;
+                }
+
+                const triage0 = paciente.triages[0];
+
+                return this.obtenerEspera(triage0.estado, triage0.created_at, paciente.estado_consulta).vencido;
+
+            })
+            .map(paciente => ({ paciente }));
+
+    },
+
+    },
+
+
+    watch: {
+
+        triages: {
+
+            handler(nuevaLista) {
+
+                this.sincronizarPacientes(
+                    nuevaLista
+                );
+
+            },
+
+            immediate: true
+
+        },
+
+
+        triage: {
+
+            handler() {
+
+                this.emitirConteos();
+
+            },
+
+            deep: true
+
+        },
+
+
+        analisisIA: {
+
+            handler() {
+
+                this.emitirConteos();
+
+            },
+
+            deep: true
+
+        }
+
+    },
+
 
     mounted() {
-        this.obtenerPacientes()
 
-        // ⏱️ Actualiza el ticker cada 30 segundos → Vue re-renderiza los countdowns
+        if (
+            window.Notification &&
+            Notification.permission === 'default'
+        ) {
+
+            Notification.requestPermission();
+
+        }
+
+
         this.intervalTiempo = setInterval(() => {
-            this.tiempoActual = new Date()
-        }, 30000)
+
+            this.tiempoActual = new Date();
+
+            this.verificarVencidosYAlertar();
+
+        }, 15000);
+
     },
+
 
     beforeUnmount() {
-        clearInterval(this.intervalTiempo)
+
+        if (this.intervalTiempo) {
+
+            clearInterval(
+                this.intervalTiempo
+            );
+
+        }
+
     },
+
 
     methods: {
 
-        // ─────────────────────────────────────────────
-        // 🤖 ANÁLISIS DE IA POR PACIENTE (DeepSeek)
-        // ─────────────────────────────────────────────
-        async analizarConIA(paciente) {
-            const triage = paciente.triages?.[0]
-            if (!triage) return
+        recortarMotivo(motivo) {
+            if (!motivo) return 'Sin motivo';
+            const limite = 30; // o los caracteres que uses
+            return motivo.length > limite ? motivo.substring(0, limite) + '...' : motivo;
+        },
 
-            // ✅ Vue detecta el cambio porque reemplazamos el objeto completo
+        /**
+         * ==========================================
+         * ESTADO FINAL
+         * ==========================================
+         */
+        obtenerEstadoFinal(paciente) {
+
+            if (this.analisisIA[paciente.id]?.sinDatos) {
+                return 'sin_datos';
+            }
+
+            const estadoIA = String(this.analisisIA[paciente.id]?.estado || '').toLowerCase().trim();
+            if (estadoIA) return estadoIA;
+
+            const estadoBD = String(paciente.triages?.[0]?.estado || '').toLowerCase().trim();
+            if (estadoBD) return estadoBD;
+
+            return 'leve';
+        },
+
+
+        /**
+         * ==========================================
+         * CONTEOS DE TARJETAS
+         * ==========================================
+         */
+        emitirConteos() {
+
+            let critico = 0;
+            let urgente = 0;
+            let leve = 0;
+            let finalizado = 0;
+            
+            this.triage.forEach(paciente => {
+                // ======================================
+                // ESTADO DEL TRIAGE
+                // ======================================
+                const estado =
+                    this.obtenerEstadoFinal(paciente);
+
+                // ======================================
+                // ESTADO DE CONSULTA
+                // ======================================
+                const estadoConsulta =
+                    String(
+                        paciente.estado_consulta || ''
+                    )
+                        .toLowerCase()
+                        .trim();
+                // ======================================
+                // 🔴 CRÍTICO = GRAVE
+                // ======================================
+                if (estado === 'grave') {
+                    critico++;
+                }
+
+                // ======================================
+                // 🟠 URGENTE = URGENTE
+                // ======================================
+                if (estado === 'urgente') {
+                    urgente++;
+                }
+
+
+                // ======================================
+                // 🔵 MODERADO = LEVE
+                // ======================================
+                if (estado === 'leve') {
+                    leve++;
+                }
+
+                // ======================================
+                // 🟢 ATENDIDO = FINALIZADO
+                // ======================================
+                if (
+                    estadoConsulta === 'finalizado' ||
+                    estadoConsulta === 'finalizada' ||
+                    estadoConsulta === 'atendido'
+                ) {
+
+                    finalizado++;
+                }
+            });
+
+            this.$emit(
+                'actualizar-conteos',
+                {
+                    todos: this.triage.length,
+                    critico,
+                    urgente,
+                    leve,
+                    finalizado
+                }
+            );
+
+        },
+
+
+        /**
+         * ==========================================
+         * VER DETALLE
+         * ==========================================
+         */
+        async verDetallePaciente(id) {
+
+            this.pacienteSeleccionado = id;
+            this.cargandoDetalle = true;
+
+            try {
+
+                const pacienteLocal = this.triage.find(p => p.id === id);
+
+                const response = await ApiService.get('/triage/' + id);
+
+                const triagesRespuesta = response.data.triages?.length
+                    ? [...response.data.triages]
+                    : [];
+
+                // Fallback: si el triage[0] de la respuesta no trae síntomas,
+                // usamos los del paciente local (los mismos que ya se ven en la tabla)
+                if (triagesRespuesta[0] && !triagesRespuesta[0].sintomas) {
+                    triagesRespuesta[0] = {
+                        ...triagesRespuesta[0],
+                        sintomas: pacienteLocal?.triages?.[0]?.sintomas || null
+                    };
+                }
+
+                this.detalletriage = {
+
+                    ...response.data,
+
+                    triages: triagesRespuesta.length
+                        ? triagesRespuesta
+                        : pacienteLocal?.triages,
+
+                    estado_consulta:
+                        response.data.estado_consulta ||
+                        pacienteLocal?.estado_consulta,
+
+                    _ia: this.analisisIA[id] || null,
+
+                    estado: this.obtenerEstadoFinal(pacienteLocal || response.data)
+
+                };
+
+            } catch (error) {
+
+                console.error('Error al cargar el detalle del paciente:', error);
+
+            } finally {
+
+                this.cargandoDetalle = false;
+
+            }
+
+        },
+
+
+        /**
+         * ==========================================
+         * CERRAR DETALLE
+         * ==========================================
+         */
+        cerrarDetalle() {
+
+            this.pacienteSeleccionado = null;
+
+            this.detalletriage = {};
+
+        },
+
+
+        /**
+         * ==========================================
+         * ANALIZAR CON IA
+         * ==========================================
+         */
+        async analizarConIA(paciente) {
+
+            const triage = paciente.triages?.[0];
+
+            // ⛔ Sin vitales reales: no se llama a la IA, no se gasta contador/token
+            if (!this.tieneDatosSuficientes(triage)) {
+
+                this.analisisIA = {
+                    ...this.analisisIA,
+                    [paciente.id]: {
+                        loading: false,
+                        sinDatos: true,
+                        prioridad: null,
+                        estado: 'sin_datos',
+                        justificacion: 'Sin triage registrado o evaluación no completada.',
+                    }
+                };
+
+                return; // 👈 nunca llega al ApiService.get(...) que llama a DeepSeek
+            }
+
             this.analisisIA = {
                 ...this.analisisIA,
                 [paciente.id]: { loading: true }
-            }
+            };
 
             try {
-                const response = await ApiService.get(`/triage/${paciente.id}/analizar-ia`)
-                const data = response.data
+                const response = await ApiService.get(`/triage/${paciente.id}/analizar-ia`);
+
+
+                const data =
+                    response.data;
+
+
+                let prioridad =
+                    data.prioridad;
+
+
+                const prioridadPorVitales =
+                    this.evaluarVitalesCriticos(
+                        triage
+                    );
+
+
+                if (
+                    prioridadPorVitales &&
+                    this.rango(
+                        prioridadPorVitales
+                    ) <
+                    this.rango(
+                        prioridad
+                    )
+                ) {
+
+                    prioridad =
+                        prioridadPorVitales;
+
+                }
+
 
                 this.analisisIA = {
+
                     ...this.analisisIA,
+
                     [paciente.id]: {
-                        loading:       false,
-                        prioridad:     data.prioridad,
-                        estado:        data.estado,
-                        justificacion: data.justificacion,
-                        error:         data.fuente === 'fallback',
-                        fechaTriage:   triage.created_at,
+
+                        loading: false,
+
+                        prioridad,
+
+                        estado:
+                            data.estado,
+
+                        justificacion:
+                            data.justificacion,
+
+                        error:
+                            data.fuente ===
+                            'fallback',
+
+                        fechaTriage:
+                            triage.created_at
+
                     }
-                }
+
+                };
 
             } catch (error) {
-                console.error(`❌ Error IA paciente ${paciente.id}:`, error)
+
+                let prioridad =
+                    this.mapearEstadoAPrioridad(
+                        triage.estado
+                    );
+
+
+                const prioridadPorVitales =
+                    this.evaluarVitalesCriticos(
+                        triage
+                    );
+
+
+                if (
+                    prioridadPorVitales &&
+                    this.rango(
+                        prioridadPorVitales
+                    ) <
+                    this.rango(
+                        prioridad
+                    )
+                ) {
+
+                    prioridad =
+                        prioridadPorVitales;
+
+                }
+
 
                 this.analisisIA = {
+
                     ...this.analisisIA,
+
                     [paciente.id]: {
-                        loading:       false,
-                        prioridad:     this.mapearEstadoAPrioridad(triage.estado),
-                        estado:        triage.estado || 'leve',
-                        justificacion: 'IA no disponible',
-                        error:         true,
-                        fechaTriage:   triage.created_at,
+
+                        loading: false,
+
+                        prioridad,
+
+                        estado:
+                            triage.estado ||
+                            'leve',
+
+                        justificacion:
+                            'IA no disponible, se usaron reglas de respaldo',
+
+                        error: true,
+
+                        fechaTriage:
+                            triage.created_at
+
                     }
-                }
+
+                };
+
             }
+
         },
 
-        // Convierte 'grave/moderado/leve' (BD) → 'rojo/amarillo/verde' (IA)
+
+        /**
+         * ==========================================
+         * RANGO DE PRIORIDAD
+         * ==========================================
+         */
+        rango(prioridad) {
+
+            const orden = {
+
+                rojo: 1,
+
+                naranja: 2,
+
+                amarillo: 3,
+
+                verde: 4,
+
+                azul: 5
+
+            };
+
+
+            return (
+                orden[
+                    prioridad?.toLowerCase()
+                ] ?? 5
+            );
+
+        },
+
+
+        /**
+         * ==========================================
+         * SIGNOS VITALES CRÍTICOS
+         * ==========================================
+         */
+        evaluarVitalesCriticos(triage) {
+
+            const sat =
+                parseFloat(
+                    triage?.saturacion
+                );
+
+
+            const temp =
+                parseFloat(
+                    triage?.temperatura
+                );
+
+
+            if (
+                !isNaN(sat) &&
+                sat < 90
+            ) {
+
+                return 'rojo';
+
+            }
+
+
+            if (
+                !isNaN(temp) &&
+                temp >= 40
+            ) {
+
+                return 'rojo';
+
+            }
+
+
+            if (
+                !isNaN(sat) &&
+                sat < 94
+            ) {
+
+                return 'naranja';
+
+            }
+
+
+            if (
+                !isNaN(temp) &&
+                temp >= 39
+            ) {
+
+                return 'naranja';
+
+            }
+
+
+            return null;
+
+        },
+
+
+        /**
+         * ==========================================
+         * MAPEAR ESTADO A PRIORIDAD
+         * ==========================================
+         */
         mapearEstadoAPrioridad(estado) {
-            const mapa = { grave: 'rojo', moderado: 'amarillo', leve: 'verde' }
-            return mapa[estado?.toLowerCase()] || 'verde'
-        },
-
-        // ─────────────────────────────────────────────
-        // 📋 CARGAR PACIENTES Y LANZAR IA
-        // ─────────────────────────────────────────────
-        async obtenerPacientes() {
-            try {
-                const response = await ApiService.get('/triage')
-                this.triage = response.data
-                console.log('triages cargados:', this.triage)
-
-                // 🚀 Analizar cada paciente con IA en paralelo
-                const promesas = this.triage.map(p => this.analizarConIA(p))
-                await Promise.allSettled(promesas)
-
-            } catch (error) {
-                console.error('Error al cargar triage:', error)
-            }
-        },
-
-        // ─────────────────────────────────────────────
-        // 🏷️ BADGE DE PRIORIDAD (ahora con IA)
-        // ─────────────────────────────────────────────
-        obtenerPrioridad(prioridadIA) {
-            if (!prioridadIA) return {
-                texto: 'Analizando...',
-                clase: 'badge bg-secondary',
-                claseCss: 'text-secondary'
-            }
 
             const mapa = {
-                rojo:     { texto: '🔴 ROJA — Inmediata',   clase: 'badge bg-danger',   claseCss: 'text-danger fw-bold' },
-                naranja:  { texto: '🟠 NARANJA — Muy Urgente', clase: 'badge bg-orange text-dark', claseCss: 'text-warning fw-bold' },
-                amarillo: { texto: '🟡 AMARILLA — Urgente', clase: 'badge bg-warning text-dark', claseCss: 'text-warning fw-bold' },
-                verde:    { texto: '🟢 VERDE — No Urgente', clase: 'badge bg-success',   claseCss: 'text-success fw-bold' },
-            }
 
-            return mapa[prioridadIA.toLowerCase()] || {
-                texto: 'Sin clasificar',
-                clase: 'badge bg-secondary',
-                claseCss: 'text-secondary'
-            }
+                grave: 'rojo',
+
+                urgente: 'naranja',
+
+                leve: 'verde'
+
+            };
+
+
+            return (
+                mapa[
+                    estado?.toLowerCase()
+                ] || 'verde'
+            );
+
         },
 
-        // ─────────────────────────────────────────────
-        // ⏱️ COUNTDOWN REACTIVO (usa this.tiempoActual)
-        // ─────────────────────────────────────────────
-        obtenerContadorTiempoIa(prioridadIA, fechaRegistro) {
-            if (!fechaRegistro || !prioridadIA) return { texto: '...', claseCss: 'text-muted' }
 
-            const inicio = new Date(fechaRegistro)
-            const ahora = this.tiempoActual // ← reactivo al setInterval
-            const minutosTranscurridos = Math.floor((ahora - inicio) / 60000)
+        /**
+         * ==========================================
+         * SINCRONIZAR PACIENTES
+         * ==========================================
+         */
+        sincronizarPacientes(lista) {
 
-            const limites = { rojo: 10, naranja: 30, amarillo: 60, verde: 120 }
-            const limite = limites[prioridadIA.toLowerCase()] ?? 120
-            const restante = limite - minutosTranscurridos
+            this.triage =
+                lista || [];
 
-            if (restante <= 0) {
+
+            const pendientes =
+                this.triage.filter(
+                    p =>
+                        !this.analisisIA[p.id]
+                );
+
+
+            const promesas =
+                pendientes.map(
+                    p =>
+                        this.analizarConIA(p)
+                );
+
+
+            Promise.allSettled(
+                promesas
+            );
+
+        },
+
+
+        /**
+         * ==========================================
+         * PRIORIDAD VISUAL
+         * ==========================================
+         */
+        obtenerPrioridad(prioridadIA) {
+
+            if (!prioridadIA) {
+
                 return {
-                    texto: `⚠️ Excedido ${Math.abs(restante)} min`,
-                    claseCss: 'badge bg-danger text-white fw-bold alert-blink'
-                }
+
+                    texto: 'Analizando...',
+
+                    clase:
+                        'badge bg-secondary'
+
+                };
+
             }
 
-            const urgente = restante <= Math.floor(limite * 0.25) // último 25% del tiempo
+
+            const mapa = {
+
+                rojo: {
+                    texto:
+                        '🔴 ROJO — Inmediata (Nivel 1)',
+                    clase:
+                        'badge bg-danger'
+                },
+
+                naranja: {
+                    texto:
+                        '🟠 NARANJA — Emergencia (Nivel 2)',
+                    clase:
+                        'badge bg-orange text-dark'
+                },
+
+                amarillo: {
+                    texto:
+                        '🟡 AMARILLO — Urgente (Nivel 3)',
+                    clase:
+                        'badge bg-warning text-dark'
+                },
+
+                verde: {
+                    texto:
+                        '🟢 VERDE — Urgencia menor (Nivel 4)',
+                    clase:
+                        'badge bg-success'
+                },
+
+                azul: {
+                    texto:
+                        '🔵 AZUL — No urgente (Nivel 5)',
+                    clase:
+                        'badge bg-primary'
+                }
+
+            };
+
+
+            return (
+                mapa[
+                    prioridadIA.toLowerCase()
+                ] || {
+
+                    texto:
+                        'Sin clasificar',
+
+                    clase:
+                        'badge bg-secondary'
+
+                }
+            );
+
+        },
+
+
+        /**
+         * ==========================================
+         * TIEMPO DE ESPERA
+         * ==========================================
+         */
+        obtenerEspera(
+            estadoTriage,
+            fechaRegistro,
+            estadoConsulta = 'en_proceso'
+        ) {
+
+            const estadoConsultaNormalizado =
+                String(
+                    estadoConsulta || ''
+                )
+                    .toLowerCase()
+                    .trim();
+
+
+            if (
+                estadoConsultaNormalizado ===
+                    'finalizada' ||
+                estadoConsultaNormalizado ===
+                    'finalizado' ||
+                estadoConsultaNormalizado ===
+                    'atendido'
+            ) {
+
+                return {
+
+                    texto:
+                        '✓ Finalizada',
+
+                    claseCss:
+                        'badge bg-success text-white fw-bold',
+
+                    vencido: false,
+
+                    finalizada: true,
+
+                    restante: null
+
+                };
+
+            }
+
+
+            if (
+                estadoConsultaNormalizado ===
+                'excedido'
+            ) {
+
+                return {
+
+                    texto:
+                        '⚠️ Excedido',
+
+                    claseCss:
+                        'badge bg-danger text-white fw-bold alert-blink',
+
+                    vencido: true,
+
+                    finalizada: false,
+
+                    restante: 0
+
+                };
+
+            }
+
+
+            if (
+                !fechaRegistro ||
+                !estadoTriage
+            ) {
+
+                return {
+
+                    texto: '...',
+
+                    claseCss:
+                        'text-muted',
+
+                    vencido: false,
+
+                    finalizada: false,
+
+                    restante: null
+
+                };
+
+            }
+
+
+            const inicio =
+                new Date(
+                    fechaRegistro
+                );
+
+
+            const ahora =
+                this.tiempoActual;
+
+
+            const minutosTranscurridos =
+                Math.floor(
+                    (
+                        ahora - inicio
+                    ) / 60000
+                );
+
+
+            const estadoNormalizado =
+                String(
+                    estadoTriage
+                )
+                    .toLowerCase()
+                    .trim();
+
+
+            const limite =
+                this.LIMITES_MINUTOS_ESTADO[
+                    estadoNormalizado
+                ] ?? 120;
+
+
+            const restante =
+                limite -
+                minutosTranscurridos;
+
+
+            if (
+                restante <= 0
+            ) {
+
+                return {
+
+                    texto:
+                        `⚠️ Excedido ${Math.abs(restante)} min`,
+
+                    claseCss:
+                        'badge bg-danger text-white fw-bold alert-blink',
+
+                    vencido: true,
+
+                    finalizada: false,
+
+                    restante
+
+                };
+
+            }
+
+
+            const urgente =
+                restante <=
+                Math.max(
+                    1,
+                    Math.floor(
+                        limite * 0.25
+                    )
+                );
+
+
             return {
-                texto: `⏱ ${restante} min restantes`,
-                claseCss: urgente
-                    ? 'badge bg-warning text-dark fw-bold'
-                    : 'badge bg-success text-white fw-bold'
-            }
+
+                texto:
+                    `⏱ ${restante} min`,
+
+                claseCss:
+                    urgente
+                        ? 'badge bg-warning text-dark fw-bold'
+                        : 'badge bg-success text-white fw-bold',
+
+                vencido: false,
+
+                finalizada: false,
+
+                restante
+
+            };
+
         },
 
-        obtenerLimiteYEstadoEspera(prioridadIA, fechaRegistro) {
-            // Mismo cálculo, reutiliza la lógica de arriba
-            return this.obtenerContadorTiempoIa(prioridadIA, fechaRegistro)
+        tieneDatosSuficientes(triage) {
+            if (!triage) return false;
+
+            return (
+                (triage.presion && String(triage.presion).trim() !== '') ||
+                (triage.saturacion !== null && triage.saturacion !== undefined && triage.saturacion !== '') ||
+                (triage.temperatura !== null && triage.temperatura !== undefined && triage.temperatura !== '')
+            );
         },
 
-        // ─────────────────────────────────────────────
-        // 👁️ VER DETALLE INDIVIDUAL
-        // ─────────────────────────────────────────────
-        async obtenerPacientesIndividual(id) {
-            try {
-                const response = await ApiService.get('/triage/' + id)
-                this.detalletriage = {
-                    ...response.data,
-                    // Inyectar análisis IA en el detalle
-                    _ia: this.analisisIA[id] || null
+
+        /**
+         * ==========================================
+         * VERIFICAR VENCIDOS
+         * ==========================================
+         */
+        verificarVencidosYAlertar() {
+
+            this.triage.forEach(paciente => {
+
+                // ⛔ Sin datos suficientes: no participa en el ciclo de alertas
+                if (this.analisisIA[paciente.id]?.sinDatos) {
+                    return;
                 }
-                console.log('detalle triage:', this.detalletriage)
+
+                const triage0 = paciente.triages?.[0];
+                if (!triage0) return;
+
+                // ...resto igual que ya tenías
+            });
+
+        },
+
+        /**
+         * ==========================================
+         * NOTIFICACIÓN
+         * ==========================================
+         */
+        notificarDoctor(
+            paciente,
+            triage0
+        ) {
+
+            this.reproducirSonidoAlerta();
+
+
+            if (
+                window.Notification &&
+                Notification.permission ===
+                    'granted'
+            ) {
+
+                new Notification(
+                    '⚠️ Tiempo de espera excedido',
+                    {
+
+                        body:
+                            `${paciente.nombre} — Estado ${triage0.estado?.toUpperCase()} — revisar de inmediato`
+
+                    }
+                );
+
+            }
+
+        },
+
+
+        /**
+         * ==========================================
+         * SONIDO
+         * ==========================================
+         */
+        reproducirSonidoAlerta() {
+
+            try {
+
+                const ctx =
+                    new (
+                        window.AudioContext ||
+                        window.webkitAudioContext
+                    )();
+
+
+                const osc =
+                    ctx.createOscillator();
+
+
+                const gain =
+                    ctx.createGain();
+
+
+                osc.type =
+                    'sine';
+
+
+                osc.frequency.value =
+                    880;
+
+
+                gain.gain.value =
+                    0.15;
+
+
+                osc.connect(gain);
+
+                gain.connect(
+                    ctx.destination
+                );
+
+
+                osc.start();
+
+
+                setTimeout(() => {
+
+                    osc.stop();
+
+                    ctx.close();
+
+                }, 400);
+
+
+            } catch (e) {
+
+                console.warn(
+                    'No se pudo reproducir la alerta sonora',
+                    e
+                );
+
+            }
+
+        },
+
+
+        normalizarEstadoConsulta(estadoConsulta) {
+            const estado = String(estadoConsulta || '').toLowerCase().trim();
+            return ['finalizada', 'finalizado', 'atendido'].includes(estado)
+                ? 'finalizada'
+                : 'en_proceso';
+        },
+
+        async cambiarEstadoConsulta(paciente, nuevoEstado) {
+
+            const estadoAnterior = paciente.estado_consulta;
+
+            // Actualización optimista: se refleja de inmediato en la tabla
+            paciente.estado_consulta = nuevoEstado;
+
+            try {
+                await ApiService.patch(`/pacientes/${paciente.id}/estado-consulta`, {
+                    estado_consulta: nuevoEstado
+                });
             } catch (error) {
-                console.error('Error al cargar detalle:', error)
+                console.error('Error al actualizar el estado de la consulta:', error);
+                paciente.estado_consulta = estadoAnterior; // revertimos si falla
             }
         },
 
-        guardarEdicion() {
-            console.log(this.triageEditar)
-        }
-    }
+
+    },
+
 }
+
 </script>
 
+
+<style scoped>
+
+.alert-blink {
+
+    animation:
+        blinker 1.5s linear infinite;
+
+}
+
+
+@keyframes blinker {
+
+    50% {
+
+        opacity: 0.6;
+
+    }
+
+}
+
+</style>

@@ -153,6 +153,12 @@ export default {
       toastTimer: null,
       guardando: false,
       descargando: false,
+      recetaDescargada: false,
+      diagnosticoDescargado: false,
+      // Evita disparar el POST de finalizar más de una vez si el usuario
+      // hace doble click en "Sí, salir de todos modos" o si validarSalida
+      // se invoca varias veces seguidas.
+      finalizando: false,
       letras: ['P', 'S', 'O', 'A', 'P', 'P'],
       secciones: [
         {
@@ -249,6 +255,99 @@ export default {
       this.estado[key].completado =
         this.estado[key].texto.trim().length > 0
     },
+    // Llama a este método antes de permitir que el usuario salga de la
+    // vista (cambie de paciente, navegue a otra sección, etc.). Si falta
+    // descargar la receta y/o el diagnóstico, muestra una alerta y solo
+    // ejecuta callbackNavegacion() si el usuario confirma salir de todos
+    // modos. Si ya descargó ambos, ejecuta el callback directo.
+    //
+    // NUEVO: cuando el usuario confirma "Sí, salir de todos modos", antes
+    // de navegar se marca la consulta como finalizada en el backend
+    // (POST consultaIA/{consultaId}/finalizar -> ConsultaIAController::finalizarConsulta),
+    // para que la consulta quede cerrada aunque no se hayan descargado los PDFs.
+    validarSalida(callbackNavegacion) {
+      const faltaReceta = !this.recetaDescargada;
+      const faltaDiagnostico = !this.diagnosticoDescargado;
+
+      if (!faltaReceta && !faltaDiagnostico) {
+        // Ya descargó ambos: igualmente finalizamos la consulta antes de
+        // salir, para mantener un solo camino de cierre.
+        this.finalizarYNavegar(callbackNavegacion);
+        return;
+      }
+
+      let texto;
+      if (faltaReceta && faltaDiagnostico) {
+        texto = 'No has descargado la receta ni el diagnóstico de esta consulta. Si sales ahora, podrías perderlos.';
+      } else if (faltaReceta) {
+        texto = 'No has descargado la receta médica de esta consulta. Si sales ahora, podrías perderla.';
+      } else {
+        texto = 'No has descargado el diagnóstico de esta consulta. Si sales ahora, podrías perderlo.';
+      }
+
+      // FIX: antes era `Swal.fire(...)` sin prefijo, lo que lanzaba un
+      // ReferenceError silencioso si SweetAlert2 solo está registrado
+      // como window.Swal (como en el resto del proyecto) y por eso el
+      // modal nunca resolvía su promesa ni ejecutaba la navegación.
+      window.Swal.fire({
+        title: '¿Estás seguro de salir?',
+        text: texto,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, salir de todos modos',
+        cancelButtonText: 'Cancelar, quedarme',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // El usuario decidió salir bajo su propio riesgo.
+          this.finalizarYNavegar(callbackNavegacion);
+        }
+      });
+    },
+    // Marca la consulta como finalizada en el backend y, tanto si el POST
+    // tiene éxito como si falla, ejecuta el callback de navegación (el
+    // usuario ya decidió salir; no lo bloqueamos por un error de red).
+    async finalizarYNavegar(callbackNavegacion) {
+      if (this.finalizando) return;
+
+      if (!this.consultaId) {
+        // Sin consulta activa no hay nada que finalizar en el backend.
+        if (typeof callbackNavegacion === 'function') {
+          callbackNavegacion();
+        }
+        return;
+      }
+
+      this.finalizando = true;
+      try {
+        const respuesta = await window.axios.post(
+          `/consultaIA/${this.consultaId}/finalizar`
+        );
+        this.$emit('psoapp-consulta-finalizada', {
+          consultaId: this.consultaId,
+          data: respuesta.data
+        });
+      } catch (error) {
+        console.error('Error al finalizar la consulta:', error);
+        // No bloqueamos la salida por esto: el usuario ya confirmó que
+        // quiere salir de todos modos. Solo avisamos con un toast, por si
+        // el padre no queda escuchando errores de este método.
+        this.mostrarToast('La consulta no se pudo marcar como finalizada');
+      } finally {
+        this.finalizando = false;
+        if (typeof callbackNavegacion === 'function') {
+          callbackNavegacion();
+        }
+      }
+    },
+    // Consulta rápida (sin disparar el modal) de si falta descargar algo.
+    // La usa el padre para decidir si necesita interceptar la navegación
+    // o dejar pasar el clic sin más.
+    tienePendientes() {
+      return !this.recetaDescargada || !this.diagnosticoDescargado;
+    },
     // Recibe el objeto "nota_psoapp" completo tal como lo devuelve el
     // backend (IAClinicaService::consultarIA / analizarTranscripcion) y
     // reparte cada campo a la sección correspondiente del acordeón usando
@@ -311,6 +410,11 @@ export default {
         enlace.click();
         document.body.removeChild(enlace);
 
+        if (tipo === 'receta') {
+          this.recetaDescargada = true;
+        } else if (tipo === 'diagnostico') {
+          this.diagnosticoDescargado = true;
+        }
         this.$emit('psoapp-descargar', { tipo, consultaId: this.consultaId });
       } catch (error) {
         console.error('Error al descargar el PDF:', error);

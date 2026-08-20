@@ -9,9 +9,12 @@ use Carbon\Carbon;
 
 class DerivacionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $derivaciones = DB::table('derivaciones')
+        $fecha = $request->input('fecha');
+        $especialidadId = $request->input('especialidad_id');
+
+        $query = DB::table('derivaciones')
             ->join('consultas', 'derivaciones.consulta_id', '=', 'consultas.id')
             ->join('pacientes', 'consultas.paciente_id', '=', 'pacientes.id')
             ->join('especialidades', 'derivaciones.especialidad_id', '=', 'especialidades.id')
@@ -24,26 +27,90 @@ class DerivacionController extends Controller
                 'derivaciones.estado',
                 'pacientes.paciente_id',
                 'derivaciones.created_at'
-            )
-            ->orderByDesc('derivaciones.created_at')
-            ->get();
+            );
+
+        // Filtrar por especialidad
+        if ($especialidadId) {
+            $query->where(
+                'derivaciones.especialidad_id',
+                $especialidadId
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Si se seleccionó una fecha
+        |--------------------------------------------------------------------------
+        |
+        | Mostramos únicamente las derivaciones de esa fecha.
+        |
+        */
+        if ($fecha) {
+
+            $query->whereDate(
+                'derivaciones.created_at',
+                $fecha
+            );
+
+            $derivaciones = $query
+                ->orderByDesc('derivaciones.created_at')
+                ->get();
+
+        } else {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Sin fecha: mostrar hoy
+            |--------------------------------------------------------------------------
+            */
+
+            $hoy = Carbon::today();
+
+            $derivaciones = (clone $query)
+                ->whereDate(
+                    'derivaciones.created_at',
+                    $hoy
+                )
+                ->orderByDesc('derivaciones.created_at')
+                ->get();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Si hoy no hay derivaciones,
+            | mostrar las más recientes
+            |--------------------------------------------------------------------------
+            */
+
+            if ($derivaciones->isEmpty()) {
+
+                $derivaciones = $query
+                    ->orderByDesc('derivaciones.created_at')
+                    ->limit(10)
+                    ->get();
+            }
+        }
 
         $resultado = $derivaciones->map(function ($item) {
 
             $motivo = $item->motivo ?? '';
 
             // Calculamos la prioridad desde el motivo
-            $prioridadCalculada = $this->obtenerPrioridadDesdeMotivo($motivo);
+            $prioridadCalculada =
+                $this->obtenerPrioridadDesdeMotivo($motivo);
 
-            // Eliminamos la parte del triage del texto
+            // Eliminamos la parte del triage
             $motivo = preg_replace(
                 '/triage:\s*(VERDE|AMARILLO|NARANJA|ROJO)\s*[\.\:\,\-]?\s*/i',
                 '',
                 $motivo
             );
 
-            // Eliminamos puntos, comas o espacios al inicio
-            $motivo = preg_replace('/^[\s\.\,\-:]+/', '', $motivo);
+            // Eliminamos caracteres al inicio
+            $motivo = preg_replace(
+                '/^[\s\.\,\-:]+/',
+                '',
+                $motivo
+            );
 
             return [
                 'id'           => $item->id,
@@ -53,7 +120,9 @@ class DerivacionController extends Controller
                 'motivo'       => trim($motivo),
                 'prioridad'    => $prioridadCalculada,
                 'estado'       => $item->estado,
-                'fecha'        => Carbon::parse($item->created_at)->format('d/m/Y H:i'),
+                'fecha'        => Carbon::parse(
+                    $item->created_at
+                )->format('d/m/Y H:i'),
                 'folio'        => $item->paciente_id,
             ];
         });
@@ -67,15 +136,25 @@ class DerivacionController extends Controller
 
         $casosCriticos = 0;
         $canalizados = 0;
+        $atendidos = 0;
 
         foreach ($derivaciones as $derivacion) {
 
-            if ($this->obtenerPrioridadDesdeMotivo($derivacion->motivo) === 'critica') {
+                // Evaluamos la prioridad generada a partir del motivo
+            $prioridadCalculada = strtolower($this->obtenerPrioridadDesdeMotivo($derivacion->motivo) ?? '');
+
+            // Casos críticos = detecta tanto 'critica' como 'alta'
+            if ($prioridadCalculada === 'critica' || $prioridadCalculada === 'alta') {
                 $casosCriticos++;
             }
-
-            if ($derivacion->estado === 'enviado') {
+            // Canalizados = estado enviado
+            if (strtolower($derivacion->estado ?? '') === 'enviado') {
                 $canalizados++;
+            }
+
+            // Atendidos = estado atendido
+            if (strtolower($derivacion->estado ?? '') === 'atendido') {
+                $atendidos++;
             }
         }
 
@@ -83,6 +162,7 @@ class DerivacionController extends Controller
             'total_derivaciones' => $derivaciones->count(),
             'casos_criticos'     => $casosCriticos,
             'canalizados'        => $canalizados,
+            'atendidos'          => $atendidos,
         ]);
     }
 

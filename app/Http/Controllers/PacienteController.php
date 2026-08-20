@@ -105,7 +105,41 @@ class PacienteController extends Controller
     }
 
     /**
+     * Busca un paciente ya registrado con el MISMO nombre y CURP.
+     *
+     * Se usa nombre + CURP (no solo CURP) porque el CURP puede venir
+     * vacío en registros antiguos/incompletos; exigir también el nombre
+     * evita falsos positivos entre dos pacientes distintos sin CURP
+     * capturado. Comparación insensible a mayúsculas/espacios en ambos
+     * campos.
+     *
+     * Si el CURP viene vacío en el formulario, NO se considera para
+     * la búsqueda de duplicados (regresa null): no hay forma confiable
+     * de identificar coincidencia solo por nombre.
+     */
+    private function buscarPacienteDuplicado(string $nombre, ?string $curp): ?Paciente
+    {
+        $nombre = trim($nombre);
+        $curp = trim((string) $curp);
+
+        if ($nombre === '' || $curp === '') {
+            return null;
+        }
+
+        return Paciente::whereRaw('LOWER(TRIM(nombre)) = ?', [mb_strtolower($nombre)])
+            ->whereRaw('UPPER(TRIM(curp)) = ?', [mb_strtoupper($curp)])
+            ->first();
+    }
+
+    /**
      * Guarda un paciente nuevo junto con su primer triage.
+     *
+     * ANTES de crear nada, verifica si ya existe un paciente con el
+     * mismo nombre y CURP (ver buscarPacienteDuplicado()). Si existe,
+     * NO se crea un registro duplicado ni un triage nuevo: se responde
+     * con 'existe' => true y los datos del paciente ya registrado, para
+     * que el frontend redirija a la lista de consultas en vez de abrir
+     * una Consulta Inteligente nueva.
      *
      * Los códigos (paciente_id, triage_codigo) se generan dentro de una
      * transacción con lockForUpdate para que el consecutivo reinicie
@@ -115,6 +149,25 @@ class PacienteController extends Controller
     public function store(Request $request)
     {
         try {
+            // 1. Verificación de duplicado por nombre + CURP, antes de
+            //    tocar la base de datos con cualquier INSERT.
+            $pacienteExistente = $this->buscarPacienteDuplicado(
+                (string) $request->nombre,
+                $request->curp
+            );
+
+            if ($pacienteExistente) {
+                return response()->json([
+                    'success' => true,
+                    'existe'  => true,
+                    'message' => 'Ya existe un paciente registrado con ese nombre y CURP.',
+                    'data' => [
+                        'Paciente' => $pacienteExistente,
+                    ]
+                ]);
+            }
+
+            // 2. No hay duplicado: se crea el paciente + su primer triage.
             $resultado = DB::transaction(function () use ($request) {
 
                 // Generamos el código del paciente (PAC-AÑO-0001)
@@ -172,6 +225,7 @@ class PacienteController extends Controller
 
             return response()->json([
                 'success' => true,
+                'existe'  => false,
                 'message' => 'Paciente y triage creados correctamente',
                 'data' => [
                     'Paciente' => $paciente,
@@ -235,7 +289,7 @@ class PacienteController extends Controller
     {
        
         $paciente = Paciente::with([
-            'triages',
+            'triages'=>fn($q) => $q->latest()->limit(1), //Traemos el ultimo triage del paciente es decir el triage actual de la consulta
             'archivos',
             'recetas.detalles',
             'recetas.consulta',
@@ -251,12 +305,37 @@ class PacienteController extends Controller
         return view('pacientes.edit', compact('paciente'));
     }
 
+    /**
+     * Actualiza los datos propios del paciente (no relaciones).
+     *
+     * IMPORTANTE:
+     * - Se usa $request->except([...]) en vez de $request->all() para NO
+     *   intentar guardar 'triages' (ni otros campos que no son columnas
+     *   de la tabla `pacientes`) como si fueran atributos del modelo.
+     *   Antes esto provocaba que Eloquent intentara hacer un UPDATE con
+     *   una columna 'triages' inexistente, rompiendo la petición.
+     * - Se responde con response()->json() en vez de redirect(), porque
+     *   esta ruta es consumida por el frontend Vue vía axios/ApiService,
+     *   que espera JSON. Un redirect() aquí regresaba un 302 hacia una
+     *   vista HTML, lo cual el cliente HTTP no maneja como una actualización
+     *   exitosa (y en algunos casos el navegador reintenta con GET,
+     *   generando comportamientos como el 405 reportado).
+     */
     public function update(Request $request, string $id)
     {
         $paciente = Paciente::findOrFail($id);
-        $paciente->update($request->all());
 
-        return redirect()->route('pacientes.index');
+        // Excluimos relaciones y campos que no deben (o no pueden)
+        // actualizarse por aquí. 'triages' se maneja por separado en
+        // TriageController@guardarTriageRapido.
+        $datos = $request->except(['triages', 'id', 'paciente_id']);
+
+        $paciente->update($datos);
+
+        // Regresamos el paciente actualizado junto con sus triages,
+        // para que el frontend pueda refrescar el panel sin pegarle
+        // de nuevo a /pacientes.
+        return response()->json($paciente->fresh()->load('triages'));
     }
 
     public function destroy(string $id)

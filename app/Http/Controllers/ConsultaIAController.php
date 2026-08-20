@@ -16,6 +16,8 @@ use App\Models\NotaPsoapp;
 use App\Models\Receta;
 use App\Models\Derivacion;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\ListaEspera;
+use Carbon\Carbon; 
 
 use App\Services\IAClinicaService;
 
@@ -78,7 +80,13 @@ class ConsultaIAController extends Controller
                     // para que quede registrado quién abrió la consulta.
                     'user_id' => auth()->id(),
                     'motivo_consulta' => 'Consulta Inteligente',
-                    'estado' => 'en_proceso',
+                    // NOTA: 'estado' y 'estado_consulta' son columnas
+                    // DISTINTAS en la tabla consultas. El flujo real del
+                    // sistema (Home.vue, finalizarConsulta, etc.) usa
+                    // estado_consulta, con default 'en_proceso'. Se deja
+                    // explícito aquí para que no dependa del default de
+                    // la BD y quede claro cuál es la columna que importa.
+                    'estado_consulta' => 'en_proceso',
                     'consulta_inteligente' => 1,
                     'session_uuid' => Str::uuid()
                 ]);
@@ -101,7 +109,13 @@ class ConsultaIAController extends Controller
             // Una vez que el médico presiona "Finalizar" (finalizarConsulta()),
             // el diagnóstico de esta consulta queda cerrado. No se aceptan
             // más transcripciones para que no se siga modificando.
-            if ($consulta->estado === 'finalizada') {
+            //
+            // FIX: antes se comparaba contra la columna 'estado' (default
+            // 'pendiente', que nunca se actualiza en ningún flujo real).
+            // La columna que realmente se marca como 'finalizada' es
+            // 'estado_consulta' (ver finalizarConsulta() más abajo), así
+            // que el bloqueo debe leer esa misma columna.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => false,
                     'error'   => 'Esta consulta ya fue finalizada. Inicia una nueva consulta para continuar.'
@@ -189,6 +203,13 @@ class ConsultaIAController extends Controller
      * - El diagnóstico/evaluación IA de esta consulta queda tal cual quedó,
      *   sin más actualizaciones.
      *
+     * IMPORTANTE: esto actualiza ÚNICAMENTE la columna estado_consulta
+     * de la tabla `consultas`. NO se toca la tabla `triage` (columna
+     * `estado`, con valores 'leve'/'grave'): ese campo es el nivel de
+     * severidad con el que llegó el paciente y debe conservarse como
+     * parte del historial clínico, sin importar que la consulta ya
+     * haya sido cerrada.
+     *
      * No borra ni modifica nada de lo ya guardado; solo cierra la puerta a
      * seguir enviando mensajes.
      */
@@ -200,19 +221,40 @@ class ConsultaIAController extends Controller
                 return response()->json(['success' => false, 'error' => 'Consulta no encontrada'], 404);
             }
 
-            if ($consulta->estado === 'finalizada') {
+            // FIX: antes se leía/escribía la columna 'estado' (default
+            // 'pendiente', sin uso real en el sistema). La columna que
+            // consulta el resto de la app (y la que se ve en phpMyAdmin
+            // con los valores 'en_proceso'/'finalizada') es
+            // 'estado_consulta'.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => true,
                     'ya_estaba_finalizada' => true,
-                    'estado' => $consulta->estado,
+                    'estado_consulta' => $consulta->estado_consulta,
                 ]);
             }
 
-            $consulta->update(['estado' => 'finalizada']);
+            $consulta->update(['estado_consulta' => 'finalizada']);
+            
+
+            // NUEVO: reflejar el cierre en lista_espera. ListaEspera no
+            // guarda consulta_id, así que se cruza por paciente_id + fecha
+            // de hoy (que es como sincronizarCitasDelDia() arma el registro
+            // del día). Se excluyen los que ya estén Finalizada/Cancelada
+            // para no pisar un estado terminal existente, y se toma el más
+            // reciente por si hubiera más de un registro del mismo paciente
+            // en el día (poco probable, pero evita ambigüedad).
+            ListaEspera::where('paciente_id', $consulta->paciente_id)
+                ->where('fecha', Carbon::now()->toDateString())
+                ->whereNotIn('estado', ['Finalizada', 'Cancelada'])
+                ->orderBy('id', 'desc')
+                ->limit(1)
+                ->update(['estado' => 'Finalizada']);
+
 
             return response()->json([
                 'success' => true,
-                'estado' => $consulta->estado,
+                'estado_consulta' => $consulta->estado_consulta,
             ]);
 
         } catch (\Exception $e) {
@@ -277,7 +319,10 @@ class ConsultaIAController extends Controller
 
             // Mismo bloqueo que en store(): si la consulta ya fue
             // finalizada, no se procesan más archivos/análisis.
-            if ($consulta->estado === 'finalizada') {
+            //
+            // FIX: misma corrección de columna que en store() y
+            // finalizarConsulta() — se lee estado_consulta, no estado.
+            if ($consulta->estado_consulta === 'finalizada') {
                 return response()->json([
                     'success' => false,
                     'error'   => 'Esta consulta ya fue finalizada. Inicia una nueva consulta para continuar.'
@@ -772,7 +817,8 @@ class ConsultaIAController extends Controller
      */
     private function armarPdfConsulta($consultaId, $tipo)
     {
-        if (!in_array($tipo, ['receta', 'diagnostico'])) {
+        // 1. Permitimos el nuevo tipo 'nota-soapp'
+        if (!in_array($tipo, ['receta', 'diagnostico', 'nota-soapp'])) {
             abort(404, 'Tipo de PDF no válido.');
         }
 
@@ -789,78 +835,36 @@ class ConsultaIAController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // Receta guardada desde RecetaInteligente.vue (solo aplica
-        // para el PDF de tipo 'receta', pero no cuesta nada cargarla
-        // siempre por si la vista de diagnóstico también la usa).
         $receta = Receta::where('consulta_id', $consulta->id)
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // El médico se toma de consultas.user_id (columna que sí
-        // existe y ya se llena en store() con auth()->id() al
-        // iniciar la consulta) — no de recetas, que no tiene esa
-        // columna.
         $medico = \App\Models\User::find($consulta->user_id);
 
-        // -----------------------------------------------------------
-        // UBICACIÓN / SUCURSAL / LOGO DEL MÉDICO (dinámico, ya no fijo)
-        // -----------------------------------------------------------
-        // consultas.user_id -> users.id -> medicos.user_id ->
-        // configuracion_medico_sucursal -> ubicaciones
-        //
-        // $medico (arriba) es el modelo User que atendió la consulta.
-        // Para llegar a su sucursal/logo hay que ubicar su fila
-        // correspondiente en el catálogo "medicos" y de ahí su(s)
-        // configuración(es) de sucursal.
         $ubicacion = null;
-
         if ($medico) {
             $medicoCatalogo = \App\Models\Medico::with('configuraciones.ubicacion')
                 ->where('user_id', $medico->id)
                 ->first();
 
-            // Si un médico llegara a tener varias sucursales configuradas,
-            // por ahora se toma la primera. Avisar si se necesita elegir
-            // la sucursal exacta de esa consulta en vez de la primera.
             $ubicacion = optional(optional($medicoCatalogo)->configuraciones)->first()?->ubicacion
                 ?? null;
         }
 
-        // Signos vitales: viven en la tabla triage, ligada por
-        // paciente_id. Tomamos el triage MÁS RECIENTE de ese
-        // paciente, sin filtrar por fecha contra la consulta,
-        // porque en el flujo real el triage puede capturarse
-        // antes o después de haberse creado la consulta.
         $triage = \App\Models\Triage::where('paciente_id', $consulta->paciente_id)
             ->orderBy('created_at', 'desc')
             ->first();
 
-        $vista = $tipo === 'receta' ? 'pdf.receta' : 'pdf.diagnostico';
+        // 2. Mapeo de vistas según el tipo solicitado
+        $vista = match ($tipo) {
+            'receta'     => 'pdf.receta',
+            'nota-soapp' => 'pdf.notasoapp',
+            default      => 'pdf.diagnostico',
+        };
 
-        // dompdf necesita la ruta ABSOLUTA de disco de la imagen, no una
-        // URL: al generar el PDF en el servidor no hay navegador ni
-        // sesión que resuelva esa ruta.
-        //
-        // 1) Se intenta primero el logo propio de la ubicación del
-        //    médico (ubicaciones.imagen), que es el dinámico.
-        // 2) Si no existe, se cae al logo genérico de siempre
-        //    (public/images/logo.png), igual que antes.
-        //
-        // AJUSTAR: si ubicaciones.imagen NO se guarda bajo
-        // storage/app/public (disco 'public' con symlink), cambiar
-        // la línea de $rutaCandidata por la ubicación física real.
+        // Procesamiento del logo
         $logoPath = null;
-
         if ($ubicacion && !empty($ubicacion->imagen)) {
-            // Las imágenes de logo NO usan el disco 'storage' de Laravel;
-            // viven directo en public/personalisarperfil/ (igual que
-            // archivos_clinicos vive en public/archivos_clinicos).
-            //
-            // ubicaciones.imagen puede venir guardado de dos formas según
-            // cómo se subió el archivo:
-            //   a) solo el nombre:              logo-consultorio-dr-basto-2026.jfif
-            //   b) con la carpeta incluida:      personalisarperfil/logo-....jfif
-            // Se soportan ambos casos sin duplicar la carpeta.
             $valorImagen = ltrim($ubicacion->imagen, '/');
 
             $rutaCandidata = str_starts_with($valorImagen, 'personalisarperfil/')
@@ -886,7 +890,14 @@ class ConsultaIAController extends Controller
             'logoPath'   => $logoPath,
         ]);
 
-        $nombreArchivo = ($tipo === 'receta' ? 'receta_' : 'diagnostico_') . $consulta->folio . '.pdf';
+        // 3. Formato dinámico del nombre del archivo descargado
+        $prefix = match ($tipo) {
+            'receta'     => 'receta_',
+            'nota-soapp' => 'notasoapp',
+            default      => 'diagnostico_',
+        };
+
+        $nombreArchivo = $prefix . $consulta->folio . '.pdf';
 
         return [$pdf, $nombreArchivo];
     }
@@ -1269,6 +1280,19 @@ class ConsultaIAController extends Controller
                 ->first();
     }
 
+    /**
+     * Historial clínico completo de un paciente (todas sus consultas +
+     * transcripciones), usado por ExpedienteTabs.vue -> obtenerConsultas().
+     *
+     * FIX: el select() de $consultas traía la columna 'estado' (sin uso
+     * real en el sistema, nunca se actualiza) en vez de 'estado_consulta'
+     * (la columna que finalizarConsulta() sí marca como 'finalizada' al
+     * presionar el botón "Finalizar" en ConsultaTiempoReal.vue). Sin
+     * 'estado_consulta' en la respuesta, el frontend no tenía forma de
+     * saber si una consulta ya había sido cerrada, y mostraba siempre
+     * "En proceso" para la primera consulta del historial sin importar
+     * su estado real.
+     */
     public function historialClinico(Request $request)
     {
         try {
@@ -1290,7 +1314,7 @@ class ConsultaIAController extends Controller
                         ]);
                 }])
                 ->orderBy('created_at', 'desc')
-                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado', 'created_at']);
+                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado_consulta', 'created_at']);
 
             $evaluaciones = EvaluacionIA::whereIn('consulta_id', $consultas->pluck('id'))
                 ->orderBy('created_at', 'desc')
@@ -1323,5 +1347,54 @@ class ConsultaIAController extends Controller
             ], 500);
         }
     }
-    
+
+    /**
+     * Lista todas las notas PSOAPP guardadas de un paciente (de todas sus
+     * consultas), con la fecha de la consulta a la que pertenecen. Usado
+     * por ExpedienteTabs.vue -> pestaña "Notas PSOAPP" (obtenerNotasPsoapp()).
+     *
+     * Se hace JOIN contra `consultas` (en vez de depender de una relación
+     * Eloquent) para no asumir que el modelo NotaPsoapp ya tiene definido
+     * belongsTo(Consulta::class).
+     *
+     * ⚠️ Verificar que el nombre real de la tabla del modelo NotaPsoapp
+     * sea 'notas_psoapp'; si es otro, ajustar el join() y el prefijo de
+     * columnas de abajo.
+     */
+    public function notasPsoapp($pacienteId)
+    {
+        try {
+            $notas = NotaPsoapp::query()
+                ->join('consultas', 'consultas.id', '=', 'notas_psoapp.consulta_id')
+                ->where('consultas.paciente_id', $pacienteId)
+                ->orderBy('consultas.created_at', 'desc')
+                ->get([
+                    'notas_psoapp.id',
+                    'notas_psoapp.consulta_id',
+                    'notas_psoapp.consulta_folio',
+                    'notas_psoapp.presentacion',
+                    'notas_psoapp.subjetivo',
+                    'notas_psoapp.objetivo',
+                    'notas_psoapp.analisis',
+                    'notas_psoapp.plan',
+                    'notas_psoapp.pronostico',
+                    'notas_psoapp.estado',
+                    'consultas.created_at as fecha',
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'notas_psoapp' => $notas,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error en notasPsoapp: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'error' => 'No se pudieron obtener las notas PSOAPP.'
+            ], 500);
+        }
+    }
+
 }

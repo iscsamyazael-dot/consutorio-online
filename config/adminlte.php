@@ -366,6 +366,12 @@ return [
                     'url'  => 'ConsultaInteligenteNueva',
                     'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
                 ],
+                 [
+                    'text' => 'Historial de consulta',
+                    'url'  => 'HistorialConsultas',
+                    'icon' => 'fas fa-fw fa-history', // 🕘 Icono de historial
+                        'can'  => 'acceso-general', // Visible para Asistente y Médico
+                ],
             ],
         ],
         [

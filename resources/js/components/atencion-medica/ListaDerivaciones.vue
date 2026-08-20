@@ -1,5 +1,5 @@
 <template>
-  <div class="card border-0 shadow-sm rounded-4 p-4 my-4">
+<div class="card border-0 shadow-sm rounded-4 p-4 my-4">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h5 class="fw-bold mb-0 text-dark">
         <i class="fas fa-share-square text-primary me-2"></i>
@@ -20,194 +20,241 @@
     </div>
 
     <!-- Tabla Dinámica -->
-    <div v-else class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th scope="col" class="py-3 ps-3">Paciente</th>
-            <th scope="col" class="py-3">Especialidad</th>
-            <th scope="col" class="py-3">Hospital</th>
-            <th scope="col" class="py-3">Motivo</th>
-            <th scope="col" class="py-3 text-center">Prioridad</th>
-            <th scope="col" class="py-3 text-center">Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in derivaciones" :key="item.id">
-            <td class="ps-3 fw-semibold text-dark">{{ item.paciente }}</td>
-            
-            <td>
-              <span class="badge bg-info-subtle text-info px-2 py-1 rounded-3">
-                <i class="fas fa-stethoscope me-1 p-1"></i>{{ item.especialidad }}
-              </span>
-            </td>
+    <div v-else>
 
-            <td class="text-secondary">{{ item.hospital || 'N/A' }}</td>
+    <!-- Filtro activo -->
+    <div
+        v-if="filtroActivo !== 'todas'"
+        class="alert alert-primary d-flex align-items-center justify-content-between rounded-4 mb-3"
+    >
+        <div>
+            <i class="fas fa-filter me-2"></i>
 
-            <!-- Motivo limpio sin la frase "triage" -->
-            <td style="max-width:320px;">
-                <div class="motivo-preview">
-                    {{ item.motivo }}
+            <strong>Filtro activo:</strong>
+
+            <span class="ms-1">
+                {{ nombreFiltro }}
+            </span>
+        </div>
+
+        <button
+            class="btn btn-sm btn-outline-primary rounded-pill"
+            @click="$emit('limpiar-filtro')"
+        >
+            <i class="fas fa-times me-1"></i>
+            Quitar filtro
+        </button>
+    </div>
+
+    <!-- Sin resultados del filtro -->
+    <div
+        v-if="derivacionesFiltradas.length === 0"
+        class="text-center my-4 py-5 border rounded-4 bg-light"
+    >
+        <i class="fas fa-filter text-muted fa-2x mb-3"></i>
+
+        <p class="fw-bold text-dark mb-1">
+            No hay derivaciones
+        </p>
+
+        <p class="text-muted small mb-0">
+            No existen pacientes que coincidan con este filtro.
+        </p>
+    </div>
+
+        <!-- Tabla -->
+        <div
+            v-else
+            class="table-responsive"
+        >
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col" class="py-3 ps-3">Paciente</th>
+                    <th scope="col" class="py-3">Especialidad</th>
+                    <th scope="col" class="py-3">Hospital</th>
+                    <th scope="col" class="py-3">Motivo</th>
+                    <th scope="col" class="py-3 text-center">Prioridad</th>
+                    <th scope="col" class="py-3 text-center">Estado</th>
+                </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in derivacionesFiltradas" :key="item.id">
+                        <td class="ps-3 fw-semibold text-dark">{{ item.paciente }}</td>
+                            
+                            <td>
+                            <span class="badge bg-info-subtle text-info px-2 py-1 rounded-3">
+                                <i class="fas fa-stethoscope me-1 p-1"></i>{{ item.especialidad }}
+                            </span>
+                            </td>
+
+                            <td class="text-secondary">{{ item.hospital || 'N/A' }}</td>
+
+                            <!-- Motivo limpio sin la frase "triage" -->
+                            <td style="max-width:320px;">
+                                <div class="motivo-preview">
+                                    {{ item.motivo }}
+                                </div>
+
+                                <button
+                                    v-if="item.motivo"
+                                    class="btn btn-link btn-sm p-0 mt-1"
+                                    @click="verMotivo(item)">
+                                    <i class="fas fa-eye me-1"></i> Ver más
+                                </button>
+
+                                <div
+                                    v-else
+                                    class="alert alert-danger d-inline-flex align-items-center py-1 px-2 mb-0 small"
+                                    role="alert">
+
+                                    <i class="fas fa-exclamation-triangle me-2 p-1"></i>
+                                    SIN MOTIVO
+
+                                </div>
+                            </td>
+
+                            <!-- Prioridad detectada -->
+                            <td class="text-center">
+                            <span :class="['badge rounded-pill px-3 py-2', getPrioridadBadge(item.prioridad)]">
+                                <i :class="['me-1', getPrioridadIcon(item.prioridad)]"></i>
+                                {{ item.prioridad ? item.prioridad.toUpperCase() : 'MEDIA' }}
+                            </span>
+                            </td>
+
+                            <!-- Estado -->
+                            <td class="text-center">
+                            <div class="dropdown">
+
+                                <button
+                                    class="btn btn-sm dropdown-toggle rounded-pill px-3"
+                                    :class="getEstadoButton(item.estado)"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                    <i :class="getEstadoIcon(item.estado)" class="me-2"></i>
+                                    {{ capitalizar(item.estado) }}
+                                </button>
+
+                                <ul class="dropdown-menu shadow border-0">
+
+                                    <li>
+                                        <a
+                                            class="dropdown-item"
+                                            href="#"
+                                            @click.prevent="actualizarEstado(item,'pendiente')">
+                                            🟡 Pendiente
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a
+                                            class="dropdown-item"
+                                            href="#"
+                                            @click.prevent="actualizarEstado(item,'enviado')">
+                                            🟢 Canalizado
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a
+                                            class="dropdown-item"
+                                            href="#"
+                                            @click.prevent="actualizarEstado(item,'atendido')">
+                                            🔵 Atendido
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>    
+
+<!--MODAL VER MOTIVO-->
+<div
+    class="modal fade"
+    id="modalMotivo"
+    tabindex="-1"
+    aria-labelledby="modalMotivoLabel"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalMotivoLabel">
+                    <i class="fas fa-file-medical me-2"></i>
+                    Motivo de la Derivación
+                </h5>
+
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Fecha: </strong>
+                    <span>{{ motivoSeleccionado.fecha }}</span>
                 </div>
 
-                <button
-                    v-if="item.motivo"
-                    class="btn btn-link btn-sm p-0 mt-1"
-                    @click="verMotivo(item)">
-                    <i class="fas fa-eye me-1"></i> Ver más
-                </button>
+                <div class="mb-3">
+                    <strong>Folio: </strong>
+                    <span>{{ motivoSeleccionado.folio }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Paciente: </strong>
+                    <span>{{ motivoSeleccionado.paciente }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Especialidad: </strong>
+                    <span>{{ motivoSeleccionado.especialidad }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Prioridad: </strong>
+
+                    <span
+                        :class="['badge rounded-pill px-3 py-2', getPrioridadBadge(motivoSeleccionado.prioridad)]">
+
+                        {{ motivoSeleccionado.prioridad?.toUpperCase() }}
+
+                    </span>
+                </div>
+
+                <hr>
+
+                <label class="fw-bold mb-2">
+                    Motivo
+                </label>
 
                 <div
-                    v-else
-                    class="alert alert-danger d-inline-flex align-items-center py-1 px-2 mb-0 small"
-                    role="alert">
+                    class="border rounded-3 p-3 bg-light"
+                    style="white-space: pre-line; line-height:1.7">
 
-                    <i class="fas fa-exclamation-triangle me-2 p-1"></i>
-                    SIN MOTIVO
-
-                </div>
-            </td>
-
-            <!-- Prioridad detectada -->
-            <td class="text-center">
-              <span :class="['badge rounded-pill px-3 py-2', getPrioridadBadge(item.prioridad)]">
-                <i :class="['me-1', getPrioridadIcon(item.prioridad)]"></i>
-                {{ item.prioridad ? item.prioridad.toUpperCase() : 'MEDIA' }}
-              </span>
-            </td>
-
-            <!-- Estado -->
-            <td class="text-center">
-              <div class="dropdown">
-
-                  <button
-                      class="btn btn-sm dropdown-toggle rounded-pill px-3"
-                      :class="getEstadoButton(item.estado)"
-                      type="button"
-                      data-bs-toggle="dropdown">
-                      <i :class="getEstadoIcon(item.estado)" class="me-2"></i>
-                      {{ capitalizar(item.estado) }}
-                  </button>
-
-                  <ul class="dropdown-menu shadow border-0">
-
-                      <li>
-                          <a
-                              class="dropdown-item"
-                              href="#"
-                              @click.prevent="actualizarEstado(item,'pendiente')">
-                              🟡 Pendiente
-                          </a>
-                      </li>
-
-                      <li>
-                          <a
-                              class="dropdown-item"
-                              href="#"
-                              @click.prevent="actualizarEstado(item,'enviado')">
-                              🔵 Enviado
-                          </a>
-                      </li>
-
-                      <li>
-                          <a
-                              class="dropdown-item"
-                              href="#"
-                              @click.prevent="actualizarEstado(item,'atendido')">
-                              🟢 Atendido
-                          </a>
-                      </li>
-                  </ul>
-              </div>
-           </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!--MODAL VER MOTIVO-->
-    <div
-        class="modal fade"
-        id="modalMotivo"
-        tabindex="-1"
-        aria-labelledby="modalMotivoLabel"
-        aria-hidden="true">
-
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="modalMotivoLabel">
-                        <i class="fas fa-file-medical me-2"></i>
-                        Motivo de la Derivación
-                    </h5>
-
-                </div>
-
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <strong>Fecha: </strong>
-                        <span>{{ motivoSeleccionado.fecha }}</span>
-                    </div>
-
-                    <div class="mb-3">
-                        <strong>Folio: </strong>
-                        <span>{{ motivoSeleccionado.folio }}</span>
-                    </div>
-
-                    <div class="mb-3">
-                        <strong>Paciente: </strong>
-                        <span>{{ motivoSeleccionado.paciente }}</span>
-                    </div>
-
-                    <div class="mb-3">
-                        <strong>Especialidad: </strong>
-                        <span>{{ motivoSeleccionado.especialidad }}</span>
-                    </div>
-
-                    <div class="mb-3">
-                        <strong>Prioridad: </strong>
-
-                        <span
-                            :class="['badge rounded-pill px-3 py-2', getPrioridadBadge(motivoSeleccionado.prioridad)]">
-
-                            {{ motivoSeleccionado.prioridad?.toUpperCase() }}
-
-                        </span>
-                    </div>
-
-                    <hr>
-
-                    <label class="fw-bold mb-2">
-                        Motivo
-                    </label>
-
-                    <div
-                        class="border rounded-3 p-3 bg-light"
-                        style="white-space: pre-line; line-height:1.7">
-
-                        {{ motivoSeleccionado.motivo }}
-
-                    </div>
-
-                </div>
-
-                <div class="modal-footer">
-
-                    <button
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal">
-
-                        Cerrar
-
-                    </button>
+                    {{ motivoSeleccionado.motivo }}
 
                 </div>
 
             </div>
+
+            <div class="modal-footer">
+
+                <button
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+
+                    Cerrar
+
+                </button>
+
+            </div>
+
         </div>
     </div>
+</div>
 </template>
 
 <script>
@@ -215,142 +262,215 @@ import * as bootstrap from 'bootstrap'
 import ApiService from '../../services/ApiService.js'
 
 export default {
-  props: {
-    consultaId: {
-      type: [Number, String],
-      default: 516
+
+    props: {
+        derivaciones: {
+            type: Array,
+            default: () => []
+        },
+
+        loading: {
+            type: Boolean,
+            default: false
+        },
+
+        filtroActivo: {
+            type: String,
+            default: 'todas'
+        },
+    },
+
+    data() {
+        return {
+            motivoSeleccionado: {}
+        }
+    },
+
+    computed: {
+
+        derivacionesFiltradas() {
+            if (this.filtroActivo === 'todas') return this.derivaciones;
+
+            if (this.filtroActivo === 'criticos') {
+            const palabrasClaveCriticas = ['critica', 'alta'];
+
+            return this.derivaciones.filter(item => {
+                // 1. Evaluación por prioridad (igual que antes)
+                const esPrioridadCritica = ['alta', 'critica'].includes(
+                String(item.prioridad || '').toLowerCase()
+                );
+
+                // 2. Evaluación por palabras clave en el motivo
+                const motivoTexto = String(item.motivo || '').toLowerCase();
+                const tieneMotivoCritico = palabrasClaveCriticas.some(palabra => 
+                motivoTexto.includes(palabra)
+                );
+
+                // Retorna verdadero si cumple la prioridad O el motivo
+                return esPrioridadCritica || tieneMotivoCritico;
+            });
+            }
+
+            if (this.filtroActivo === 'canalizados') {
+            return this.derivaciones.filter(item =>
+                String(item.estado || '').toLowerCase() === 'enviado'
+            );
+            }
+
+            if (this.filtroActivo === 'atendidos') {
+            return this.derivaciones.filter(item =>
+                String(item.estado || '').toLowerCase() === 'atendido'
+            );
+            }
+
+            return this.derivaciones;
+        },
+
+        nombreFiltro() {
+            const nombres = {
+                todas: 'Todas las derivaciones',
+                criticos: 'Casos críticos',
+                canalizados: 'Canalizados',
+                atendidos: 'Atendidos'
+            }
+            return nombres[this.filtroActivo] || 'Todas las derivaciones'
+        },
+    },
+
+    methods: {
+
+        getPrioridadBadge(prioridad) {
+            switch (prioridad) {
+                case 'baja':
+                    return 'bg-success text-white fw-bold shadow-sm'
+
+                case 'media':
+                    return 'bg-warning text-dark fw-bold shadow-sm'
+
+                case 'alta':
+                    return 'bg-orange text-white fw-bold shadow-sm'
+
+                case 'critica':
+                    return 'bg-danger text-white fw-bold shadow-sm'
+
+                default:
+                    return 'bg-secondary text-white'
+            }
+        },
+
+        getPrioridadIcon(prioridad) {
+            switch (prioridad) {
+                case 'baja':
+                    return 'fas fa-check-circle'
+
+                case 'media':
+                    return 'fas fa-minus-circle'
+
+                case 'alta':
+                    return 'fas fa-exclamation-circle'
+
+                case 'critica':
+                    return 'fas fa-radiation'
+
+                default:
+                    return 'fas fa-circle'
+            }
+        },
+
+        getEstadoBadge(estado) {
+            switch (estado) {
+                case 'pendiente':
+                    return 'bg-warning text-dark'
+
+                case 'enviado':
+                    return 'bg-success text-white'
+
+                case 'atendido':
+                    return 'bg-primary text-white'
+
+                default:
+                    return 'bg-secondary text-white'
+            }
+        },
+
+        verMotivo(item) {
+
+            this.motivoSeleccionado = item
+
+            const modal = new bootstrap.Modal(
+                document.getElementById('modalMotivo')
+            )
+
+            modal.show()
+        },
+
+        async actualizarEstado(item, nuevoEstado) {
+
+            try {
+
+                await ApiService.put(
+                    `/derivaciones/${item.id}/estado`,
+                    {
+                        estado: nuevoEstado
+                    }
+                )
+
+                item.estado = nuevoEstado
+
+            } catch (error) {
+
+                console.error(
+                    'Error al actualizar estado:',
+                    error
+                )
+            }
+        },
+
+        getEstadoButton(estado) {
+
+            switch (estado) {
+
+                case 'pendiente':
+                    return 'btn-warning'
+
+                case 'enviado':
+                    return 'btn-success'
+
+                case 'atendido':
+                    return 'btn-primary'
+
+                default:
+                    return 'btn-secondary'
+            }
+        },
+
+        getEstadoIcon(estado) {
+
+            switch (estado) {
+
+                case 'pendiente':
+                    return 'fas fa-clock'
+
+                case 'enviado':
+                    return 'fas fa-paper-plane'
+
+                case 'atendido':
+                    return 'fas fa-check-circle'
+
+                default:
+                    return 'fas fa-circle'
+            }
+        },
+
+        capitalizar(texto) {
+
+            if (!texto) {
+                return ''
+            }
+
+            return texto.charAt(0).toUpperCase() + texto.slice(1)
+        }
     }
-  },
-
-  data() {
-    return {
-      derivaciones: [],
-      loading: true,
-      motivoSeleccionado: {}
-    }
-  },
-
-  mounted() {
-    this.obtenerDerivaciones()
-  },
-
-  methods: {
-    async obtenerDerivaciones() {
-      this.loading = true
-
-      try {
-        const response = await ApiService.get('/derivaciones')
-        this.derivaciones = response.data
-      } catch (error) {
-        console.error('Error al cargar derivaciones:', error)
-      } finally {
-        this.loading = false
-      }
-    },
-
-    getPrioridadBadge(prioridad) {
-      switch (prioridad) {
-        case 'baja':
-          return 'bg-success text-white fw-bold shadow-sm'
-        case 'media':
-          return 'bg-warning text-dark fw-bold shadow-sm'
-        case 'alta':
-          return 'bg-orange text-white fw-bold shadow-sm'
-        case 'critica':
-          return 'bg-danger text-white fw-bold shadow-sm'
-        default:
-          return 'bg-secondary text-white'
-      }
-    },
-
-    getPrioridadIcon(prioridad) {
-      switch (prioridad) {
-        case 'baja':
-          return 'fas fa-check-circle'
-
-        case 'media':
-          return 'fas fa-minus-circle'
-
-        case 'alta':
-          return 'fas fa-exclamation-circle'
-
-        case 'critica':
-          return 'fas fa-radiation'
-
-        default:
-          return 'fas fa-circle'
-      }
-    },
-
-    getEstadoBadge(estado) {
-      switch (estado) {
-        case 'pendiente':
-          return 'bg-warning text-dark'
-        case 'enviado':
-          return 'bg-primary text-white'
-        case 'atendido':
-          return 'bg-success text-white'
-        default:
-          return 'bg-secondary text-white'
-      }
-    },
-
-    verMotivo(item) {
-
-        this.motivoSeleccionado = item
-
-        const modal = new bootstrap.Modal(
-            document.getElementById('modalMotivo')
-        )
-
-        modal.show()
-
-    },
-
-    async actualizarEstado(item, nuevoEstado){
-      try{
-        await ApiService.put(`/derivaciones/${item.id}/estado`,{
-            estado:nuevoEstado
-        });
-        item.estado = nuevoEstado;
-      }catch(error){
-        console.error(error);
-      }
-    },
-
-    getEstadoButton(estado){
-      switch(estado){
-        case 'pendiente':
-          return 'btn-warning';
-        case 'enviado':
-          return 'btn-primary';
-        case 'atendido':
-          return 'btn-success';
-        default:
-          return 'btn-secondary';
-      }
-    },
-
-    getEstadoIcon(estado){
-      switch(estado){
-        case 'pendiente':
-          return 'fas fa-clock';
-        case 'enviado':
-          return 'fas fa-paper-plane';
-        case 'atendido':
-          return 'fas fa-check-circle';
-        default:
-          return 'fas fa-circle';
-      }
-
-    },
-
-    capitalizar(texto){
-      return texto.charAt(0).toUpperCase() + texto.slice(1);
-    },
-
-
-  }
 }
 </script>
 

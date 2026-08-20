@@ -6,6 +6,14 @@
         <i class="fas fa-file-medical-alt mr-1"></i> Informe Completo de Evaluación IA
       </h3>
       <div class="card-tools">
+        <button
+          type="button"
+          class="btn btn-sm btn-info mr-2"
+          @click="imprimirNotaSoapp"
+          :disabled="!detalle"
+        >
+          <i class="fas fa-print mr-1"></i> Imprimir Nota SOAPP
+        </button>
         <button type="button" class="btn btn-sm btn-secondary" @click="$emit('volver')">
           <i class="fas fa-arrow-left mr-1"></i> Volver al listado
         </button>
@@ -65,18 +73,86 @@
                 <span v-if="!detalle.sintomas_array?.length" class="text-muted">No detectados</span>
               </div>
 
-              <div class="row pt-2">
-                <div class="col-6">
-                  <span class="d-block text-muted small">Nivel de Riesgo:</span>
-                  <span class="badge" :class="`badge-${riesgoColor(detalle.riesgo)}`" style="font-size: 0.9rem;">
+              <div class="pt-2">
+                <!-- NIVEL DE RIESGO -->
+                <div class="mb-4">
+                  <span class="d-block text-muted small font-weight-bold mb-2">
+                    <i class="fas fa-shield-alt mr-1"></i>
+                    Nivel de Riesgo
+                  </span>
+
+                  <span
+                    class="badge px-3 py-2"
+                    :class="`badge-${riesgoColor(detalle.riesgo)}`"
+                    style="font-size: 0.9rem;"
+                  >
                     {{ detalle.riesgo }}
                   </span>
                 </div>
-                <div class="col-6">
-                  <span class="d-block text-muted small">Confianza IA:</span>
-                  <span class="font-weight-bold text-primary" style="font-size: 1.1rem;">
-                    {{ detalle.confianza }}%
+
+                <!-- RECOMENDACIONES + CONFIANZA -->
+                <div>
+                  <span class="d-block text-muted small font-weight-bold mb-3">
+                    <i class="fas fa-lightbulb mr-1 text-warning"></i>
+                    Recomendación IA y nivel de confianza
                   </span>
+
+                  <div
+                    v-for="(evaluacion, index) in detalle.evaluaciones"
+                    :key="evaluacion.id || index"
+                    class="ia-recomendacion mb-3"
+                  >
+                    <!-- TEXTO DE LA RECOMENDACIÓN -->
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div class="d-flex align-items-start">
+                        <span class="badge badge-light-primary mr-2">
+                          EVA. {{ index + 1 }}
+                        </span>
+
+                        <span class="text-dark">
+                          {{ evaluacion.recomendacion || 'Sin recomendación registrada.' }}
+                        </span>
+                      </div>
+
+                      <span class="font-weight-bold text-primary ml-2">
+                        {{ evaluacion.confianza }}%
+                      </span>
+                    </div>
+
+                    <!-- BARRA DE CONFIANZA -->
+                    <div class="progress" style="height: 9px; border-radius: 10px; background-color: #e9ecef;">
+                      <div
+                        class="progress-bar"
+                        role="progressbar"
+                        :style="{ width: `${evaluacion.confianza}%` }"
+                        :class="confianzaColor(evaluacion.confianza)"
+                        :aria-valuenow="evaluacion.confianza"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-1">
+                      <small class="text-muted">
+                        Nivel de confianza
+                      </small>
+
+                      <small
+                        class="font-weight-bold"
+                        :class="confianzaTextoColor(evaluacion.confianza)"
+                      >
+                        {{ confianzaTexto(evaluacion.confianza) }}
+                      </small>
+                    </div>
+
+                  </div>
+                  <!-- SIN EVALUACIONES -->
+                  <div
+                    v-if="!detalle.evaluaciones?.length"
+                    class="text-muted small"
+                  >
+                    No existen recomendaciones de IA registradas.
+                  </div>
                 </div>
               </div>
             </div>
@@ -246,6 +322,42 @@ export default {
       const colores = { CRITICO: 'danger', ALTO: 'danger', MEDIO: 'warning', BAJO: 'info' };
       return colores[nivel] || 'secondary';
     },
+
+    confianzaColor(confianza) {
+      if (confianza >= 80) return 'bg-success';
+      if (confianza >= 60) return 'bg-warning';
+      return 'bg-danger';
+    },
+
+    confianzaTextoColor(confianza) {
+      if (confianza >= 80) return 'text-success';
+      if (confianza >= 60) return 'text-warning';
+      return 'text-danger';
+    },
+
+    confianzaTexto(confianza) {
+      if (confianza >= 80) return 'Alta confianza';
+      if (confianza >= 60) return 'Confianza moderada';
+      return 'Baja confianza';
+    },
+
+    imprimirNotaSoapp() {
+      if (!this.detalle?.consulta_id) {
+          alert('No se encontró la consulta.');
+          return;
+      }
+
+      const url = `/consultaIA/${this.detalle.consulta_id}/pdf/nota-soapp/ver`;
+      window.open(url, '_blank');
+    },
+
+    escapeHtml(texto) {
+      if (texto === null || texto === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(texto);
+      return div.innerHTML;
+    },
+
   },
 };
 </script>

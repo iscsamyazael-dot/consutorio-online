@@ -24,10 +24,10 @@
           <span class="cc-mono">{{ pacienteActivo.paciente_id }}</span>
         </div>
       </div>
-      <!-- Estado vacío cuando no hay paciente seleccionado -->
+      <!-- Estado vacío cuando no hay paciente seleccionado / no hay citas hoy -->
       <div v-else class="cc-hero">
         <div class="cc-hero__info">
-          <p class="cc-hero__name" style="color: #9ca3af;">Sin paciente seleccionado</p>
+          <p class="cc-hero__name" style="color: #9ca3af;">{{ mensajeSinPaciente }}</p>
         </div>
       </div>
 
@@ -107,11 +107,11 @@
       </div>
       <!-- Acciones del panel: cancelar y guardar (modo edición) -->
       <div class="cc-panel__actions" v-else>
-        <button class="cc-btn cc-btn--ghost" @click="cancelarEdicion">
+        <button class="cc-btn cc-btn--ghost" @click="cancelarEdicion" :disabled="guardandoEdicion">
           <i class="ti ti-x" aria-hidden="true"></i> Cancelar
         </button>
-        <button class="cc-btn cc-btn--success" @click="guardarEdicion">
-          <i class="ti ti-device-floppy" aria-hidden="true"></i> Guardar cambios
+        <button class="cc-btn cc-btn--success" @click="guardarEdicion" :disabled="guardandoEdicion">
+          <i class="ti ti-device-floppy" aria-hidden="true"></i> {{ guardandoEdicion ? 'Guardando...' : 'Guardar cambios' }}
         </button>
       </div>
     </div>
@@ -132,73 +132,165 @@
       <!-- Buscador por nombre o folio -->
       <div class="cc-table-search">
         <i class="ti ti-search" aria-hidden="true"></i>
-        <input type="text" v-model="busqueda" placeholder="Buscar por nombre o folio…" />
+        <input type="text" v-model="busqueda" placeholder="Buscar por nombre o folio… (busca en todos los pacientes)" />
       </div>
 
-      <!-- Aviso de cómo seleccionar un paciente para nueva consulta -->
+      <!-- Filtros: especialidad, médico y fecha con calendario (cruzando con /api/citas) -->
+      <!-- Estos filtros se ignoran automáticamente mientras haya texto en el buscador de arriba -->
+      <div class="cc-table-filtros" :class="{ 'cc-table-filtros--inactivos': busquedaActiva }">
+        <select v-model="especialidadSeleccionada" class="cc-filtro-select" @change="onEspecialidadChange" :disabled="busquedaActiva">
+          <option value="">Todas las especialidades</option>
+          <option v-for="esp in especialidadesDisponibles" :key="esp.id" :value="esp.id">
+            {{ esp.nombre }}
+          </option>
+        </select>
+
+        <select v-model="medicoSeleccionado" class="cc-filtro-select" :disabled="busquedaActiva">
+          <option value="">Todos los médicos</option>
+          <option v-for="med in medicosFiltrados" :key="med.id" :value="med.id">
+            {{ med.nombre }}
+          </option>
+        </select>
+
+        <!-- Selector de fecha con calendario nativo del navegador -->
+        <label class="cc-filtro-fecha">
+          <i class="ti ti-calendar" aria-hidden="true"></i>
+          <input
+            type="date"
+            v-model="fechaFiltro"
+            class="cc-filtro-fecha-input"
+            :disabled="busquedaActiva"
+          />
+        </label>
+
+        <!-- Solo aparece cuando hay una fecha activa; la quita para ver todas -->
+        <button
+          v-if="fechaFiltro"
+          type="button"
+          class="cc-filtro-toggle"
+          :disabled="busquedaActiva"
+          @click="fechaFiltro = ''"
+        >
+          <i class="ti ti-x" aria-hidden="true"></i> Ver todas las fechas
+        </button>
+      </div>
+
+      <!-- Aviso de cómo seleccionar un paciente para nueva consulta / estado del filtro actual -->
       <div class="cc-hint">
         <i class="ti ti-info-circle" aria-hidden="true"></i>
-        Doble clic sobre un paciente para seleccionarlo y usarlo en <strong>Nueva consulta</strong>.
+        <span v-if="busquedaActiva">
+          Buscando "<strong>{{ busqueda }}</strong>" en todos los pacientes, sin importar fecha, médico o especialidad.
+        </span>
+        <span v-else>
+          Doble clic sobre un paciente para seleccionarlo y usarlo en <strong>Nueva consulta</strong>.
+          <template v-if="fechaFiltro"> · Mostrando citas del <strong>{{ formatearFecha(fechaFiltro) }}</strong></template>
+        </span>
       </div>
 
       <div class="cc-table-wrap">
         <table class="cc-table">
           <thead>
             <tr>
+              <th style="width: 50px;">#</th>
+              <th>Turno</th>
               <th>Paciente / Diagnóstico</th>
               <th>Folio</th>
+              <th>Médico / Especialidad</th>
               <th>Estado</th>
               <th>Urgencia</th>
               <th class="cc-th--right">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <!-- Una fila por cada paciente filtrado -->
-            <!-- cc-row--active resalta la fila del paciente seleccionado en el panel -->
-            <!-- cc-row--selected resalta la fila seleccionada para "Nueva consulta" (doble clic) -->
             <tr
-              v-for="p in pacientesFiltrados"
-              :key="p.id"
+              v-for="(listaPacientes, index) in pacientesFiltrados"
+              :key="listaPacientes.id || index"
               class="cc-row"
               :class="{
-                'cc-row--active': pacienteActivo && p.paciente_id === pacienteActivo.paciente_id,
-                'cc-row--selected': pacienteSeleccionadoId === p.id
+                'cc-row--active': pacienteActivo && listaPacientes.paciente_id === pacienteActivo.paciente_id,
+                'cc-row--selected': pacienteSeleccionadoId === listaPacientes.id
               }"
               title="Doble clic para seleccionar este paciente"
-              @dblclick="seleccionarParaConsulta(p)"
-            >
-              <!-- Avatar circular + nombre en negritas + motivo de consulta debajo -->
+              @dblclick="seleccionarParaConsulta(listaPacientes)"
+            > 
+              <!-- Número consecutivo -->
+              <td class="font-semibold text-gray-500">
+                {{ index + 1 }}
+              </td>
+              
+              <!-- Turno -->
+              <td>
+                <span class="px-2.5 py-1 text-xs font-bold bg-blue-100 text-blue-800 rounded-full">
+                  #{{ listaPacientes.turno_numero ?? '—' }}
+                </span>
+              </td>
+              
+              <!-- Paciente / Diagnóstico -->
               <td class="cc-td--patient">
-                <div class="cc-mini-avatar" :style="{ background: avatarColor(nombreCompleto(p)) }">
-                  {{ initials(nombreCompleto(p)) }}
+                <div class="cc-mini-avatar" :style="{ background: avatarColor(nombreCompleto(listaPacientes)) }">
+                  {{ initials(nombreCompleto(listaPacientes)) }}
                 </div>
                 <div>
                   <p class="cc-patient-name">
-                    {{ nombreCompleto(p) }}
-                    <i v-if="pacienteSeleccionadoId === p.id" class="ti ti-circle-check cc-selected-icon" aria-hidden="true"></i>
+                    {{ nombreCompleto(listaPacientes) }}
+                    <i v-if="pacienteSeleccionadoId === listaPacientes.id" class="ti ti-circle-check cc-selected-icon" aria-hidden="true"></i>
                   </p>
-                  <p class="cc-patient-diag">{{ ultimoTriage(p)?.motivo_consulta || '—' }}</p>
+                  <p class="cc-patient-diag">{{ ultimoTriage(listaPacientes)?.motivo_consulta || '—' }}</p>
                 </div>
               </td>
-              <!-- Folio en azul -->
-              <td><span class="cc-mono cc-mono--cell">{{ p.paciente_id }}</span></td>
-              <!-- Chip de estado (Activo, En espera, etc.) -->
-              <td><span class="cc-chip" :class="chipClass(p.estado)">{{ p.estado || 'Sin asignar' }}</span></td>
-              <!-- Chip de urgencia/triage -->
-              <td><span class="cc-chip" :class="triageClass(ultimoTriage(p)?.estado)">{{ ultimoTriage(p)?.estado || 'Sin asignar' }}</span></td>
-              <!-- Botones de acción: ojo azul y carpeta cyan sobre fondo gris neutro -->
+              
+              <!-- Folio -->
+              <td><span class="cc-mono cc-mono--cell">{{ listaPacientes.turno_folio || '—' }}</span></td>
+              
+              <!-- Médico / Especialidad -->
+             <td>
+              <div class="text-xs font-medium text-gray-900">{{ listaPacientes.turno_medico ? listaPacientes.turno_medico.nombre : 'Sin médico' }}</div>
+              <div class="text-xs text-gray-500">{{ listaPacientes.turno_especialidad ? listaPacientes.turno_especialidad.nombre : 'Sin especialidad' }}</div>
+            </td>
+              
+              <!-- Estado -->
+             <td><span class="cc-chip" :class="chipClassTurno(listaPacientes.turno_estado)">{{ listaPacientes.turno_estado || 'Sin asignar' }}</span></td>
+              
+              <!-- Urgencia -->
+              <td><span class="cc-chip" :class="triageClass(ultimoTriage(listaPacientes)?.estado)">{{ ultimoTriage(listaPacientes)?.estado || 'Sin asignar' }}</span></td>
+              
+              <!-- Acciones -->
               <td class="cc-td--actions">
-                <button class="cc-icon-btn cc-icon-btn--view" title="Ver / seleccionar" @click="verPaciente(p)">
+                <button class="cc-icon-btn cc-icon-btn--view" title="Ver / seleccionar" @click="verPaciente(listaPacientes)">
                   <i class="ti ti-eye" aria-hidden="true"></i>
                 </button>
-                <button class="cc-icon-btn cc-icon-btn--folder" title="Expediente" @click="abrirExpedienteDesdeFila(p)">
+                <button
+                  v-if="!tieneCitaHoy(listaPacientes)"
+                  class="cc-icon-btn cc-icon-btn--add"
+                  title="Agregar a la lista de espera"
+                  @click="abrirModal('triage', listaPacientes)"
+                >
+                  <i class="ti ti-plus" aria-hidden="true"></i>
+                </button>
+                <button
+                  v-else
+                  class="cc-icon-btn cc-icon-btn--triage"
+                  title="Editar signos vitales"
+                  @click="abrirModal('triage', listaPacientes)"
+                >
+                  <i class="ti ti-shield-half" aria-hidden="true"></i>
+                </button>
+                <button class="cc-icon-btn cc-icon-btn--folder" title="Expediente" @click="abrirExpedienteDesdeFila(listaPacientes)">
                   <i class="ti ti-folder" aria-hidden="true"></i>
+                </button>
+                <button
+                  class="cc-icon-btn cc-icon-btn--danger"
+                  title="Finalizar y quitar de la lista de espera"
+                  :disabled="finalizandoId === listaPacientes.id"
+                  @click="finalizarPaciente(listaPacientes)"
+                >
+                  <i class="ti ti-trash" aria-hidden="true"></i>
                 </button>
               </td>
             </tr>
-            <!-- Estado vacío cuando no hay resultados -->
+            
             <tr v-if="pacientesFiltrados.length === 0">
-              <td colspan="5" class="cc-table-empty">No se encontraron pacientes con ese criterio.</td>
+              <td colspan="8" class="cc-table-empty">No se encontraron pacientes con ese criterio.</td>
             </tr>
           </tbody>
         </table>
@@ -258,6 +350,196 @@
               <!-- Abre el expediente completo del paciente -->
               <button class="cc-btn cc-btn--primary" @click="irAExpediente(modal.paciente)">
                 <i class="ti ti-folder-open" aria-hidden="true"></i> Abrir expediente
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+
+      <!-- MODAL: EDITAR SIGNOS VITALES (edición rápida desde la tabla) -->
+      <transition name="cc-fade">
+        <div v-if="modal.tipo === 'triage'" class="cc-overlay" @click.self="cerrarModal">
+          <div class="cc-modal cc-modal--md">
+            <div class="cc-modal__header cc-modal__header--blue">
+              <span><i class="ti ti-shield-half" aria-hidden="true"></i> {{ tieneCitaHoy(modal.paciente) ? 'Editar signos vitales' : 'Agregar paciente a la lista de espera' }}</span>
+              <button class="cc-modal__close" @click="cerrarModal" aria-label="Cerrar">
+                <i class="ti ti-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="cc-modal__body">
+              <!-- Aviso: este paciente no tiene cita hoy, y al guardar se agregará a la lista -->
+              <div
+                v-if="modal.paciente && !tieneCitaHoy(modal.paciente)"
+                class="cc-triage-aviso"
+              >
+                <i class="ti ti-info-circle" aria-hidden="true">
+                </i>
+                <p> Este paciente no tiene cita para hoy, al guardar 
+                 se agregará al final de la
+                <strong>lista de espera de hoy.</strong></p>
+              </div>
+
+              <!-- Referencia visual del paciente + badge de estado global del triaje -->
+              <div class="cc-exp-ref">
+                <div class="cc-mini-avatar cc-mini-avatar--lg" :style="{ background: avatarColor(nombreCompleto(modal.paciente)) }">
+                  {{ initials(nombreCompleto(modal.paciente)) }}
+                </div>
+                <div>
+                  <p class="cc-exp-ref__name">{{ nombreCompleto(modal.paciente) }}</p>
+                  <p class="cc-exp-ref__folio">
+                    Folio: <span class="cc-mono">{{ modal.paciente?.paciente_id }}</span>
+                  </p>
+                </div>
+                <span v-if="overallTriageStatus" class="cc-overall-badge" :class="'cc-badge-' + overallTriageStatus">
+                  <span class="cc-overall-dot"></span>
+                  {{ overallTriageLabel }}
+                </span>
+              </div>
+
+              <!-- Médico / especialidad: solo se pide cuando el paciente aún no tiene
+                   cita hoy (walk-in). Usa el catálogo COMPLETO (catalogoMedicos /
+                   catalogoEspecialidades), no los derivados de la lista de espera de
+                   hoy, para poder asignar a un médico que hoy todavía no tiene a
+                   nadie en la fila. -->
+                <div v-if="modal.paciente && !tieneCitaHoy(modal.paciente)" class="cc-motivo-panel">
+                  <div class="cc-motivo-panel-head">
+                    <span><i class="ti ti-user-plus" aria-hidden="true"></i> Asignación</span>
+                  </div>
+                  <div class="cc-asignacion-grid">
+                    <div class="cc-field">
+                      <label class="cc-field-label">Especialidad</label>
+                      <select class="cc-select-full" v-model="triageForm.especialidad_id" @change="onEspecialidadTriageChange">
+                        <option value="">Sin especialidad asignada</option>
+                        <option v-for="esp in catalogoEspecialidades" :key="esp.id" :value="esp.id">
+                          {{ esp.nombre }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="cc-field">
+                      <label class="cc-field-label">Médico</label>
+                      <select class="cc-select-full" v-model="triageForm.medico_id">
+                        <option value="">Sin médico asignado</option>
+                        <option v-for="med in medicosCatalogoFiltrados" :key="med.id" :value="med.id">
+                          {{ med.nombre }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+              <!-- Motivo de consulta / síntomas: la IA usa este texto + los
+                   signos vitales para determinar automáticamente el nivel
+                   de urgencia (Rojo/Amarillo/Verde) al guardar. -->
+              <div class="cc-motivo-panel">
+                <div class="cc-motivo-panel-head">
+                  <span><i class="ti ti-notes-medical" aria-hidden="true"></i> Motivo de consulta / síntomas</span>
+                  <span class="cc-motivo-panel-sub">La IA calculará la urgencia con base en esto</span>
+                </div>
+                <textarea
+                  class="cc-motivo-textarea"
+                  rows="3"
+                  v-model="triageForm.motivo_consulta"
+                  placeholder="Describe lo que el paciente reporta: dolor, mareo, dificultad para respirar, etc."
+                ></textarea>
+              </div>
+
+              <!-- Panel de signos vitales, igual que el paso "Triaje" del alta de paciente -->
+              <div class="cc-vitals-panel">
+                <div class="cc-vitals-panel-head">
+                  <span>Signos vitales</span>
+                  <span class="cc-vitals-panel-sub">Rangos evaluados para adulto</span>
+                </div>
+
+                <div class="cc-vitals-grid">
+
+                  <div class="cc-vital-card" :class="'cc-v-' + presionStatus">
+                    <div class="cc-vital-label">Presión arterial</div>
+                    <div class="cc-vital-readout">
+                      <input type="text" v-model="triageForm.presion" class="cc-vital-input" placeholder="120/80" maxlength="7">
+                      <span class="cc-vital-unit">mmHg</span>
+                    </div>
+                    <span class="cc-vital-status-tag" v-if="presionMensaje">{{ presionMensaje }}</span>
+                  </div>
+
+                  <div class="cc-vital-card" :class="'cc-v-' + saturacionStatus">
+                    <div class="cc-vital-label">Saturación O₂</div>
+                    <div class="cc-vital-readout">
+                      <input type="number" v-model.number="triageForm.saturacion" class="cc-vital-input" placeholder="98" min="0" max="100">
+                      <span class="cc-vital-unit">%</span>
+                    </div>
+                    <span class="cc-vital-status-tag" v-if="saturacionMensaje">{{ saturacionMensaje }}</span>
+                  </div>
+
+                  <div class="cc-vital-card" :class="'cc-v-' + temperaturaStatus">
+                    <div class="cc-vital-label">Temperatura</div>
+                    <div class="cc-vital-readout">
+                      <input type="number" v-model.number="triageForm.temperatura" class="cc-vital-input" placeholder="36.5" min="30" max="45" step="0.1">
+                      <span class="cc-vital-unit">°C</span>
+                    </div>
+                    <span class="cc-vital-status-tag" v-if="temperaturaMensaje">{{ temperaturaMensaje }}</span>
+                  </div>
+
+                  <div class="cc-vital-card" :class="'cc-v-' + frecuenciaCardiacaStatus">
+                    <div class="cc-vital-label">Frec. cardíaca</div>
+                    <div class="cc-vital-readout">
+                      <input type="number" v-model.number="triageForm.frecuencia_cardiaca" class="cc-vital-input" placeholder="72" min="0" max="300">
+                      <span class="cc-vital-unit">lpm</span>
+                    </div>
+                    <span class="cc-vital-status-tag" v-if="frecuenciaCardiacaMensaje">{{ frecuenciaCardiacaMensaje }}</span>
+                  </div>
+
+                  <div class="cc-vital-card" :class="'cc-v-' + frecuenciaRespiratoriaStatus">
+                    <div class="cc-vital-label">Frec. respiratoria</div>
+                    <div class="cc-vital-readout">
+                      <input type="number" v-model.number="triageForm.frecuencia_respiratoria" class="cc-vital-input" placeholder="16" min="0" max="60">
+                      <span class="cc-vital-unit">rpm</span>
+                    </div>
+                    <span class="cc-vital-status-tag" v-if="frecuenciaRespiratoriaMensaje">{{ frecuenciaRespiratoriaMensaje }}</span>
+                  </div>
+
+                  <div class="cc-vital-card">
+                    <div class="cc-vital-label">Peso</div>
+                    <div class="cc-vital-readout">
+                      <input type="number" v-model.number="triageForm.peso" class="cc-vital-input" placeholder="70.0" min="0" max="300" step="0.1">
+                      <span class="cc-vital-unit">kg</span>
+                    </div>
+                  </div>
+
+                  <div class="cc-vital-card">
+                    <div class="cc-vital-label">Talla</div>
+                    <div class="cc-vital-readout">
+                      <input type="number" v-model.number="triageForm.talla" class="cc-vital-input" placeholder="170" min="0" max="250">
+                      <span class="cc-vital-unit">cm</span>
+                    </div>
+                  </div>
+
+                  <!-- ═══ NUEVO: Tarjeta de IMC calculado en vivo ═══ -->
+                  <div class="cc-vital-card cc-vital-card-imc" v-if="imcTriage">
+                    <div class="cc-vital-label">
+                      IMC
+                      <span v-if="imcTriage.tipo === 'pediatrico'" class="cc-vital-imc-percentil">
+                        Percentil {{ imcTriage.percentil }}
+                      </span>
+                    </div>
+                    <div class="cc-vital-readout">
+                      <strong class="cc-vital-value-imc">{{ imcTriage.bmi }}</strong>
+                      <span class="cc-vital-imc-badge" :class="claseImc(imcTriage)">
+                        {{ imcTriage.clasificacion }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="cc-vital-card cc-vital-card-imc-vacio" v-else-if="triageForm.peso || triageForm.talla">
+                    <div class="cc-vital-label">IMC</div>
+                    <small class="cc-vital-imc-hint">Captura peso y talla para calcularlo</small>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+            <div class="cc-modal__footer">
+              <button class="cc-btn cc-btn--ghost" @click="cerrarModal" :disabled="guardandoTriage">Cancelar</button>
+              <button class="cc-btn cc-btn--success" :disabled="guardandoTriage" @click="guardarTriageRapido">
+                <i class="ti ti-device-floppy" aria-hidden="true"></i> {{ guardandoTriage ? 'Guardando...' : 'Guardar signos vitales' }}
               </button>
             </div>
           </div>
@@ -363,19 +645,53 @@
               <p class="cc-section-label">
                 <i class="ti ti-heartbeat" aria-hidden="true"></i> 2. Signos vitales y somatometría
               </p>
-              <div class="cc-form-grid">
-                <div class="cc-field">
-                  <label class="cc-field-label">Peso (kg)</label>
-                  <div class="cc-input-wrap">
-                    <i class="ti ti-scale" aria-hidden="true"></i>
-                    <input type="number" step="0.1" v-model="form.peso" placeholder="0.0" />
-                  </div>
+              <div class="cc-field">
+                <label class="cc-field-label">Peso (kg)</label>
+                <div class="cc-input-wrap">
+                  <i class="ti ti-scale" aria-hidden="true"></i>
+                  <input
+                    type="number"
+                    step="0.1"
+                    v-model.number="form.peso"
+                    placeholder="0.0"
+                  />
                 </div>
-                <div class="cc-field">
-                  <label class="cc-field-label">Talla (cm)</label>
-                  <div class="cc-input-wrap">
-                    <i class="ti ti-ruler" aria-hidden="true"></i>
-                    <input type="number" v-model="form.talla" placeholder="170" />
+              </div>
+
+              <div class="cc-field">
+                <label class="cc-field-label">Talla (cm)</label>
+                <div class="cc-input-wrap">
+                  <i class="ti ti-ruler" aria-hidden="true"></i>
+                  <input
+                    type="number"
+                    step="0.1"
+                    v-model.number="form.talla"
+                    placeholder="170"
+                  />
+                </div>
+              </div>
+
+              <!-- IMC calculado automáticamente -->
+              <div v-if="imcCalculado !== null" class="cc-field cc-field--full">
+                <div class="cc-imc-result">
+                  <div class="cc-imc-result__icon">
+                    <i class="ti ti-scale" aria-hidden="true"></i>
+                  </div>
+
+                  <div class="cc-imc-result__info">
+                    <span class="cc-field-label">Índice de Masa Corporal (IMC)</span>
+
+                    <strong class="cc-imc-value">
+                      {{ imcCalculado }}
+                      <small>kg/m²</small>
+                    </strong>
+
+                    <span
+                      class="cc-imc-status"
+                      :class="'cc-imc-status--' + categoriaImc"
+                    >
+                      {{ categoriaImcTexto }}
+                    </span>
                   </div>
                 </div>
                 <div class="cc-field">
@@ -499,9 +815,28 @@
 
 <script>
 import ApiService from '../../services/ApiService.js'
+import axios from 'axios'
+// Bus de eventos compartido para avisar a otras vistas (ej. Home.vue,
+// el dashboard) cuando una consulta se finaliza, sin esperar el
+// setInterval de refresco automático de esa vista.
+import eventBus from '../../utils/eventBus.js'
+import { evaluarIMC } from '@/utils/bmiPercentile.js'
+import lmsTable from '@/data/bmi-lms-cdc.json'
 
 // Clave usada en localStorage para el paciente seleccionado para "Nueva consulta"
 const CLAVE_PACIENTE_SELECCIONADO = 'pacienteSeleccionado'
+
+// Fecha de hoy en formato YYYY-MM-DD (mismo formato que cita.fecha y que
+// el input type="date"), calculada en hora local para no desfasarse por UTC.
+// Se define fuera del componente porque se usa como valor por defecto en
+// data(), antes de que el resto del componente esté disponible.
+function obtenerFechaHoyISO() {
+  const hoy = new Date()
+  const y = hoy.getFullYear()
+  const m = String(hoy.getMonth() + 1).padStart(2, '0')
+  const d = String(hoy.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
 export default {
   name: 'ConsultaClinica',
@@ -511,16 +846,33 @@ export default {
       // Lista principal de pacientes traída de la API
       pacientes: [],
 
-      // Paciente mostrado en el panel izquierdo
+      // Citas traídas de /api/citas — es la única fuente que trae médico,
+      // especialidad y fecha; se cruza con "pacientes" por id para poder filtrar.
+      listaEspera: [],
+
+      loading:{
+        lista:false,
+      },
+
+      // Paciente mostrado en el panel izquierdo.
       pacienteActivo: null,
 
-      // Texto escrito en el buscador (filtra por nombre o folio)
+      // Texto escrito en el buscador
       busqueda: '',
+
+      // Filtros de la tabla de espera.
+      especialidadSeleccionada: '',
+      medicoSeleccionado: '',
+      fechaFiltro: obtenerFechaHoyISO(),
+
+      // Catálogo completo (médicos/especialidades) para el modal de triage
+      catalogoMedicos: [],
+      catalogoEspecialidades: [],
 
       // Controla si el panel izquierdo está en modo edición
       editMode: false,
+      guardandoEdicion: false,
 
-      // Datos temporales del formulario de edición del panel
       editForm: {
         diagnostico: '',
         sintomas: '',
@@ -528,28 +880,45 @@ export default {
         estado: ''
       },
 
-      // Opciones disponibles en los selectores del modo edición
       triageOpciones: ['Rojo', 'Amarillo', 'Verde'],
       estadoOpciones: ['En espera', 'Atendido', 'Cancelado'],
 
-      // Controla qué modal está abierto y a qué paciente pertenece
       modal: {
-        tipo: '',       // 'detalle' | 'expediente' | '' (vacío = cerrado)
+        tipo: '',
         paciente: null
       },
+
+      // Formulario del modal de edición rápida de signos vitales (desde la tabla)
+      triageForm: {
+        presion: '',
+        saturacion: null,
+        temperatura: null,
+        frecuencia_cardiaca: null,
+        frecuencia_respiratoria: null,
+        peso: null,
+        talla: null,
+
+        // IMC calculado automáticamente
+        imc: null,
+        imc_percentil: null,
+        imc_clasificacion: '',
+
+        motivo_consulta: '',
+        medico_id: '',
+        especialidad_id: ''
+      },
+      guardandoTriage: false,
 
       // Imágenes cargadas en el dropzone del expediente (base64)
       previews: [],
 
-      // ID del paciente seleccionado con doble clic para "Nueva consulta"
-      // (se sincroniza con localStorage para resaltar la fila al recargar)
       pacienteSeleccionadoId: null,
+      finalizandoId: null,
 
       // Formulario completo del expediente clínico
       form: {
         paciente_id:              '',
         codigo_paciente:          '',
-        // ── Datos generales
         telefono:                 '',
         email:                    '',
         sexo:                     '',
@@ -559,9 +928,11 @@ export default {
         direccion:                '',
         contacto_emergencia:      '',
         telefono_emergencia:      '',
-        // ── Signos vitales (vienen del triage)
         peso:                     '',
         talla:                    '',
+        imc:                      '',
+        imc_percentil:            '',
+        imc_clasificacion:        '',
         presion:                  '',
         temperatura:              '',
         saturacion:               '',
@@ -569,35 +940,416 @@ export default {
         motivo_consulta:          '',
         sintomas:                 '',
         diagnostico:              '',
-        // ── Antecedentes médicos
         alergias:                 '',
         enfermedades_cronicas:    '',
         medicamentos_actuales:    '',
         antecedentes_quirurgicos: ''
-      }
+      },
+      intervaloRefresco: null
     }
   },
 
   computed: {
-    // Filtra la lista de pacientes según el texto del buscador
-    // Compara contra nombre completo y folio (paciente_id)
+    especialidadesDisponibles() {
+      const mapa = new Map()
+      const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
+      lista.forEach(item => {
+        if (!item.especialidad) return
+        const id = item.especialidad.id ?? item.especialidad.nombre
+        if (!mapa.has(id)) mapa.set(id, { id, nombre: item.especialidad.nombre })
+      })
+      return Array.from(mapa.values())
+    },
+
+    medicosDisponibles() {
+      const mapa = new Map()
+      const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
+      lista.forEach(item => {
+        if (!item.medico) return
+        const id = item.medico.id ?? item.medico.nombre
+        const espId = item.especialidad ? (item.especialidad.id ?? item.especialidad.nombre) : ''
+        if (!mapa.has(id)) {
+          mapa.set(id, { id, nombre: item.medico.nombre, especialidadIds: new Set(espId ? [espId] : []) })
+        } else if (espId) {
+          mapa.get(id).especialidadIds.add(espId)
+        }
+      })
+      return Array.from(mapa.values()).map(m => ({ ...m, especialidadIds: Array.from(m.especialidadIds) }))
+    },
+
+    medicosFiltrados() {
+      if (!this.especialidadSeleccionada) return this.medicosDisponibles
+      return this.medicosDisponibles.filter(m =>
+        Array.isArray(m.especialidadIds) && m.especialidadIds.includes(this.especialidadSeleccionada)
+      )
+    },
+
+    medicosCatalogoFiltrados() {
+      if (!this.triageForm.especialidad_id) return this.catalogoMedicos
+      return this.catalogoMedicos.filter(m => m.especialidad_id == this.triageForm.especialidad_id)
+    },
+
+    citasPorPacienteId() {
+      const mapa = new Map()
+      const lista = Array.isArray(this.listaEspera) ? this.listaEspera : []
+      lista.forEach(item => {
+        const pid = item.paciente?.id || item.paciente_id
+        if (pid == null) return
+        if (!mapa.has(pid)) mapa.set(pid, [])
+        mapa.get(pid).push(item)
+      })
+      return mapa
+    },
+
+    busquedaActiva() {
+      return this.busqueda.trim().length > 0
+    },
+
     pacientesFiltrados() {
-      if (!this.busqueda.trim()) return this.pacientes
-      const q = this.busqueda.toLowerCase()
-      return this.pacientes.filter(p =>
-        (p.nombre || '').toLowerCase().includes(q) ||
-        (p.paciente_id || '').toLowerCase().includes(q)
+      const q = this.busqueda.trim().toLowerCase()
+
+      const fusionar = (p) => {
+        const registros = this.citasPorPacienteId.get(p.id) || []
+        const registroActivo = registros.find(r => !['Cancelada', 'Finalizada'].includes(r.estado)) || registros[0] || null
+
+        return {
+          ...p,
+          _registroLE:         registroActivo,
+          turno_id:            registroActivo?.id ?? null,
+          turno_numero:        registroActivo?.numero_turno ?? null,
+          turno_folio:         registroActivo?.folio ?? null,
+          turno_estado:        registroActivo?.estado ?? null,
+          turno_medico:        registroActivo?.medico ?? null,
+          turno_especialidad:  registroActivo?.especialidad ?? null,
+        }
+      }
+
+      if (q) {
+        return this.pacientes
+          .filter(p =>
+            (p.nombre || '').toLowerCase().includes(q) ||
+            (p.paciente_id || '').toLowerCase().includes(q)
+          )
+          .map(fusionar)
+      }
+
+      const hayFiltro = !!(this.especialidadSeleccionada || this.medicoSeleccionado)
+      let lista = this.pacientes
+
+      if (hayFiltro) {
+        lista = this.pacientes.filter(p => {
+          const registrosPaciente = this.citasPorPacienteId.get(p.id) || []
+          return registrosPaciente.some(item => {
+            const medicoOk = !this.medicoSeleccionado ||
+              (item.medico && (item.medico.id ?? item.medico.nombre) === this.medicoSeleccionado)
+            const especialidadOk = !this.especialidadSeleccionada ||
+              (item.especialidad && (item.especialidad.id ?? item.especialidad.nombre) === this.especialidadSeleccionada)
+            const estadoOk = !['Cancelada', 'Finalizada'].includes(item.estado)
+            return medicoOk && especialidadOk && estadoOk
+          })
+        })
+      } else {
+        lista = this.pacientes.filter(p => {
+          const registrosPaciente = this.citasPorPacienteId.get(p.id) || []
+          return registrosPaciente.some(item => !['Cancelada', 'Finalizada'].includes(item.estado))
+        })
+      }
+
+      lista = lista.map(fusionar).sort((a, b) => {
+        const turnoA = a.turno_numero ?? 999999
+        const turnoB = b.turno_numero ?? 999999
+        return turnoA - turnoB
+      })
+
+      return lista
+    },
+
+    mensajeSinPaciente() {
+      if (this.pacientesFiltrados.length === 0) {
+        return 'No hay pacientes en la lista de espera para hoy'
+      }
+      return 'Sin paciente seleccionado'
+    },
+
+    presionStatus() {
+      const raw = this.triageForm.presion
+      if (!raw || !raw.includes('/')) return ''
+      const [sysStr, diaStr] = raw.split('/')
+      const sys = parseInt(sysStr, 10)
+      const dia = parseInt(diaStr, 10)
+      if (isNaN(sys) || isNaN(dia)) return ''
+      if (sys >= 180 || dia >= 120 || sys < 90) return 'critical'
+      if (sys >= 140 || dia >= 90) return 'warning'
+      return 'normal'
+    },
+    saturacionStatus() {
+      const v = this.triageForm.saturacion
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 90) return 'critical'
+      if (v < 95) return 'warning'
+      return 'normal'
+    },
+    temperaturaStatus() {
+      const v = this.triageForm.temperatura
+      if (v === null || v === '' || v === undefined) return ''
+      if (v >= 38.5 || v < 35.5) return 'critical'
+      if (v >= 37.6) return 'warning'
+      return 'normal'
+    },
+    frecuenciaCardiacaStatus() {
+      const v = this.triageForm.frecuencia_cardiaca
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 50 || v > 120) return 'critical'
+      if (v < 60 || v > 100) return 'warning'
+      return 'normal'
+    },
+    frecuenciaRespiratoriaStatus() {
+      const v = this.triageForm.frecuencia_respiratoria
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 8 || v > 24) return 'critical'
+      if (v < 12 || v > 20) return 'warning'
+      return 'normal'
+    },
+    overallTriageStatus() {
+      const statuses = [
+        this.presionStatus, this.saturacionStatus, this.temperaturaStatus,
+        this.frecuenciaCardiacaStatus, this.frecuenciaRespiratoriaStatus
+      ]
+      if (statuses.includes('critical')) return 'critical'
+      if (statuses.includes('warning')) return 'warning'
+      if (statuses.includes('normal')) return 'normal'
+      return ''
+    },
+    overallTriageLabel() {
+      return this.statusLabel(this.overallTriageStatus)
+    },
+
+    presionMensaje() {
+      const raw = this.triageForm.presion
+      if (!raw || !raw.includes('/')) return ''
+      const [sysStr, diaStr] = raw.split('/')
+      const sys = parseInt(sysStr, 10)
+      const dia = parseInt(diaStr, 10)
+      if (isNaN(sys) || isNaN(dia)) return ''
+      if (sys >= 180 || dia >= 120) return 'Crisis hipertensiva'
+      if (sys < 90) return 'Hipotensión'
+      if (sys >= 140 || dia >= 90) return 'Hipertensión leve'
+      return 'Presión normal'
+    },
+    saturacionMensaje() {
+      const v = this.triageForm.saturacion
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 90) return 'Hipoxemia grave'
+      if (v < 95) return 'Hipoxemia leve'
+      return 'Saturación normal'
+    },
+    temperaturaMensaje() {
+      const v = this.triageForm.temperatura
+      if (v === null || v === '' || v === undefined) return ''
+      if (v >= 38.5) return 'Fiebre alta'
+      if (v < 35.5) return 'Hipotermia'
+      if (v >= 37.6) return 'Fiebre leve'
+      return 'Temperatura normal'
+    },
+    frecuenciaCardiacaMensaje() {
+      const v = this.triageForm.frecuencia_cardiaca
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 50) return 'Bradicardia'
+      if (v > 120) return 'Taquicardia'
+      if (v < 60) return 'Bradicardia leve'
+      if (v > 100) return 'Taquicardia leve'
+      return 'Frecuencia normal'
+    },
+    frecuenciaRespiratoriaMensaje() {
+      const v = this.triageForm.frecuencia_respiratoria
+      if (v === null || v === '' || v === undefined) return ''
+      if (v < 8) return 'Bradipnea'
+      if (v > 24) return 'Taquipnea'
+      if (v < 12) return 'Bradipnea leve'
+      if (v > 20) return 'Taquipnea leve'
+      return 'Respiración normal'
+    },
+
+    // ── IMC calculado en vivo para el modal de triage ──
+    // Usa la misma lógica que SignosVitales.vue: si hay edad y sexo
+    // confiables, aplica la tabla pediátrica CDC (percentil); si no,
+    // devuelve el IMC crudo sin clasificar. El watch de peso/talla
+    // llama a calcularIMCAutomatico() para reflejar esto en triageForm.
+    imcTriage() {
+      const peso = Number(this.triageForm.peso)
+      const talla = Number(this.triageForm.talla)
+
+      if (!peso || !talla || peso <= 0 || talla <= 0) {
+        return null
+      }
+
+      const paciente = this.modal.paciente
+
+      if (!paciente) {
+        return null
+      }
+
+      let edadAnios = Number(paciente.edad) || 0
+      let edadMeses = 0
+
+      // Si tenemos fecha de nacimiento, calculamos la edad con mayor precisión
+      if (paciente.fecha_nacimiento) {
+        const nacimiento = new Date(paciente.fecha_nacimiento)
+        const hoy = new Date()
+
+        if (!isNaN(nacimiento.getTime())) {
+          let meses =
+            (hoy.getFullYear() - nacimiento.getFullYear()) * 12 +
+            (hoy.getMonth() - nacimiento.getMonth())
+
+          if (hoy.getDate() < nacimiento.getDate()) {
+            meses--
+          }
+
+          meses = Math.max(meses, 0)
+
+          edadAnios = Math.floor(meses / 12)
+          edadMeses = meses % 12
+        }
+      }
+
+      const sexo = (paciente.sexo || '').toString().trim().toUpperCase()
+
+      if (!sexo) {
+        return {
+          bmi: Number(
+            (peso / Math.pow(talla / 100, 2)).toFixed(2)
+          ),
+          tipo: 'sin_clasificar',
+          clasificacion: 'Falta sexo del paciente'
+        }
+      }
+
+      return evaluarIMC(
+        {
+          pesoKg: peso,
+          tallaCm: talla,
+          edadAnios,
+          edadMeses,
+          sexo
+        },
+        lmsTable
       )
     }
   },
 
-  // Al montar el componente, carga la lista de pacientes
-  mounted() {
-    this.obtenerPacientes()
+  async mounted() {
+    await Promise.all([this.obtenerPacientes(), this.obtenerListaEspera(), this.cargarCatalogoAgregar()])
     this.cargarSeleccionPrevia()
+    this.inicializarPacienteActivo()
+    // NUEVO: refresca la lista de espera cada 15 segundos, para que un
+    // paciente finalizado desde ConsultaTiempoReal.vue (u otra pantalla)
+    // desaparezca de esta tabla sin que el usuario tenga que recargar.
+      this.intervaloRefresco = setInterval(() => {
+      this.obtenerListaEspera()
+    }, 15000)
+  },
+  beforeUnmount() {
+    if (this.intervaloRefresco) {
+      clearInterval(this.intervaloRefresco)
+    }
+  },
+  watch: {
+    'triageForm.peso': {
+      handler() {
+        this.calcularIMCAutomatico()
+      }
+    },
+    'triageForm.talla': {
+      handler() {
+        this.calcularIMCAutomatico()
+      }
+    }
+  },
+
+  watch: {
+      fechaFiltro() {
+        this.obtenerListaEspera()
+      },
+      medicoSeleccionado() {
+        this.obtenerListaEspera()
+      },
+      especialidadSeleccionada() {
+        this.obtenerListaEspera()
+      },
   },
 
   methods: {
+    chipClassTurno(estado) {
+      switch (estado) {
+        case 'En proceso': return 'cc-chip--blue'
+        case 'Llamando':   return 'cc-chip--amber'
+        case 'Finalizada': return 'cc-chip--green'
+        case 'Cancelada':  return 'cc-chip--red'
+        case 'En espera':  return 'cc-chip--gray'
+        default:           return 'cc-chip--gray'
+      }
+    },
+    nombreCompleto(p) {
+      const paciente = p.paciente || p;
+      return paciente.nombre || 'Sin nombre';
+    },
+
+    getRegistroLE(paciente) {
+      const registros = this.citasPorPacienteId.get(paciente.id) || []
+      return registros[0] || {}
+    },
+
+    getTurno(paciente) {
+      const reg = this.getRegistroLE(paciente)
+      return reg.numero_turno ?? '-'
+    },
+
+    getEstado(paciente) {
+      const reg = this.getRegistroLE(paciente)
+      return reg.estado ?? 'En espera'
+    },
+
+    getFolio(paciente) {
+      const reg = this.getRegistroLE(paciente)
+      return reg.folio || paciente.paciente_id || 'S/F'
+    },
+
+    calcularIMCAutomatico() {
+      const resultado = this.imcTriage
+
+      if (!resultado) {
+        this.triageForm.imc = null
+        this.triageForm.imc_percentil = null
+        this.triageForm.imc_clasificacion = ''
+        return
+      }
+
+      this.triageForm.imc = resultado.bmi ?? null
+
+      this.triageForm.imc_percentil =
+        resultado.percentil ??
+        resultado.percentile ??
+        null
+
+      this.triageForm.imc_clasificacion =
+        resultado.clasificacion ??
+        resultado.tipo ??
+        ''
+    },
+
+    // ── NUEVO: color del badge de IMC según severidad (mismo criterio
+    // que usa SignosVitales.vue en su método claseImc) ──
+    claseImc(info) {
+      if (!info) return ''
+      if (info.tipo === 'sin_clasificar') return 'cc-imc-badge-neutro'
+      const c = (info.clasificacion || '').toLowerCase()
+      if (c.includes('normal')) return 'cc-imc-badge-normal'
+      if (c.includes('bajo')) return 'cc-imc-badge-warning'
+      if (c.includes('sobrepeso')) return 'cc-imc-badge-warning'
+      if (c.includes('obesidad')) return 'cc-imc-badge-critical'
+      return 'cc-imc-badge-neutro'
+    },
 
     // ──────────────────────────────────────────
     // API
@@ -605,34 +1357,237 @@ export default {
 
     async obtenerPacientes() {
       try {
-        // Solicita la lista de pacientes al backend
         const response = await ApiService.get('/pacientes')
         this.pacientes = response.data
-        // Selecciona el primer paciente por defecto si existe
-        if (this.pacientes.length > 0) {
-          this.pacienteActivo = this.pacientes[0]
+
+        if (this.pacienteActivo) {
+          const actualizado = this.pacientes.find(p => p.id === this.pacienteActivo.id)
+          this.pacienteActivo = actualizado || null
         }
       } catch (error) {
         console.error('Error al obtener pacientes:', error)
       }
     },
 
-    async guardarCambiosPaciente() {
+    async obtenerListaEspera() {
+      this.loading.lista = true
+      this.loadError = null
+
+      const params = {}
+       if (this.fechaFiltro) {
+          params.fecha = this.fechaFiltro
+      } else {
+          params.todas_fechas = 1
+      }
+      if (this.medicoSeleccionado) params.medico_id = this.medicoSeleccionado
+      if (this.especialidadSeleccionada) params.especialidad_id = this.especialidadSeleccionada
+
       try {
-        // Envía los datos actualizados del paciente activo al backend
-        await ApiService.put('/pacientes/' + this.pacienteActivo.id, this.pacienteActivo)
-        await this.obtenerPacientes()
+        const res = await ApiService.get('/lista-espera', { params })
+        this.listaEspera = res.data.lista || res.data
+        console.log("📌 Datos de la Lista de Espera recibidos:", this.listaEspera)
+      } catch (err) {
+          this.loadError = "No se pudo cargar la lista de espera."
+          if (typeof this.mostrarToast === 'function') {
+            this.mostrarToast("⚠ Error al cargar lista de espera", "error")
+          }
+          console.error("Error cargando lista de espera:", err)
+        } finally {
+          this.loading.lista = false
+        }
+    },
+
+    async cargarCatalogoAgregar() {
+      try {
+        const res = await ApiService.get('/lista-espera/create')
+        this.catalogoMedicos = res.data.medicos || []
+        this.catalogoEspecialidades = res.data.especialidades || []
       } catch (error) {
-        console.error('Error al guardar paciente:', error)
+        console.error('Error al cargar catálogo de médicos/especialidades:', error)
       }
     },
 
-    // ──────────────────────────────────────────
-    // Selección de paciente para "Nueva consulta" (doble clic)
-    // ──────────────────────────────────────────
+    onEspecialidadTriageChange() {
+      if (this.triageForm.medico_id) {
+        const sigueSiendoValido = this.medicosCatalogoFiltrados.some(m => m.id === this.triageForm.medico_id)
+        if (!sigueSiendoValido) this.triageForm.medico_id = ''
+      }
+    },
 
-    // Al recargar la página, si ya había un paciente seleccionado
-    // previamente, resalta esa misma fila en la tabla
+    async finalizarPaciente(paciente) {
+      if (!paciente) return
+
+      const registroLE = this.listaEspera.find(
+        item => item.paciente_id === paciente.id && item.estado !== 'Cancelada' && item.estado !== 'Finalizada'
+      )
+      
+      if (!registroLE) {
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'info',
+            title: 'Sin registro activo hoy',
+            text: 'Este paciente no se encuentra activo en la lista de espera de hoy.'
+          })
+        }
+        return
+      }
+
+      let confirmado = true
+      if (window.Swal) {
+        const resultado = await window.Swal.fire({
+          icon: 'warning',
+          title: '¿Marcar como no presentado / abandono?',
+          text: `${this.nombreCompleto(paciente)} se cambiará a estado Cancelado en la lista de espera.`,
+          showCancelButton: true,
+          confirmButtonText: 'Sí, cancelar',
+          cancelButtonText: 'Volver',
+          confirmButtonColor: '#dc2626'
+        })
+        confirmado = resultado.isConfirmed
+      } else {
+        confirmado = window.confirm(`¿Marcar como abandonó a ${this.nombreCompleto(paciente)}?`)
+      }
+      if (!confirmado) return
+
+      this.finalizandoId = paciente.id
+
+      try {
+        await ApiService.patch(`/lista-espera/${registroLE.id}/estado`, { estado: 'Cancelada' })
+
+        await this.obtenerListaEspera()
+        eventBus.emit('consulta-finalizada')
+
+        if (this.pacienteActivo && this.pacienteActivo.id === paciente.id) {
+          this.pacienteActivo = this.pacientesFiltrados[0] || null
+        }
+
+        if (window.Swal) {
+          window.Swal.fire({
+            toast: true, position: 'top-end', icon: 'success',
+            title: 'Paciente marcado como cancelado', showConfirmButton: false,
+            timer: 1400, timerProgressBar: true
+          })
+        }
+      } catch (err) {
+        console.error('Error al actualizar el estado en lista de espera:', err)
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'error',
+            title: 'No se pudo actualizar el estado',
+            text: err.response?.data?.message || 'Intenta de nuevo.'
+          })
+        }
+      } finally {
+        this.finalizandoId = null
+      }
+    },
+
+    async guardarCambiosPaciente(paciente) {
+      const objetivo = paciente || this.pacienteActivo
+      if (!objetivo) return
+      try {
+        const { triages, ...datosPaciente } = objetivo
+        await ApiService.put('/pacientes/' + objetivo.id, datosPaciente)
+        await this.obtenerPacientes()
+      } catch (error) {
+        console.error('Error al guardar paciente:', error)
+        throw error
+      }
+    },
+
+    async guardarTriageEnBackend(pacienteId, payload) {
+      const { data } = await axios.post(`/triage/guardar/${pacienteId}`, payload)
+      return data
+    },
+
+    onEspecialidadChange() {
+      if (this.medicoSeleccionado) {
+        const sigueSiendoValido = this.medicosFiltrados.some(m => m.id === this.medicoSeleccionado)
+        if (!sigueSiendoValido) this.medicoSeleccionado = ''
+      }
+    },
+
+    obtenerFechaHoyISO() {
+      return obtenerFechaHoyISO()
+    },
+
+    inicializarPacienteActivo() {
+      this.pacienteActivo = this.pacientesFiltrados[0] || null
+    },
+
+    fechaSolo(fecha) {
+      if (!fecha) return ''
+      return String(fecha).slice(0, 10)
+    },
+
+    obtenerCitaHoyActiva(paciente) {
+      if (!paciente) return null
+      const hoy = this.obtenerFechaHoyISO()
+      const citasDelPaciente = this.citasPorPacienteId.get(paciente.id) || []
+      return citasDelPaciente.find(c => {
+        const fechaOk = this.fechaSolo(c.fecha) === hoy
+        const estadoOk = !['Cancelada', 'Finalizada'].includes(c.estado)
+        const medicoOk = !this.medicoSeleccionado ||
+          (c.medico && (c.medico.id ?? c.medico.nombre) === this.medicoSeleccionado)
+        const especialidadOk = !this.especialidadSeleccionada ||
+          (c.especialidad && (c.especialidad.id ?? c.especialidad.nombre) === this.especialidadSeleccionada)
+        return fechaOk && estadoOk && medicoOk && especialidadOk
+      }) || null
+    },
+
+    tieneCitaHoy(paciente) {
+      return !!this.obtenerCitaHoyActiva(paciente)
+    },
+
+    horaCitaPaciente(p) {
+      const fechaObjetivo = this.fechaFiltro || this.obtenerFechaHoyISO()
+      const citasDelPaciente = this.citasPorPacienteId.get(p.id) || []
+      const relevantes = citasDelPaciente.filter(
+        c => this.fechaSolo(c.fecha) === fechaObjetivo && c.estado !== 'Cancelada'
+      )
+      if (!relevantes.length) return null
+      return relevantes.map(c => c.hora).sort()[0]
+    },
+
+    async agregarPacienteAListaHoy(paciente) {
+      const medicoId = this.triageForm.medico_id || this.medicoSeleccionado
+      const especialidadId = this.triageForm.especialidad_id || this.especialidadSeleccionada
+
+      try {
+        await ApiService.post('/lista-espera', {
+          paciente_id:      paciente.id,
+          medico_id:        medicoId || null,
+          especialidad_id:  especialidadId || null,
+          observaciones:    'Agregado a la lista de hoy desde la búsqueda de paciente'
+        })
+
+        await this.obtenerListaEspera()
+        this.busqueda = ''
+
+        return true
+      } catch (error) {
+        console.error('Error al agregar paciente a la lista de hoy:', error)
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'error',
+            title: 'No se pudo agregar a la lista de hoy',
+            text: error.response?.data?.message || 'Intenta de nuevo.'
+          })
+        }
+        return false
+      }
+    },
+
+    endpointEstadoCita(cita) {
+      const idStr = String(cita.id)
+
+      if (cita.origen === 'consulta' || idStr.startsWith('consulta-')) {
+        return `/api/consultas/${idStr.replace('consulta-', '')}/estado`
+      }
+
+      return `/api/citas/${idStr.replace('cita-', '')}/estado`
+    },
+
     cargarSeleccionPrevia() {
       const guardado = localStorage.getItem(CLAVE_PACIENTE_SELECCIONADO)
       if (!guardado) return
@@ -644,8 +1599,6 @@ export default {
       }
     },
 
-    // Guarda el paciente elegido en localStorage para que lo recojan
-    // los componentes de "Nueva consulta" y "Consulta inteligente"
     seleccionarParaConsulta(paciente) {
       if (!paciente) return
 
@@ -658,7 +1611,6 @@ export default {
       localStorage.setItem(CLAVE_PACIENTE_SELECCIONADO, JSON.stringify(payload))
       this.pacienteSeleccionadoId = paciente.id
 
-      // Aviso visual de confirmación (usa SweetAlert2, ya disponible en el proyecto)
       if (window.Swal) {
         window.Swal.fire({
           toast: true,
@@ -672,63 +1624,90 @@ export default {
       }
     },
 
-    // ──────────────────────────────────────────
-    // Panel izquierdo
-    // ──────────────────────────────────────────
-
     verPaciente(paciente) {
-      // Carga el paciente seleccionado en el panel y sale del modo edición
       this.pacienteActivo = paciente
       this.editMode = false
     },
 
     iniciarEdicion(paciente) {
       if (!paciente) return
-      // Activa el modo edición y precarga el formulario con los datos actuales
+      const t = this.ultimoTriage(paciente) || {}
       this.editMode = true
       this.editForm = {
-        diagnostico: paciente.diagnostico || '',
-        sintomas:    paciente.sintomas    || '',
-        triage:      paciente.triage      || '',
-        estado:      paciente.estado      || ''
+        diagnostico: t.motivo_consulta || '',
+        sintomas:    t.sintomas        || '',
+        triage:      t.estado          || '',
+        estado:      paciente.estado   || ''
       }
     },
 
     cancelarEdicion() {
-      // Sale del modo edición sin guardar cambios
       this.editMode = false
     },
 
-    guardarEdicion() {
+    async guardarEdicion() {
       if (!this.pacienteActivo) return
-      // Aplica los cambios del formulario al paciente activo
-      Object.assign(this.pacienteActivo, this.editForm)
-      // Sincroniza también el objeto dentro del array de pacientes
-      const idx = this.pacientes.findIndex(p => p.id === this.pacienteActivo.id)
-      if (idx !== -1) {
-        Object.assign(this.pacientes[idx], this.editForm)
-      }
-      this.editMode = false
-      // Descomenta para persistir en la API:
-      // this.guardarCambiosPaciente()
-    },
 
-    // ──────────────────────────────────────────
-    // Modales
-    // ──────────────────────────────────────────
+      this.guardandoEdicion = true
+      try {
+        const triageActualizado = await this.guardarTriageEnBackend(this.pacienteActivo.id, {
+          motivo_consulta: this.editForm.diagnostico,
+          sintomas:         this.editForm.sintomas,
+          estado_triage:    this.editForm.triage
+        })
+
+        this.pacienteActivo.estado = this.editForm.estado
+        await this.guardarCambiosPaciente(this.pacienteActivo)
+
+        this.editMode = false
+
+        if (window.Swal) {
+          window.Swal.fire({
+            toast: true, position: 'top-end', icon: 'success',
+            title: 'Cambios guardados', showConfirmButton: false,
+            timer: 1400, timerProgressBar: true
+          })
+        }
+      } catch (error) {
+        console.error('Error al guardar la edición del panel:', error)
+        if (window.Swal) {
+          window.Swal.fire({ icon: 'error', title: 'No se pudieron guardar los cambios', text: 'Intenta de nuevo.' })
+        }
+      } finally {
+        this.guardandoEdicion = false
+      }
+    },
 
     abrirModal(tipo, paciente) {
       if (!paciente) return
       this.modal.tipo    = tipo
       this.modal.paciente = paciente
 
-      // Si se abre el expediente, precarga el formulario con los datos del paciente
+      if (tipo === 'triage') {
+        this.triageForm = {
+          presion: '',
+          saturacion: null,
+          temperatura: null,
+          frecuencia_cardiaca: null,
+          frecuencia_respiratoria: null,
+          peso: null,
+          talla: null,
+
+          imc: null,
+          imc_percentil: null,
+          imc_clasificacion: '',
+
+          motivo_consulta: '',
+          medico_id: '',
+          especialidad_id: ''
+        }
+      }
+
       if (tipo === 'expediente') {
         const t = this.ultimoTriage(paciente) || {}
         this.form = {
           paciente_id:              paciente.id                         || '',
           codigo_paciente:          paciente.paciente_id                || '',
-          // datos generales
           telefono:                 paciente.telefono                   || '',
           email:                    paciente.email                      || '',
           sexo:                     paciente.sexo                       || '',
@@ -738,9 +1717,11 @@ export default {
           direccion:                paciente.direccion                  || '',
           contacto_emergencia:      paciente.contacto_emergencia        || '',
           telefono_emergencia:      paciente.telefono_emergencia        || '',
-          // signos vitales del último triage
           peso:                     t.peso                              || '',
           talla:                    t.talla                             || '',
+          imc:                      t.imc                               || '',
+          imc_percentil:            t.imc_percentil                     || '',
+          imc_clasificacion:        t.imc_clasificacion                 || '',
           presion:                  t.presion                           || '',
           temperatura:              t.temperatura                       || '',
           saturacion:               t.saturacion                        || '',
@@ -748,7 +1729,6 @@ export default {
           motivo_consulta:          t.motivo_consulta                   || '',
           sintomas:                 t.sintomas                          || '',
           diagnostico:              '',
-          // antecedentes
           alergias:                 paciente.alergias                   || '',
           enfermedades_cronicas:    paciente.enfermedades_cronicas      || '',
           medicamentos_actuales:    paciente.medicamentos_actuales      || '',
@@ -759,23 +1739,19 @@ export default {
     },
 
     cerrarModal() {
-      // Cierra el modal activo y limpia la referencia al paciente
       this.modal.tipo     = ''
       this.modal.paciente = null
     },
 
     abrirExpedienteDesdeFila(paciente) {
-      // Atajo para abrir el expediente directamente desde la tabla
       this.abrirModal('expediente', paciente)
     },
 
     irAExpediente(paciente) {
-      // Desde el modal de detalle, abre el expediente del mismo paciente
       this.abrirModal('expediente', paciente)
     },
 
     guardarExpediente() {
-      // Aquí conectar con la API para persistir el expediente
       console.log('Expediente guardado:', {
         paciente: this.modal.paciente,
         form:     this.form,
@@ -784,37 +1760,93 @@ export default {
       this.cerrarModal()
     },
 
-    // ──────────────────────────────────────────
-    // Archivos / imágenes (dropzone)
-    // ──────────────────────────────────────────
+    async guardarTriageRapido() {
+      const paciente = this.modal.paciente
+      if (!paciente) return
+
+      const resultadoIMC = this.imcTriage
+
+      if (resultadoIMC) {
+        this.triageForm.imc = resultadoIMC.bmi ?? null
+
+        this.triageForm.imc_percentil =
+          resultadoIMC.percentil ??
+          resultadoIMC.percentile ??
+          null
+
+        this.triageForm.imc_clasificacion =
+          resultadoIMC.clasificacion ??
+          resultadoIMC.tipo ??
+          ''
+      }
+
+      if (!this.tieneCitaHoy(paciente)) {
+        const seAgrego = await this.agregarPacienteAListaHoy(paciente)
+        if (!seAgrego) return
+      }
+
+      this.guardandoTriage = true
+      try {
+        const resultado = await this.guardarTriageEnBackend(paciente.id, this.triageForm)
+
+        if (resultado?.triage) {
+          if (!paciente.triages) paciente.triages = []
+          paciente.triages.push(resultado.triage)
+        }
+
+        await this.obtenerPacientes()
+
+        const nivel = resultado?.triage?.estado
+        const iconosPorNivel = { Rojo: '🔴', Amarillo: '🟡', Verde: '🟢' }
+
+        if (window.Swal) {
+          if (nivel) {
+            window.Swal.fire({
+              toast: true, position: 'top-end', icon: 'success',
+              title: 'Signos vitales actualizados',
+              text: `La IA clasificó a este paciente como ${iconosPorNivel[nivel] || ''} ${nivel}`,
+              showConfirmButton: false,
+              timer: 2600, timerProgressBar: true
+            })
+          } else {
+            window.Swal.fire({
+              toast: true, position: 'top-end', icon: 'success',
+              title: 'Signos vitales actualizados', showConfirmButton: false,
+              timer: 1400, timerProgressBar: true
+            })
+          }
+        }
+
+        this.cerrarModal()
+        this.$emit('triage-guardado')
+      } catch (error) {
+        console.error('Error al guardar los signos vitales:', error)
+        if (window.Swal) {
+          window.Swal.fire({ icon: 'error', title: 'No se pudieron guardar los signos vitales', text: 'Intenta de nuevo.' })
+        }
+      } finally {
+        this.guardandoTriage = false
+      }
+    },
 
     onFileChange(event) {
-      // Dispara la lectura de archivos seleccionados con el input
       this._leerArchivos(event.target.files)
     },
 
     onDrop(event) {
-      // Dispara la lectura de archivos soltados en la dropzone
       this._leerArchivos(event.dataTransfer.files)
     },
 
     _leerArchivos(files) {
       for (const file of files) {
-        // Solo acepta imágenes (jpg, png, etc.)
         if (!file.type.startsWith('image/')) continue
         const reader = new FileReader()
-        // Agrega la imagen como base64 al array de previews
         reader.onload = e => { this.previews.push(e.target.result) }
         reader.readAsDataURL(file)
       }
     },
 
-    // ──────────────────────────────────────────
-    // Helpers de UI
-    // ──────────────────────────────────────────
-
     formatearFecha(fecha) {
-      // Convierte "2024-03-15" → "15 de marzo de 2024"
       if (!fecha) return '—'
       const [anio, mes, dia] = fecha.split('-')
       const meses = [
@@ -825,7 +1857,6 @@ export default {
     },
 
     avatarColor(nombre) {
-      // Genera un color consistente para cada nombre (mismo nombre = mismo color siempre)
       const colores = [
         '#185FA5','#059669','#d97706','#dc2626',
         '#7c3aed','#0891b2','#be185d','#65a30d'
@@ -838,13 +1869,11 @@ export default {
     },
 
     ultimoTriage(paciente) {
-      // Retorna el triage más reciente del paciente (último del array)
       if (!paciente?.triages?.length) return null
       return paciente.triages[paciente.triages.length - 1]
     },
 
     nombreCompleto(p) {
-      // Une nombre + apellido paterno + apellido materno, omitiendo los vacíos
       if (!p) return ''
       return [p.nombre, p.apellido_paterno, p.apellido_materno]
         .filter(Boolean)
@@ -852,7 +1881,6 @@ export default {
     },
 
     initials(nombre) {
-      // Genera las iniciales del nombre (máx. 2 letras) para el avatar
       if (!nombre) return ''
       return nombre
         .split(' ')
@@ -863,7 +1891,6 @@ export default {
     },
 
     chipClass(estado) {
-      // Devuelve la clase CSS del chip según el estado del paciente
       switch (estado) {
         case 'Atendido':  return 'cc-chip--green'
         case 'En espera': return 'cc-chip--amber'
@@ -873,13 +1900,19 @@ export default {
     },
 
     triageClass(estado) {
-      // Devuelve la clase CSS del chip según el nivel de triage
       switch (estado) {
         case 'grave':    case 'Rojo':     return 'cc-chip--red'
         case 'moderado': case 'Amarillo': return 'cc-chip--amber'
         case 'leve':     case 'Verde':    return 'cc-chip--green'
         default:                          return 'cc-chip--gray'
       }
+    },
+
+    statusLabel(status) {
+      if (status === 'critical') return 'Fuera de rango'
+      if (status === 'warning') return 'Vigilar'
+      if (status === 'normal') return 'Normal'
+      return ''
     }
   }
 }
@@ -887,12 +1920,11 @@ export default {
 
 <style scoped>
 @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
 
 /* ─── Reset & base ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Layout principal: panel izquierdo fijo + tabla a la derecha */
 .cc-layout {
   display: grid;
   grid-template-columns: 340px 1fr;
@@ -904,12 +1936,10 @@ export default {
   min-height: 100vh;
 }
 
-/* En pantallas chicas, apila panel y tabla en una sola columna */
 @media (max-width: 1024px) {
   .cc-layout { grid-template-columns: 1fr; }
 }
 
-/* ─── Superficies compartidas (panel y tabla) ─── */
 .cc-panel,
 .cc-table-section {
   background: #fff;
@@ -919,7 +1949,6 @@ export default {
   box-shadow: 0 1px 4px rgba(0,0,0,.04);
 }
 
-/* ─── Labels & dots de sección ─── */
 .cc-label { font-size: 13px; font-weight: 600; color: #374151; }
 
 .cc-dot {
@@ -931,7 +1960,6 @@ export default {
 .cc-dot--blue { background: #185FA5; }
 .cc-dot--gray { background: #9ca3af; }
 
-/* ─── Cabecera del panel izquierdo ─── */
 .cc-panel__head {
   display: flex;
   align-items: center;
@@ -940,7 +1968,6 @@ export default {
   gap: 10px;
 }
 
-/* Indicador "Editando" que aparece en modo edición */
 .cc-edit-flag {
   margin-left: auto;
   display: inline-flex;
@@ -954,7 +1981,6 @@ export default {
   border-radius: 99px;
 }
 
-/* ─── Hero: avatar + nombre del paciente activo ─── */
 .cc-hero {
   display: flex;
   align-items: center;
@@ -964,7 +1990,6 @@ export default {
   border-bottom: 1px solid #f0f2f5;
 }
 
-/* Avatar circular del panel izquierdo */
 .cc-avatar {
   width: 44px; height: 44px;
   border-radius: 50%;
@@ -981,7 +2006,6 @@ export default {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* ─── Detalles del paciente (dl/dt/dd) ─── */
 .cc-details { padding: 4px 22px; }
 .cc-details__row {
   display: flex;
@@ -1004,7 +2028,6 @@ export default {
 }
 .cc-details__edit { display: flex; justify-content: flex-end; }
 
-/* Inputs pequeños del modo edición del panel */
 .cc-mini-input,
 .cc-mini-select {
   font-size: 12.5px; font-weight: 600; font-family: inherit;
@@ -1020,7 +2043,6 @@ export default {
   box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
 }
 
-/* ─── Caja de síntomas ─── */
 .cc-symptoms {
   margin: 4px 22px 18px;
   padding: 14px;
@@ -1047,7 +2069,6 @@ export default {
   box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
 }
 
-/* ─── Barra de acciones del panel ─── */
 .cc-panel__actions {
   display: flex; gap: 8px;
   padding: 14px 22px;
@@ -1055,7 +2076,6 @@ export default {
   border-top: 1px solid #f0f2f5;
 }
 
-/* ─── Chips de estado y triage ─── */
 .cc-chip {
   display: inline-block;
   font-size: 11px; font-weight: 700;
@@ -1068,17 +2088,14 @@ export default {
 .cc-chip--blue  { background: #dbeafe; color: #1e40af; }
 .cc-chip--red   { background: #fee2e2; color: #991b1b; }
 .cc-chip--amber { background: #fef3c7; color: #92400e; }
-/* Gris-verde suave para "Activo" (como en la foto de referencia) */
 .cc-chip--gray  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
-/* ─── Texto monoespacio (folio) ─── */
 .cc-mono {
   font-family: 'Inter', monospace;
   font-size: 11px; color: #185FA5; font-weight: 600;
 }
 .cc-mono--cell { color: #185FA5; font-size: 11px; font-weight: 600; }
 
-/* ─── Botones generales ─── */
 .cc-btn {
   display: inline-flex; align-items: center; gap: 6px;
   border-radius: 9px;
@@ -1109,11 +2126,6 @@ export default {
 }
 .cc-btn--success:hover:not(:disabled) { background: #047857; }
 
-/* ════════════════════════════════════════
-   TABLA DE ESPERA
-   ════════════════════════════════════════ */
-
-/* Cabecera de la sección tabla: título + contador */
 .cc-table-head {
   display: flex;
   justify-content: space-between; align-items: center;
@@ -1127,7 +2139,6 @@ export default {
   padding: 4px 12px; border-radius: 99px;
 }
 
-/* Buscador integrado como línea con separador inferior */
 .cc-table-search {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 24px;
@@ -1141,7 +2152,106 @@ export default {
 }
 .cc-table-search input::placeholder { color: #9ca3af; }
 
-/* Aviso de "doble clic para seleccionar" */
+.cc-table-filtros {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  border-bottom: 1px solid #f0f2f5;
+  background: #fafbfc;
+  transition: opacity 0.15s;
+}
+.cc-table-filtros--inactivos {
+  opacity: 0.5;
+}
+
+.cc-filtro-select {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #185FA5;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cc-filtro-select:hover,
+.cc-filtro-select:focus {
+  border-color: #185FA5;
+}
+.cc-filtro-select:disabled {
+  cursor: not-allowed;
+}
+
+.cc-filtro-fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #185FA5;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.cc-filtro-fecha:hover {
+  border-color: #185FA5;
+}
+.cc-filtro-fecha i {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.cc-filtro-fecha-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #185FA5;
+  cursor: pointer;
+}
+.cc-filtro-fecha-input:disabled {
+  cursor: not-allowed;
+}
+
+.cc-filtro-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.cc-filtro-toggle:hover {
+  border-color: #185FA5;
+  color: #185FA5;
+}
+.cc-filtro-toggle--activo {
+  background: #185FA5;
+  border-color: #185FA5;
+  color: #fff;
+}
+.cc-filtro-toggle:disabled {
+  cursor: not-allowed;
+}
+
 .cc-hint {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 24px;
@@ -1153,14 +2263,12 @@ export default {
 
 .cc-table-wrap { overflow-x: auto; }
 
-/* Tabla sin bordes externos, solo separadores entre filas */
 .cc-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
 
-/* Cabecera de columnas */
 .cc-table thead th {
   padding: 10px 24px;
   text-align: left;
@@ -1171,7 +2279,6 @@ export default {
 }
 .cc-th--right { text-align: right; }
 
-/* Filas de datos */
 .cc-row td {
   padding: 16px 24px;
   border-bottom: 1px solid #f3f4f6;
@@ -1180,36 +2287,31 @@ export default {
   background: #fff;
 }
 .cc-row:last-child td { border-bottom: none; }
-.cc-row:hover td      { background: #fafbff; cursor: pointer; }      /* hover sutil */
-.cc-row--active td    { background: #eff6ff; }      /* fila del paciente activo */
+.cc-row:hover td      { background: #fafbff; cursor: pointer; }
+.cc-row--active td    { background: #eff6ff; }
 
-/* Fila seleccionada para "Nueva consulta" (doble clic) */
 .cc-row--selected td {
   background: #ecfdf5;
   box-shadow: inset 3px 0 0 #059669;
 }
 
-/* Ícono de check junto al nombre del paciente seleccionado */
 .cc-selected-icon {
   color: #059669;
   font-size: 14px;
   margin-left: 6px;
 }
 
-/* Estado vacío cuando el buscador no encuentra resultados */
 .cc-table-empty {
   text-align: center; padding: 40px 16px;
   color: #9ca3af; font-size: 13px;
 }
 
-/* Celda paciente: avatar circular + nombre + motivo alineados */
 .cc-td--patient { display: flex; align-items: center; gap: 14px; }
 .cc-td--actions { text-align: right; white-space: nowrap; }
 
-/* Avatar circular en la tabla (igual que en la foto de referencia) */
 .cc-mini-avatar {
   width: 42px; height: 42px;
-  border-radius: 50%;                     /* ← círculo */
+  border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700;
   color: #fff; flex-shrink: 0;
@@ -1220,28 +2322,21 @@ export default {
   border-radius: 50%; font-size: 16px;
 }
 
-/* Nombre del paciente en negritas */
 .cc-patient-name {
   font-weight: 700; color: #111827;
   font-size: 13.5px; line-height: 1.3;
   display: flex; align-items: center;
 }
 
-/* Texto secundario debajo del nombre (motivo de consulta) en azul */
 .cc-patient-diag {
   font-size: 11.5px; color: #185FA5;
   font-weight: 600; margin-top: 2px;
 }
 
-/* ════════════════════════════════════════
-   BOTONES DE ACCIÓN CIRCULARES
-   Fondo gris neutro en reposo,
-   color solo en el ícono (como en la foto)
-   ════════════════════════════════════════ */
 .cc-icon-btn {
   width: 38px; height: 38px;
   border-radius: 50%;
-  background: #f0f2f5;              /* gris neutro — igual en todos */
+  background: #f0f2f5;
   border: none; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 17px;
@@ -1250,25 +2345,26 @@ export default {
 }
 .cc-icon-btn:hover  { transform: translateY(-1px); }
 .cc-icon-btn:active { transform: scale(0.94); }
+.cc-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-/* Ojo — azul eléctrico como en la foto */
 .cc-icon-btn--view       { background: #f0f2f5; color: #2563eb; }
 .cc-icon-btn--view:hover { background: #dbeafe; }
 
-/* Carpeta — cyan/turquesa como en la foto */
+.cc-icon-btn--add       { background: #f0f2f5; color: #059669; }
+.cc-icon-btn--add:hover { background: #d1fae5; }
+
+.cc-icon-btn--triage       { background: #f0f2f5; color: #7c3aed; }
+.cc-icon-btn--triage:hover { background: #ede9fe; }
+
 .cc-icon-btn--folder       { background: #f0f2f5; color: #06b6d4; }
 .cc-icon-btn--folder:hover { background: #cffafe; }
 
-/* Editar — ámbar (por si se usa en otro lugar) */
 .cc-icon-btn--edit       { background: #f0f2f5; color: #d97706; }
 .cc-icon-btn--edit:hover { background: #fef3c7; }
 
-/* Eliminar — rojo (por si se usa en otro lugar) */
 .cc-icon-btn--danger       { background: #f0f2f5; color: #ef4444; }
-.cc-icon-btn--danger:hover { background: #fee2e2; }
+.cc-icon-btn--danger:hover:not(:disabled) { background: #fee2e2; }
 
-/* ─── Overlay y modales ─── */
-/* Fondo semitransparente que cubre toda la pantalla */
 .cc-overlay {
   position: fixed; inset: 0;
   background: rgba(15, 23, 42, 0.5);
@@ -1277,7 +2373,6 @@ export default {
   padding: 20px;
 }
 
-/* Cuadro blanco del modal */
 .cc-modal {
   background: #fff;
   border-radius: 20px;
@@ -1287,20 +2382,18 @@ export default {
   max-height: 90vh;
   box-shadow: 0 20px 60px rgba(0,0,0,0.18);
 }
-/* Versión grande para el expediente */
 .cc-modal--lg { max-width: 680px; }
+.cc-modal--md { max-width: 620px; }
 
-/* Cabecera del modal con fondo de color */
 .cc-modal__header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 18px 24px;
   font-size: 14px; font-weight: 700; color: #fff;
   gap: 12px; flex-shrink: 0;
 }
-.cc-modal__header--dark { background: #0f172a; }  /* ficha clínica */
-.cc-modal__header--blue { background: #185FA5; }  /* expediente */
+.cc-modal__header--dark { background: #0f172a; }
+.cc-modal__header--blue { background: #185FA5; }
 
-/* Botón circular "×" para cerrar el modal */
 .cc-modal__close {
   background: transparent; border: none;
   color: rgba(255,255,255,0.7);
@@ -1311,10 +2404,23 @@ export default {
 }
 .cc-modal__close:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
-/* Cuerpo scrollable del modal */
 .cc-modal__body { padding: 24px; overflow-y: auto; flex: 1; }
 
-/* Grid 2 columnas para la ficha clínica */
+.cc-triage-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 12.5px;
+  line-height: 1.5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+}
+.cc-triage-aviso i { margin-top: 2px; flex-shrink: 0; }
+
 .cc-modal__grid {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 14px;
@@ -1323,7 +2429,6 @@ export default {
 }
 .cc-modal__grid-full { grid-column: 1 / -1; }
 
-/* Footer del modal: botones Cancelar/Guardar */
 .cc-modal__footer {
   display: flex; justify-content: space-between; gap: 10px;
   padding: 16px 24px;
@@ -1332,7 +2437,6 @@ export default {
   flex-shrink: 0;
 }
 
-/* ─── Campos del expediente ─── */
 .cc-field-label {
   font-size: 11px; font-weight: 600; color: #9ca3af;
   text-transform: uppercase; letter-spacing: 0.06em;
@@ -1342,7 +2446,6 @@ export default {
 .cc-field-value        { font-size: 14px; font-weight: 600; color: #111827; }
 .cc-field-value--muted { font-size: 13px; font-weight: 400; color: #6b7280; line-height: 1.6; }
 
-/* Referencia visual del paciente en el encabezado del expediente */
 .cc-exp-ref {
   display: flex; align-items: center; gap: 14px;
   background: #f8fafc; border: 1px solid #e8eaed;
@@ -1352,14 +2455,158 @@ export default {
 .cc-exp-ref__name  { font-size: 15px; font-weight: 700; color: #111827; }
 .cc-exp-ref__folio { font-size: 12px; color: #9ca3af; margin-top: 2px; }
 
-/* Etiqueta de sección dentro del expediente */
+.cc-overall-badge {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+  white-space: nowrap;
+}
+.cc-overall-dot { width: 7px; height: 7px; border-radius: 50%; }
+.cc-badge-normal   { background: #e4f7ef; color: #067a56; }
+.cc-badge-normal .cc-overall-dot { background: #0e9f6e; }
+.cc-badge-warning  { background: #fdf1df; color: #a15a05; }
+.cc-badge-warning .cc-overall-dot { background: #d97706; }
+.cc-badge-critical { background: #fce8e8; color: #b31414; }
+.cc-badge-critical .cc-overall-dot { background: #dc2626; animation: cc-pulse 1.4s infinite; }
+
+@keyframes cc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+.cc-motivo-panel {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.cc-motivo-panel-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px; padding: 0 2px;
+  flex-wrap: wrap; gap: 4px;
+}
+.cc-motivo-panel-head > span:first-child {
+  font-size: 13.5px; font-weight: 700; color: #111827;
+  display: flex; align-items: center; gap: 6px;
+}
+.cc-motivo-panel-sub { font-size: 11px; color: #9ca3af; }
+.cc-motivo-textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb; border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px; font-family: inherit; color: #111827;
+  resize: vertical; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cc-motivo-textarea:focus {
+  border-color: #185FA5;
+  box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
+}
+
+.cc-vitals-panel {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 14px;
+  padding: 18px;
+}
+.cc-vitals-panel-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 14px; padding: 0 2px;
+}
+.cc-vitals-panel-head > span:first-child {
+  font-size: 13.5px; font-weight: 700; color: #111827; letter-spacing: .2px;
+}
+.cc-vitals-panel-sub { font-size: 11px; color: #9ca3af; }
+
+.cc-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.cc-vital-card {
+  background: #f8fafc;
+  border: 1px solid #e8eaed;
+  border-radius: 12px; padding: 12px 14px;
+  transition: border-color .2s, background .2s;
+}
+.cc-vital-label {
+  font-size: 10.5px; font-weight: 600; color: #9ca3af;
+  letter-spacing: .3px; margin-bottom: 7px; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.cc-vital-readout { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.cc-vital-input {
+  width: 100%; background: transparent; border: none; outline: none;
+  font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 19px;
+  color: #111827; padding: 0; min-width: 0;
+}
+.cc-vital-input::placeholder { color: #cbd5e1; }
+.cc-vital-unit { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #9ca3af; flex-shrink: 0; }
+
+.cc-vital-status-tag {
+  display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 700;
+  letter-spacing: .3px; text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+}
+.cc-v-normal   { background: #e4f7ef; border-color: rgba(14,159,110,.3); }
+.cc-v-normal .cc-vital-status-tag { background: rgba(14,159,110,.14); color: #067a56; }
+.cc-v-warning  { background: #fdf1df; border-color: rgba(217,119,6,.3); }
+.cc-v-warning .cc-vital-input { color: #a15a05; }
+.cc-v-warning .cc-vital-status-tag { background: rgba(217,119,6,.16); color: #a15a05; }
+.cc-v-critical { background: #fce8e8; border-color: rgba(220,38,38,.35); }
+.cc-v-critical .cc-vital-input { color: #b31414; }
+.cc-v-critical .cc-vital-status-tag { background: rgba(220,38,38,.16); color: #b31414; }
+
+/* ─── NUEVO: Tarjeta de IMC dentro del modal de triage ─── */
+.cc-vital-card-imc {
+  grid-column: span 2;
+}
+
+.cc-vital-imc-percentil {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #9ca3af;
+}
+
+.cc-vital-value-imc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  font-size: 19px;
+  color: #111827;
+}
+
+.cc-vital-imc-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.cc-imc-badge-normal   { background: #e4f7ef; color: #067a56; }
+.cc-imc-badge-warning  { background: #fdf1df; color: #a15a05; }
+.cc-imc-badge-critical { background: #fce8e8; color: #b31414; }
+.cc-imc-badge-neutro   { background: #f8fafc; color: #9ca3af; }
+
+.cc-vital-card-imc-vacio {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cc-vital-imc-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
 .cc-section-label {
   font-size: 13px; font-weight: 700; color: #374151;
   margin-bottom: 14px;
   display: flex; align-items: center; gap: 8px;
 }
 
-/* Grid de 3 columnas para los campos del formulario */
 .cc-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -1368,9 +2615,8 @@ export default {
 }
 
 .cc-field       { display: flex; flex-direction: column; }
-.cc-field--full { grid-column: 1 / -1; }  /* campo que ocupa todo el ancho */
+.cc-field--full { grid-column: 1 / -1; }
 
-/* Input con ícono a la izquierda */
 .cc-input-wrap {
   display: flex; align-items: center;
   border: 1px solid #e5e7eb; border-radius: 10px;
@@ -1389,7 +2635,6 @@ export default {
   width: 100%; color: #111827; background: transparent;
 }
 
-/* Textarea del expediente */
 .cc-field textarea {
   border: 1px solid #e5e7eb; border-radius: 10px;
   padding: 10px 14px;
@@ -1403,7 +2648,6 @@ export default {
   box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
 }
 
-/* ─── Dropzone de imágenes ─── */
 .cc-dropzone {
   border: 2px dashed #d1d5db; border-radius: 12px;
   padding: 28px 20px; text-align: center;
@@ -1416,7 +2660,6 @@ export default {
 .cc-dropzone p    { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
 .cc-dropzone span { font-size: 12px; color: #9ca3af; }
 
-/* Galería de previews de imágenes cargadas */
 .cc-previews { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .cc-preview  { position: relative; width: 86px; height: 86px; }
 .cc-preview img {
@@ -1424,7 +2667,6 @@ export default {
   object-fit: cover; border-radius: 10px;
   border: 1px solid #e5e7eb;
 }
-/* Botón rojo para eliminar una imagen del preview */
 .cc-preview button {
   position: absolute; top: -6px; right: -6px;
   width: 22px; height: 22px; border-radius: 50%;
@@ -1433,7 +2675,30 @@ export default {
   display: flex; align-items: center; justify-content: center;
 }
 
-/* ─── Transición fade para los modales ─── */
 .cc-fade-enter-active, .cc-fade-leave-active { transition: opacity 0.2s; }
 .cc-fade-enter-from,   .cc-fade-leave-to     { opacity: 0; }
+
+.cc-asignacion-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.cc-select-full {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cc-select-full:focus {
+  border-color: #185FA5;
+  box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
+}
 </style>
