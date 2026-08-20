@@ -22,9 +22,13 @@
 /* =========================================================
    PANEL SUPER-ADMIN
    GESTIÓN DE CLIENTES
+   Todo este bloque va namespaced bajo .panel-superadmin
+   (envolver el <template> raíz de TenantMaster.vue con
+   <div class="panel-superadmin"> ... </div>) para no pisar
+   los estilos globales de Bootstrap/AdminLTE del resto de la app.
    ========================================================= */
 
-:root {
+.panel-superadmin {
     --ink: #16233D;
     --ink-soft: #4A5A78;
 
@@ -62,27 +66,20 @@
    BASE
    ========================================================= */
 
-* {
+.panel-superadmin * {
     box-sizing: border-box;
 }
 
-html,
-body {
-    margin: 0;
-    padding: 0;
-    min-height: 100%;
-}
-
-body {
+.panel-superadmin {
     background: var(--bg);
     color: var(--text-primary);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
 }
 
-button,
-input,
-select {
+.panel-superadmin button,
+.panel-superadmin input,
+.panel-superadmin select {
     font-family: inherit;
 }
 
@@ -91,7 +88,7 @@ select {
    CONTENEDOR PRINCIPAL
    ========================================================= */
 
-.app {
+.panel-superadmin.app {
     width: 100%;
     max-width: 1180px;
     margin: 0 auto;
@@ -102,7 +99,7 @@ select {
 TOPBAR
 ========================================================= */
 
-.topbar {
+.panel-superadmin .topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -123,7 +120,7 @@ TOPBAR
 MARCA
 ========================================================= */
 
-.brand {
+.panel-superadmin .brand {
     display: flex;
     align-items: center;
 
@@ -139,7 +136,7 @@ MARCA
     font-weight: 600;
 }
 
-.brand .mark {
+.panel-superadmin .brand .mark {
     width: 36px;
     height: 36px;
 
@@ -166,7 +163,7 @@ MARCA
         0 4px 10px rgba(15, 118, 110, 0.15);
 }
 
-.brand-info {
+.panel-superadmin .brand-info {
     display: flex;
     align-items: center;
 
@@ -175,7 +172,7 @@ MARCA
     min-width: 0;
 }
 
-.brand-title {
+.panel-superadmin .brand-title {
     color: var(--ink);
 
     font-size: 14px;
@@ -184,13 +181,13 @@ MARCA
     white-space: nowrap;
 }
 
-.brand-separator {
+.panel-superadmin .brand-separator {
     color: var(--border-strong);
 
     font-size: 15px;
 }
 
-.brand-section {
+.panel-superadmin .brand-section {
     color: var(--text-muted);
 
     font-size: 13px;
@@ -204,7 +201,7 @@ MARCA
 ACCIONES SUPERIORES
 ========================================================= */
 
-.topbar-actions {
+.panel-superadmin .topbar-actions {
     display: flex;
     align-items: center;
 
@@ -216,7 +213,7 @@ ACCIONES SUPERIORES
 BOTONES DE ICONOS
 ========================================================= */
 
-.icon-btn {
+.panel-superadmin .icon-btn {
     position: relative;
 
     width: 38px;
@@ -247,7 +244,7 @@ BOTONES DE ICONOS
         transform .2s ease;
 }
 
-.icon-btn:hover {
+.panel-superadmin .icon-btn:hover {
     border-color: var(--border-strong);
 
     background: #FAFCFC;
@@ -262,11 +259,11 @@ BOTONES DE ICONOS
 INDICADOR DE NOTIFICACIÓN
 ========================================================= */
 
-.notification-btn {
+.panel-superadmin .notification-btn {
     position: relative;
 }
 
-.notification-dot {
+.panel-superadmin .notification-dot {
     position: absolute;
 
     top: 8px;
@@ -287,7 +284,7 @@ INDICADOR DE NOTIFICACIÓN
 SEPARADOR
 ========================================================= */
 
-.topbar-divider {
+.panel-superadmin .topbar-divider {
     width: 1px;
     height: 28px;
 
@@ -301,7 +298,7 @@ SEPARADOR
 PERFIL
 ========================================================= */
 
-.avatar-chip {
+.panel-superadmin .avatar-chip {
     display: flex;
     align-items: center;
 
@@ -326,13 +323,13 @@ PERFIL
         border-color .2s ease;
 }
 
-.avatar-chip:hover {
+.panel-superadmin .avatar-chip:hover {
     background: #fff;
 
     border-color: var(--border);
 }
 
-.avatar-chip .dot {
+.panel-superadmin .avatar-chip .dot {
     width: 32px;
     height: 32px;
 
@@ -352,7 +349,7 @@ PERFIL
     font-weight: 700;
 }
 
-.avatar-info {
+.panel-superadmin .avatar-info {
     display: flex;
     flex-direction: column;
 
@@ -361,14 +358,14 @@ PERFIL
     line-height: 1.15;
 }
 
-.avatar-name {
+.panel-superadmin .avatar-name {
     color: var(--ink);
 
     font-size: 12.5px;
     font-weight: 600;
 }
 
-.avatar-role {
+.panel-superadmin .avatar-role {
     margin-top: 3px;
 
     color: var(--text-muted);
@@ -377,7 +374,7 @@ PERFIL
     font-weight: 500;
 }
 
-.avatar-arrow {
+.panel-superadmin .avatar-arrow {
     margin-left: 2px;
 
     color: var(--text-muted);
@@ -385,7 +382,7 @@ PERFIL
     transition: transform .2s ease;
 }
 
-.avatar-chip:hover .avatar-arrow {
+.panel-superadmin .avatar-chip:hover .avatar-arrow {
     color: var(--ink-soft);
 
     transform: translateY(1px);
@@ -395,7 +392,7 @@ PERFIL
    ENCABEZADO DE PÁGINA
    ========================================================= */
 
-.page-head {
+.panel-superadmin .page-head {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -405,7 +402,7 @@ PERFIL
     margin-bottom: 26px;
 }
 
-.page-head h1 {
+.panel-superadmin .page-head h1 {
     margin: 0 0 5px;
 
     color: var(--ink);
@@ -416,7 +413,7 @@ PERFIL
     line-height: 1.2;
 }
 
-.page-head p {
+.panel-superadmin .page-head p {
     margin: 0;
 
     color: var(--text-secondary);
@@ -429,7 +426,7 @@ PERFIL
    BOTONES
    ========================================================= */
 
-.btn {
+.panel-superadmin .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -448,25 +445,25 @@ PERFIL
     transition: all .2s ease;
 }
 
-.btn-primary {
+.panel-superadmin .btn-primary {
     background: var(--teal);
     color: #fff;
 
     box-shadow: 0 4px 10px rgba(15, 118, 110, 0.12);
 }
 
-.btn-primary:hover {
+.panel-superadmin .btn-primary:hover {
     background: var(--teal-dark);
     transform: translateY(-1px);
 }
 
-.btn-ghost {
+.panel-superadmin .btn-ghost {
     background: #fff;
     border-color: var(--border-strong);
     color: var(--ink-soft);
 }
 
-.btn-ghost:hover {
+.panel-superadmin .btn-ghost:hover {
     background: #F8FAFC;
     border-color: #BFC9D6;
 }
@@ -476,14 +473,14 @@ PERFIL
 ESTADÍSTICAS
 ========================================================= */
 
-.stats {
+.panel-superadmin .stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 18px;
     margin-bottom: 24px;
 }
 
-.stat-card {
+.panel-superadmin .stat-card {
     position: relative;
 
     display: flex;
@@ -513,13 +510,13 @@ ESTADÍSTICAS
         border-color .2s ease;
 }
 
-.stat-card:hover {
+.panel-superadmin .stat-card:hover {
     transform: translateY(-2px);
 
     box-shadow: 0 8px 22px rgba(22, 35, 61, 0.07);
 }
 
-.stat-card::after {
+.panel-superadmin .stat-card::after {
     content: '';
 
     position: absolute;
@@ -539,7 +536,7 @@ ESTADÍSTICAS
     pointer-events: none;
 }
 
-.stat-card .chip {
+.panel-superadmin .stat-card .chip {
     position: relative;
     z-index: 1;
 
@@ -559,14 +556,14 @@ ESTADÍSTICAS
     color: var(--chip-fg, var(--teal-dark));
 }
 
-.stat-content {
+.panel-superadmin .stat-content {
     position: relative;
     z-index: 1;
 
     min-width: 0;
 }
 
-.stat-label {
+.panel-superadmin .stat-label {
     margin-bottom: 5px;
 
     color: var(--text-secondary);
@@ -575,7 +572,7 @@ ESTADÍSTICAS
     font-weight: 600;
 }
 
-.stat-number {
+.panel-superadmin .stat-number {
     color: var(--ink);
 
     font-family: var(--font-display);
@@ -586,7 +583,7 @@ ESTADÍSTICAS
     line-height: 1;
 }
 
-.stat-description {
+.panel-superadmin .stat-description {
     margin-top: 6px;
 
     color: var(--text-muted);
@@ -594,11 +591,11 @@ ESTADÍSTICAS
     font-size: 11.5px;
 }
 
-.stat-success {
+.panel-superadmin .stat-success {
     color: var(--teal-dark);
 }
 
-.stat-danger {
+.panel-superadmin .stat-danger {
     color: var(--coral-dark);
 }
 
@@ -607,7 +604,7 @@ ESTADÍSTICAS
    TARJETA PRINCIPAL
    ========================================================= */
 
-.card {
+.panel-superadmin .card {
     overflow: hidden;
 
     background: var(--surface);
@@ -624,7 +621,7 @@ ESTADÍSTICAS
    CABECERA DE LISTA
    ========================================================= */
 
-.card-head {
+.panel-superadmin .card-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -636,13 +633,13 @@ ESTADÍSTICAS
     border-bottom: 1px solid var(--border);
 }
 
-.card-title {
+.panel-superadmin .card-title {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.card-title-icon {
+.panel-superadmin .card-title-icon {
     width: 38px;
     height: 38px;
 
@@ -656,7 +653,7 @@ ESTADÍSTICAS
     color: var(--teal-dark);
 }
 
-.card-head h2 {
+.panel-superadmin .card-head h2 {
     margin: 0;
 
     color: var(--ink);
@@ -666,7 +663,7 @@ ESTADÍSTICAS
     font-weight: 600;
 }
 
-.card-head p {
+.panel-superadmin .card-head p {
     margin: 3px 0 0;
 
     color: var(--text-secondary);
@@ -679,18 +676,18 @@ ESTADÍSTICAS
    BUSCADOR
    ========================================================= */
 
-.list-tools {
+.panel-superadmin .list-tools {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.search {
+.panel-superadmin .search {
     position: relative;
     width: 280px;
 }
 
-.search input {
+.panel-superadmin .search input {
     width: 100%;
 
     padding: 10px 13px 10px 36px;
@@ -707,7 +704,7 @@ ESTADÍSTICAS
     transition: all .2s ease;
 }
 
-.search input:focus {
+.panel-superadmin .search input:focus {
     outline: none;
 
     border-color: var(--teal);
@@ -715,7 +712,7 @@ ESTADÍSTICAS
     box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.09);
 }
 
-.search svg {
+.panel-superadmin .search svg {
     position: absolute;
 
     left: 12px;
@@ -731,13 +728,13 @@ ESTADÍSTICAS
    TABLA
    ========================================================= */
 
-table {
+.panel-superadmin table {
     width: 100%;
 
     border-collapse: collapse;
 }
 
-thead th {
+.panel-superadmin thead th {
     padding: 13px 22px;
 
     background: #FAFBFC;
@@ -755,7 +752,7 @@ thead th {
     text-transform: uppercase;
 }
 
-tbody td {
+.panel-superadmin tbody td {
     padding: 17px 22px;
 
     border-bottom: 1px solid var(--border);
@@ -767,15 +764,15 @@ tbody td {
     vertical-align: middle;
 }
 
-tbody tr:last-child td {
+.panel-superadmin tbody tr:last-child td {
     border-bottom: none;
 }
 
-tbody tr {
+.panel-superadmin tbody tr {
     transition: background .15s ease;
 }
 
-tbody tr:hover {
+.panel-superadmin tbody tr:hover {
     background: #FBFCFD;
 }
 
@@ -784,21 +781,21 @@ tbody tr:hover {
    DATOS DEL CLIENTE
    ========================================================= */
 
-.folio {
+.panel-superadmin .folio {
     color: var(--ink-soft);
 
     font-family: var(--font-mono);
     font-size: 11.5px;
 }
 
-.cliente-name {
+.panel-superadmin .cliente-name {
     color: var(--ink);
 
     font-size: 13.5px;
     font-weight: 600;
 }
 
-.cliente-sub {
+.panel-superadmin .cliente-sub {
     margin-top: 3px;
 
     color: var(--text-muted);
@@ -806,7 +803,7 @@ tbody tr:hover {
     font-size: 11px;
 }
 
-.db-chip {
+.panel-superadmin .db-chip {
     display: inline-flex;
     align-items: center;
 
@@ -836,7 +833,7 @@ tbody tr:hover {
    ESTADOS
    ========================================================= */
 
-.pill {
+.panel-superadmin .pill {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -849,7 +846,7 @@ tbody tr:hover {
     font-weight: 600;
 }
 
-.pill::before {
+.panel-superadmin .pill::before {
     content: '';
 
     width: 6px;
@@ -858,21 +855,21 @@ tbody tr:hover {
     border-radius: 50%;
 }
 
-.pill-active {
+.panel-superadmin .pill-active {
     background: var(--teal-light);
     color: var(--teal-dark);
 }
 
-.pill-active::before {
+.panel-superadmin .pill-active::before {
     background: var(--teal);
 }
 
-.pill-inactive {
+.panel-superadmin .pill-inactive {
     background: var(--coral-light);
     color: var(--coral-dark);
 }
 
-.pill-inactive::before {
+.panel-superadmin .pill-inactive::before {
     background: var(--coral);
 }
 
@@ -881,13 +878,13 @@ tbody tr:hover {
    ACCIONES
    ========================================================= */
 
-.row-actions {
+.panel-superadmin .row-actions {
     display: flex;
     align-items: center;
     gap: 7px;
 }
 
-.row-actions button {
+.panel-superadmin .row-actions button {
     width: 34px;
     height: 34px;
 
@@ -907,7 +904,7 @@ tbody tr:hover {
     transition: all .2s ease;
 }
 
-.row-actions button:hover {
+.panel-superadmin .row-actions button:hover {
     border-color: var(--teal);
 
     color: var(--teal);
@@ -920,19 +917,19 @@ tbody tr:hover {
    FORMULARIO
    ========================================================= */
 
-.form-view {
+.panel-superadmin .form-view {
     padding: 28px 30px 32px;
 }
 
-.form-view.active {
+.panel-superadmin .form-view.active {
     display: block;
 }
 
-.list-view.hidden {
+.panel-superadmin .list-view.hidden {
     display: none;
 }
 
-.stepper {
+.panel-superadmin .stepper {
     display: flex;
 
     gap: 0;
@@ -940,7 +937,7 @@ tbody tr:hover {
     margin-bottom: 30px;
 }
 
-.step {
+.panel-superadmin .step {
     flex: 1;
 
     display: flex;
@@ -955,14 +952,14 @@ tbody tr:hover {
     color: var(--text-muted);
 }
 
-.step.active,
-.step.done {
+.panel-superadmin .step.active,
+.panel-superadmin .step.done {
     color: var(--ink);
 
     border-color: var(--teal);
 }
 
-.step .num {
+.panel-superadmin .step .num {
     width: 26px;
     height: 26px;
 
@@ -983,17 +980,17 @@ tbody tr:hover {
     font-weight: 600;
 }
 
-.step.active .num,
-.step.done .num {
+.panel-superadmin .step.active .num,
+.panel-superadmin .step.done .num {
     background: var(--teal);
 }
 
-.step .label {
+.panel-superadmin .step .label {
     font-size: 13px;
     font-weight: 600;
 }
 
-.step .sub {
+.panel-superadmin .step .sub {
     display: block;
 
     margin-top: 2px;
@@ -1003,15 +1000,15 @@ tbody tr:hover {
     font-size: 11px;
 }
 
-.fieldset {
+.panel-superadmin .fieldset {
     display: none;
 }
 
-.fieldset.active {
+.panel-superadmin .fieldset.active {
     display: block;
 }
 
-.grid-2 {
+.panel-superadmin .grid-2 {
     display: grid;
 
     grid-template-columns: 1fr 1fr;
@@ -1019,11 +1016,11 @@ tbody tr:hover {
     gap: 18px;
 }
 
-.field {
+.panel-superadmin .field {
     margin-bottom: 18px;
 }
 
-.field label {
+.panel-superadmin .field label {
     display: block;
 
     margin-bottom: 7px;
@@ -1034,8 +1031,8 @@ tbody tr:hover {
     font-weight: 600;
 }
 
-.field input,
-.field select {
+.panel-superadmin .field input,
+.panel-superadmin .field select {
     width: 100%;
 
     padding: 11px 12px;
@@ -1050,8 +1047,8 @@ tbody tr:hover {
     font-size: 13.5px;
 }
 
-.field input:focus,
-.field select:focus {
+.panel-superadmin .field input:focus,
+.panel-superadmin .field select:focus {
     outline: none;
 
     border-color: var(--teal);
@@ -1059,7 +1056,7 @@ tbody tr:hover {
     box-shadow: 0 0 0 3px rgba(15, 118, 110, .08);
 }
 
-.field input[readonly] {
+.panel-superadmin .field input[readonly] {
     background: #F7F9FA;
 
     color: var(--ink-soft);
@@ -1068,7 +1065,7 @@ tbody tr:hover {
     font-size: 12px;
 }
 
-.field .hint {
+.panel-superadmin .field .hint {
     margin-top: 5px;
 
     color: var(--text-muted);
@@ -1081,14 +1078,14 @@ tbody tr:hover {
    FORM ACTIONS
    ========================================================= */
 
-.form-actions {
+.panel-superadmin .form-actions {
     display: flex;
     justify-content: space-between;
 
     margin-top: 8px;
 }
 
-.form-actions .right {
+.panel-superadmin .form-actions .right {
     display: flex;
     gap: 10px;
 }
@@ -1098,7 +1095,7 @@ tbody tr:hover {
    SUMMARY
    ========================================================= */
 
-.summary {
+.panel-superadmin .summary {
     margin-bottom: 20px;
 
     padding: 18px 20px;
@@ -1109,7 +1106,7 @@ tbody tr:hover {
     border-radius: var(--radius);
 }
 
-.summary-row {
+.panel-superadmin .summary-row {
     display: flex;
     justify-content: space-between;
 
@@ -1120,21 +1117,21 @@ tbody tr:hover {
     font-size: 13px;
 }
 
-.summary-row:last-child {
+.panel-superadmin .summary-row:last-child {
     border-bottom: none;
 }
 
-.summary-row span:first-child {
+.panel-superadmin .summary-row span:first-child {
     color: var(--text-secondary);
 }
 
-.summary-row span:last-child {
+.panel-superadmin .summary-row span:last-child {
     color: var(--ink);
 
     font-weight: 600;
 }
 
-.note {
+.panel-superadmin .note {
     display: flex;
 
     gap: 10px;
@@ -1157,7 +1154,7 @@ tbody tr:hover {
    TOAST
    ========================================================= */
 
-.toast {
+.panel-superadmin .toast {
     display: none;
     align-items: center;
 
@@ -1177,7 +1174,7 @@ tbody tr:hover {
     font-weight: 500;
 }
 
-.toast.show {
+.panel-superadmin .toast.show {
     display: flex;
 }
 
@@ -1188,79 +1185,77 @@ tbody tr:hover {
 
 @media (max-width: 900px) {
 
-    .stats {
+    .panel-superadmin .stats {
         grid-template-columns: 1fr;
     }
 
-    .card-head {
+    .panel-superadmin .card-head {
         align-items: flex-start;
         flex-direction: column;
     }
 
-    .list-tools {
+    .panel-superadmin .list-tools {
         width: 100%;
     }
 
-    .search {
+    .panel-superadmin .search {
         width: 100%;
     }
 }
 
 @media (max-width: 760px) {
 
-    .app {
+    .panel-superadmin.app {
         padding: 0 14px 40px;
     }
 
-    .topbar {
+    .panel-superadmin .topbar {
         align-items: flex-start;
     }
 
-    .brand .crumb {
+    .panel-superadmin .brand .crumb {
         display: none;
     }
 
-    .avatar-chip span {
+    .panel-superadmin .avatar-chip span {
         display: none;
     }
 
-    .page-head {
+    .panel-superadmin .page-head {
         align-items: flex-start;
         flex-direction: column;
     }
 
-    .page-head h1 {
+    .panel-superadmin .page-head h1 {
         font-size: 25px;
     }
 
-    .page-head .btn {
+    .panel-superadmin .page-head .btn {
         width: 100%;
     }
 
-    .grid-2 {
+    .panel-superadmin .grid-2 {
         grid-template-columns: 1fr;
     }
 
-    .list-tools {
+    .panel-superadmin .list-tools {
         flex-direction: column;
     }
 
-    table {
+    .panel-superadmin table {
         display: block;
         overflow-x: auto;
     }
 
-    .form-view {
+    .panel-superadmin .form-view {
         padding: 22px 18px;
     }
 
-    .step {
+    .panel-superadmin .step {
         align-items: flex-start;
     }
 
-    .step .sub {
+    .panel-superadmin .step .sub {
         display: none;
     }
-
-    
 }

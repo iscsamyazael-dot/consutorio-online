@@ -1,5 +1,5 @@
 <template>
-  <div class="app">
+  <div class="app panel-superadmin">
     <!-- Topbar fijo -->
     <header-bar></header-bar>
 
