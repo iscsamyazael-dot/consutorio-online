@@ -1129,6 +1129,26 @@ class IAClinicaService
             $contenido = $response->json('candidates.0.content.parts.0.text');
             $data = $this->decodificarJsonDesdeTexto($contenido, 'analizarElectrocardiograma', $response->json() ?? []);
 
+            // Rastro de auditoría: a diferencia de otros métodos de este servicio,
+            // aquí SÍ dejamos logueado el JSON completo aunque la llamada haya sido
+            // exitosa (no solo en caso de error). Un ECG mal leído (falso positivo
+            // o falso negativo de un patrón crítico) tiene consecuencias clínicas
+            // serias, así que conviene poder auditar después qué exactamente
+            // reportó la IA -- incluyendo 'confianza' y 'limitaciones', que son los
+            // campos que explican si el modelo mismo dudaba de su propia lectura.
+            if (is_array($data)) {
+                Log::info('Resultado de análisis de ECG (IA)', [
+                    'archivo' => basename($rutaCompleta),
+                    'diagnostico_probable' => $data['diagnostico_probable'] ?? null,
+                    'nivel_riesgo' => $data['nivel_riesgo'] ?? null,
+                    'confianza' => $data['confianza'] ?? null,
+                    'limitaciones' => $data['limitaciones'] ?? null,
+                    'hallazgos_criticos' => $data['hallazgos_criticos'] ?? null,
+                    'alteraciones_st_t' => $data['alteraciones_st_t'] ?? null,
+                    'fuente_datos' => $data['fuente_datos'] ?? null,
+                ]);
+            }
+
             return is_array($data) ? $data : null;
 
         } catch (\Throwable $e) {
