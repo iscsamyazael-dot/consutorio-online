@@ -47,7 +47,7 @@
 
                             <div class="row">
 
-                                <div class="col-md-6 mb-4">
+                                <div class="col-md-12 mb-4">
                                     <label class="form-label-custom">
                                         Nombre Completo
                                         <span class="text-danger">*</span>
@@ -89,7 +89,7 @@
 
                             <div class="row">
 
-                                <div class="col-md-6 mb-4">
+                                <div class="col-md-12 mb-4">
 
                                     <label class="form-label-custom">
                                         Cédula Profesional
@@ -110,7 +110,7 @@
 
                                 </div>
 
-                                <div class="col-md-6 mb-4">
+                                <!-- <div class="col-md-6 mb-4">
                                     <label class="form-label-custom">
                                         Especialidad Médica
                                         <span class="text-danger">*</span>
@@ -134,7 +134,7 @@
                                             </option>
                                         </select>
                                     </div>
-                                </div>
+                                </div> -->
                             </div>
                         </div>
                     </div>
