@@ -21,6 +21,19 @@
     ningún paso adicional en el resto del proyecto (a diferencia de
     portal-vue, que sí necesitaba plugin + un <portal-target> en el
     layout -- eso era para Vue 2 y aquí no aplica).
+
+    FIX (triageGuardadoLocal no se reinicia realmente):
+    mounted() y el watch de `paciente` rellenaban triageGuardadoLocal
+    con el último triage HISTÓRICO del paciente (ultimoTriageDelPaciente),
+    contradiciendo lo que dice el comentario de la notificación más
+    abajo ("se reinicia cada vez que el componente se vuelve a montar,
+    sin importar los triages históricos"). Eso causaba que, en cuanto
+    paciente.triages traía algo, la alerta "Agrega los signos vitales"
+    desapareciera y se mostrara el panel .vitals-grid -- pero como el
+    botón para abrir el modal SOLO vive dentro del v-if="!triageGuardadoLocal",
+    ya no había forma de registrar un triage nuevo para esta consulta.
+    Se quitaron mounted() y el watch: triageGuardadoLocal ahora solo
+    cambia cuando se guarda un triage nuevo desde el modal.
 -->
 <template>
     <div class="vitals-panel">
@@ -258,39 +271,17 @@ export default {
             // nuevo (al salir y volver a entrar), sin importar los
             // triages históricos que ya existan en paciente.triages.
             // Esto es lo que controla si se muestra el aviso o el panel.
+            // IMPORTANTE: no se rellena en mounted()/watch a partir del
+            // historial (paciente.triages) -- eso era el bug: ocultaba
+            // el botón de "Agregar triage" en cuanto el paciente ya
+            // tenía algún triage viejo, sin dar forma de registrar uno
+            // nuevo para esta consulta.
             triageGuardadoLocal: null,
             formTriage: this.formTriageVacio()
         }
     },
 
-    mounted() {
-       // Inicializa con el último triage histórico del paciente
-       // (si existe), en vez de arrancar siempre vacío.
-       this.triageGuardadoLocal = this.ultimoTriageDelPaciente
-    },
-    watch: {
-        // Si el padre (ConsultaInteligente.vue) refresca `paciente`
-        // (ej. tras @triage-agregado → obtenerPaciente()), reflejamos
-        // el triage más reciente que venga del backend.
-        paciente: {
-            deep: true,
-            handler() {
-                this.triageGuardadoLocal = this.ultimoTriageDelPaciente
-            }
-        }
-    },
-
     computed: {
-        // Lee el último triage del historial que llega por prop
-        // (paciente.triages), independientemente de si se guardó
-        // en esta sesión o en una anterior (ej. desde la tabla de
-        // ConsultaClinica.vue).
-        ultimoTriageDelPaciente() {
-            const triages = this.paciente?.triages
-            if (!Array.isArray(triages) || !triages.length) return null
-            return triages[triages.length - 1]
-        },
-
         // Edad del paciente en meses. Preferimos fecha_nacimiento (más
         // precisa, necesaria para el percentil pediátrico); si no está
         // disponible, caemos a la columna `edad` (años) del paciente.
@@ -517,13 +508,6 @@ export default {
     margin-bottom: 1rem;
     box-shadow: 0 2px 10px rgba(15,23,42,.05);
 
-    /* Se queda fijo debajo del header clínico (sticky-top, z-index:
-       1020, en consulta_inteligente.blade.php) mientras se hace scroll
-       en el contenido de abajo (historial / transcripción / receta).
-       --header-height ahora incluye navbar + header clínico + margen,
-       calculado en ConsultaInteligente.vue -> ajustarAlturaHeader().
-       z-index queda por debajo del header para que, si llegan a
-       solaparse un instante durante el scroll, el header gane. */
     position: sticky;
 }
 
@@ -547,8 +531,6 @@ export default {
     font-size: .65rem;
     color: var(--ink-faint);
 }
-
-/* ─── NOTIFICACIÓN: agregar triage nuevo ────────────────────────── */
 
 .vitals-empty-wrap {
     padding: 4px 2px 2px;
@@ -614,15 +596,7 @@ export default {
     .vitals-notice { animation: none !important; }
 }
 
-/* ─── PANEL: triage guardado en esta visita ─────────────────────── */
-/* Grid de 3 columnas + valores en gris azulado suave con la unidad
-   chiquita alineada a la derecha. Tamaños reducidos respecto a la
-   versión anterior para que la tarjeta ocupe menos espacio. */
-
 .vitals-grid {
-    /* Grid con columnas del mismo ancho que se reparten TODO el
-       espacio disponible por igual (a diferencia del flex anterior,
-       que dejaba las cajas angostas agrupadas a la izquierda). */
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 6px;
@@ -652,9 +626,6 @@ export default {
     justify-content: center;
     gap: 3px;
     text-align: center;
-    /* Ya no aspect-ratio 1:1: con el grid expandido, el cuadrado
-       perfecto se vería demasiado alto. Se deja una altura mínima
-       cómoda y que cada caja crezca en ancho libremente. */
     min-height: 78px;
 }
 
@@ -686,7 +657,6 @@ export default {
     flex-wrap: wrap;
 }
 
-/* Tarjeta de IMC dentro del panel guardado */
 .vital-item-imc {
     grid-column: span 2;
 }
@@ -726,8 +696,6 @@ export default {
 .imc-badge-neutro {
     background: var(--paper);
     color: var(--ink-faint);
-    /* Gris azulado suave (atenuado), en vez del negro en negritas
-       que tenía antes. */
     color: #A0A9BD;
 }
 
@@ -737,11 +705,6 @@ export default {
     font-weight: 500;
     color: #C2C9D6;
 }
-
-/* ─── Colores por estado clínico ─────────────────────────────────── */
-/* Verde = normal, amarillo = alerta, rojo = crítico. Se aplica un
-   tinte suave al fondo/borde de la caja y un color más saturado al
-   valor numérico para que resalte de inmediato. */
 
 .vital-item--normal {
     background: var(--status-normal-soft);
@@ -770,21 +733,8 @@ export default {
     color: var(--status-critical);
 }
 
-/* ─── MODAL: agregar triage ──────────────────────────────────────── */
-/* Estos estilos siguen aplicando igual aunque el modal ahora se monte
-   vía <Teleport>: `scoped` funciona agregando un atributo data-v-xxxx
-   a los elementos en tiempo de compilación, y Teleport mueve el
-   propio nodo del DOM (con ese atributo ya puesto) a su destino -- no
-   re-renderiza el contenido, así que el scoping viaja con él. No se
-   necesita marcar nada como :deep() para esto. */
-
 .modal-overlay {
     position: fixed;
-    /* Empieza DEBAJO del header clínico (misma --header-height que usa
-       .vitals-panel para su sticky), en vez de cubrir toda la pantalla
-       con inset:0. Así el modal se centra solo en el espacio visible
-       que queda debajo del header, sin taparlo ni encimarse con
-       "Signos vitales". */
     top: var(--header-height, 160px);
     left: 0;
     right: 0;
@@ -902,7 +852,6 @@ export default {
     opacity: .6;
 }
 
-/* Vista previa de IMC dentro del modal */
 .campo-triage-imc {
     grid-column: span 2;
     background: var(--paper, #F5F7FA);
@@ -993,7 +942,6 @@ export default {
     background: #0c8a5f;
 }
 
-/* Transición de entrada/salida del overlay */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
     transition: opacity .2s ease;

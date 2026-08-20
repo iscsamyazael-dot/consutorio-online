@@ -32,7 +32,7 @@
         }
 
         .header-logo {
-            width: 70px;
+            width: 95px;
             vertical-align: middle;
         }
 
@@ -85,17 +85,17 @@
         ===================================================== */
 
         .logo-img {
-            width: 55px;
-            height: 55px;
+            width: 90px;
+            height: 90px;
         }
 
         .logo-placeholder {
-            width: 55px;
-            height: 55px;
+            width: 80px;
+            height: 80px;
             border: 1px solid #cbd5e0;
             border-radius: 50%;
             text-align: center;
-            line-height: 55px;
+            line-height: 80px;
             font-size: 8px;
             color: #718096;
         }
@@ -338,27 +338,39 @@
         }
 
         /* =====================================================
-           FIRMA
+           FIRMAS
         ===================================================== */
 
-        .signature-container {
-            margin-top: 55px;
-            text-align: right;
+        .signatures-wrapper {
+            width: 100%;
+            margin-top: 45px;
+            margin-bottom: 15px;
+            text-align: center;
+            /* Evita que el bloque de firmas se rompa a la mitad entre dos páginas */
+            page-break-inside: avoid;
+        }
+
+        .signature-item {
+            display: inline-block;
+            width: 30%;
+            margin: 0 1.5%;
+            vertical-align: top;
+            text-align: center;
         }
 
         .signature-line {
-            width: 165px;
-            border-top: 1px solid #94a3b8;
-            margin-left: auto;
-            margin-bottom: 4px;
+            border-top: 0.5px solid #d8dee5;
+            width: 85%;
+            height: 0;
+            margin: 0 auto 6px auto;
         }
 
         .signature-text {
-            width: 165px;
-            margin-left: auto;
-            text-align: center;
             font-size: 8.5px;
-            color: #64748b;
+            color: #94a3b8;
+            font-family: sans-serif;
+            font-weight: normal;
+            letter-spacing: 0.3px;
         }
 
         /* =====================================================
@@ -984,19 +996,24 @@
 
     </table>
 
-
     {{-- =====================================================
-         FIRMA
+        SECCIÓN DE FIRMAS (MÉDICO, PACIENTE, TESTIGO)
     ====================================================== --}}
-
-    <div class="signature-container">
-
-        <div class="signature-line"></div>
-
-        <div class="signature-text">
-            Firma
+    <div class="signatures-wrapper">
+        <div class="signature-item">
+            <div class="signature-line"></div>
+            <div class="signature-text">Firma del médico</div>
         </div>
 
+        <div class="signature-item">
+            <div class="signature-line"></div>
+            <div class="signature-text">Firma del paciente</div>
+        </div>
+
+        <div class="signature-item">
+            <div class="signature-line"></div>
+            <div class="signature-text">Firma del testigo</div>
+        </div>
     </div>
 
 
