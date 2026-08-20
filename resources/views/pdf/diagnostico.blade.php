@@ -107,6 +107,47 @@
             font-weight: bold;
         }
 
+        /* ---------- Signos vitales ---------- */
+        .vitales-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+        }
+        .vitales-box h2 {
+            border-bottom: none;
+            margin: 0 0 8px;
+            padding-bottom: 0;
+        }
+        .vitales-table td {
+            font-size: 10.5px;
+            padding: 4px 6px;
+            text-align: center;
+            vertical-align: top;
+            width: 16.66%;
+        }
+        .vital-valor {
+            font-size: 13px;
+            font-weight: bold;
+            color: #111827;
+        }
+        .vital-valor.alerta {
+            color: #b91c1c;
+        }
+        .vital-etiqueta {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+        .vitales-vacio {
+            font-size: 10.5px;
+            color: #9ca3af;
+            font-style: italic;
+        }
+
         /* ---------- Diagnóstico probable (destacado, igual que indicaciones del médico en receta) ---------- */
         .diagnostico-box {
             background: #fffbeb;
@@ -280,6 +321,66 @@
         </tr>
         @endif
     </table>
+
+    {{--
+        Signos vitales (signos_vitales de la consulta / evaluación IA).
+        Se asume una variable $signosVitales pasada desde el controlador
+        (p. ej. $consulta->signosVitales o $evaluacion->signosVitales)
+        con los campos usados abajo. Ajusta los nombres de propiedad
+        si en tu modelo son distintos.
+    --}}
+    <div class="vitales-box">
+        <h2>Signos vitales</h2>
+        @if($signosVitales ?? null)
+            <table class="vitales-table">
+                <tr>
+                    <td>
+                        <div class="vital-valor">{{ $signosVitales->presion_arterial ?? '—' }}</div>
+                        <div class="vital-etiqueta">T.A. (mmHg)</div>
+                    </td>
+                    <td>
+                        <div class="vital-valor">{{ $signosVitales->frecuencia_cardiaca ?? '—' }}</div>
+                        <div class="vital-etiqueta">F.C. (lpm)</div>
+                    </td>
+                    <td>
+                        <div class="vital-valor">{{ $signosVitales->frecuencia_respiratoria ?? '—' }}</div>
+                        <div class="vital-etiqueta">F.R. (rpm)</div>
+                    </td>
+                    <td>
+                        <div class="vital-valor">{{ $signosVitales->temperatura ?? '—' }}</div>
+                        <div class="vital-etiqueta">Temp. (°C)</div>
+                    </td>
+                    <td>
+                        <div class="vital-valor {{ isset($signosVitales->saturacion_oxigeno) && $signosVitales->saturacion_oxigeno < 92 ? 'alerta' : '' }}">
+                            {{ $signosVitales->saturacion_oxigeno ?? '—' }}
+                        </div>
+                        <div class="vital-etiqueta">SpO2 (%)</div>
+                    </td>
+                    <td>
+                        <div class="vital-valor">{{ $signosVitales->glucosa ?? '—' }}</div>
+                        <div class="vital-etiqueta">Glucosa (mg/dL)</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="vital-valor">{{ $signosVitales->peso ?? '—' }}</div>
+                        <div class="vital-etiqueta">Peso (kg)</div>
+                    </td>
+                    <td>
+                        <div class="vital-valor">{{ $signosVitales->talla ?? '—' }}</div>
+                        <div class="vital-etiqueta">Talla (cm)</div>
+                    </td>
+                    <td>
+                        <div class="vital-valor">{{ $signosVitales->imc ?? '—' }}</div>
+                        <div class="vital-etiqueta">IMC</div>
+                    </td>
+                    <td colspan="3"></td>
+                </tr>
+            </table>
+        @else
+            <div class="vitales-vacio">No se registraron signos vitales para esta consulta.</div>
+        @endif
+    </div>
 
     {{-- Diagnóstico probable (evaluaciones_ia.diagnostico_probable) --}}
     @if($evaluacion && !empty($evaluacion->diagnostico_probable))
