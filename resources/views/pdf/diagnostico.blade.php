@@ -16,8 +16,8 @@
         /* ---------- Encabezado: logo + consultorio + folio/fecha ---------- */
         .header-table td { vertical-align: middle; }
         .logo-img {
-            width: 52px;
-            height: 52px;
+            width: 68px;
+            height: 68px;
         }
         .clinica-nombre {
             font-size: 16px;
@@ -198,12 +198,12 @@
 
     <table class="header-table">
         <tr>
-            <td style="width: 12%;">
+            <td style="width: 15%;">
                 @if(!empty($logoPath))
                     <img src="{{ $logoPath }}" class="logo-img">
                 @endif
             </td>
-            <td style="width: 48%;">
+            <td style="width: 45%;">
                 {{-- Datos del consultorio: ahora dinámicos según el médico --}}
                 <div class="clinica-nombre">{{ $nombreConsultorio }}</div>
                 <div class="clinica-sub">
