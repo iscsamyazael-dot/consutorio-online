@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Models;
-
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Receta;
@@ -113,5 +113,17 @@ class Paciente extends Model
         'id',                // PK local en 'pacientes'
         'id'                 // PK local en 'consultas'
     );
-}
+    }
+
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($paciente) {
+            if (empty($paciente->qr_token)) {
+                $paciente->qr_token = (string) Str::uuid();
+            }
+        });
+    }
 }

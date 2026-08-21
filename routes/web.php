@@ -25,9 +25,11 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\CimaMedicamentoController;
 use App\Http\Controllers\EvaluacionesIAController;
 use App\Http\Controllers\DispositivoController;
+use App\Http\Controllers\ConfiguracionEmpresaController;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OnboardingController;
 
 
 
@@ -193,6 +195,12 @@ Route::middleware('auth')->group(function () {
         Route::post('dispositivos/generar-codigo', [DispositivoController::class, 'generarCodigoEmparejamiento']);
         
         
+        // Onboarding: marca el onboarding como completado (POST /onboarding/completar)
+        Route::post('/onboarding/completar', [OnboardingController::class, 'completar'])->name('onboarding.completar');
+       // Onboarding: vista del wizard de bienvenida (GET /onboarding)
+       Route::get('conf-admin', function () { return view('Onboarding.index'); })->name('configuracion-sistema.conf-admin');
+       // Onboarding: vista del wizard de bienvenida (GET /onboarding)
+       Route::get('/onboarding', function () { return view('Onboarding.index'); })->name('onboarding.index');
         
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
@@ -215,8 +223,7 @@ Route::middleware('auth')->group(function () {
         //Código para hacer el filtro de un paciente mediante un input //
         Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
         //Codigo para las vistas y que son usadas en el menú de adminlte"
-        //codigo  de las citas //
-
+       
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de PATCH .../citas/{cita}/estado. Antes había
         // dos rutas casi idénticas (con y sin prefijo /api) apuntando al
@@ -241,7 +248,8 @@ Route::middleware('auth')->group(function () {
         //**INICIA LAS RUTAS PARA LAS VISTAS DE ACUERDO AL ACESSO DE CADA USUARIO *//
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO - ASISTENTE ///
-        Route::middleware(['auth', 'can:acceso-general'])->group(function() {
+        // Route::middleware(['auth', 'can:acceso-general'])->group(function() {
+        Route::middleware(['auth', 'can:acceso-general', 'onboarding.check'])->group(function() {// Se agrega el middleware onboarding.check para verificar si el onboarding está completado
             // Antes: closure que solo hacía "return view('pacientes.index')" sin datos.
             // Ahora: pasa por el controlador para inyectar totalPacientes / totalPendientes / pacientesPendientes.
             Route::get('ListaPacientes', [PacienteController::class, 'lista'])->name('pacientes.index');
@@ -252,7 +260,8 @@ Route::middleware('auth')->group(function () {
         });
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO///
-            Route::middleware(['auth', 'can:acceso-medico-admin'])->group(function() {
+            // Route::middleware(['auth', 'can:acceso-medico-admin'])->group(function() {
+            Route::middleware(['auth', 'can:acceso-medico-admin', 'onboarding.check'])->group(function() {//
             Route::get('/', function() { return view('dashboard'); })->name('dashboard');
             Route::get('Medicamentos', function() { return view('medicamentos.index'); })->name('medicamentos.index');
             Route::get('agregar-usuario',function(){ return view('configuracion-sistema.agregar-usuario');});
@@ -281,6 +290,9 @@ Route::middleware('auth')->group(function () {
             Route::get('RegistroMedico', function (){ return view('medicos.medicocreate'); })->name('medicos.medicocreate');
             Route::get('perfil',function(){ return view('configuracion-sistema.perfil'); })->name('configuracion-sistema.perfil');
             Route::get('cambiar-contraseña', function () { return view('configuracion-sistema.cambiar-contraseña'); })->name('configuracion-sistema.cambiar-contraseña');
+            //NUEVAS RUTAS DE CONFIGURACION EMPRESA 
+            Route::get('/configuracion-empresa', [ConfiguracionEmpresaController::class, 'show']);
+            Route::put('/configuracion-empresa/config-correo', [ConfiguracionEmpresaController::class, 'guardarConfigCorreo']);
             Route::get('Sucursales',function(){ return view('Ubicaciones.index'); })->name('Ubicaciones.index');
             Route::get('Agenda',function(){ return view('Citas.index'); })->name('Citas.index');
             Route::get('AgendarCitas',function(){ $datos = (new CitaController())->create(); return view('Citas.create',$datos); });

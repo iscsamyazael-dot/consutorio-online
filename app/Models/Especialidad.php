@@ -9,9 +9,11 @@ class Especialidad extends Model
     protected $table = 'especialidades';
 
     protected $fillable = [
-        'nombre'
-    ];
-
+    'folio',
+    'nombre',
+    'descripcion',
+    'estado',
+];
     public function medicos()
     {
         return $this->hasMany(Medico::class);
