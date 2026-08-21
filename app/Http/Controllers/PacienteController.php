@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use App\Models\Triage;
+use App\Mail\PacienteQrMail;
+use App\Services\TenantMailConfigurator;
+use Illuminate\Support\Facades\Mail;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -223,6 +228,24 @@ class PacienteController extends Controller
 
             [$paciente, $triage] = $resultado;
 
+            // El envío del QR va FUERA de la transacción a propósito: es una
+            // llamada externa (SMTP) y no debe bloquear ni revertir la creación
+            // del paciente/triage si el correo falla.
+            if (!empty($paciente->email)) {
+                try {
+                    TenantMailConfigurator::aplicar();
+
+                    $qrPath = $this->generarQrPaciente($paciente);
+
+                    Mail::to($paciente->email)->send(new PacienteQrMail($paciente, $qrPath));
+
+                } catch (\Exception $e) {
+                    \Log::error('Error enviando QR al paciente: ' . $e->getMessage());
+                    // No relanzamos la excepción: el paciente ya se creó
+                    // correctamente, un fallo de correo no debe romper esa respuesta.
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'existe'  => false,
@@ -283,6 +306,35 @@ class PacienteController extends Controller
         }
 
         return $prefijo . '-' . $anioActual . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Genera la imagen PNG del QR para un paciente, usando su qr_token
+     * (no sus datos personales — ver decisión en la Pieza B).
+     * Devuelve la ruta absoluta del archivo generado.
+     */
+    private function generarQrPaciente(Paciente $paciente): string
+    {
+        $qrCode = new QrCode(
+            data: $paciente->qr_token,
+            size: 300,
+            margin: 10,
+        );
+
+        $writer = new PngWriter();
+        $result = $writer->write($qrCode);
+
+        $directorio = storage_path('app/qr-pacientes');
+
+        if (!is_dir($directorio)) {
+            mkdir($directorio, 0755, true);
+        }
+
+        $ruta = $directorio . "/{$paciente->qr_token}.png";
+
+        $result->saveToFile($ruta);
+
+        return $ruta;
     }
 
     public function show(string $id)

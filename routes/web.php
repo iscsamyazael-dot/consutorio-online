@@ -24,6 +24,7 @@ use App\Http\Controllers\Api_Ionic\AuthController; //Login APP-IONIC
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\CimaMedicamentoController;
 use App\Http\Controllers\EvaluacionesIAController;
+use App\Http\Controllers\ConfiguracionEmpresaController;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
@@ -283,6 +284,9 @@ Route::middleware('auth')->group(function () {
             Route::get('RegistroMedico', function (){ return view('medicos.medicocreate'); })->name('medicos.medicocreate');
             Route::get('perfil',function(){ return view('configuracion-sistema.perfil'); })->name('configuracion-sistema.perfil');
             Route::get('cambiar-contraseña', function () { return view('configuracion-sistema.cambiar-contraseña'); })->name('configuracion-sistema.cambiar-contraseña');
+            //NUEVAS RUTAS DE CONFIGURACION EMPRESA 
+            Route::get('/configuracion-empresa', [ConfiguracionEmpresaController::class, 'show']);
+            Route::put('/configuracion-empresa/config-correo', [ConfiguracionEmpresaController::class, 'guardarConfigCorreo']);
             Route::get('Sucursales',function(){ return view('Ubicaciones.index'); })->name('Ubicaciones.index');
             Route::get('Agenda',function(){ return view('Citas.index'); })->name('Citas.index');
             Route::get('AgendarCitas',function(){ $datos = (new CitaController())->create(); return view('Citas.create',$datos); });
