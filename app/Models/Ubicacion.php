@@ -12,6 +12,7 @@ class Ubicacion extends Model
     protected $table = 'ubicaciones';
     public $timestamps = false;
     protected $fillable = [
+        'empresa_id',
         'folio_sucursal',
         'nombre',
         'direccion',
@@ -24,4 +25,9 @@ class Ubicacion extends Model
     protected $casts = [
         'activo' => 'boolean',
     ];
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
 }

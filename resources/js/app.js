@@ -49,6 +49,7 @@ import PanelTabla from './components/configuracion-sistema/PanelTabla.vue'
 import RegistrarUsuario from './components/configuracion-sistema/PanelUsuario.vue'
 import Ubicacionesmaster from './components/Ubicaciones/Ubicacionesmaster.vue';
 import TenantMaster from  './components/superadmin/TenantMaster.vue';
+import admin from './components/Onboarding/admin.vue';
 
 import DashboardHome from './components/Dashboard/Home.vue'
 import historialcosnulta from './components/Historialconsulta/historialcosnulta.vue';
@@ -89,6 +90,7 @@ app.component('panel-tabla', PanelTabla);
 app.component('tenant-master-contenedor',TenantMaster);
 app.component('dashboard-home', DashboardHome);
 app.component('historial-consulta', historialcosnulta);
+app.component('admin-onboarding', admin);
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 

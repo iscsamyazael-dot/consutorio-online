@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\IdentifyTenant;
+use App\Http\Middleware\EnsureOnboardingCompleted;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Puedes asignarle un alias para usarlo en tus rutas
         $middleware->alias([
             'tenant' => IdentifyTenant::class,
+            'onboarding.check' => EnsureOnboardingCompleted::class,
         ]);
 
         // Aplica el middleware a TODAS las rutas del grupo web
