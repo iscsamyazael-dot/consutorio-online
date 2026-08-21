@@ -125,7 +125,7 @@
             padding: 4px 6px;
             text-align: center;
             vertical-align: top;
-            width: 16.66%;
+            width: 20%;
         }
         .vital-valor {
             font-size: 13px;
@@ -148,7 +148,7 @@
             font-style: italic;
         }
 
-        /* ---------- Diagnóstico probable (destacado, igual que indicaciones del médico en receta) ---------- */
+        /* ---------- Diagnóstico probable (destacado) ---------- */
         .diagnostico-box {
             background: #fffbeb;
             border: 1px solid #fde68a;
@@ -232,9 +232,9 @@
         // medico -> configuracion_medico_sucursal -> ubicaciones).
         // Si el médico no tiene sucursal configurada, se usa el texto
         // genérico como respaldo para que el documento no salga vacío.
-        $nombreConsultorio = $ubicacion->nombre ?? 'Ultra Farmacia';
+        $nombreConsultorio    = $ubicacion->nombre    ?? 'Ultra Farmacia';
         $direccionConsultorio = $ubicacion->direccion ?? 'Calle Centro';
-        $telefonoConsultorio = $ubicacion->telefono ?? '988 966 5839';
+        $telefonoConsultorio  = $ubicacion->telefono  ?? '988 966 5839';
     @endphp
 
     <table class="header-table">
@@ -245,7 +245,7 @@
                 @endif
             </td>
             <td style="width: 45%;">
-                {{-- Datos del consultorio: ahora dinámicos según el médico --}}
+                {{-- Datos del consultorio: dinámicos según el médico --}}
                 <div class="clinica-nombre">{{ $nombreConsultorio }}</div>
                 <div class="clinica-sub">
                     {{ $direccionConsultorio }}<br>
@@ -293,11 +293,12 @@
 
     @php
         $nombrePaciente = trim(
-            ($consulta->paciente->nombre ?? '') . ' ' .
+            ($consulta->paciente->nombre          ?? '') . ' ' .
             ($consulta->paciente->apellido_paterno ?? '') . ' ' .
             ($consulta->paciente->apellido_materno ?? '')
         );
     @endphp
+
     <table class="datos-table">
         <tr>
             <td class="datos-label">Paciente:</td>
@@ -323,19 +324,36 @@
     </table>
 
     {{--
-        Signos vitales (signos_vitales de la consulta / evaluación IA).
-        Se asume una variable $signosVitales pasada desde el controlador
-        (p. ej. $consulta->signosVitales o $evaluacion->signosVitales)
-        con los campos usados abajo. Ajusta los nombres de propiedad
-        si en tu modelo son distintos.
+        =====================================================
+        SIGNOS VITALES
+        =====================================================
+        FIX: los signos vitales se guardan en la tabla `triage`,
+        no en una tabla separada. El controlador ahora pasa
+        $triage también como $signosVitales (mismo objeto,
+        nombre distinto) para que el blade lo encuentre.
+
+        Mapeo de columnas reales (tabla triage) vs. nombres
+        que usaba el blade original:
+
+            presion_arterial    → presion        ✅ corregido
+            saturacion_oxigeno  → saturacion     ✅ corregido
+            frecuencia_cardiaca → frecuencia_cardiaca  (igual)
+            frecuencia_respiratoria → frecuencia_respiratoria (igual)
+            temperatura         → temperatura    (igual)
+            peso                → peso           (igual)
+            talla               → talla          (igual)
+            imc                 → imc            (igual)
+            glucosa             → ❌ no existe en triage, se muestra —
+        =====================================================
     --}}
     <div class="vitales-box">
         <h2>Signos vitales</h2>
         @if($signosVitales ?? null)
             <table class="vitales-table">
                 <tr>
+                    {{-- FIX: columna real es `presion`, no `presion_arterial` --}}
                     <td>
-                        <div class="vital-valor">{{ $signosVitales->presion_arterial ?? '—' }}</div>
+                        <div class="vital-valor">{{ $signosVitales->presion ?? '—' }}</div>
                         <div class="vital-etiqueta">T.A. (mmHg)</div>
                     </td>
                     <td>
@@ -350,16 +368,13 @@
                         <div class="vital-valor">{{ $signosVitales->temperatura ?? '—' }}</div>
                         <div class="vital-etiqueta">Temp. (°C)</div>
                     </td>
+                    {{-- FIX: columna real es `saturacion`, no `saturacion_oxigeno` --}}
                     <td>
-                        <div class="vital-valor {{ isset($signosVitales->saturacion_oxigeno) && $signosVitales->saturacion_oxigeno < 92 ? 'alerta' : '' }}">
-                            {{ $signosVitales->saturacion_oxigeno ?? '—' }}
+                        <div class="vital-valor {{ isset($signosVitales->saturacion) && $signosVitales->saturacion < 92 ? 'alerta' : '' }}">
+                            {{ $signosVitales->saturacion ?? '—' }}
                         </div>
                         <div class="vital-etiqueta">SpO2 (%)</div>
-                    </td>
-                    <td>
-                        <div class="vital-valor">{{ $signosVitales->glucosa ?? '—' }}</div>
-                        <div class="vital-etiqueta">Glucosa (mg/dL)</div>
-                    </td>
+                   
                 </tr>
                 <tr>
                     <td>

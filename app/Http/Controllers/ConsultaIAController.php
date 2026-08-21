@@ -23,7 +23,7 @@ use App\Services\IAClinicaService;
 
 class ConsultaIAController extends Controller
 {   
-     protected $iaClinicaService;
+    protected $iaClinicaService;
 
     /*
     |--------------------------------------------------------------------------
@@ -235,7 +235,6 @@ class ConsultaIAController extends Controller
             }
 
             $consulta->update(['estado_consulta' => 'finalizada']);
-            
 
             // NUEVO: reflejar el cierre en lista_espera. ListaEspera no
             // guarda consulta_id, así que se cruza por paciente_id + fecha
@@ -250,7 +249,6 @@ class ConsultaIAController extends Controller
                 ->orderBy('id', 'desc')
                 ->limit(1)
                 ->update(['estado' => 'Finalizada']);
-
 
             return response()->json([
                 'success' => true,
@@ -343,7 +341,7 @@ class ConsultaIAController extends Controller
             // tomando solo el consecutivo de 4 dígitos, para que el
             // nombre del archivo quede alineado con el folio que ya ve
             // el médico en pantalla.
-           $codigoPaciente = $consulta->paciente->paciente_id ?? ('CONSULTA-' . $consulta->id);
+            $codigoPaciente = $consulta->paciente->paciente_id ?? ('CONSULTA-' . $consulta->id);
 
             $nombreArchivo = $codigoPaciente . '_' . time() . '_' . Str::random(6)
                  . '.' . $archivo->getClientOriginalExtension();
@@ -359,6 +357,7 @@ class ConsultaIAController extends Controller
             \Log::info('Texto extraído', [
                     'texto' => $textoExtraido
                 ]);
+
             if (empty($textoExtraido)) {
                 return response()->json([
                     'success' => false,
@@ -814,10 +813,16 @@ class ConsultaIAController extends Controller
      * entre generarPdf() (descarga) y verPdf() (previsualización inline),
      * para no duplicar la carga de consulta/nota/evaluación/receta/
      * médico/triage en los dos métodos.
+     *
+     * FIX: se agrega 'signosVitales' => $triage al array que se pasa
+     * a la vista. Antes $triage se cargaba correctamente pero nunca se
+     * enviaba al blade con el nombre que este espera ($signosVitales),
+     * por eso el @if($signosVitales ?? null) siempre evaluaba null y
+     * mostraba "No se registraron signos vitales para esta consulta."
      */
     private function armarPdfConsulta($consultaId, $tipo)
     {
-        // 1. Permitimos el nuevo tipo 'nota-soapp'
+        // 1. Permitimos los tipos válidos de PDF
         if (!in_array($tipo, ['receta', 'diagnostico', 'nota-soapp'])) {
             abort(404, 'Tipo de PDF no válido.');
         }
@@ -851,6 +856,10 @@ class ConsultaIAController extends Controller
                 ?? null;
         }
 
+        // Cargamos el triage más reciente del paciente para obtener
+        // los signos vitales (presión, temperatura, peso, talla, etc.).
+        // La tabla `triage` es donde el sistema guarda estos datos;
+        // no existe una tabla separada de signos_vitales.
         $triage = \App\Models\Triage::where('paciente_id', $consulta->paciente_id)
             ->orderBy('created_at', 'desc')
             ->first();
@@ -880,20 +889,25 @@ class ConsultaIAController extends Controller
         }
 
         $pdf = Pdf::loadView($vista, [
-            'consulta'   => $consulta,
-            'nota'       => $nota,
-            'evaluacion' => $evaluacion,
-            'receta'     => $receta,
-            'medico'     => $medico,
-            'ubicacion'  => $ubicacion,
-            'triage'     => $triage,
-            'logoPath'   => $logoPath,
+            'consulta'      => $consulta,
+            'nota'          => $nota,
+            'evaluacion'    => $evaluacion,
+            'receta'        => $receta,
+            'medico'        => $medico,
+            'ubicacion'     => $ubicacion,
+            'triage'        => $triage,
+            'logoPath'      => $logoPath,
+            // FIX: se pasa $triage también como $signosVitales, que es el
+            // nombre que usa el blade pdf/notasoapp.blade.php en su
+            // @if($signosVitales ?? null). Antes esta variable nunca llegaba
+            // a la vista y siempre mostraba "No se registraron signos vitales".
+            'signosVitales' => $triage,
         ]);
 
         // 3. Formato dinámico del nombre del archivo descargado
         $prefix = match ($tipo) {
             'receta'     => 'receta_',
-            'nota-soapp' => 'notasoapp',
+            'nota-soapp' => 'notasoapp_',
             default      => 'diagnostico_',
         };
 
@@ -1000,7 +1014,7 @@ class ConsultaIAController extends Controller
                     'motivo_derivacion'                => $respuestaIA['motivo_derivacion'] ?? null,
                     'requiere_urgencias'               => $respuestaIA['requiere_urgencias'] ?? false,
                     'justificacion'                    => $respuestaIA['justificacion'] ?? null,
-                    // NUEVO: transparencia cuando la especialidad ideal no
+                    // Transparencia cuando la especialidad ideal no
                     // está en el catálogo de este consultorio.
                     'especialidad_fuera_catalogo'      => $respuestaIA['especialidad_fuera_catalogo'] ?? false,
                     'especialidad_ideal_no_disponible' => $respuestaIA['especialidad_ideal_no_disponible'] ?? null,
@@ -1053,10 +1067,9 @@ class ConsultaIAController extends Controller
                 'triage'                     => $respuestaIA['triage'] ?? null,
                 'diagnosticos_probables'     => $respuestaIA['diagnosticos_probables'] ?? [],
                 'medicamentos'               => $medicamentos,
-                'medicamentos_sugeridos_ia'  => $medicamentosSugeridosIA, // no verificados
+                'medicamentos_sugeridos_ia'  => $medicamentosSugeridosIA,
                 // Sugerencia de la IA para el textarea de "Recomendación general"
-                // del frontend (RecetaInteligente.vue). El médico puede editarla
-                // libremente antes de guardar la receta.
+                // del frontend (RecetaInteligente.vue).
                 'recomendaciones_generales'  => $respuestaIA['recomendaciones_generales'] ?? '',
                 'justificacion'              => $respuestaIA['justificacion'] ?? null,
             ]);
@@ -1083,21 +1096,6 @@ class ConsultaIAController extends Controller
      * no coincide con ninguna especialidad activa, o el match encontrado
      * no es clínicamente coherente con los síntomas, se usa el mapa de
      * palabras clave como respaldo determinístico.
-     *
-     * NOTA: las descripciones de "especialidades" en la BD son
-     * institucionales (no listas de síntomas), por lo que el respaldo
-     * usa un mapa de palabras clave en vez de un LIKE directo contra
-     * la columna descripcion.
-     *
-     * NOTA (transparencia de especialidad ideal): cuando la IA detecta
-     * que la especialidad clínicamente ideal para el caso no existe en
-     * el catálogo activo, lo señala mediante 'especialidad_fuera_catalogo'
-     * (true/false) y 'especialidad_ideal_no_disponible' (el nombre de esa
-     * especialidad ideal, ej. "Neumología"), mientras que 'especialidad'
-     * sigue trayendo la mejor alternativa disponible (ej. "Medicina
-     * general"). Estos dos campos solo vienen poblados cuando la fuente
-     * es 'ia_triage'; el mapa de respaldo no tiene esa información, así
-     * que en 'mapa_respaldo' quedan en false/null.
      */
     public function derivacionInteligente(Request $request)
     {
@@ -1127,10 +1125,6 @@ class ConsultaIAController extends Controller
             $requiereUrgencias = false;
             $especialidad = null;
             $fuente = null;
-
-            // NUEVO: bandera + nombre de la especialidad ideal cuando no
-            // está en el catálogo. Solo se poblarán si la fuente termina
-            // siendo 'ia_triage'.
             $especialidadFueraCatalogo = false;
             $especialidadIdealNoDisponible = null;
 
@@ -1139,8 +1133,6 @@ class ConsultaIAController extends Controller
                 $diagnosticosProbables = $respuestaIA['diagnosticos_probables'] ?? [];
                 $motivoDerivacionIA = $respuestaIA['motivo_derivacion'] ?? null;
                 $requiereUrgencias = $respuestaIA['requiere_urgencias'] ?? false;
-
-                // NUEVO: tomamos directo de la respuesta de la IA
                 $especialidadFueraCatalogo = $respuestaIA['especialidad_fuera_catalogo'] ?? false;
                 $especialidadIdealNoDisponible = $respuestaIA['especialidad_ideal_no_disponible'] ?? null;
 
@@ -1167,11 +1159,6 @@ class ConsultaIAController extends Controller
             if (!$especialidad) {
                 $especialidad = $this->buscarEspecialidadPorMapaDeRespaldo($sintomas);
                 $fuente = 'mapa_respaldo';
-
-                // NUEVO: si terminamos usando el mapa de respaldo, no hay
-                // forma de saber si la especialidad ideal existía o no en
-                // el catálogo, así que se resetean para no mostrar un
-                // aviso inventado en el frontend.
                 $especialidadFueraCatalogo = false;
                 $especialidadIdealNoDisponible = null;
             }
@@ -1185,7 +1172,6 @@ class ConsultaIAController extends Controller
                 'diagnosticos_probables'           => $diagnosticosProbables,
                 'motivo_derivacion_ia'             => $motivoDerivacionIA,
                 'requiere_urgencias'               => $requiereUrgencias,
-                // NUEVO
                 'especialidad_fuera_catalogo'      => $especialidadFueraCatalogo,
                 'especialidad_ideal_no_disponible' => $especialidadIdealNoDisponible,
             ]);
@@ -1202,82 +1188,77 @@ class ConsultaIAController extends Controller
 
     private function buscarEspecialidadPorMapaDeRespaldo(array $sintomas)
     {
-            $textoSintomas = mb_strtolower(implode(' ', $sintomas));
+        $textoSintomas = mb_strtolower(implode(' ', $sintomas));
 
-            $mapaEspecialidades = [
-                'diente'       => 'Dentista',
-                'muela'        => 'Dentista',
-                'encía'        => 'Dentista',
-                'encia'        => 'Dentista',
-                'boca'         => 'Dentista',
-                'dental'       => 'Dentista',
+        $mapaEspecialidades = [
+            'diente'        => 'Dentista',
+            'muela'         => 'Dentista',
+            'encía'         => 'Dentista',
+            'encia'         => 'Dentista',
+            'boca'          => 'Dentista',
+            'dental'        => 'Dentista',
+            'estómago'      => 'Gastroenterología',
+            'estomago'      => 'Gastroenterología',
+            'digestivo'     => 'Gastroenterología',
+            'digestión'     => 'Gastroenterología',
+            'digestion'     => 'Gastroenterología',
+            'hígado'        => 'Gastroenterología',
+            'higado'        => 'Gastroenterología',
+            'intestino'     => 'Gastroenterología',
+            'colon'         => 'Gastroenterología',
+            'colitis'       => 'Gastroenterología',
+            'gastritis'     => 'Gastroenterología',
+            'náusea'        => 'Gastroenterología',
+            'nausea'        => 'Gastroenterología',
+            'vómito'        => 'Gastroenterología',
+            'vomito'        => 'Gastroenterología',
+            'diarrea'       => 'Gastroenterología',
+            'estreñimiento' => 'Gastroenterología',
+            'estrenimiento' => 'Gastroenterología',
+            'abdominal'     => 'Gastroenterología',
+            'abdomen'       => 'Gastroenterología',
+            'reflujo'       => 'Gastroenterología',
+            'acidez'        => 'Gastroenterología',
+            'alimentación'  => 'Nutricion',
+            'alimentacion'  => 'Nutricion',
+            'peso'          => 'Nutricion',
+            'dieta'         => 'Nutricion',
+            'niño'          => 'Pediatría',
+            'nino'          => 'Pediatría',
+            'bebé'          => 'Pediatría',
+            'bebe'          => 'Pediatría',
+            'infante'       => 'Pediatría',
+            'ansiedad'      => 'Psicología',
+            'depresión'     => 'Psicología',
+            'depresion'     => 'Psicología',
+            'estrés'        => 'Psicología',
+            'estres'        => 'Psicología',
+            'emocional'     => 'Psicología',
+            'hueso'         => 'Traumatologia',
+            'fractura'      => 'Traumatologia',
+            'articulación'  => 'Traumatologia',
+            'articulacion'  => 'Traumatologia',
+            'músculo'       => 'Traumatologia',
+            'musculo'       => 'Traumatologia',
+            'esguince'      => 'Traumatologia',
+        ];
 
-                'estómago'     => 'Gastroenterología',
-                'estomago'     => 'Gastroenterología',
-                'digestivo'    => 'Gastroenterología',
-                'digestión'    => 'Gastroenterología',
-                'digestion'    => 'Gastroenterología',
-                'hígado'       => 'Gastroenterología',
-                'higado'       => 'Gastroenterología',
-                'intestino'    => 'Gastroenterología',
-                'colon'        => 'Gastroenterología',
-                'colitis'      => 'Gastroenterología',
-                'gastritis'    => 'Gastroenterología',
-                'náusea'       => 'Gastroenterología',
-                'nausea'       => 'Gastroenterología',
-                'vómito'       => 'Gastroenterología',
-                'vomito'       => 'Gastroenterología',
-                'diarrea'      => 'Gastroenterología',
-                'estreñimiento'=> 'Gastroenterología',
-                'estrenimiento'=> 'Gastroenterología',
-                'abdominal'    => 'Gastroenterología',
-                'abdomen'      => 'Gastroenterología',
-                'reflujo'      => 'Gastroenterología',
-                'acidez'       => 'Gastroenterología',
+        $especialidadSugerida = null;
 
-                'alimentación' => 'Nutricion',
-                'alimentacion' => 'Nutricion',
-                'peso'         => 'Nutricion',
-                'dieta'        => 'Nutricion',
-
-                'niño'         => 'Pediatría',
-                'nino'         => 'Pediatría',
-                'bebé'         => 'Pediatría',
-                'bebe'         => 'Pediatría',
-                'infante'      => 'Pediatría',
-
-                'ansiedad'     => 'Psicología',
-                'depresión'    => 'Psicología',
-                'depresion'    => 'Psicología',
-                'estrés'       => 'Psicología',
-                'estres'       => 'Psicología',
-                'emocional'    => 'Psicología',
-
-                'hueso'        => 'Traumatologia',
-                'fractura'     => 'Traumatologia',
-                'articulación' => 'Traumatologia',
-                'articulacion' => 'Traumatologia',
-                'músculo'      => 'Traumatologia',
-                'musculo'      => 'Traumatologia',
-                'esguince'     => 'Traumatologia',
-            ];
-
-            $especialidadSugerida = null;
-
-            foreach ($mapaEspecialidades as $palabraClave => $nombreEspecialidad) {
-                if (str_contains($textoSintomas, $palabraClave)) {
-                    $especialidadSugerida = $nombreEspecialidad;
-                    break;
-                }
+        foreach ($mapaEspecialidades as $palabraClave => $nombreEspecialidad) {
+            if (str_contains($textoSintomas, $palabraClave)) {
+                $especialidadSugerida = $nombreEspecialidad;
+                break;
             }
+        }
 
-            if (!$especialidadSugerida) {
-                $especialidadSugerida = 'Medicina general';
-            }
+        if (!$especialidadSugerida) {
+            $especialidadSugerida = 'Medicina general';
+        }
 
-            return Specialty::where('estado', 'Activo')
-                ->where('nombre', $especialidadSugerida)
-                ->first();
+        return Specialty::where('estado', 'Activo')
+            ->where('nombre', $especialidadSugerida)
+            ->first();
     }
 
     /**
@@ -1286,12 +1267,7 @@ class ConsultaIAController extends Controller
      *
      * FIX: el select() de $consultas traía la columna 'estado' (sin uso
      * real en el sistema, nunca se actualiza) en vez de 'estado_consulta'
-     * (la columna que finalizarConsulta() sí marca como 'finalizada' al
-     * presionar el botón "Finalizar" en ConsultaTiempoReal.vue). Sin
-     * 'estado_consulta' en la respuesta, el frontend no tenía forma de
-     * saber si una consulta ya había sido cerrada, y mostraba siempre
-     * "En proceso" para la primera consulta del historial sin importar
-     * su estado real.
+     * (la columna que finalizarConsulta() sí marca como 'finalizada').
      */
     public function historialClinico(Request $request)
     {
@@ -1351,15 +1327,7 @@ class ConsultaIAController extends Controller
     /**
      * Lista todas las notas PSOAPP guardadas de un paciente (de todas sus
      * consultas), con la fecha de la consulta a la que pertenecen. Usado
-     * por ExpedienteTabs.vue -> pestaña "Notas PSOAPP" (obtenerNotasPsoapp()).
-     *
-     * Se hace JOIN contra `consultas` (en vez de depender de una relación
-     * Eloquent) para no asumir que el modelo NotaPsoapp ya tiene definido
-     * belongsTo(Consulta::class).
-     *
-     * ⚠️ Verificar que el nombre real de la tabla del modelo NotaPsoapp
-     * sea 'notas_psoapp'; si es otro, ajustar el join() y el prefijo de
-     * columnas de abajo.
+     * por ExpedienteTabs.vue -> pestaña "Notas PSOAPP".
      */
     public function notasPsoapp($pacienteId)
     {
@@ -1396,5 +1364,4 @@ class ConsultaIAController extends Controller
             ], 500);
         }
     }
-
 }
