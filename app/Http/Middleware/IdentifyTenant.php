@@ -19,9 +19,28 @@ class IdentifyTenant
     public function handle(Request $request, Closure $next): Response
     {
       $dbName = null;
+        // 0. Dispositivo (kiosco / TV) autenticado por token Sanctum.
+        //    Se resuelve ANTES que email/sesión porque el dispositivo
+        //    nunca manda esos datos, y porque auth:sanctum (que corre
+        //    después en el pipeline) necesita que 'mysql' ya apunte al
+        //    tenant correcto para poder validar el token contra
+        //    personal_access_tokens de esa base.
+        $bearerToken = $request->bearerToken();
+        if ($bearerToken) {
+            $tokenId = strtok($bearerToken, '|'); // solo la parte antes del "|"
 
+            if ($tokenId) {
+                $mapeo = DB::connection('central')->table('resolucion_tokens_dispositivo')
+                    ->where('token_id', $tokenId)
+                    ->first();
+
+                if ($mapeo) {
+                    $dbName = $mapeo->tenant_db;
+                }
+            }
+        }
         // 1. Si el usuario está enviando su correo en el login
-        if ($request->filled('email')) {
+        if (!$dbName && $request->filled('email')) {
             $parts = explode('@', $request->input('email'));
             if (count($parts) >= 2) {
                 // Buscamos dinámicamente en la central según el dominio del correo

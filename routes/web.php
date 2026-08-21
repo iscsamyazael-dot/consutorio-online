@@ -24,6 +24,7 @@ use App\Http\Controllers\Api_Ionic\AuthController; //Login APP-IONIC
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\CimaMedicamentoController;
 use App\Http\Controllers\EvaluacionesIAController;
+use App\Http\Controllers\DispositivoController;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
@@ -164,6 +165,7 @@ Route::middleware('auth')->group(function () {
 
         Route::patch('/api/consultas/{id}/estado', [ConsultaController::class, 'actualizarEstado'])->name('consultas.estado.api');// Historial: cambiar estado de consulta tradicional
         
+        //Rutas para la lista de espera ///
         // Dentro del grupo protegido por auth (mismo patrón que ya usas para 'citas')
         Route::resource('lista-espera', ListaEsperaController::class)
              ->parameters(['lista-espera' => 'listaEspera']);
@@ -174,6 +176,7 @@ Route::middleware('auth')->group(function () {
         //Ruta para mostrar el resumen de las tarjetas
         Route::get('Resumen-listaEspera-consultaFinalizadas', [ListaEsperaController::class, 'resumen']);
         
+        //Rutas para el Kiosco ///
         Route::post('lista-espera/buscar-paciente', [ListaEsperaController::class, 'buscarParaKiosco'])
             ->middleware('throttle:30,1')
             ->name('lista-espera.buscar-kiosco');
@@ -185,6 +188,9 @@ Route::middleware('auth')->group(function () {
         Route::get('lista-espera-pantalla', [ListaEsperaController::class, 'pantalla'])
             ->middleware('throttle:30,1')
             ->name('lista-espera.pantalla');
+        
+        //Rutas para emparejar el dispositivo //
+        Route::post('dispositivos/generar-codigo', [DispositivoController::class, 'generarCodigoEmparejamiento']);
         
         
         
@@ -330,8 +336,8 @@ Route::prefix('api/ionic')
 
 
 
-// Fuera del grupo protegido (pantalla pública en sala de espera)
-Route::get('lista-espera-pantalla', [ListaEsperaController::class, 'pantalla'])
-    ->name('lista-espera.pantalla');
+// Pública, sin auth — la tablet/TV solo la usa una vez:
+Route::post('dispositivos/emparejar', [DispositivoController::class, 'emparejar'])
+    ->middleware('throttle:5,1');
 
 require __DIR__.'/auth.php';
