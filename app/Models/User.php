@@ -29,6 +29,7 @@ class User extends Authenticatable
     'password',
     'rol',    // varchar — el que usa el frontend
     'activo',
+    'onboarding_completado',
     ];
 
     
@@ -66,6 +67,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'activo' => 'boolean',
+            'onboarding_completado' => 'boolean',
         ];
     }
 

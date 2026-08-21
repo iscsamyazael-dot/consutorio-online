@@ -27,6 +27,7 @@ use App\Http\Controllers\EvaluacionesIAController;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OnboardingController;
 
 
 
@@ -174,7 +175,10 @@ Route::middleware('auth')->group(function () {
         
         //Ruta para mostrar el resumen de las tarjetas
         Route::get('Resumen-listaEspera-consultaFinalizadas', [ListaEsperaController::class, 'resumen']);
-        
+        Route::post('/onboarding/completar', [OnboardingController::class, 'completar'])->name('onboarding.completar');// Onboarding: marca el onboarding como completado (POST /onboarding/completar)
+       
+       Route::get('conf-admin', function () { return view('Onboarding.index'); })->name('configuracion-sistema.conf-admin');// Onboarding: vista del wizard de bienvenida (GET /onboarding)
+        Route::get('/onboarding', function () { return view('Onboarding.index'); })->name('onboarding.index');// Onboarding: vista del wizard de bienvenida (GET /onboarding)
         
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
@@ -198,7 +202,7 @@ Route::middleware('auth')->group(function () {
         Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
         //Codigo para las vistas y que son usadas en el menú de adminlte"
         //codigo  de las citas //
-
+        Route::post('/onboarding/completar', [OnboardingController::class, 'completar'])->name('onboarding.completar');//
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de PATCH .../citas/{cita}/estado. Antes había
         // dos rutas casi idénticas (con y sin prefijo /api) apuntando al
@@ -223,7 +227,8 @@ Route::middleware('auth')->group(function () {
         //**INICIA LAS RUTAS PARA LAS VISTAS DE ACUERDO AL ACESSO DE CADA USUARIO *//
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO - ASISTENTE ///
-        Route::middleware(['auth', 'can:acceso-general'])->group(function() {
+        // Route::middleware(['auth', 'can:acceso-general'])->group(function() {
+        Route::middleware(['auth', 'can:acceso-general', 'onboarding.check'])->group(function() {// Se agrega el middleware onboarding.check para verificar si el onboarding está completado
             // Antes: closure que solo hacía "return view('pacientes.index')" sin datos.
             // Ahora: pasa por el controlador para inyectar totalPacientes / totalPendientes / pacientesPendientes.
             Route::get('ListaPacientes', [PacienteController::class, 'lista'])->name('pacientes.index');
@@ -234,7 +239,8 @@ Route::middleware('auth')->group(function () {
         });
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO///
-            Route::middleware(['auth', 'can:acceso-medico-admin'])->group(function() {
+            // Route::middleware(['auth', 'can:acceso-medico-admin'])->group(function() {
+            Route::middleware(['auth', 'can:acceso-medico-admin', 'onboarding.check'])->group(function() {//
             Route::get('/', function() { return view('dashboard'); })->name('dashboard');
             Route::get('Medicamentos', function() { return view('medicamentos.index'); })->name('medicamentos.index');
             Route::get('agregar-usuario',function(){ return view('configuracion-sistema.agregar-usuario');});

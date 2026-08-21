@@ -506,6 +506,19 @@ return [
                     'can'  => 'ver-admin', // 🔒 Oculta el botón
                 ],
                 [
+                'text' => 'Crear consultorio', // texto que quieras mostrar
+                'url'  => 'conf-admin',    // la ruta hacia tu vista conf.admin
+                'icon' => 'fas fa-fw fa-cog',
+                'can'  => 'ver-admin', // 🔒 Oculta el botón
+            ],
+            [
+                'text' => 'Cambiar contraseña',
+                'url'  => 'cambiar-contraseña',
+                'icon' => 'fas fa-fw fa-lock',
+                'can'  => 'ver-admin',
+            ],
+
+                [
                     'text' => 'Agregar Usuario',
                     'url'  => 'agregar-usuario',
                     'icon' => 'fas fa-fw fa-user',
