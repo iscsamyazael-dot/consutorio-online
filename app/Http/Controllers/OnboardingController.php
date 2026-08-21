@@ -127,7 +127,7 @@ class OnboardingController extends Controller
             // sí lo arma en el frontend). Se liga a la empresa recién
             // creada mediante empresa_id.
             $ubicacion = Ubicacion::create([
-                'empresa_id' => $empresa->id,
+                //'empresa_id' => $empresa->id,
                 'folio_sucursal' => $validated['ubicacion']['folio_sucursal'] ?? $this->generarFolio('UBIC', Ubicacion::class),
                 'nombre' => $validated['ubicacion']['nombre'],
                 'direccion' => $validated['ubicacion']['direccion'],
