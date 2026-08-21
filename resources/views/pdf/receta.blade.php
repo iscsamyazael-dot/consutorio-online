@@ -119,11 +119,10 @@
 
         /* ---------- Cuerpo: medicamentos + signos vitales ---------- */
         .cuerpo-table td { vertical-align: top; }
-        .col-meds { width: 70%; padding-right: 18px; }
+        .col-meds { width: 68%; padding-right: 18px; }
         .col-vitales {
-            width: 30%;
-            border-left: 1px solid #e5e9f0;
-            padding-left: 14px;
+            width: 32%;
+            vertical-align: top;
         }
 
         h2 {
@@ -163,24 +162,42 @@
             margin: 0 0 6px;
         }
 
-        .vitales-item {
+        /* ---------- Signos vitales (mismo diseño que la nota de evolución) ---------- */
+        .vitales-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 10px 12px;
+        }
+        .vitales-box h2 {
+            border-bottom: none;
+            margin: 0 0 8px;
+            padding-bottom: 0;
+        }
+        .vitales-table td {
             font-size: 10.5px;
-            color: #374151;
-            margin-bottom: 6px;
+            padding: 6px 4px;
+            text-align: center;
+            vertical-align: top;
+            width: 50%;
         }
-        .vitales-label {
-            color: #6b7280;
-            display: block;
-            font-size: 9px;
-            text-transform: uppercase;
-        }
-        .vitales-valor {
-            font-family: 'DejaVu Sans Mono', monospace;
+        .vital-valor {
+            font-size: 13px;
             font-weight: bold;
             color: #111827;
         }
+        .vital-valor.alerta {
+            color: #b91c1c;
+        }
+        .vital-etiqueta {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
         .vitales-vacio {
-            font-size: 10px;
+            font-size: 10.5px;
             color: #9ca3af;
             font-style: italic;
         }
@@ -322,7 +339,7 @@
     </div>
     @endif
 
-    @if($evaluacion)
+    @if($receta || $triage)
     <table class="cuerpo-table">
         <tr>
             <td class="col-meds">
@@ -352,63 +369,72 @@
             </td>
 
             <td class="col-vitales">
-                <h2>Signos vitales</h2>
-                @if($triage)
-                    @php
-                        $tieneAlgunVital = !empty($triage->presion) || !empty($triage->frecuencia_cardiaca)
-                            || !empty($triage->frecuencia_respiratoria) || !empty($triage->saturacion)
-                            || !empty($triage->temperatura) || !empty($triage->peso) || !empty($triage->talla);
-                    @endphp
+                {{--
+                    Signos vitales: mismo diseño que la nota de evolución
+                    clínica (cajitas con valor grande + etiqueta), pero en
+                    grid de 2 columnas para caber en la columna lateral.
+                    Mapeo de columnas reales de la tabla `triage`:
+                        presion, frecuencia_cardiaca, frecuencia_respiratoria,
+                        temperatura, saturacion, peso, talla
+                --}}
+                <div class="vitales-box">
+                    <h2>Signos vitales</h2>
+                    @if($triage)
+                        @php
+                            $tieneAlgunVital = !empty($triage->presion) || !empty($triage->frecuencia_cardiaca)
+                                || !empty($triage->frecuencia_respiratoria) || !empty($triage->saturacion)
+                                || !empty($triage->temperatura) || !empty($triage->peso) || !empty($triage->talla);
+                        @endphp
 
-                    @if($tieneAlgunVital)
-                        @if(!empty($triage->presion))
-                        <div class="vitales-item">
-                            <span class="vitales-label">Presión arterial</span>
-                            <span class="vitales-valor">{{ $triage->presion }}</span>
-                        </div>
-                        @endif
-                        @if(!empty($triage->frecuencia_cardiaca))
-                        <div class="vitales-item">
-                            <span class="vitales-label">Frec. cardiaca</span>
-                            <span class="vitales-valor">{{ $triage->frecuencia_cardiaca }} lpm</span>
-                        </div>
-                        @endif
-                        @if(!empty($triage->frecuencia_respiratoria))
-                        <div class="vitales-item">
-                            <span class="vitales-label">Frec. respiratoria</span>
-                            <span class="vitales-valor">{{ $triage->frecuencia_respiratoria }} rpm</span>
-                        </div>
-                        @endif
-                        @if(!empty($triage->saturacion))
-                        <div class="vitales-item">
-                            <span class="vitales-label">SpO2</span>
-                            <span class="vitales-valor">{{ $triage->saturacion }}</span>
-                        </div>
-                        @endif
-                        @if(!empty($triage->temperatura))
-                        <div class="vitales-item">
-                            <span class="vitales-label">Temperatura</span>
-                            <span class="vitales-valor">{{ $triage->temperatura }} °C</span>
-                        </div>
-                        @endif
-                        @if(!empty($triage->peso))
-                        <div class="vitales-item">
-                            <span class="vitales-label">Peso</span>
-                            <span class="vitales-valor">{{ $triage->peso }} kg</span>
-                        </div>
-                        @endif
-                        @if(!empty($triage->talla))
-                        <div class="vitales-item">
-                            <span class="vitales-label">Talla</span>
-                            <span class="vitales-valor">{{ $triage->talla }} cm</span>
-                        </div>
+                        @if($tieneAlgunVital)
+                            <table class="vitales-table">
+                                <tr>
+                                    <td>
+                                        <div class="vital-valor">{{ $triage->presion ?? '—' }}</div>
+                                        <div class="vital-etiqueta">T.A. (mmHg)</div>
+                                    </td>
+                                    <td>
+                                        <div class="vital-valor">{{ $triage->frecuencia_cardiaca ?? '—' }}</div>
+                                        <div class="vital-etiqueta">F.C. (lpm)</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="vital-valor">{{ $triage->frecuencia_respiratoria ?? '—' }}</div>
+                                        <div class="vital-etiqueta">F.R. (rpm)</div>
+                                    </td>
+                                    <td>
+                                        <div class="vital-valor">{{ $triage->temperatura ?? '—' }}</div>
+                                        <div class="vital-etiqueta">Temp. (°C)</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="vital-valor {{ isset($triage->saturacion) && $triage->saturacion < 92 ? 'alerta' : '' }}">
+                                            {{ $triage->saturacion ?? '—' }}
+                                        </div>
+                                        <div class="vital-etiqueta">SpO2 (%)</div>
+                                    </td>
+                                    <td>
+                                        <div class="vital-valor">{{ $triage->peso ?? '—' }}</div>
+                                        <div class="vital-etiqueta">Peso (kg)</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="vital-valor">{{ $triage->talla ?? '—' }}</div>
+                                        <div class="vital-etiqueta">Talla (cm)</div>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </table>
+                        @else
+                            <div class="vitales-vacio">Sin signos vitales registrados.</div>
                         @endif
                     @else
-                        <p class="vitales-vacio">Sin signos vitales registrados.</p>
+                        <div class="vitales-vacio">Sin triage registrado para esta consulta.</div>
                     @endif
-                @else
-                    <p class="vitales-vacio">Sin triage registrado para esta consulta.</p>
-                @endif
+                </div>
             </td>
         </tr>
     </table>
