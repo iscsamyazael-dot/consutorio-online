@@ -96,7 +96,7 @@ class TenantController extends Controller
             DB::table($dbName . '.users')->insert([
                 'name' => 'Administrador ' . $request->nombre_consultorio,
                 'email' => $emailAdmin,
-                'password' => bcrypt('Password123'), // Contraseña temporal inicial
+                'password' => bcrypt('password123'), // Contraseña temporal inicial
                 'rol'=> 'admin',
                 'created_at' => now(),
                 'updated_at' => now(),

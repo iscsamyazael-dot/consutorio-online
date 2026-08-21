@@ -307,4 +307,101 @@ class ListaEsperaController extends Controller
             'urgencias' => $urgencias,
         ]);
     }
+
+    /**
+     * POST /lista-espera/buscar-paciente
+     * Recibe { codigo: "PAC-2026-0001" | "CIT-2026-0064" | "Juan Pérez López" }
+     * y resuelve al paciente + si tiene cita hoy.
+     */
+    public function buscarParaKiosco(Request $request)
+    {
+        $codigo = trim($request->input('codigo', ''));
+        $hoy = Carbon::now()->toDateString();
+
+        // 1. QR de cita (CIT-...)
+        if (str_starts_with(strtoupper($codigo), 'CIT-')) {
+            $cita = Cita::where('folio', $codigo)
+                ->where('fecha', $hoy)
+                ->where('estado', '!=', 'Cancelada')
+                ->with('paciente')
+                ->first();
+
+            if (!$cita) {
+                return response()->json(['encontrado' => false, 'motivo' => 'cita_no_encontrada'], 404);
+            }
+
+            return response()->json([
+                'encontrado' => true,
+                'tipo'       => 'cita',
+                'paciente'   => $cita->paciente,
+                'cita'       => $cita,
+            ]);
+        }
+
+        // 2. QR/folio permanente de paciente (PAC-...)
+        if (str_starts_with(strtoupper($codigo), 'PAC-')) {
+            $paciente = Paciente::where('paciente_id', $codigo)->first();
+
+            if (!$paciente) {
+                return response()->json(['encontrado' => false, 'motivo' => 'paciente_no_encontrado'], 404);
+            }
+
+            $citaHoy = Cita::where('paciente_id', $paciente->id)
+                ->where('fecha', $hoy)
+                ->where('estado', '!=', 'Cancelada')
+                ->first();
+
+            return response()->json([
+                'encontrado'    => true,
+                'tipo'          => 'paciente',
+                'paciente'      => $paciente,
+                'cita'          => $citaHoy, // null si es walk-in
+            ]);
+        }
+
+        // 3. Nombre completo digitado → varios resultados posibles
+        $coincidencias = Paciente::where('nombre', 'like', "%{$codigo}%")
+            ->where('estado', 'activo')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'encontrado'    => $coincidencias->count() > 0,
+            'tipo'          => 'nombre',
+            'coincidencias' => $coincidencias,
+        ]);
+    }
+
+    public function registrarDesdeKiosco(Request $request)
+    {
+        $validated = $request->validate([
+            'paciente_id' => 'required|exists:pacientes,id',
+            'cita_id'     => 'nullable|exists:citas,id',
+        ]);
+
+        // evitar duplicar si ya está en la lista de espera de hoy sin finalizar/cancelar
+        $yaEnCola = ListaEspera::where('paciente_id', $validated['paciente_id'])
+            ->where('fecha', Carbon::now()->toDateString())
+            ->whereNotIn('estado', ['Finalizada', 'Cancelada'])
+            ->first();
+
+        if ($yaEnCola) {
+            return response()->json(['success' => true, 'registro' => $yaEnCola, 'ya_existia' => true]);
+        }
+
+        $cita = $validated['cita_id'] ?? null ? Cita::find($validated['cita_id']) : null;
+
+        $registro = ListaEspera::create([
+            'paciente_id'     => $validated['paciente_id'],
+            'medico_id'       => $cita->medico_id ?? null,
+            'especialidad_id' => $cita->especialidad_id ?? null,
+            'cita_id'         => $cita->id ?? null,
+            'fecha'           => Carbon::now()->toDateString(),
+            'hora_llegada'    => Carbon::now()->toTimeString(),
+            'estado'          => 'En espera',
+            'observaciones'   => 'Autoregistro desde kiosco',
+        ]);
+
+        return response()->json(['success' => true, 'registro' => $registro->load(['paciente','medico','especialidad'])], 201);
+    }
 }

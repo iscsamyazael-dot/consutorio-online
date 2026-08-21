@@ -140,8 +140,7 @@ Route::middleware('auth')->group(function () {
         // resource de abajo, pero se deja agrupada aquí por claridad.
         Route::get('historialClinico', [ConsultaIAController::class, 'historialClinico'])->name('consultaIA.historialClinico'); // IA: historial clínico completo generado por el módulo de IA
         Route::post('consultaIA/{consultaId}/finalizar', [ConsultaIAController::class, 'finalizarConsulta'])->name('consultaIA.finalizarConsulta'); // IA: cierra la consulta y bloquea más mensajes
-        Route::get('consultaIA/paciente/{pacienteId}/psoapp', [ConsultaIAController::class, 'notasPsoapp'])
-    ->name('consultaIA.notasPsoapp'); // IA: lista todas las notas PSOAPP de un paciente, para ExpedienteTabs.vue
+        Route::get('consultaIA/paciente/{pacienteId}/psoapp', [ConsultaIAController::class, 'notasPsoapp'])->name('consultaIA.notasPsoapp'); // IA: lista todas las notas PSOAPP de un paciente, para ExpedienteTabs.vue
         Route::resource('consultaIA', ConsultaIAController::class); // IA: CRUD principal del módulo de Consulta Inteligente (IA)
         Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente'); // IA: genera receta con apoyo de IA
         Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente'); // IA: genera derivación con apoyo de IA
@@ -174,6 +173,19 @@ Route::middleware('auth')->group(function () {
         
         //Ruta para mostrar el resumen de las tarjetas
         Route::get('Resumen-listaEspera-consultaFinalizadas', [ListaEsperaController::class, 'resumen']);
+        
+        Route::post('lista-espera/buscar-paciente', [ListaEsperaController::class, 'buscarParaKiosco'])
+            ->middleware('throttle:30,1')
+            ->name('lista-espera.buscar-kiosco');
+
+        Route::post('lista-espera/registrar-desde-kiosco', [ListaEsperaController::class, 'registrarDesdeKiosco'])
+            ->middleware('throttle:30,1')
+            ->name('lista-espera.registrar-kiosco');
+
+        Route::get('lista-espera-pantalla', [ListaEsperaController::class, 'pantalla'])
+            ->middleware('throttle:30,1')
+            ->name('lista-espera.pantalla');
+        
         
         
         // ─────────────────────────────────────────────────────────────
