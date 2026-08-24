@@ -472,7 +472,7 @@ return [
             'text' => 'Sucursales',
             'icon' => 'fas fa-fw fa-map-marker-alt',
             'url' => 'Sucursales',
-            'can'  => 'ver-admin',
+            'can'  => 'acceso-medico-admin',
             
         ],
 
@@ -485,7 +485,7 @@ return [
         // ==========================================
         
         ['header' => 'CONFIGURACIÓN DEL SISTEMA',
-         'can'    => 'admin', // 🔒 Oculta el encabezado para Asistente y Médico
+         'can'    => 'acceso-medico-admin', // 🔒 Oculta el encabezado para Asistente y Médico
         ],
         
 
@@ -497,46 +497,52 @@ return [
         
         ['text' => 'Perfil',
             'icon' => 'fas fa-fw fa-user',
-            'can'  => 'ver-admin',
+            'can'  => 'acceso-medico-admin',
             'submenu' => [
                 [
                     'text' => 'Ver Perfil',
                     'url'  => 'perfil',
                     'icon' => 'fas fa-fw fa-user',
-                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                    'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
                 ],
                 [
                 'text' => 'Crear consultorio', // texto que quieras mostrar
                 'url'  => 'conf-admin',    // la ruta hacia tu vista conf.admin
                 'icon' => 'fas fa-fw fa-cog',
-                'can'  => 'ver-admin', // 🔒 Oculta el botón
+                'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
             ],
             [
                 'text' => 'Cambiar contraseña',
                 'url'  => 'cambiar-contraseña',
                 'icon' => 'fas fa-fw fa-lock',
-                'can'  => 'ver-admin',
+                'can'  => 'acceso-medico-admin',
             ],
 
                 [
                     'text' => 'Agregar Usuario',
                     'url'  => 'agregar-usuario',
                     'icon' => 'fas fa-fw fa-user',
-                    'can'  => 'ver-admin', // 🔒 Oculta el botón
+                    'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
                 ],
             ],
+        ],
+        [
+            'text' => 'Agregar Dispositivos',
+            'url'  => 'agrega-dispositivo',
+            'icon' => 'fas fa-fw fa-tablet-alt',
+            'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
         ],
         [
             'text' => 'Cambiar contraseña',
             'url'  => 'cambiar-contraseña',
             'icon' => 'fas fa-fw fa-lock',
-            'can'  => 'ver-admin', // 🔒 Oculta el botón
+            'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
         ],
         [
             'text' => 'Cerrar sesión',
             'url'  => 'logout',
             'icon' => 'fas fa-sign-out-alt',
-            'can'  => 'ver-admin', // 🔒 Oculta el botón
+            'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
         ],
     ],                   
     

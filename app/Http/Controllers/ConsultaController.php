@@ -78,6 +78,13 @@ class ConsultaController extends Controller
             'estado_consulta' => 'finalizada',
         ]);
 
+        // 2. SINCRONIZAR LA LISTA DE ESPERA PARA LA TV
+        // Buscamos si el paciente tiene un registro pendiente hoy en la lista de espera y lo actualizamos
+        \App\Models\ListaEspera::where('paciente_id', $paciente->id)
+            ->where('fecha', now()->toDateString())
+            ->whereIn('estado', ['En espera', 'Llamando', 'En proceso'])
+            ->update(['estado' => 'Finalizada']); // O el estado que corresponda al finalizar
+
         // CREAR NOTA PSOAPP
         NotaPsoapp::create([
             'consulta_id'      => $consulta->id,
@@ -187,9 +194,25 @@ class ConsultaController extends Controller
             'Finalizada' => 'finalizada',
             'Cancelada'  => 'cancelada',
         ];
-
-        $consulta->estado_consulta = $mapaEstados[$request->estado] ?? $request->estado;
+        
+        $nuevoEstadoConsulta = $mapaEstados[$request->estado] ?? $request->estado;
+        $consulta->estado_consulta = $nuevoEstadoConsulta;
         $consulta->save();
+
+        // ── AQUÍ ESTABA EL FALTANTE PARA LA TV ──
+        // Traducimos el estado de la consulta al formato que lee ListaEspera
+        $mapaListaEspera = [
+            'activa'     => 'En espera',
+            'en_proceso' => 'En consulta',
+            'finalizada' => 'Finalizada', // O el estado que use tu TV para ocultarlo
+            'cancelada'  => 'Cancelada',
+        ];
+
+        if (isset($mapaListaEspera[$nuevoEstadoConsulta])) {
+            \App\Models\ListaEspera::where('paciente_id', $consulta->paciente_id)
+                ->where('fecha', now()->toDateString())
+                ->update(['estado' => $mapaListaEspera[$nuevoEstadoConsulta]]);
+        }
 
         return response()->json([
             'success'  => true,

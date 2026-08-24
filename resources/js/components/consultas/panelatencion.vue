@@ -1549,34 +1549,42 @@ export default {
       return relevantes.map(c => c.hora).sort()[0]
     },
 
-    async agregarPacienteAListaHoy(paciente) {
-      const medicoId = this.triageForm.medico_id || this.medicoSeleccionado
-      const especialidadId = this.triageForm.especialidad_id || this.especialidadSeleccionada
+   async agregarPacienteAListaHoy(paciente) {
+    const medicoId = this.triageForm.medico_id || this.medicoSeleccionado
+    const especialidadId = this.triageForm.especialidad_id || this.especialidadSeleccionada
 
-      try {
-        await ApiService.post('/lista-espera', {
-          paciente_id:      paciente.id,
-          medico_id:        medicoId || null,
-          especialidad_id:  especialidadId || null,
-          observaciones:    'Agregado a la lista de hoy desde la búsqueda de paciente'
+    try {
+      const { data } = await ApiService.post('/lista-espera', {
+        paciente_id:      paciente.id,
+        medico_id:        medicoId || null,
+        especialidad_id:  especialidadId || null,
+        observaciones:    'Agregado a la lista de hoy desde la búsqueda de paciente'
+      })
+
+      await this.obtenerListaEspera()
+      this.busqueda = ''
+
+      if (data?.ya_existia && window.Swal) {
+        window.Swal.fire({
+          toast: true, position: 'top-end', icon: 'info',
+          title: 'Este paciente ya estaba en la lista de espera de hoy',
+          showConfirmButton: false, timer: 2000, timerProgressBar: true
         })
-
-        await this.obtenerListaEspera()
-        this.busqueda = ''
-
-        return true
-      } catch (error) {
-        console.error('Error al agregar paciente a la lista de hoy:', error)
-        if (window.Swal) {
-          window.Swal.fire({
-            icon: 'error',
-            title: 'No se pudo agregar a la lista de hoy',
-            text: error.response?.data?.message || 'Intenta de nuevo.'
-          })
-        }
-        return false
       }
-    },
+
+      return true
+    } catch (error) {
+      console.error('Error al agregar paciente a la lista de hoy:', error)
+      if (window.Swal) {
+        window.Swal.fire({
+          icon: 'error',
+          title: 'No se pudo agregar a la lista de hoy',
+          text: error.response?.data?.message || 'Intenta de nuevo.'
+        })
+      }
+      return false
+    }
+  },
 
     endpointEstadoCita(cita) {
       const idStr = String(cita.id)
@@ -1764,29 +1772,25 @@ export default {
       const paciente = this.modal.paciente
       if (!paciente) return
 
-      const resultadoIMC = this.imcTriage
-
-      if (resultadoIMC) {
-        this.triageForm.imc = resultadoIMC.bmi ?? null
-
-        this.triageForm.imc_percentil =
-          resultadoIMC.percentil ??
-          resultadoIMC.percentile ??
-          null
-
-        this.triageForm.imc_clasificacion =
-          resultadoIMC.clasificacion ??
-          resultadoIMC.tipo ??
-          ''
-      }
-
-      if (!this.tieneCitaHoy(paciente)) {
-        const seAgrego = await this.agregarPacienteAListaHoy(paciente)
-        if (!seAgrego) return
-      }
-
+      // Se activa AQUÍ, antes de cualquier llamada de red, para que el
+      // botón "Guardar signos vitales" se deshabilite de inmediato y un
+      // doble clic no dispare dos requests simultáneos.
       this.guardandoTriage = true
+
       try {
+        const resultadoIMC = this.imcTriage
+
+        if (resultadoIMC) {
+          this.triageForm.imc = resultadoIMC.bmi ?? null
+          this.triageForm.imc_percentil = resultadoIMC.percentil ?? resultadoIMC.percentile ?? null
+          this.triageForm.imc_clasificacion = resultadoIMC.clasificacion ?? resultadoIMC.tipo ?? ''
+        }
+
+        if (!this.tieneCitaHoy(paciente)) {
+          const seAgrego = await this.agregarPacienteAListaHoy(paciente)
+          if (!seAgrego) return
+        }
+
         const resultado = await this.guardarTriageEnBackend(paciente.id, this.triageForm)
 
         if (resultado?.triage) {

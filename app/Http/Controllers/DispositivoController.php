@@ -13,12 +13,47 @@ use Carbon\Carbon;
 class DispositivoController extends Controller
 {
     /**
+     * GET /dispositivos
+     * Lista los dispositivos (usuarios rol=dispositivo) del tenant actual.
+     * NOTA: no se puede devolver el token en texto plano aquí — Sanctum
+     * solo guarda el hash. Solo mandamos metadata (fecha de creación,
+     * último uso) para que el frontend decida si mostrar "conectado".
+     */
+    public function index()
+    {
+        $dispositivos = User::where('rol', 'dispositivo')
+            ->with(['tokens' => function ($q) {
+                $q->latest();
+            }])
+            ->get()
+            ->map(function ($user) {
+                $tokenActivo = $user->tokens->first();
+
+                return [
+                    'id'                 => $user->id,
+                    'nombre_dispositivo' => $user->name,
+                    'tipo'               => $user->tipo,
+                    'vinculado_en'       => $tokenActivo?->created_at,
+                    'ultima_conexion'    => $tokenActivo?->last_used_at,
+                    // "activo" ahora significa "está vinculado" (tiene un
+                    // token vigente), no "usó el token en los últimos 5
+                    // min". Antes dependía de last_used_at, así que un
+                    // kiosco recién emparejado (o simplemente inactivo por
+                    // un rato) se veía como "Sin conexión" aunque siguiera
+                    // perfectamente vinculado. 'ultima_conexion' se deja
+                    // como dato informativo aparte, no como lo que define
+                    // el badge.
+                    'activo'             => (bool) $tokenActivo,
+                    'tiene_token'        => (bool) $tokenActivo,
+                ];
+            });
+
+        return response()->json(['dispositivos' => $dispositivos]);
+    }
+
+    /**
      * POST /dispositivos/generar-codigo
-     * Protegida por auth + can:acceso-general. La sesión del admin
-     * ya trae el tenant resuelto (config('database.connections.mysql.database')
-     * ya apunta a su base), así que el registro completo se guarda
-     * normalmente ahí. Además, se guarda un mapeo mínimo en central
-     * para que emparejar() (sin sesión) pueda encontrar el tenant.
+     * (sin cambios respecto a tu versión original)
      */
     public function generarCodigoEmparejamiento(Request $request)
     {
@@ -27,8 +62,6 @@ class DispositivoController extends Controller
             'tipo'                => 'required|in:kiosco,tv',
         ]);
 
-        // Evita colisiones con un código ya activo, tanto en el tenant
-        // actual como en central (donde conviven códigos de TODOS los tenants)
         do {
             $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         } while (
@@ -40,8 +73,6 @@ class DispositivoController extends Controller
 
         $expiraEn = now()->addMinutes(10);
 
-        // 1. Registro completo en la base del TENANT actual (conexión 'mysql',
-        //    ya resuelta por la sesión del admin logueado)
         $registro = CodigoEmparejamientoDispositivo::create([
             'codigo'              => $codigo,
             'nombre_dispositivo'  => $validated['nombre_dispositivo'],
@@ -49,8 +80,6 @@ class DispositivoController extends Controller
             'expira_en'           => $expiraEn,
         ]);
 
-        // 2. Mapeo mínimo en CENTRAL, para que emparejar() sepa a qué
-        //    tenant pertenece este código sin tener sesión
         DB::connection('central')->table('resolucion_codigos_dispositivo')->insert([
             'codigo'    => $codigo,
             'tenant_db' => config('database.connections.mysql.database'),
@@ -65,8 +94,9 @@ class DispositivoController extends Controller
 
     /**
      * POST /dispositivos/emparejar
-     * Pública (sin auth) — la llama la tablet/TV una sola vez.
-     * No hay tenant resuelto todavía: primero se busca en central.
+     * (mismo flujo original, con UN cambio: ahora persiste `tipo` en el
+     * User, y actualiza `tipo` también si el usuario ya existía — por si
+     * se re-emparejó con un tipo distinto)
      */
     public function emparejar(Request $request)
     {
@@ -74,7 +104,6 @@ class DispositivoController extends Controller
             'codigo' => 'required|string|size:6',
         ]);
 
-        // 1. Buscar en CENTRAL a qué tenant pertenece este código
         $mapeo = DB::connection('central')->table('resolucion_codigos_dispositivo')
             ->where('codigo', $validated['codigo'])
             ->where('expira_en', '>', now())
@@ -84,51 +113,133 @@ class DispositivoController extends Controller
             return response()->json(['success' => false, 'motivo' => 'codigo_invalido_o_expirado'], 404);
         }
 
-        // 2. Cambiar la conexión 'mysql' al tenant resuelto
         Config::set('database.connections.mysql.database', $mapeo->tenant_db);
         DB::purge('mysql');
         DB::reconnect('mysql');
 
-        // 3. Ya en la base del tenant, buscar el registro completo y validar que no esté usado
-        $registro = CodigoEmparejamientoDispositivo::where('codigo', $validated['codigo'])
-            ->whereNull('usado_en')
-            ->where('expira_en', '>', now())
-            ->first();
+        $resultado = DB::transaction(function () use ($validated) {
+            $registro = CodigoEmparejamientoDispositivo::where('codigo', $validated['codigo'])
+                ->where('expira_en', '>', now())
+                ->lockForUpdate()
+                ->first();
 
-        if (!$registro) {
+            if (!$registro || $registro->usado_en) {
+                return null;
+            }
+
+            $usuarioDispositivo = User::firstOrCreate(
+                ['name' => $registro->nombre_dispositivo, 'rol' => 'dispositivo'],
+                [
+                    'tipo'     => $registro->tipo,
+                    'email'    => Str::slug($registro->nombre_dispositivo) . '-' . Str::random(6) . '@dispositivo.interno',
+                    'password' => bcrypt(Str::random(40)),
+                ]
+            );
+
+            // Si el usuario ya existía (re-emparejamiento), aseguramos que
+            // el tipo quede actualizado con el del código usado.
+            if ($usuarioDispositivo->tipo !== $registro->tipo) {
+                $usuarioDispositivo->update(['tipo' => $registro->tipo]);
+            }
+
+            $usuarioDispositivo->tokens()->delete();
+
+            $tokenCompleto = $usuarioDispositivo->createToken($registro->nombre_dispositivo)->plainTextToken;
+            $tokenId = (int) strtok($tokenCompleto, '|');
+
+            $registro->update(['usado_en' => now()]);
+
+            return [
+                'tokenCompleto' => $tokenCompleto,
+                'tokenId'       => $tokenId,
+                'tipo'          => $registro->tipo,
+            ];
+        });
+
+        if (!$resultado) {
             return response()->json(['success' => false, 'motivo' => 'codigo_invalido_o_expirado'], 404);
         }
 
-        // 4. Crear (o reusar) el usuario-dispositivo, EN LA BASE DEL TENANT
-        $usuarioDispositivo = User::firstOrCreate(
-            ['name' => $registro->nombre_dispositivo, 'rol' => 'dispositivo'],
-            [
-                'email'    => Str::slug($registro->nombre_dispositivo) . '-' . Str::random(6) . '@dispositivo.interno',
-                'password' => bcrypt(Str::random(40)),
-            ]
-        );
-
-        // Revoca tokens previos de este dispositivo antes de emitir uno nuevo
-        $usuarioDispositivo->tokens()->delete();
-
-        $tokenCompleto = $usuarioDispositivo->createToken($registro->nombre_dispositivo)->plainTextToken;
-        // $tokenCompleto tiene formato "{id}|{texto_plano}" — separamos el id
-        $tokenId = (int) strtok($tokenCompleto, '|');
-
-        // 5. Mapeo mínimo del token en CENTRAL, para que IdentifyTenant
-        //    resuelva el tenant en cada request futura del dispositivo
         DB::connection('central')->table('resolucion_tokens_dispositivo')->insert([
-            'token_id'  => $tokenId,
+            'token_id'  => $resultado['tokenId'],
             'tenant_db' => $mapeo->tenant_db,
         ]);
 
-        // 6. Marcar el código como usado, en la base del tenant
-        $registro->update(['usado_en' => now()]);
+        return response()->json([
+            'success' => true,
+            'token'   => $resultado['tokenCompleto'],
+            'tipo'    => $resultado['tipo'],
+        ]);
+    }
+
+    /**
+     * POST /dispositivos/{dispositivo}/regenerar-token
+     * Revoca el/los token(s) actuales de este dispositivo y crea uno
+     * nuevo. El token en texto plano SOLO se puede ver en esta respuesta;
+     * no queda guardado en ningún lado después (mismo límite de Sanctum
+     * que ya aplicaba en emparejar()).
+     */
+    public function regenerarToken(User $dispositivo)
+    {
+        if ($dispositivo->rol !== 'dispositivo') {
+            abort(404);
+        }
+
+        $resultado = DB::transaction(function () use ($dispositivo) {
+            $idsViejos = $dispositivo->tokens()->pluck('id');
+
+            if ($idsViejos->isNotEmpty()) {
+                DB::connection('central')->table('resolucion_tokens_dispositivo')
+                    ->whereIn('token_id', $idsViejos)
+                    ->delete();
+            }
+
+            $dispositivo->tokens()->delete();
+
+            $tokenCompleto = $dispositivo->createToken($dispositivo->name)->plainTextToken;
+            $tokenId = (int) strtok($tokenCompleto, '|');
+
+            return ['tokenCompleto' => $tokenCompleto, 'tokenId' => $tokenId];
+        });
+
+        DB::connection('central')->table('resolucion_tokens_dispositivo')->insert([
+            'token_id'  => $resultado['tokenId'],
+            'tenant_db' => config('database.connections.mysql.database'),
+        ]);
 
         return response()->json([
             'success' => true,
-            'token'   => $tokenCompleto,
-            'tipo'    => $registro->tipo,
+            'token'   => $resultado['tokenCompleto'],
+        ]);
+    }
+
+    /**
+     * DELETE /dispositivos/{dispositivo}
+     * Desvincula el dispositivo: borra sus tokens (local y mapeo en
+     * central) y el usuario mismo.
+     */
+    public function destroy(User $dispositivo)
+    {
+        if ($dispositivo->rol !== 'dispositivo') {
+            abort(404);
+        }
+
+        DB::transaction(function () use ($dispositivo) {
+            $idsTokens = $dispositivo->tokens()->pluck('id');
+
+            if ($idsTokens->isNotEmpty()) {
+                DB::connection('central')->table('resolucion_tokens_dispositivo')
+                    ->whereIn('token_id', $idsTokens)
+                    ->delete();
+            }
+
+            $dispositivo->tokens()->delete();
+            $dispositivo->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dispositivo desvinculado correctamente',
         ]);
     }
 }

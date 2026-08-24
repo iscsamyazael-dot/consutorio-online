@@ -53,6 +53,9 @@ import admin from './components/Onboarding/admin.vue';
 
 import DashboardHome from './components/Dashboard/Home.vue'
 import historialcosnulta from './components/Historialconsulta/historialcosnulta.vue';
+import PantallaKiosco from './components/Kiosco/Kioscoautoregistro.vue'
+// Junto a los demás imports de configuracion-sistema
+import AgregaDispositivo from './components/Kiosco/AgregaDispositivo.vue'
 // ------------------------------------------------------
 // Instancia única de la app
 // ------------------------------------------------------
@@ -91,6 +94,9 @@ app.component('tenant-master-contenedor',TenantMaster);
 app.component('dashboard-home', DashboardHome);
 app.component('historial-consulta', historialcosnulta);
 app.component('admin-onboarding', admin);
+app.component('pantalla-kiosco', PantallaKiosco);
+app.component('agrega-dispositivo', AgregaDispositivo);
+
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 

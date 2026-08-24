@@ -178,23 +178,14 @@ Route::middleware('auth')->group(function () {
         //Ruta para mostrar el resumen de las tarjetas
         Route::get('Resumen-listaEspera-consultaFinalizadas', [ListaEsperaController::class, 'resumen']);
         
-        //Rutas para el Kiosco ///
-        Route::post('lista-espera/buscar-paciente', [ListaEsperaController::class, 'buscarParaKiosco'])
-            ->middleware('throttle:30,1')
-            ->name('lista-espera.buscar-kiosco');
+        //RUTAS PARA GENERAR EL TOKENS PARA LA VINCULACIÓN DE LOS DISPOSITIVOS //
+         Route::get('dispositivos', [DispositivoController::class, 'index']);
+        //Ruta para generar codigo de emparejamiento//
+         Route::post('dispositivos/generar-codigo', [DispositivoController::class, 'generarCodigoEmparejamiento']);
+         Route::post('dispositivos/{dispositivo}/regenerar-token', [DispositivoController::class, 'regenerarToken']);
+         Route::delete('dispositivos/{dispositivo}', [DispositivoController::class, 'destroy']);
+        //AQUI TERMINAN LAS RUTAS PARA LA VINCULACION DE DISPOSITIVOS ///
 
-        Route::post('lista-espera/registrar-desde-kiosco', [ListaEsperaController::class, 'registrarDesdeKiosco'])
-            ->middleware('throttle:30,1')
-            ->name('lista-espera.registrar-kiosco');
-
-        Route::get('lista-espera-pantalla', [ListaEsperaController::class, 'pantalla'])
-            ->middleware('throttle:30,1')
-            ->name('lista-espera.pantalla');
-        
-        //Rutas para emparejar el dispositivo //
-        Route::post('dispositivos/generar-codigo', [DispositivoController::class, 'generarCodigoEmparejamiento']);
-        
-        
         // Onboarding: marca el onboarding como completado (POST /onboarding/completar)
         Route::post('/onboarding/completar', [OnboardingController::class, 'completar'])->name('onboarding.completar');
        // Onboarding: vista del wizard de bienvenida (GET /onboarding)
@@ -304,6 +295,8 @@ Route::middleware('auth')->group(function () {
                 $paciente = Paciente::findOrFail($id);
                 return view('consultas.consulta_inteligente', compact('paciente'));
             })->name('consultas.consulta_inteligente'); // IA: vista de Consulta Inteligente para un paciente específico
+            //Vista para agregar un dispositivo al kiosco//
+              Route::get('agrega-dispositivo', function () { return view('Kiosco.dispositivo');})->name('agrega-dispositivo');
         });
 
 });
@@ -347,9 +340,33 @@ Route::prefix('api/ionic')
     });
 
 
+// Rutas protegidas del kiosco/TV: requieren token Sanctum del dispositivo
+Route::prefix('api/kiosco')
+    ->middleware('auth:sanctum')
+    ->group(function () {
+        Route::post('lista-espera/buscar-paciente', [ListaEsperaController::class, 'buscarParaKiosco'])
+            ->middleware('throttle:30,1')
+            ->name('lista-espera.buscar-kiosco');
 
-// Pública, sin auth — la tablet/TV solo la usa una vez:
-Route::post('dispositivos/emparejar', [DispositivoController::class, 'emparejar'])
+        Route::post('lista-espera/registrar-desde-kiosco', [ListaEsperaController::class, 'registrarDesdeKiosco'])
+            ->middleware('throttle:30,1')
+            ->name('lista-espera.registrar-kiosco');
+
+        Route::get('lista-espera-pantalla', [ListaEsperaController::class, 'pantalla'])
+            ->middleware('throttle:30,1')
+            ->name('lista-espera.pantalla');
+
+       
+    });
+
+//Ruta para la vista del Kiosco
+Route::get('/kiosco', function () { return view('kiosco.index'); })->name('kiosco.index');
+//Ruta para la TV del Kiosco//
+Route::get('/TVKiosco', function () { return view('kiosco.KioscoTV'); })->name('kiosco.KioscoTV');
+
+// Pública, sin auth — la tablet/TV solo la usa una vez para emparejarse:
+Route::post('api/kiosco/dispositivos/emparejar', [DispositivoController::class, 'emparejar'])
     ->middleware('throttle:5,1');
+
 
 require __DIR__.'/auth.php';

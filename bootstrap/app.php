@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $middleware->validateCsrfTokens(except: [
             'api/ionic/*',
+            'api/kiosco/*',
         ]);
         
         // Puedes asignarle un alias para usarlo en tus rutas

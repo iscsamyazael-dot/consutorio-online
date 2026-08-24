@@ -10,16 +10,62 @@ use App\Models\Specialty;
 use App\Models\Consulta;
 use App\Models\Triage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class ListaEsperaController extends Controller
 {
     /**
+     * Genera un código con formato PREFIJO-AAAA-NNNN, donde NNNN es un
+     * consecutivo que se reinicia en 0001 cada vez que cambia el año.
+     *
+     * Mismo método que PacienteController::generarCodigoConReinicioAnual()
+     * (duplicado a propósito, no compartido vía trait, para mantener el
+     * mismo patrón que ya usa ese controlador).
+     *
+     * IMPORTANTE: debe llamarse dentro de un DB::transaction().
+     */
+    private function generarCodigoConReinicioAnual(string $modelo, string $columna, string $prefijo): string
+    {
+        $anioActual = date('Y');
+
+        $ultimoRegistro = $modelo::where($columna, 'LIKE', "{$prefijo}-{$anioActual}-%")
+            ->orderBy('id', 'desc')
+            ->lockForUpdate()
+            ->first();
+
+        if ($ultimoRegistro) {
+            $ultimoNumero = (int) substr($ultimoRegistro->{$columna}, -4);
+            $numero = $ultimoNumero + 1;
+        } else {
+            $numero = 1;
+        }
+
+        return $prefijo . '-' . $anioActual . '-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Genera el número de turno del día, reiniciando en 1 cada vez que
+     * cambia la fecha (no anual, por eso no usa el método de arriba).
+     * lockForUpdate() evita que dos registros simultáneos (kiosco + sync
+     * de citas, dos kioscos a la vez, o kiosco + walk-in del panel)
+     * generen el mismo número de turno.
+     *
+     * IMPORTANTE: debe llamarse dentro de un DB::transaction().
+     */
+    private function generarTurnoConReinicioDiario(string $fecha): int
+    {
+        $ultimoRegistro = ListaEspera::where('fecha', $fecha)
+            ->orderBy('id', 'desc')
+            ->lockForUpdate()
+            ->first();
+
+        return $ultimoRegistro ? $ultimoRegistro->numero_turno + 1 : 1;
+    }
+
+    /**
      * Vuelca a lista_espera las citas agendadas de una fecha que aún
      * no tengan su reflejo ahí (por cita_id). No duplica.
-     *
-     * `citas` sigue siendo únicamente la fuente de agenda (Sofia/n8n
-     * y app Ionic). lista_espera es solo un reflejo operativo del día.
      */
     private function sincronizarCitasDelDia(string $fecha)
     {
@@ -37,40 +83,39 @@ class ListaEsperaController extends Controller
                 continue;
             }
 
-            ListaEspera::create([
-                'paciente_id'     => $cita->paciente_id,
-                'medico_id'       => $cita->medico_id,
-                'especialidad_id' => $cita->especialidad_id,
-                'cita_id'         => $cita->id,
-                'fecha'           => $fecha,
-                'hora_llegada'    => $cita->hora,
-                'estado'          => 'En espera',
-                'observaciones'   => 'Volcado automático desde cita agendada (' . $cita->folio . ')',
-            ]);
+            DB::transaction(function () use ($cita, $fecha) {
+                $folio = $this->generarCodigoConReinicioAnual(ListaEspera::class, 'folio', 'LE');
+                $numeroTurno = $this->generarTurnoConReinicioDiario($fecha);
+
+                ListaEspera::create([
+                    'folio'           => $folio,
+                    'numero_turno'    => $numeroTurno,
+                    'paciente_id'     => $cita->paciente_id,
+                    'medico_id'       => $cita->medico_id,
+                    'especialidad_id' => $cita->especialidad_id,
+                    'cita_id'         => $cita->id,
+                    'fecha'           => $fecha,
+                    'hora_llegada'    => $cita->hora,
+                    'estado'          => 'En espera',
+                    'observaciones'   => 'Volcado automático desde cita agendada (' . $cita->folio . ')',
+                ]);
+            });
         }
     }
 
-    /**
-     * GET /lista-espera
-     * Lista la cola de atención de un día (agendados + walk-ins).
-     * Filtros opcionales: fecha (default hoy), medico_id, especialidad_id, estado.
-     */
     public function index(Request $request)
     {
         $fecha = $request->filled('fecha') ? $request->fecha : Carbon::now()->toDateString();
 
         $this->sincronizarCitasDelDia($fecha);
 
-        $query = ListaEspera::with(['paciente', 
-                                    'medico', 
-                                    'especialidad', 
+        $query = ListaEspera::with(['paciente',
+                                    'medico',
+                                    'especialidad',
                                     'cita',
                                     'paciente.ultimoTriage'])
             ->where('fecha', $fecha);
-        
 
-        // Si viene "todas_fechas=1", no se filtra por fecha (se listan todos
-        // los registros). Si no viene, se filtra por la fecha indicada (o hoy).
         if (!$request->boolean('todas_fechas')) {
             $query->where('fecha', $fecha);
         }
@@ -92,13 +137,6 @@ class ListaEsperaController extends Controller
         );
     }
 
-    /**
-     * GET /lista-espera/create
-     * Devuelve los catálogos necesarios para poblar el formulario de
-     * "agregar walk-in" en el frontend (mismo patrón que
-     * CitaController@create): pacientes activos, médicos activos y
-     * especialidades activas.
-     */
     public function create()
     {
         $pacientes = Paciente::select('id', 'nombre')
@@ -122,7 +160,8 @@ class ListaEsperaController extends Controller
 
     /**
      * POST /lista-espera
-     * Agrega un walk-in (sin cita previa). NO toca la tabla `citas`.
+     * Agrega un walk-in (sin cita previa), usado desde el panel admin
+     * por secretaria/enfermera. NO toca la tabla `citas`.
      */
     public function store(Request $request)
     {
@@ -135,28 +174,47 @@ class ListaEsperaController extends Controller
         ]);
 
         $ahora = Carbon::now();
+        $fecha = $ahora->toDateString();
 
-        $registro = ListaEspera::create([
-            'paciente_id'     => $validated['paciente_id'],
-            'medico_id'       => $validated['medico_id'] ?? null,
-            'especialidad_id' => $validated['especialidad_id'] ?? null,
-            'cita_id'         => null,
-            'fecha'           => $ahora->toDateString(),
-            'hora_llegada'    => $ahora->toTimeString(),
-            'estado'          => 'En espera',
-            'consultorio'     => $validated['consultorio'] ?? null,
-            'observaciones'   => $validated['observaciones'] ?? 'Agregado como walk-in (sin cita previa)',
-        ]);
+        $resultado = DB::transaction(function () use ($validated, $ahora, $fecha) {
+
+            $yaEnCola = ListaEspera::where('paciente_id', $validated['paciente_id'])
+                ->where('fecha', $fecha)
+                ->whereNotIn('estado', ['Finalizada', 'Cancelada'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($yaEnCola) {
+                return ['registro' => $yaEnCola, 'ya_existia' => true];
+            }
+
+            $folio = $this->generarCodigoConReinicioAnual(ListaEspera::class, 'folio', 'LE');
+            $numeroTurno = $this->generarTurnoConReinicioDiario($fecha);
+
+            $registro = ListaEspera::create([
+                'folio'           => $folio,
+                'numero_turno'    => $numeroTurno,
+                'paciente_id'     => $validated['paciente_id'],
+                'medico_id'       => $validated['medico_id'] ?? null,
+                'especialidad_id' => $validated['especialidad_id'] ?? null,
+                'cita_id'         => null,
+                'fecha'           => $fecha,
+                'hora_llegada'    => $ahora->toTimeString(),
+                'estado'          => 'En espera',
+                'consultorio'     => $validated['consultorio'] ?? null,
+                'observaciones'   => $validated['observaciones'] ?? 'Agregado como walk-in (sin cita previa)',
+            ]);
+
+            return ['registro' => $registro, 'ya_existia' => false];
+        });
 
         return response()->json([
-            'success'  => true,
-            'registro' => $registro->load(['paciente', 'medico', 'especialidad']),
-        ], 201);
+            'success'    => true,
+            'registro'   => $resultado['registro']->load(['paciente', 'medico', 'especialidad']),
+            'ya_existia' => $resultado['ya_existia'],
+        ], $resultado['ya_existia'] ? 200 : 201);
     }
 
-    /**
-     * GET /lista-espera/{listaEspera}
-     */
     public function show(ListaEspera $listaEspera)
     {
         return response()->json(
@@ -164,12 +222,6 @@ class ListaEsperaController extends Controller
         );
     }
 
-      /**
-     * GET /lista-espera/{listaEspera}/edit
-     * Igual que create(), pero además incluye el registro actual, por
-     * si el frontend quiere precargar un formulario de edición con
-     * los catálogos + los valores ya guardados.
-     */
     public function edit(ListaEspera $listaEspera)
     {
         $pacientes = Paciente::select('id', 'nombre')
@@ -192,14 +244,6 @@ class ListaEsperaController extends Controller
         ]);
     }
 
-
-    /**
-     * PUT/PATCH /lista-espera/{listaEspera}
-     * Actualización general del registro (médico, especialidad,
-     * consultorio, observaciones). Para el cambio de estado se usa
-     * la ruta dedicada actualizarEstado() (más abajo), para poder
-     * validar solo ese campo sin exigir el resto del payload.
-     */
     public function update(Request $request, ListaEspera $listaEspera)
     {
         $validated = $request->validate([
@@ -217,10 +261,6 @@ class ListaEsperaController extends Controller
         ]);
     }
 
-    /**
-     * DELETE /lista-espera/{listaEspera}
-     * Elimina un registro (por ejemplo, si se agregó un walk-in por error).
-     */
     public function destroy(ListaEspera $listaEspera)
     {
         $listaEspera->delete();
@@ -231,10 +271,6 @@ class ListaEsperaController extends Controller
         ]);
     }
 
-    /**
-     * PATCH /lista-espera/{listaEspera}/estado
-     * Cambia únicamente el estado del turno.
-     */
     public function actualizarEstado(Request $request, ListaEspera $listaEspera)
     {
         $request->validate([
@@ -251,9 +287,7 @@ class ListaEsperaController extends Controller
     }
 
     /**
-     * GET /lista-espera-pantalla
-     * Endpoint público de solo lectura para la pantalla de TV.
-     * Solo número de turno, nombre truncado, consultorio y estado.
+     * GET /api/kiosco/lista-espera-pantalla
      */
     public function pantalla()
     {
@@ -273,6 +307,7 @@ class ListaEsperaController extends Controller
                 return [
                     'numero_turno' => $r->numero_turno,
                     'nombre_corto' => trim($primerNombre . ' ' . $inicialApellido),
+                    'nombre_completo' => $nombre,
                     'consultorio'  => $r->consultorio,
                     'estado'       => $r->estado,
                 ];
@@ -282,9 +317,9 @@ class ListaEsperaController extends Controller
     }
 
     public function resumen()
-    {   
+    {
         $hoy = today();
-        
+
         $consultasHoy = Consulta::where('estado', 'Finalizada')
             ->whereDate('created_at', $hoy)
             ->count();
@@ -294,12 +329,12 @@ class ListaEsperaController extends Controller
             ->count();
 
         $urgencias = ListaEspera::where('estado', '!=', 'Cancelada')
-        ->whereDate('fecha', $hoy)
-        ->whereHas('paciente.triages', function ($q) use ($hoy) {
-            $q->where('nivel_urgencia',  ['rojo', 'naranja'])
-              ->whereDate('created_at', $hoy);
+            ->whereDate('fecha', $hoy)
+            ->whereHas('paciente.triages', function ($q) use ($hoy) {
+                $q->whereIn('nivel_urgencia', ['rojo', 'naranja'])
+                  ->whereDate('created_at', $hoy);
             })
-        ->count();
+            ->count();
 
         return response()->json([
             'consultas_hoy' => $consultasHoy,
@@ -309,16 +344,13 @@ class ListaEsperaController extends Controller
     }
 
     /**
-     * POST /lista-espera/buscar-paciente
-     * Recibe { codigo: "PAC-2026-0001" | "CIT-2026-0064" | "Juan Pérez López" }
-     * y resuelve al paciente + si tiene cita hoy.
+     * POST /api/kiosco/lista-espera/buscar-paciente
      */
     public function buscarParaKiosco(Request $request)
     {
         $codigo = trim($request->input('codigo', ''));
         $hoy = Carbon::now()->toDateString();
 
-        // 1. QR de cita (CIT-...)
         if (str_starts_with(strtoupper($codigo), 'CIT-')) {
             $cita = Cita::where('folio', $codigo)
                 ->where('fecha', $hoy)
@@ -338,7 +370,6 @@ class ListaEsperaController extends Controller
             ]);
         }
 
-        // 2. QR/folio permanente de paciente (PAC-...)
         if (str_starts_with(strtoupper($codigo), 'PAC-')) {
             $paciente = Paciente::where('paciente_id', $codigo)->first();
 
@@ -355,11 +386,10 @@ class ListaEsperaController extends Controller
                 'encontrado'    => true,
                 'tipo'          => 'paciente',
                 'paciente'      => $paciente,
-                'cita'          => $citaHoy, // null si es walk-in
+                'cita'          => $citaHoy,
             ]);
         }
 
-        // 3. Nombre completo digitado → varios resultados posibles
         $coincidencias = Paciente::where('nombre', 'like', "%{$codigo}%")
             ->where('estado', 'activo')
             ->limit(10)
@@ -372,6 +402,9 @@ class ListaEsperaController extends Controller
         ]);
     }
 
+    /**
+     * POST /api/kiosco/lista-espera/registrar-desde-kiosco
+     */
     public function registrarDesdeKiosco(Request $request)
     {
         $validated = $request->validate([
@@ -379,29 +412,45 @@ class ListaEsperaController extends Controller
             'cita_id'     => 'nullable|exists:citas,id',
         ]);
 
-        // evitar duplicar si ya está en la lista de espera de hoy sin finalizar/cancelar
-        $yaEnCola = ListaEspera::where('paciente_id', $validated['paciente_id'])
-            ->where('fecha', Carbon::now()->toDateString())
-            ->whereNotIn('estado', ['Finalizada', 'Cancelada'])
-            ->first();
+        $fecha = Carbon::now()->toDateString();
 
-        if ($yaEnCola) {
-            return response()->json(['success' => true, 'registro' => $yaEnCola, 'ya_existia' => true]);
-        }
+        $resultado = DB::transaction(function () use ($validated, $fecha) {
 
-        $cita = $validated['cita_id'] ?? null ? Cita::find($validated['cita_id']) : null;
+            $yaEnCola = ListaEspera::where('paciente_id', $validated['paciente_id'])
+                ->where('fecha', $fecha)
+                ->whereNotIn('estado', ['Finalizada', 'Cancelada'])
+                ->lockForUpdate()
+                ->first();
 
-        $registro = ListaEspera::create([
-            'paciente_id'     => $validated['paciente_id'],
-            'medico_id'       => $cita->medico_id ?? null,
-            'especialidad_id' => $cita->especialidad_id ?? null,
-            'cita_id'         => $cita->id ?? null,
-            'fecha'           => Carbon::now()->toDateString(),
-            'hora_llegada'    => Carbon::now()->toTimeString(),
-            'estado'          => 'En espera',
-            'observaciones'   => 'Autoregistro desde kiosco',
-        ]);
+            if ($yaEnCola) {
+                return ['registro' => $yaEnCola, 'ya_existia' => true];
+            }
 
-        return response()->json(['success' => true, 'registro' => $registro->load(['paciente','medico','especialidad'])], 201);
+            $cita = $validated['cita_id'] ?? null ? Cita::find($validated['cita_id']) : null;
+
+            $folio = $this->generarCodigoConReinicioAnual(ListaEspera::class, 'folio', 'LE');
+            $numeroTurno = $this->generarTurnoConReinicioDiario($fecha);
+
+            $registro = ListaEspera::create([
+                'folio'           => $folio,
+                'numero_turno'    => $numeroTurno,
+                'paciente_id'     => $validated['paciente_id'],
+                'medico_id'       => $cita->medico_id ?? null,
+                'especialidad_id' => $cita->especialidad_id ?? null,
+                'cita_id'         => $cita->id ?? null,
+                'fecha'           => $fecha,
+                'hora_llegada'    => Carbon::now()->toTimeString(),
+                'estado'          => 'En espera',
+                'observaciones'   => 'Autoregistro desde kiosco',
+            ]);
+
+            return ['registro' => $registro, 'ya_existia' => false];
+        });
+
+        return response()->json([
+            'success'    => true,
+            'registro'   => $resultado['registro']->load(['paciente', 'medico', 'especialidad']),
+            'ya_existia' => $resultado['ya_existia'],
+        ], $resultado['ya_existia'] ? 200 : 201);
     }
 }
