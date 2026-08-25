@@ -179,8 +179,10 @@ class DispositivoController extends Controller
      * no queda guardado en ningún lado después (mismo límite de Sanctum
      * que ya aplicaba en emparejar()).
      */
-    public function regenerarToken(User $dispositivo)
-    {
+    public function regenerarToken($id)
+    {   
+        $dispositivo = User::where('rol', 'dispositivo')->findOrFail($id);
+
         if ($dispositivo->rol !== 'dispositivo') {
             abort(404);
         }
@@ -218,8 +220,10 @@ class DispositivoController extends Controller
      * Desvincula el dispositivo: borra sus tokens (local y mapeo en
      * central) y el usuario mismo.
      */
-    public function destroy(User $dispositivo)
-    {
+    public function destroy($id)
+    {   
+        $dispositivo = User::where('rol', 'dispositivo')->findOrFail($id);
+        
         if ($dispositivo->rol !== 'dispositivo') {
             abort(404);
         }

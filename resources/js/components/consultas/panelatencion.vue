@@ -1572,7 +1572,7 @@ export default {
         })
       }
 
-      return true
+      return data?.registro?.id ?? null
     } catch (error) {
       console.error('Error al agregar paciente a la lista de hoy:', error)
       if (window.Swal) {
@@ -1772,9 +1772,6 @@ export default {
       const paciente = this.modal.paciente
       if (!paciente) return
 
-      // Se activa AQUÍ, antes de cualquier llamada de red, para que el
-      // botón "Guardar signos vitales" se deshabilite de inmediato y un
-      // doble clic no dispare dos requests simultáneos.
       this.guardandoTriage = true
 
       try {
@@ -1786,21 +1783,23 @@ export default {
           this.triageForm.imc_clasificacion = resultadoIMC.clasificacion ?? resultadoIMC.tipo ?? ''
         }
 
+        // El paciente ya tenía fila de lista_espera hoy → usamos ese id.
+        // Si no, se crea aquí mismo y usamos el id recién creado.
+        let listaEsperaId = paciente._registroLE?.id ?? null
+
         if (!this.tieneCitaHoy(paciente)) {
-          const seAgrego = await this.agregarPacienteAListaHoy(paciente)
-          if (!seAgrego) return
+          listaEsperaId = await this.agregarPacienteAListaHoy(paciente)
+          if (!listaEsperaId) return
         }
 
-        const resultado = await this.guardarTriageEnBackend(paciente.id, this.triageForm)
+        const resultado = await this.guardarTriageEnBackend(paciente.id, {
+          ...this.triageForm,
+          lista_espera_id: listaEsperaId
+        })
 
-        if (resultado?.triage) {
-          if (!paciente.triages) paciente.triages = []
-          paciente.triages.push(resultado.triage)
-        }
+        await Promise.all([this.obtenerPacientes(), this.obtenerListaEspera()])
 
-        await this.obtenerPacientes()
-
-        const nivel = resultado?.triage?.estado
+        const nivel = resultado?.estado
         const iconosPorNivel = { Rojo: '🔴', Amarillo: '🟡', Verde: '🟢' }
 
         if (window.Swal) {
@@ -1873,8 +1872,9 @@ export default {
     },
 
     ultimoTriage(paciente) {
-      if (!paciente?.triages?.length) return null
-      return paciente.triages[paciente.triages.length - 1]
+      //if (!paciente?.triages?.length) return null
+      //return paciente.triages[paciente.triages.length - 1]
+      return paciente?._registroLE?.triage || null
     },
 
     nombreCompleto(p) {

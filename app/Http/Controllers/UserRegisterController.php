@@ -37,6 +37,7 @@ class UserRegisterController extends Controller
             'password' => Hash::make($validated['password']),
             'rol'      => $validated['rol'],
             'activo'   => 1,
+            'onboarding_completado' => 1,        
         ]);
 
         return response()->json([

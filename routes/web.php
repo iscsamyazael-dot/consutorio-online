@@ -181,9 +181,9 @@ Route::middleware('auth')->group(function () {
         //RUTAS PARA GENERAR EL TOKENS PARA LA VINCULACIÓN DE LOS DISPOSITIVOS //
          Route::get('dispositivos', [DispositivoController::class, 'index']);
         //Ruta para generar codigo de emparejamiento//
-         Route::post('dispositivos/generar-codigo', [DispositivoController::class, 'generarCodigoEmparejamiento']);
-         Route::post('dispositivos/{dispositivo}/regenerar-token', [DispositivoController::class, 'regenerarToken']);
-         Route::delete('dispositivos/{dispositivo}', [DispositivoController::class, 'destroy']);
+        Route::post('dispositivos/generar-codigo', [DispositivoController::class, 'generarCodigoEmparejamiento']);
+        Route::delete('dispositivos/{id}', [DispositivoController::class, 'destroy']);
+        Route::post('dispositivos/{id}/regenerar-token', [DispositivoController::class, 'regenerarToken']);
         //AQUI TERMINAN LAS RUTAS PARA LA VINCULACION DE DISPOSITIVOS ///
 
         // Onboarding: marca el onboarding como completado (POST /onboarding/completar)
@@ -360,9 +360,9 @@ Route::prefix('api/kiosco')
     });
 
 //Ruta para la vista del Kiosco
-Route::get('/kiosco', function () { return view('kiosco.index'); })->name('kiosco.index');
+Route::get('kiosco', function () { return view('Kiosco.Index'); })->name('Kiosco.index');
 //Ruta para la TV del Kiosco//
-Route::get('/TVKiosco', function () { return view('kiosco.KioscoTV'); })->name('kiosco.KioscoTV');
+Route::get('TVKiosco', function () { return view('Kiosco.kioscoTV'); })->name('Kiosco.kioscoTV');
 
 // Pública, sin auth — la tablet/TV solo la usa una vez para emparejarse:
 Route::post('api/kiosco/dispositivos/emparejar', [DispositivoController::class, 'emparejar'])

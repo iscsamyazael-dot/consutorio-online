@@ -137,6 +137,7 @@ class TriageController extends Controller
     {
         $request->validate([
             'paciente_id' => 'required|exists:pacientes,id',
+            'lista_espera_id' => 'nullable|exists:lista_espera,id',
             'presion'     => 'nullable|string|max:20',
             'saturacion'  => 'nullable|numeric|min:0|max:100',
             'temperatura' => 'nullable|string|max:10',
@@ -170,6 +171,7 @@ class TriageController extends Controller
 
         $id = DB::table('triage')->insertGetId([
             'paciente_id' => $request->paciente_id,
+            'lista_espera_id' => $request->lista_espera_id,
             'presion'     => $request->presion,
             'saturacion'  => $request->saturacion,
             'temperatura' => $request->temperatura,

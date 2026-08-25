@@ -14,6 +14,7 @@ class Triage extends Model
    protected $fillable = [
     'triage_codigo',
     'paciente_id',
+    'lista_espera_id',
     'codigo_paciente',
     'usuario_triage_id',
     'presion',
@@ -57,6 +58,12 @@ class Triage extends Model
     public function consulta()
     {
         return $this->hasOne(Consulta::class, 'triage_id');
+    }
+
+    //Relacion del Triage a la lista de espera//
+    public function listaEspera()
+    {
+        return $this->belongsTo(ListaEspera::class, 'lista_espera_id');
     }
 }
 

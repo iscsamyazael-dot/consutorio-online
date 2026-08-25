@@ -56,4 +56,9 @@ class ListaEspera extends Model
     {
         return $this->belongsTo(Cita::class, 'cita_id');
     }
+
+    public function triage()
+    {
+        return $this->hasOne(Triage::class, 'lista_espera_id');
+    }
 }

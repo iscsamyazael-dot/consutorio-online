@@ -58,6 +58,7 @@ class MedicoController extends Controller
                 'role'     => 'medico', // Rol en enum
                 'rol'      => 'medico', // Rol secundario en string
                 'activo'   => 1,
+                'onboarding_completado' => 1,
             ]);
             // 1. Crear el Médico principal (Genera el folio MEDI-2026-XXX en su booted solo)
             $medico = Medico::create([

@@ -113,7 +113,7 @@ class ListaEsperaController extends Controller
                                     'medico',
                                     'especialidad',
                                     'cita',
-                                    'paciente.ultimoTriage'])
+                                    'triage'])
             ->where('fecha', $fecha);
 
         if (!$request->boolean('todas_fechas')) {
@@ -218,7 +218,7 @@ class ListaEsperaController extends Controller
     public function show(ListaEspera $listaEspera)
     {
         return response()->json(
-            $listaEspera->load(['paciente', 'medico', 'especialidad', 'cita'])
+            $listaEspera->load(['paciente', 'medico', 'especialidad', 'cita','triage'])
         );
     }
 
