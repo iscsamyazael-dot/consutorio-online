@@ -42,12 +42,10 @@
             <span class="vitals-panel-sub">Rangos evaluados para adulto</span>
         </div>
 
-        <!-- NOTIFICACIÓN: solo se muestra si NO hay triage guardado
-             en esta visita a la vista (triageGuardadoLocal === null).
-             Se reinicia cada vez que el componente se vuelve a montar,
-             sin importar los triages históricos que ya existan en
-             paciente.triages. -->
-        <div v-if="!triageGuardadoLocal" class="vitals-empty-wrap">
+        <!-- NOTIFICACIÓN: solo se muestra si NO hay triage para esta
+             visita (ni recién guardado en esta sesión, ni encontrado
+             en el historial por lista_espera_id). -->
+        <div v-if="!triageVisitaActual" class="vitals-empty-wrap">
             <button type="button" class="vitals-notice" @click="abrirModalTriage">
                 <span class="vitals-notice-icon">⚠️</span>
                 <span class="vitals-notice-text">
@@ -61,67 +59,57 @@
         </div>
 
         <!-- PANEL: triage ya registrado en esta visita -->
-        <!-- Cada vital-item ahora tiene su valor y unidad en spans
-             separados (vital-value / vital-unit) para poder darle el
-             estilo "atenuado" (valor en gris azulado suave, unidad
-             chiquita alineada a la derecha), en vez de texto negro
-             en negritas todo junto. -->
         <div v-else class="vitals-grid">
-            <div class="vital-item" :class="'vital-item--' + estadoPresion(triageGuardadoLocal.presion)" v-if="triageGuardadoLocal.presion">
+            <div class="vital-item" :class="'vital-item--' + estadoPresion(triageVisitaActual.presion)" v-if="triageVisitaActual.presion">
                 <span class="vital-label">Presión arterial</span>
                 <div class="vital-value-row">
-                    <span class="vital-value" :class="'vital-value--' + estadoPresion(triageGuardadoLocal.presion)">{{ triageGuardadoLocal.presion }}</span>
+                    <span class="vital-value" :class="'vital-value--' + estadoPresion(triageVisitaActual.presion)">{{ triageVisitaActual.presion }}</span>
                     <span class="vital-unit">mmHg</span>
                 </div>
             </div>
-            <div class="vital-item" :class="'vital-item--' + estadoSaturacion(triageGuardadoLocal.saturacion)" v-if="triageGuardadoLocal.saturacion !== null && triageGuardadoLocal.saturacion !== undefined && triageGuardadoLocal.saturacion !== ''">
+            <div class="vital-item" :class="'vital-item--' + estadoSaturacion(triageVisitaActual.saturacion)" v-if="triageVisitaActual.saturacion !== null && triageVisitaActual.saturacion !== undefined && triageVisitaActual.saturacion !== ''">
                 <span class="vital-label">Saturación O₂</span>
                 <div class="vital-value-row">
-                    <span class="vital-value" :class="'vital-value--' + estadoSaturacion(triageGuardadoLocal.saturacion)">{{ triageGuardadoLocal.saturacion }}</span>
+                    <span class="vital-value" :class="'vital-value--' + estadoSaturacion(triageVisitaActual.saturacion)">{{ triageVisitaActual.saturacion }}</span>
                     <span class="vital-unit">%</span>
                 </div>
             </div>
-            <div class="vital-item" :class="'vital-item--' + estadoTemperatura(triageGuardadoLocal.temperatura)" v-if="triageGuardadoLocal.temperatura !== null && triageGuardadoLocal.temperatura !== undefined && triageGuardadoLocal.temperatura !== ''">
+            <div class="vital-item" :class="'vital-item--' + estadoTemperatura(triageVisitaActual.temperatura)" v-if="triageVisitaActual.temperatura !== null && triageVisitaActual.temperatura !== undefined && triageVisitaActual.temperatura !== ''">
                 <span class="vital-label">Temperatura</span>
                 <div class="vital-value-row">
-                    <span class="vital-value" :class="'vital-value--' + estadoTemperatura(triageGuardadoLocal.temperatura)">{{ triageGuardadoLocal.temperatura }}</span>
+                    <span class="vital-value" :class="'vital-value--' + estadoTemperatura(triageVisitaActual.temperatura)">{{ triageVisitaActual.temperatura }}</span>
                     <span class="vital-unit">°C</span>
                 </div>
             </div>
-            <div class="vital-item" :class="'vital-item--' + estadoFrecuenciaCardiaca(triageGuardadoLocal.frecuencia_cardiaca)" v-if="triageGuardadoLocal.frecuencia_cardiaca !== null && triageGuardadoLocal.frecuencia_cardiaca !== undefined && triageGuardadoLocal.frecuencia_cardiaca !== ''">
+            <div class="vital-item" :class="'vital-item--' + estadoFrecuenciaCardiaca(triageVisitaActual.frecuencia_cardiaca)" v-if="triageVisitaActual.frecuencia_cardiaca !== null && triageVisitaActual.frecuencia_cardiaca !== undefined && triageVisitaActual.frecuencia_cardiaca !== ''">
                 <span class="vital-label">Frec. cardíaca</span>
                 <div class="vital-value-row">
-                    <span class="vital-value" :class="'vital-value--' + estadoFrecuenciaCardiaca(triageGuardadoLocal.frecuencia_cardiaca)">{{ triageGuardadoLocal.frecuencia_cardiaca }}</span>
+                    <span class="vital-value" :class="'vital-value--' + estadoFrecuenciaCardiaca(triageVisitaActual.frecuencia_cardiaca)">{{ triageVisitaActual.frecuencia_cardiaca }}</span>
                     <span class="vital-unit">lpm</span>
                 </div>
             </div>
-            <div class="vital-item" :class="'vital-item--' + estadoFrecuenciaRespiratoria(triageGuardadoLocal.frecuencia_respiratoria)" v-if="triageGuardadoLocal.frecuencia_respiratoria !== null && triageGuardadoLocal.frecuencia_respiratoria !== undefined && triageGuardadoLocal.frecuencia_respiratoria !== ''">
+            <div class="vital-item" :class="'vital-item--' + estadoFrecuenciaRespiratoria(triageVisitaActual.frecuencia_respiratoria)" v-if="triageVisitaActual.frecuencia_respiratoria !== null && triageVisitaActual.frecuencia_respiratoria !== undefined && triageVisitaActual.frecuencia_respiratoria !== ''">
                 <span class="vital-label">Frec. respiratoria</span>
                 <div class="vital-value-row">
-                    <span class="vital-value" :class="'vital-value--' + estadoFrecuenciaRespiratoria(triageGuardadoLocal.frecuencia_respiratoria)">{{ triageGuardadoLocal.frecuencia_respiratoria }}</span>
+                    <span class="vital-value" :class="'vital-value--' + estadoFrecuenciaRespiratoria(triageVisitaActual.frecuencia_respiratoria)">{{ triageVisitaActual.frecuencia_respiratoria }}</span>
                     <span class="vital-unit">rpm</span>
                 </div>
             </div>
-            <!-- Peso y talla se quedan neutros (sin verde/amarillo/rojo):
-                 no tienen un rango de alerta universal sin más contexto
-                 (edad, IMC objetivo del paciente, etc.). -->
-            <div class="vital-item" v-if="triageGuardadoLocal.peso !== null && triageGuardadoLocal.peso !== undefined && triageGuardadoLocal.peso !== ''">
+            <div class="vital-item" v-if="triageVisitaActual.peso !== null && triageVisitaActual.peso !== undefined && triageVisitaActual.peso !== ''">
                 <span class="vital-label">Peso</span>
                 <div class="vital-value-row">
-                    <span class="vital-value">{{ triageGuardadoLocal.peso }}</span>
+                    <span class="vital-value">{{ triageVisitaActual.peso }}</span>
                     <span class="vital-unit">kg</span>
                 </div>
             </div>
-            <div class="vital-item" v-if="triageGuardadoLocal.talla !== null && triageGuardadoLocal.talla !== undefined && triageGuardadoLocal.talla !== ''">
+            <div class="vital-item" v-if="triageVisitaActual.talla !== null && triageVisitaActual.talla !== undefined && triageVisitaActual.talla !== ''">
                 <span class="vital-label">Talla</span>
                 <div class="vital-value-row">
-                    <span class="vital-value">{{ triageGuardadoLocal.talla }}</span>
+                    <span class="vital-value">{{ triageVisitaActual.talla }}</span>
                     <span class="vital-unit">cm</span>
                 </div>
             </div>
 
-            <!-- IMC calculado, con clasificación pediátrica (percentil CDC)
-                 o de adulto (rangos OMS) según la edad del paciente -->
             <div class="vital-item vital-item-imc" v-if="imcGuardado">
                 <span class="vital-label">
                     IMC
@@ -134,11 +122,7 @@
             </div>
         </div>
 
-        <!-- MODAL: agregar triage nuevo.
-             Envuelto en <Teleport to="body"> para que se monte fuera de
-             este árbol (ver comentario largo al inicio del archivo) y su
-             position:fixed cubra la pantalla completa sin importar qué
-             ancestro tenga transform/filter/sticky/etc. -->
+        <!-- MODAL: agregar triage nuevo (sin cambios respecto al que ya tienes) -->
         <Teleport to="body">
             <transition name="modal-fade">
                 <div v-if="mostrarModalTriage" class="modal-overlay" @click.self="cerrarModalTriage">
@@ -195,7 +179,6 @@
                                 <input v-model.number="formTriage.talla" type="number" step="1" placeholder="170" :disabled="guardandoTriage">
                             </label>
 
-                            <!-- Vista previa del IMC en vivo mientras se captura peso/talla -->
                             <div class="campo-triage campo-triage-imc" v-if="imcModalPreview">
                                 <span>IMC (calculado)</span>
                                 <div class="imc-preview">
@@ -232,7 +215,6 @@
 
     </div>
 </template>
-
 <script>
 import axios from 'axios'
 import { evaluarIMC } from '@/utils/bmiPercentile.js'
@@ -258,6 +240,11 @@ export default {
             type: Object,
             required: false,
             default: () => ({})
+        },
+        listaEsperaId: { 
+            type: [Number, String], 
+            required: false, 
+            default: null 
         }
     },
 
@@ -318,8 +305,18 @@ export default {
 
         // IMC del triage ya guardado, para mostrar en el panel
         imcGuardado() {
-            if (!this.triageGuardadoLocal) return null
-            return this.calcularIMCInfo(this.triageGuardadoLocal.peso, this.triageGuardadoLocal.talla)
+            if (!this.triageVisitaActual) return null
+            return this.calcularIMCInfo(this.triageVisitaActual.peso, this.triageVisitaActual.talla)
+        },
+        // NUEVO: el triage a mostrar. Prioriza el recién guardado en ESTA
+        // sesión (triageGuardadoLocal); si no hay uno nuevo, busca en el
+        // historial (paciente.triages) el que pertenezca a la visita de
+        // hoy, comparando por lista_espera_id.
+        triageVisitaActual() {
+            if (this.triageGuardadoLocal) return this.triageGuardadoLocal
+            if (!this.listaEsperaId) return null
+            const triages = this.paciente?.triages || []
+            return triages.find(t => t.lista_espera_id == this.listaEsperaId) || null
         }
     },
     methods: {

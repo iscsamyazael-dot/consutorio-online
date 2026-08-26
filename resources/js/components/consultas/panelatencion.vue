@@ -1799,7 +1799,7 @@ export default {
 
         await Promise.all([this.obtenerPacientes(), this.obtenerListaEspera()])
 
-        const nivel = resultado?.estado
+        const nivel = resultado?.triage?.estado
         const iconosPorNivel = { Rojo: '🔴', Amarillo: '🟡', Verde: '🟢' }
 
         if (window.Swal) {

@@ -265,7 +265,19 @@ export default {
     // de navegar se marca la consulta como finalizada en el backend
     // (POST consultaIA/{consultaId}/finalizar -> ConsultaIAController::finalizarConsulta),
     // para que la consulta quede cerrada aunque no se hayan descargado los PDFs.
-    validarSalida(callbackNavegacion) {
+    validarSalida(callbackNavegacion, opciones = {}) {
+      
+      const {
+            titulo = '¿Estás seguro de salir?',
+            confirmButtonText = 'Sí, salir de todos modos',
+            cancelButtonText = 'Cancelar, quedarme',
+            textos = {
+                ambos: 'No has descargado la receta ni el diagnóstico de esta consulta. Si sales ahora, podrías perderlos.',
+                receta: 'No has descargado la receta médica de esta consulta. Si sales ahora, podrías perderla.',
+                diagnostico: 'No has descargado el diagnóstico de esta consulta. Si sales ahora, podrías perderlo.'
+            }
+      } = opciones;
+
       const faltaReceta = !this.recetaDescargada;
       const faltaDiagnostico = !this.diagnosticoDescargado;
 
@@ -278,11 +290,11 @@ export default {
 
       let texto;
       if (faltaReceta && faltaDiagnostico) {
-        texto = 'No has descargado la receta ni el diagnóstico de esta consulta. Si sales ahora, podrías perderlos.';
+        texto = textos.ambos;
       } else if (faltaReceta) {
-        texto = 'No has descargado la receta médica de esta consulta. Si sales ahora, podrías perderla.';
+        texto = textos.receta;
       } else {
-        texto = 'No has descargado el diagnóstico de esta consulta. Si sales ahora, podrías perderlo.';
+        texto = textos.diagnostico;
       }
 
       // FIX: antes era `Swal.fire(...)` sin prefijo, lo que lanzaba un
@@ -290,20 +302,19 @@ export default {
       // como window.Swal (como en el resto del proyecto) y por eso el
       // modal nunca resolvía su promesa ni ejecutaba la navegación.
       window.Swal.fire({
-        title: '¿Estás seguro de salir?',
+        title: titulo,
         text: texto,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sí, salir de todos modos',
-        cancelButtonText: 'Cancelar, quedarme',
+        confirmButtonText,
+        cancelButtonText,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
         reverseButtons: true
       }).then((result) => {
-        if (result.isConfirmed) {
-          // El usuario decidió salir bajo su propio riesgo.
-          this.finalizarYNavegar(callbackNavegacion);
-        }
+          if (result.isConfirmed) {
+              this.finalizarYNavegar(callbackNavegacion);
+          }
       });
     },
     // Marca la consulta como finalizada en el backend y, tanto si el POST

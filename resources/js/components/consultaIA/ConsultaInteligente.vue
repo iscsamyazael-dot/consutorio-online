@@ -82,6 +82,7 @@
         -->
         <SignosVitales
             :paciente="paciente"
+            :lista-espera-id="listaEsperaIdHoy"
             @triage-agregado="obtenerPaciente"
         />
 
@@ -192,6 +193,7 @@ export default {
             resultados: [],
             buscando: false,
             debounceTimer: null,
+            listaEsperaIdHoy: null,
             todosPacientes: []
         }
     },
@@ -207,6 +209,7 @@ export default {
 
         if (this.hasPaciente) {
             this.obtenerPaciente();
+            this.obtenerListaEsperaIdHoy();
         } else {
             this.cargarListaPacientes();
         }
@@ -398,8 +401,18 @@ export default {
         },
 
         async manejarConversacionFinalizada() {
+            const opcionesModal = {
+                titulo: '¿Avanzar al siguiente paciente?',
+                confirmButtonText: 'Sí, continuar con el siguiente',
+                cancelButtonText: 'Quedarme con este paciente',
+                textos: {
+                    ambos: 'No has descargado la receta ni el diagnóstico de esta consulta. Si avanzas ahora, podrías perderlos.',
+                    receta: 'No has descargado la receta médica de esta consulta. Si avanzas ahora, podrías perderla.',
+                    diagnostico: 'No has descargado el diagnóstico de esta consulta. Si avanzas ahora, podrías perderlo.'
+                }
+            };
             if (this.$refs.notaPsoapp) {
-                this.$refs.notaPsoapp.validarSalida(() => this._avanzarSiguientePaciente());
+                this.$refs.notaPsoapp.validarSalida(() => this._avanzarSiguientePaciente(), opcionesModal);
             } else {
                 await this._avanzarSiguientePaciente();
             }
@@ -408,34 +421,26 @@ export default {
         async _avanzarSiguientePaciente() {
             try {
                 const hoy = this.obtenerFechaHoyISO()
-
-                const respCitas = await axios.get('/api/citas')
-                const citasHoy = (respCitas.data || []).filter(c => String(c.fecha).slice(0, 10) === hoy)
-
-                const citaActual = citasHoy.find(
-                    c => c.paciente && c.paciente.id == this.pacienteId
+                const respListaEspera = await ApiService.get('/lista-espera', { params: { fecha: hoy } })
+                const listaHoy = respListaEspera.data.lista || respListaEspera.data
+                const registroActual = listaHoy.find(
+                    r => r.paciente && r.paciente.id == this.pacienteId
                 )
-
-                if (citaActual) {
-                    await axios.patch(`/api/citas/${citaActual.id}/estado`, {
+                if (registroActual) {
+                    await ApiService.patch(`/lista-espera/${registroActual.id}/estado`, {
                         estado: 'Finalizada'
                     })
                     eventBus.emit('consulta-finalizada')
                 } else {
-                    console.warn('No se encontró una cita de hoy para este paciente; no se pudo marcar como Finalizada.')
+                    console.warn('No se encontró un registro de lista_espera de hoy para este paciente; no se pudo marcar como Finalizada.')
                 }
-
-                const pendientes = citasHoy
-                    .filter(c => c.id !== citaActual?.id)
-                    .filter(c => !['Finalizada', 'Cancelada'].includes(c.estado))
-                    .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+                const pendientes = listaHoy
+                    .filter(r => r.id !== registroActual?.id)
+                    .filter(r => !['Finalizada', 'Cancelada'].includes(r.estado))
+                    .sort((a, b) => (a.numero_turno ?? 999999) - (b.numero_turno ?? 999999))
 
                 const siguiente = pendientes[0]
-
                 if (siguiente && siguiente.paciente) {
-                    // Antes era window.location.href directo. Ahora pasa
-                    // por navegarFuera() para quitar el beforeunload antes
-                    // de salir de verdad.
                     this.navegarFuera('/ConsultaInteligente/' + siguiente.paciente.id)
                 } else if (window.Swal) {
                     window.Swal.fire({
@@ -462,6 +467,21 @@ export default {
             if (this.hasPaciente && this.$refs.notaPsoapp && this.$refs.notaPsoapp.tienePendientes()) {
                 e.preventDefault()
                 e.returnValue = ''
+            }
+        },
+
+        // NUEVO: busca la fila de lista_espera de HOY para este paciente,
+        // para saber cuál triage de paciente.triages corresponde a esta visita.
+        async obtenerListaEsperaIdHoy() {
+            try {
+                const hoy = this.obtenerFechaHoyISO()
+                const response = await ApiService.get('/lista-espera', { params: { fecha: hoy } })
+                const lista = response.data.lista || response.data
+                const registro = lista.find(item => item.paciente_id == this.pacienteId)
+                this.listaEsperaIdHoy = registro?.id ?? null
+            } catch (error) {
+                console.error('Error al obtener lista_espera de hoy:', error)
+                this.listaEsperaIdHoy = null
             }
         },
 

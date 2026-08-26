@@ -290,6 +290,7 @@ class TriageController extends Controller
         $paciente = Paciente::findOrFail($pacienteId);
 
         $data = $request->validate([
+            'lista_espera_id'         => 'nullable|exists:lista_espera,id',
             'presion'                 => 'nullable|string|max:20',
             'saturacion'              => 'nullable|numeric|min:0|max:100',
             'temperatura'             => 'nullable|numeric',
