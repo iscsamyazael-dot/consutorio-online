@@ -856,6 +856,23 @@ class ConsultaIAController extends Controller
                 ?? null;
         }
 
+        // FIX: si no hay sucursal configurada para este médico (caso típico
+        // cuando quien genera el PDF es el admin, que no tiene consultorio
+        // propio asignado), usamos los datos generales de la empresa
+        // (configuracion_empresa) como respaldo, en vez de dejar que el
+        // blade caiga en sus textos hardcodeados ("Ultra Farmacia", etc.).
+        if (!$ubicacion) {
+            $empresa = \App\Models\Empresa::first();
+            if ($empresa) {
+                $ubicacion = (object) [
+                    'nombre'    => $empresa->nombre_empresa,
+                    'direccion' => $empresa->direccion,
+                    'telefono'  => $empresa->telefono,
+                    'imagen'    => $empresa->logo_url,
+                ];
+            }
+        }
+
         // Cargamos el triage más reciente del paciente para obtener
         // los signos vitales (presión, temperatura, peso, talla, etc.).
         // La tabla `triage` es donde el sistema guarda estos datos;

@@ -321,6 +321,45 @@
             <td><span class="badge-alerta">{{ $consulta->paciente->alergias }}</span></td>
         </tr>
         @endif
+        
+        @php
+            $lineaVitales = [];
+
+            if ($signosVitales ?? null) {
+                if (!empty($signosVitales->presion)) {
+                    $lineaVitales[] = 'PA: ' . $signosVitales->presion;
+                }
+                if (!empty($signosVitales->frecuencia_cardiaca)) {
+                    $lineaVitales[] = 'FC: ' . $signosVitales->frecuencia_cardiaca . ' lpm';
+                }
+                if (!empty($signosVitales->frecuencia_respiratoria)) {
+                    $lineaVitales[] = 'FR: ' . $signosVitales->frecuencia_respiratoria . ' rpm';
+                }
+                if (!empty($signosVitales->saturacion)) {
+                    $colorSpo2 = $signosVitales->saturacion < 92 ? ' style="color:#b91c1c; font-weight:bold;"' : '';
+                    $lineaVitales[] = '<span'.$colorSpo2.'>SpO2: ' . $signosVitales->saturacion . '%</span>';
+                }
+                if (!empty($signosVitales->temperatura)) {
+                    $lineaVitales[] = 'Temp: ' . $signosVitales->temperatura . ' °C';
+                }
+                if (!empty($signosVitales->peso)) {
+                    $lineaVitales[] = 'Peso: ' . number_format($signosVitales->peso, 2) . ' kg';
+                }
+                if (!empty($signosVitales->talla)) {
+                    $lineaVitales[] = 'Talla: ' . number_format($signosVitales->talla, 2) . ' cm';
+                }
+                if (!empty($signosVitales->imc)) {
+                    $lineaVitales[] = 'IMC: ' . $signosVitales->imc;
+                }
+            }
+        @endphp
+        <tr>
+            <td class="datos-label">Signos vitales:</td>
+            <td>
+                {!! count($lineaVitales) > 0 ? implode('  ·  ', $lineaVitales) : 'No se registraron signos vitales.' !!}
+            </td>
+        </tr>
+
     </table>
 
     {{--
@@ -346,7 +385,7 @@
             glucosa             → ❌ no existe en triage, se muestra —
         =====================================================
     --}}
-    <div class="vitales-box">
+    <!-- <div class="vitales-box">
         <h2>Signos vitales</h2>
         @if($signosVitales ?? null)
             <table class="vitales-table">
@@ -395,7 +434,7 @@
         @else
             <div class="vitales-vacio">No se registraron signos vitales para esta consulta.</div>
         @endif
-    </div>
+    </div> -->
 
     {{-- Diagnóstico probable (evaluaciones_ia.diagnostico_probable) --}}
     @if($evaluacion && !empty($evaluacion->diagnostico_probable))
