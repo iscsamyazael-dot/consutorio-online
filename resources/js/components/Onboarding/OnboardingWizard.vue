@@ -207,12 +207,51 @@
 
         <div class="actions">
           <button class="btn btn--ghost" :disabled="guardando" @click="step = 3">Atrás</button>
-          <button class="btn btn--success" :disabled="!especialidadValida || guardando" @click="guardarTodo">
-            <span v-if="guardando" class="spinner"></span>
-            {{ guardando ? 'Guardando...' : 'Guardar' }}
+          <button class="btn btn--success" :disabled="!especialidadValida || guardando" @click="step = 5">
+            Siguiente
           </button>
         </div>
       </div>
+      
+      <!-- Paso 5: Correo Electrónico (Notificaciones QR) -->
+      <div v-else-if="step === 5" key="paso5" class="panel">
+        <h4>Configurar correo de notificaciones</h4>
+        <p class="panel-subtitle" style="font-size: 0.9rem; color: #64748b; margin-bottom: 20px;">
+          Configura tu cuenta para enviar automáticamente el código QR a los pacientes cuando se registren.
+        </p>
+
+        <!-- Opción A: Conexión rápida (Recomendada para Médicos) -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 20px;">
+          <svg viewBox="0 0 24 24" width="36" height="36" style="margin-bottom: 10px; color: #ea4335;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/></svg>
+          <h5 style="margin: 0 0 8px 0; font-size: 1rem; color: #1e293b;">Conexión inteligente</h5>
+          <p style="font-size: 0.85krem; color: #64748b; margin-bottom: 15px;">Conecta tu cuenta institucional de Google de forma segura con un solo clic.</p>
+          
+          <!-- Botón simulado para la ruta de OAuth de Google -->
+          <a href="/auth/google/redirect" class="btn btn--secondary" style="display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #cbd5e1; color: #334155; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 500;">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.14C3.15 21.32 7.22 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.18C.43 8.14 0 9.87 0 12s.43 3.86 1.18 5.38l4.09-3.14z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.15 2.68 1.18 6.62l4.09 3.14c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+            Conectar con Google
+          </a>
+        </div>
+
+        <!-- Mensaje de error si aplica -->
+        <transition name="fade">
+          <div v-if="error" class="banner banner--error" style="margin-bottom: 15px;">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 9v4m0 4h.01M10.29 3.86l-8.18 14A2 2 0 004 21h16a2 2 0 001.89-3.14l-8.18-14a2 2 0 00-3.42 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>{{ error }}</span>
+          </div>
+        </transition>
+
+        <div class="actions">
+          <button class="btn btn--ghost" :disabled="guardando" @click="step = 4">Atrás</button>
+          
+          <!-- Botón para finalizar guardando todo (ahora pasa del paso 4 al final) -->
+          <button class="btn btn--success" :disabled="guardando" @click="guardarTodo">
+            <span v-if="guardando" class="spinner"></span>
+            {{ guardando ? 'Guardando...' : 'Finalizar y Guardar' }}
+          </button>
+        </div>
+      </div>
+
     </transition>
 
     <!-- Toast de notificación -->
@@ -242,6 +281,9 @@ export default {
     IconEspecialidad: {
       template: `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 6h16M4 12h16M4 18h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     },
+    IconCorreo: {
+      template: `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6l-10 7L2 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    },
   },
   data() {
     return {
@@ -260,6 +302,7 @@ export default {
         { key: 'sucursal', label: 'Sucursal', icon: 'IconSucursal' },
         { key: 'medico', label: 'Médico', icon: 'IconMedico' },
         { key: 'especialidad', label: 'Especialidad', icon: 'IconEspecialidad' },
+        { key: 'correo', label: 'Correo', icon: 'IconCorreo' },
       ],
 
       dias: [
@@ -306,6 +349,14 @@ export default {
       especialidad: {
         name: '',
         description: '',
+      },
+      correo:{
+        tipo: 'oauth', // o 'smtp'
+        mail_host: '',
+        mail_port: 587,
+        mail_username: '',
+        mail_password: '',
+        mail_encryption: 'tls',
       },
     };
   },
@@ -362,7 +413,8 @@ export default {
       }));
 
       const formData = new FormData();
-
+      formData.append('correo[tipo]', this.correo.tipo);
+      formData.append('correo[mail_username]', this.correo.mail_username || '');
       formData.append('empresa[nombre_empresa]', this.empresa.nombre_empresa);
       formData.append('empresa[razon_social]', this.empresa.razon_social);
       formData.append('empresa[rfc]', this.empresa.rfc);

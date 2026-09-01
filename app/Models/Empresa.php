@@ -21,6 +21,12 @@ class Empresa extends Model
         'telefono',
         'email',
         'direccion',
+        'mail_host',
+        'mail_port',
+        'mail_username',
+        'mail_password',
+        'mail_encryption',
+        'mail_configurado',
     ];
 
     public function ubicaciones()

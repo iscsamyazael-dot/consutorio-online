@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Paciente;
 use App\Models\Triage;
+use App\Models\Empresa;  
 use App\Mail\PacienteQrMail;
 use App\Services\TenantMailConfigurator;
 use Illuminate\Support\Facades\Mail;
@@ -12,7 +13,7 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PacienteController extends Controller
 {
@@ -228,21 +229,24 @@ class PacienteController extends Controller
 
             [$paciente, $triage] = $resultado;
 
+             // ⬇️ CAMBIO 1: generamos el PDF SIEMPRE (haya o no email),
+            // porque ahora también sirve para la descarga automática del botón.
+            $archivos = null;
+            try {
+                $archivos = $this->generarExpedienteYQr($paciente);
+            } catch (\Exception $e) {
+                \Log::error('Error generando expediente del paciente: ' . $e->getMessage());
+            }
+
             // El envío del QR va FUERA de la transacción a propósito: es una
             // llamada externa (SMTP) y no debe bloquear ni revertir la creación
             // del paciente/triage si el correo falla.
-            if (!empty($paciente->email)) {
+            if (!empty($paciente->email) && $archivos ) {
                 try {
-                    TenantMailConfigurator::aplicar();
-
-                    $qrPath = $this->generarQrPaciente($paciente);
-
-                    Mail::to($paciente->email)->send(new PacienteQrMail($paciente, $qrPath));
-
+                   //$archivos = $this->generarExpedienteYQr($paciente);
+                   TenantMailConfigurator::enviarCorreoConQr($paciente, $archivos);
                 } catch (\Exception $e) {
-                    \Log::error('Error enviando QR al paciente: ' . $e->getMessage());
-                    // No relanzamos la excepción: el paciente ya se creó
-                    // correctamente, un fallo de correo no debe romper esa respuesta.
+                    \Log::error('Error enviando expediente al paciente: ' . $e->getMessage());;
                 }
             }
 
@@ -253,7 +257,10 @@ class PacienteController extends Controller
                 'data' => [
                     'Paciente' => $paciente,
                     'Triage' => $triage,
-                ]
+                ],
+                'expediente_pdf_url' => $archivos
+                ? "/Descargar-Expediente-pdf/{$paciente->id}"
+                : null,
             ]);
     
 
@@ -315,8 +322,9 @@ class PacienteController extends Controller
      */
     private function generarQrPaciente(Paciente $paciente): string
     {
+        // Utiliza la librería Endroid\QrCode que ya está instalada en tu Laravel
         $qrCode = new QrCode(
-            data: $paciente->qr_token,
+            data: $paciente->qr_token, // Los datos cifrados o únicos del paciente
             size: 300,
             margin: 10,
         );
@@ -332,9 +340,63 @@ class PacienteController extends Controller
 
         $ruta = $directorio . "/{$paciente->qr_token}.png";
 
+        // Guarda la imagen físicamente en tu servidor como un archivo .png
         $result->saveToFile($ruta);
 
-        return $ruta;
+        return $ruta; // Regresa la ruta para adjuntarla al correo
+    }
+
+    private function generarExpedienteYQr(Paciente $paciente): array
+    {
+        $empresa = Empresa::first();
+
+        // Generamos el QR una sola vez en memoria...
+        $qrCode = new QrCode(data: $paciente->qr_token, size: 300, margin: 10);
+        $writer = new PngWriter();
+        $qrPng = $writer->write($qrCode)->getString();
+
+        // ...y lo usamos para dos cosas: el archivo PNG suelto,
+        // y el base64 incrustado dentro del PDF.
+        $directorioQr = storage_path('app/qr-pacientes');
+        if (!is_dir($directorioQr)) {
+            mkdir($directorioQr, 0755, true);
+        }
+        $rutaQr = $directorioQr . "/{$paciente->qr_token}.png";
+        file_put_contents($rutaQr, $qrPng);
+
+        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+
+        $pdf = Pdf::loadView('pdf.expediente-paciente', [
+            'paciente' => $paciente,
+            'empresa'  => $empresa,
+            'qrBase64' => $qrBase64,
+        ]);
+
+        $directorioPdf = storage_path('app/expedientes-pacientes');
+        if (!is_dir($directorioPdf)) {
+            mkdir($directorioPdf, 0755, true);
+        }
+        $rutaPdf = $directorioPdf . "/{$paciente->paciente_id}.pdf";
+        $pdf->save($rutaPdf);
+
+        return [
+            'pdf' => $rutaPdf,
+            'qr'  => $rutaQr,
+        ];
+    }
+
+    public function descargarExpedientePdf(string $id)
+    {   
+        \Log::info('DESCARGA PDF - Base de datos activa: ' . \DB::connection()->getDatabaseName());
+        $paciente = Paciente::findOrFail($id);
+        
+        $ruta = storage_path("app/expedientes-pacientes/{$paciente->paciente_id}.pdf");
+
+        if (!file_exists($ruta)) {
+            abort(404, 'El expediente de este paciente no existe o aún no se ha generado.');
+        }
+
+        return response()->download($ruta, "expediente-{$paciente->paciente_id}.pdf");
     }
 
     public function show(string $id)

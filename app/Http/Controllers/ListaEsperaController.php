@@ -12,6 +12,8 @@ use App\Models\Triage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Services\GeneradorTicketPreview;
+
 
 class ListaEsperaController extends Controller
 {
@@ -271,11 +273,14 @@ class ListaEsperaController extends Controller
         ]);
     }
 
-    public function actualizarEstado(Request $request, ListaEspera $listaEspera)
+    public function actualizarEstado(Request $request, $id)
     {
         $request->validate([
-            'estado' => 'required|in:En espera,Llamando,En proceso,Finalizada,Cancelada',
+            'estado' => 'required|in:En espera,Llamando,En consulta,Finalizada,Cancelada',
         ]);
+        
+        // Buscamos la instancia fresca directamente de la base de datos
+        $listaEspera = ListaEspera::findOrFail($id);
 
         $listaEspera->estado = $request->estado;
         $listaEspera->save();
@@ -284,6 +289,7 @@ class ListaEsperaController extends Controller
             'success'  => true,
             'registro' => $listaEspera,
         ]);
+
     }
 
     /**
@@ -350,6 +356,27 @@ class ListaEsperaController extends Controller
     {
         $codigo = trim($request->input('codigo', ''));
         $hoy = Carbon::now()->toDateString();
+        
+        // NUEVO: detecta un UUID (qr_token) antes de las otras ramas
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $codigo)) {
+            $paciente = Paciente::where('qr_token', $codigo)->first();
+
+            if (!$paciente) {
+                return response()->json(['encontrado' => false, 'motivo' => 'qr_no_encontrado'], 404);
+            }
+
+            $citaHoy = Cita::where('paciente_id', $paciente->id)
+                ->where('fecha', $hoy)
+                ->where('estado', '!=', 'Cancelada')
+                ->first();
+
+            return response()->json([
+                'encontrado' => true,
+                'tipo'       => 'qr',
+                'paciente'   => $paciente,
+                'cita'       => $citaHoy,
+            ]);
+        }
 
         if (str_starts_with(strtoupper($codigo), 'CIT-')) {
             $cita = Cita::where('folio', $codigo)
@@ -423,7 +450,23 @@ class ListaEsperaController extends Controller
                 ->first();
 
             if ($yaEnCola) {
-                return ['registro' => $yaEnCola, 'ya_existia' => true];
+                
+                // Si ya existía, cargamos relaciones para el ticket por si se requiere reimprimir o mostrar
+                $yaEnCola->load(['paciente', 'medico', 'especialidad', 'cita']);
+                
+                $previewBase64 = (new GeneradorTicketPreview())->generarBase64([
+                    'folio'           => $yaEnCola->folio,
+                    'numero_turno'    => $yaEnCola->numero_turno,
+                    'nombre_paciente' => $yaEnCola->paciente->nombre ?? 'N/D',
+                    'hora'            => $yaEnCola->cita?->hora ?? $yaEnCola->hora_llegada,
+                ]);
+
+                return [
+                    'registro'              => $yaEnCola, 
+                    'ya_existia'            => true,
+                    'ticket_preview_base64' => $previewBase64,
+                ];
+                    
             }
 
             $cita = $validated['cita_id'] ?? null ? Cita::find($validated['cita_id']) : null;
@@ -448,9 +491,9 @@ class ListaEsperaController extends Controller
         });
 
         return response()->json([
-            'success'    => true,
-            'registro'   => $resultado['registro']->load(['paciente', 'medico', 'especialidad']),
-            'ya_existia' => $resultado['ya_existia'],
+        'success'      => true,
+        'registro'     => $resultado['registro']->load(['paciente', 'medico', 'especialidad']),
+        'ya_existia'   => $resultado['ya_existia'],
         ], $resultado['ya_existia'] ? 200 : 201);
     }
 }

@@ -130,6 +130,13 @@
             {{ yaExistia ? 'Ya estabas registrado, aquí está tu turno.' : 'Toma asiento, te llamaremos en pantalla.' }}
           </p>
         </div>
+        
+        <!-- 🖨️ VISTA PREVIA TEMPORAL DEL TEXTO ESC/POS -->
+        <div v-if="ticketTextoSimulado" style="margin-top: 15px; width: 100%; max-width: 320px;">
+          <p class="texto-apoyo" style="font-size: 11px; margin-bottom: 4px;">Simulación de salida térmica:</p>
+          <pre style="background: #ffffff; color: #000; padding: 12px; border: 1px dashed #666; font-family: 'Courier New', Courier, monospace; font-size: 12px; text-align: left; line-height: 1.2; border-radius: 4px; overflow-x: auto;">{{ ticketTextoSimulado }}</pre>
+        </div>
+
         <p class="texto-apoyo cuenta-regresiva">Volviendo al inicio en {{ segundosRestantes }}s…</p>
       </section>
 
@@ -178,6 +185,7 @@
     const registroCreado = ref(null)
     const yaExistia = ref(false)
     const segundosRestantes = ref(8)
+    const ticketTextoSimulado = ref('')
 
     const videoRef = ref(null)
     let qrScanner = null
@@ -297,6 +305,8 @@
             ? 'No encontramos una cita con ese folio para hoy.'
             : data.motivo === 'paciente_no_encontrado'
             ? 'No encontramos un paciente con ese folio.'
+            : data.motivo === 'qr_no_encontrado'
+            ? 'Este código QR no corresponde a ningún paciente registrado.'
             : 'No encontramos coincidencias con ese nombre.'
         estado.value = 'no_encontrado'
         return
@@ -344,6 +354,20 @@
 
         registroCreado.value = data.registro
         yaExistia.value = !!data.ya_existia
+
+        // 🔍 PETICIÓN TEMPORAL PARA OBTERNAR EL TEXTO DEL TICKET
+        try {
+          const { data: previewData } = await KioscoApiService.post('/api/kiosco/previsualizar-ticket', {
+            folio: data.registro.folio,
+            numero_turno: data.registro.numero_turno,
+            nombre_paciente: data.registro.paciente?.nombre || 'Paciente',
+            hora: data.registro.cita?.hora || data.registro.hora_llegada
+          })
+          ticketTextoSimulado.value = previewData.layout_texto
+        } catch (err) {
+          console.warn('No se pudo cargar la vista previa de texto', err)
+        }
+         // TERMINA LA PETICIÓN TEMPORAL PARA OBTERNAR EL TEXTO DEL TICKET
         estado.value = 'exito'
         iniciarCuentaRegresiva()
     } catch (error) {

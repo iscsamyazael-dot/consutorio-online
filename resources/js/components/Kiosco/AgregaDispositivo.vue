@@ -146,6 +146,7 @@ export default {
       tokenVisible: {},
       regenerando: {},
       desvinculando: {},
+      polling: null,
 
       // ---- generación de código (existente) ----
       form: {
@@ -349,8 +350,33 @@ export default {
         }
       }, 1000);
     },
+    iniciarPolling() {
+      clearInterval(this.polling);
+      this.polling = setInterval(async () => {
+        try {
+          const { data } = await ApiService.get(`/dispositivos/verificar-codigo/${this.codigoGenerado}`);
+          if (data.vinculado) {
+            clearInterval(this.polling);
+            clearInterval(this.temporizador);
+
+            await window.Swal.fire({
+              icon: 'success',
+              title: 'Dispositivo vinculado',
+              text: `"${data.nombre_dispositivo}" se conectó correctamente.`,
+              confirmButtonColor: '#0B7285',
+            });
+
+            this.reiniciar();
+          }
+        } catch (error) {
+          // Silencioso: si falla una consulta de polling no interrumpimos
+          // al usuario, simplemente se reintenta en el siguiente tick.
+        }
+      }, 3000);
+    },
     reiniciar() {
       clearInterval(this.temporizador);
+      clearInterval(this.polling);
       this.codigoGenerado = null;
       this.form.nombre_dispositivo = '';
       this.form.tipo = 'kiosco';
@@ -360,6 +386,7 @@ export default {
   },
   beforeUnmount() {
     clearInterval(this.temporizador);
+    clearInterval(this.polling);
   },
 };
 </script>

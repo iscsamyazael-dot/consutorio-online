@@ -56,6 +56,8 @@ import historialcosnulta from './components/Historialconsulta/historialcosnulta.
 import PantallaKiosco from './components/Kiosco/Kioscoautoregistro.vue'
 // Junto a los demás imports de configuracion-sistema
 import AgregaDispositivo from './components/Kiosco/AgregaDispositivo.vue'
+import ConfiguracionImpresora from './components/Kiosco/ConfiguracionImpresora.vue'
+import VinculacionCorreo from './components/configuracion-sistema/VincularCorreo.vue'
 // ------------------------------------------------------
 // Instancia única de la app
 // ------------------------------------------------------
@@ -96,7 +98,8 @@ app.component('historial-consulta', historialcosnulta);
 app.component('admin-onboarding', admin);
 app.component('pantalla-kiosco', PantallaKiosco);
 app.component('agrega-dispositivo', AgregaDispositivo);
-
+app.component('configuracion-impresora', ConfiguracionImpresora);
+app.component('vincular-correo', VinculacionCorreo);
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 

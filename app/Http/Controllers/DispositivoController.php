@@ -246,4 +246,25 @@ class DispositivoController extends Controller
             'message' => 'Dispositivo desvinculado correctamente',
         ]);
     }
+
+    /**
+     * GET /dispositivos/verificar-codigo/{codigo}
+     * Usado por AgregaDispositivo.vue mientras el código está activo en
+     * pantalla, para detectar en tiempo real (via polling) el momento en
+     * que el dispositivo termina de vincularse, sin esperar a que el
+     * usuario recargue o a que el contador expire.
+     */
+    public function verificarCodigo($codigo)
+    {
+        $registro = CodigoEmparejamientoDispositivo::where('codigo', $codigo)->first();
+
+        if (!$registro) {
+            return response()->json(['vinculado' => false, 'existe' => false]);
+        }
+        return response()->json([
+            'existe'    => true,
+            'vinculado' => (bool) $registro->usado_en,
+            'nombre_dispositivo' => $registro->nombre_dispositivo,
+        ]);
+    }
 }

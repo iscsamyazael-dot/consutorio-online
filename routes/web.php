@@ -30,7 +30,9 @@ use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OnboardingController;
-
+use App\Http\Controllers\ConfiguracionImpresoraController;
+use App\Http\Controllers\ImpresionTicketController;
+use App\Http\Controllers\ConfiguracionCorreoController;
 
 
 
@@ -184,7 +186,13 @@ Route::middleware('auth')->group(function () {
         Route::post('dispositivos/generar-codigo', [DispositivoController::class, 'generarCodigoEmparejamiento']);
         Route::delete('dispositivos/{id}', [DispositivoController::class, 'destroy']);
         Route::post('dispositivos/{id}/regenerar-token', [DispositivoController::class, 'regenerarToken']);
+        Route::get('/dispositivos/verificar-codigo/{codigo}', [DispositivoController::class, 'verificarCodigo']);
         //AQUI TERMINAN LAS RUTAS PARA LA VINCULACION DE DISPOSITIVOS ///
+
+        //RUTAS PARA CONFIGURAR LA IMPRESORA DEL KIOSCO//
+        Route::get('/configuracion-impresora', [ConfiguracionImpresoraController::class, 'show']);
+        Route::post('/configuracion-impresora', [ConfiguracionImpresoraController::class, 'update']);
+        //AQUI TERMINA LAS RUTAS PARA LA CONFIGURACION DE LA IMPRESORA DEL KIOSCO//
 
         // Onboarding: marca el onboarding como completado (POST /onboarding/completar)
         Route::post('/onboarding/completar', [OnboardingController::class, 'completar'])->name('onboarding.completar');
@@ -192,6 +200,25 @@ Route::middleware('auth')->group(function () {
        Route::get('conf-admin', function () { return view('Onboarding.index'); })->name('configuracion-sistema.conf-admin');
        // Onboarding: vista del wizard de bienvenida (GET /onboarding)
        Route::get('/onboarding', function () { return view('Onboarding.index'); })->name('onboarding.index');
+       // Onboarding: Actualizar datos del correo electronico para envio de correos //
+       Route::patch('actualizar-correo', [ConfiguracionEmpresaController::class, 'actualizarCorreo']);
+
+       //Rutas para usar los servicios del AUTH de google o Microsoft
+       // Verificar si ya hay una cuenta vinculada y el email
+        Route::get('estatus-correo', [ConfiguracionCorreoController::class, 'estatus']);
+        
+        // Redirigir al usuario al proveedor de OAuth (ej. Google)
+        Route::get('/auth/google/redirect', [ConfiguracionCorreoController::class, 'redirectToGoogle']);
+        
+        // Callback que responde Google tras la autorización exitosa
+        Route::get('/auth/google/callback', [ConfiguracionCorreoController::class, 'handleGoogleCallback']);
+        
+        // Desconectar / limpiar los datos de correo de la fila existente
+        Route::post('desconectar-correo', [ConfiguracionCorreoController::class, 'desconectar']);
+
+        //Ruta para descargar o imprimir el pdf expediente del paciente//
+        Route::get('Descargar-Expediente-pdf/{paciente}', [PacienteController::class, 'descargarExpedientePdf'])
+                ->name('pacientes.descargarExpedientePdf');
         
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
@@ -297,6 +324,10 @@ Route::middleware('auth')->group(function () {
             })->name('consultas.consulta_inteligente'); // IA: vista de Consulta Inteligente para un paciente específico
             //Vista para agregar un dispositivo al kiosco//
               Route::get('agrega-dispositivo', function () { return view('Kiosco.dispositivo');})->name('agrega-dispositivo');
+            //Vista para agregar la impresora que imprimira el Ticket//
+            Route::get('agregar-impresora', function () { return view('Kiosco.impresora');})->name('agregar-impresora');
+            //Vista para vincular correo electronico como parte de la configuracion Omboarding//
+            Route::get('vincular-correo', function () { return view('configuracion-sistema.vincularCorreo');})->name('vincular-correo');
         });
 
 });
@@ -355,6 +386,11 @@ Route::prefix('api/kiosco')
         Route::get('lista-espera-pantalla', [ListaEsperaController::class, 'pantalla'])
             ->middleware('throttle:30,1')
             ->name('lista-espera.pantalla');
+
+        Route::post('/api/kiosco/imprimir-ticket', [ImpresionTicketController::class, 'imprimirTicket']);
+
+        //RUTA TEMPORAL PARA VER COMO QUEDA EL DISEÑO DEL TICKET//
+        Route::post('previsualizar-ticket', [ImpresionTicketController::class, 'previewTextoPlano']);
 
        
     });

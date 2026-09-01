@@ -430,16 +430,16 @@ export default {
                 motivo_consulta: ''
             }
         },
-// Guardar paciente en la base de datos.
-// El backend (PacienteController@store) verifica si ya existe un
-// paciente con el mismo nombre + CURP:
-//   - Si YA EXISTE (data.existe === true): no se crea nada nuevo,
-//     se redirige a ListaConsultas.
-//   - Si es NUEVO (data.existe === false): se crea el paciente
-//     (+ triage) y se redirige a ConsultaInteligente/{id} del
-//     paciente recién creado.
+        // Guardar paciente en la base de datos.
+        // El backend (PacienteController@store) verifica si ya existe un
+        // paciente con el mismo nombre + CURP:
+        //   - Si YA EXISTE (data.existe === true): no se crea nada nuevo,
+        //     se redirige a ListaConsultas.
+        //   - Si es NUEVO (data.existe === false): se crea el paciente
+        //     (+ triage) y se redirige a ConsultaInteligente/{id} del
+        //     paciente recién creado.
         async guardarPaciente() {
-            if (!this.form.nombre || !this.form.curp) {
+            if (!this.form.nombre) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Datos incompletos',
@@ -472,6 +472,11 @@ export default {
                 // Consulta Inteligente para ese paciente.
                 const pacienteId = data.data.Paciente.id
 
+                // NUEVO: descarga automática del PDF del expediente (si se generó)
+                if (data.expediente_pdf_url) {
+                    this.descargarExpedientePdf(data.expediente_pdf_url, data.data.Paciente.paciente_id)
+                }
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Paciente registrado',
@@ -490,7 +495,28 @@ export default {
                     confirmButtonText: 'Aceptar'
                 })
             }
+        },
+
+        // NUEVO: método aparte para mantener guardarPaciente() legible
+        async descargarExpedientePdf(url, pacienteIdLegible) {
+            try {
+                const response = await ApiService.get(url, { responseType: 'blob' })
+                const blobUrl = window.URL.createObjectURL(new Blob([response.data]))
+                const link = document.createElement('a')
+                link.href = blobUrl
+                link.setAttribute('download', `expediente-${pacienteIdLegible}.pdf`)
+                document.body.appendChild(link)
+                link.click()
+                link.remove()
+                window.URL.revokeObjectURL(blobUrl)
+            } catch (error) {
+                console.error('Error al descargar el expediente PDF:', error)
+                // No mostramos Swal de error aquí a propósito: el paciente
+                // ya se guardó correctamente, no queremos que un fallo de
+                // descarga se sienta como si el registro hubiera fallado.
+            }
         }
+
     }
 }
 </script>

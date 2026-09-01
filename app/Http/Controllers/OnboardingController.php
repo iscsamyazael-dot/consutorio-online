@@ -62,6 +62,15 @@ class OnboardingController extends Controller
             // Paso 4: Especialidad
             'especialidad.name' => ['required', 'string', 'max:100'],
             'especialidad.description' => ['nullable', 'string'],
+            
+            // Paso 5: Correo (Opcionales por si el usuario decide omitirlo)
+            'correo.tipo' => ['nullable', 'string', 'max:50'],
+            'correo.mail_host' => ['nullable', 'string', 'max:255'],
+            'correo.mail_port' => ['nullable', 'integer'],
+            'correo.mail_username' => ['nullable', 'string', 'max:255'],
+            'correo.mail_password' => ['nullable', 'string', 'max:255'],
+            'correo.mail_encryption' => ['nullable', 'string', 'max:20'],
+
         ], [
             'medico.horarios.*.hora_fin.after' => 'La hora de fin debe ser posterior a la hora de inicio.',
         ]);
@@ -85,6 +94,10 @@ class OnboardingController extends Controller
                     $validated['empresa']['nombre_empresa']
                 );
             }
+            
+            // Datos de correo opcionales enviados desde el paso 5
+            $datosCorreo = $validated['correo'] ?? [];
+
 
             // 2. Empresa. Va primero porque la ubicación se liga a ella
             // mediante empresa_id.
@@ -96,6 +109,13 @@ class OnboardingController extends Controller
                 'telefono' => $validated['empresa']['telefono'] ?? null,
                 'email' => $validated['empresa']['email'] ?? null,
                 'direccion' => $validated['empresa']['direccion'],
+                // Configuración de correo (si los omitió, se quedan en null o vacíos en la fila)
+                'mail_host' => $datosCorreo['mail_host'] ?? null,
+                'mail_port' => $datosCorreo['mail_port'] ?? null,
+                'mail_username' => $datosCorreo['mail_username'] ?? null,
+                'mail_password' => !empty($datosCorreo['mail_password']) ? encrypt($datosCorreo['mail_password']) : null,
+                'mail_encryption' => $datosCorreo['mail_encryption'] ?? null,
+
             ]);
 
             // 3. Especialidad: el médico la necesita para su especialidad_id.
@@ -207,5 +227,43 @@ class OnboardingController extends Controller
         $correlativo = $modelo::count() + 1;
 
         return sprintf('%s-%s-%04d', $prefijo, $anio, $correlativo);
+    }
+
+    public function actualizarCorreo(Request $request)
+    {
+        $validated = $request->validate([
+            'mail_host' => ['nullable', 'string', 'max:255'],
+            'mail_port' => ['nullable', 'integer'],
+            'mail_username' => ['nullable', 'string', 'max:255'],
+            'mail_password' => ['nullable', 'string', 'max:255'],
+            'mail_encryption' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        // Buscamos la empresa existente (la única fila de configuración)
+        $empresa = Empresa::first(); 
+
+        if (!$empresa) {
+            return response()->json(['message' => 'No se encontró la empresa.'], 404);
+        }
+
+        // Actualizamos únicamente los campos de correo que llegaron (o rellenamos los vacíos)
+        $datosAActualizar = [
+            'mail_host' => $validated['mail_host'] ?? $empresa->mail_host,
+            'mail_port' => $validated['mail_port'] ?? $empresa->mail_port,
+            'mail_username' => $validated['mail_username'] ?? $empresa->mail_username,
+            'mail_encryption' => $validated['mail_encryption'] ?? $empresa->mail_encryption,
+        ];
+
+        if (!empty($validated['mail_password'])) {
+            $datosAActualizar['mail_password'] = encrypt($validated['mail_password']);
+        }
+
+        // Aquí ocurre la actualización de la fila existente
+        $empresa->update($datosAActualizar);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Configuración de correo actualizada correctamente.'
+        ]);
     }
 }

@@ -506,18 +506,23 @@ return [
                     'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
                 ],
                 [
-                'text' => 'Crear consultorio', // texto que quieras mostrar
-                'url'  => 'conf-admin',    // la ruta hacia tu vista conf.admin
-                'icon' => 'fas fa-fw fa-cog',
-                'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
-            ],
-            [
-                'text' => 'Cambiar contraseña',
-                'url'  => 'cambiar-contraseña',
-                'icon' => 'fas fa-fw fa-lock',
-                'can'  => 'acceso-medico-admin',
-            ],
-
+                    'text' => 'Crear consultorio', // texto que quieras mostrar
+                    'url'  => 'conf-admin',    // la ruta hacia tu vista conf.admin
+                    'icon' => 'fas fa-fw fa-cog',
+                    'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
+                ],
+                [
+                    'text' => 'Vincular correo', // texto que quieras mostrar
+                    'url'  => 'vincular-correo',    // la ruta hacia tu vista conf.admin
+                    'icon' => 'fas fa-fw fa-envelope',
+                    'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
+                ],
+                [
+                    'text' => 'Cambiar contraseña',
+                    'url'  => 'cambiar-contraseña',
+                    'icon' => 'fas fa-fw fa-lock',
+                    'can'  => 'acceso-medico-admin',
+                ],
                 [
                     'text' => 'Agregar Usuario',
                     'url'  => 'agregar-usuario',
@@ -530,6 +535,12 @@ return [
             'text' => 'Agregar Dispositivos',
             'url'  => 'agrega-dispositivo',
             'icon' => 'fas fa-fw fa-tablet-alt',
+            'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
+        ],
+        [
+            'text' => 'Agregar Impresora',
+            'url'  => 'agregar-impresora',
+            'icon' => 'fas fa-fw fa-print',
             'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
         ],
         [
