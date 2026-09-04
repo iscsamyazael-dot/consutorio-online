@@ -37,14 +37,30 @@
 -->
 <template>
     <div class="vitals-panel">
-        <div class="vitals-panel-head">
-            <span>Signos vitales</span>
-            <span class="vitals-panel-sub">Rangos evaluados para adulto</span>
+        <div class="vitals-panel-head d-flex justify-content-between align-items-center">
+            <div>
+                <span>Signos vitales</span>
+                <span class="vitals-panel-sub ms-2">Rangos evaluados para adulto</span>
+            </div>
+            
+            <!-- Botones de Control de Edición Inline -->
+            <div v-if="triageVisitaActual">
+                <button v-if="!editandoSignosInline" type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" @click="activarEdicionInline">
+                    <i class="fas fa-pencil-alt"></i> Editar
+                </button>
+                <template v-else>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 me-1" :disabled="guardandoTriage" @click="cancelarEdicionInline">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success py-0 px-2" :disabled="guardandoTriage" @click="guardarEdicionInline">
+                        <span v-if="guardandoTriage"><i class="fas fa-spinner fa-spin"></i></span>
+                        <span v-else><i class="fas fa-check"></i> Guardar</span>
+                    </button>
+                </template>
+            </div>
         </div>
 
-        <!-- NOTIFICACIÓN: solo se muestra si NO hay triage para esta
-             visita (ni recién guardado en esta sesión, ni encontrado
-             en el historial por lista_espera_id). -->
+        <!-- NOTIFICACIÓN: si no hay triage -->
         <div v-if="!triageVisitaActual" class="vitals-empty-wrap">
             <button type="button" class="vitals-notice" @click="abrirModalTriage">
                 <span class="vitals-notice-icon">⚠️</span>
@@ -58,66 +74,91 @@
             </button>
         </div>
 
-        <!-- PANEL: triage ya registrado en esta visita -->
+        <!-- PANEL: triage ya registrado (Muestra Texto o Inputs según editandoSignosInline) -->
         <div v-else class="vitals-grid">
-            <div class="vital-item" :class="'vital-item--' + estadoPresion(triageVisitaActual.presion)" v-if="triageVisitaActual.presion">
+            <!-- Presión Arterial -->
+            <div class="vital-item" :class="!editandoSignosInline ? ('vital-item--' + estadoPresion(triageVisitaActual.presion)) : ''" v-if="triageVisitaActual.presion || editandoSignosInline">
                 <span class="vital-label">Presión arterial</span>
-                <div class="vital-value-row">
+                <div v-if="!editandoSignosInline" class="vital-value-row">
                     <span class="vital-value" :class="'vital-value--' + estadoPresion(triageVisitaActual.presion)">{{ triageVisitaActual.presion }}</span>
                     <span class="vital-unit">mmHg</span>
                 </div>
+                <input v-else v-model="formTriage.presion" type="text" class="form-control form-control-sm mt-1" placeholder="120/80">
             </div>
-            <div class="vital-item" :class="'vital-item--' + estadoSaturacion(triageVisitaActual.saturacion)" v-if="triageVisitaActual.saturacion !== null && triageVisitaActual.saturacion !== undefined && triageVisitaActual.saturacion !== ''">
+
+            <!-- Saturación O2 -->
+            <div class="vital-item" :class="!editandoSignosInline ? ('vital-item--' + estadoSaturacion(triageVisitaActual.saturacion)) : ''">
                 <span class="vital-label">Saturación O₂</span>
-                <div class="vital-value-row">
+                <div v-if="!editandoSignosInline" class="vital-value-row">
                     <span class="vital-value" :class="'vital-value--' + estadoSaturacion(triageVisitaActual.saturacion)">{{ triageVisitaActual.saturacion }}</span>
                     <span class="vital-unit">%</span>
                 </div>
+                <input v-else v-model.number="formTriage.saturacion" type="number" class="form-control form-control-sm mt-1" placeholder="98">
             </div>
-            <div class="vital-item" :class="'vital-item--' + estadoTemperatura(triageVisitaActual.temperatura)" v-if="triageVisitaActual.temperatura !== null && triageVisitaActual.temperatura !== undefined && triageVisitaActual.temperatura !== ''">
+
+            <!-- Temperatura -->
+            <div class="vital-item" :class="!editandoSignosInline ? ('vital-item--' + estadoTemperatura(triageVisitaActual.temperatura)) : ''">
                 <span class="vital-label">Temperatura</span>
-                <div class="vital-value-row">
+                <div v-if="!editandoSignosInline" class="vital-value-row">
                     <span class="vital-value" :class="'vital-value--' + estadoTemperatura(triageVisitaActual.temperatura)">{{ triageVisitaActual.temperatura }}</span>
                     <span class="vital-unit">°C</span>
                 </div>
+                <input v-else v-model.number="formTriage.temperatura" type="number" step="0.1" class="form-control form-control-sm mt-1" placeholder="36.5">
             </div>
-            <div class="vital-item" :class="'vital-item--' + estadoFrecuenciaCardiaca(triageVisitaActual.frecuencia_cardiaca)" v-if="triageVisitaActual.frecuencia_cardiaca !== null && triageVisitaActual.frecuencia_cardiaca !== undefined && triageVisitaActual.frecuencia_cardiaca !== ''">
+
+            <!-- Frecuencia Cardíaca -->
+            <div class="vital-item" :class="!editandoSignosInline ? ('vital-item--' + estadoFrecuenciaCardiaca(triageVisitaActual.frecuencia_cardiaca)) : ''">
                 <span class="vital-label">Frec. cardíaca</span>
-                <div class="vital-value-row">
+                <div v-if="!editandoSignosInline" class="vital-value-row">
                     <span class="vital-value" :class="'vital-value--' + estadoFrecuenciaCardiaca(triageVisitaActual.frecuencia_cardiaca)">{{ triageVisitaActual.frecuencia_cardiaca }}</span>
                     <span class="vital-unit">lpm</span>
                 </div>
+                <input v-else v-model.number="formTriage.frecuencia_cardiaca" type="number" class="form-control form-control-sm mt-1" placeholder="75">
             </div>
-            <div class="vital-item" :class="'vital-item--' + estadoFrecuenciaRespiratoria(triageVisitaActual.frecuencia_respiratoria)" v-if="triageVisitaActual.frecuencia_respiratoria !== null && triageVisitaActual.frecuencia_respiratoria !== undefined && triageVisitaActual.frecuencia_respiratoria !== ''">
+
+            <!-- Frecuencia Respiratoria -->
+            <div class="vital-item" :class="!editandoSignosInline ? ('vital-item--' + estadoFrecuenciaRespiratoria(triageVisitaActual.frecuencia_respiratoria)) : ''">
                 <span class="vital-label">Frec. respiratoria</span>
-                <div class="vital-value-row">
+                <div v-if="!editandoSignosInline" class="vital-value-row">
                     <span class="vital-value" :class="'vital-value--' + estadoFrecuenciaRespiratoria(triageVisitaActual.frecuencia_respiratoria)">{{ triageVisitaActual.frecuencia_respiratoria }}</span>
                     <span class="vital-unit">rpm</span>
                 </div>
+                <input v-else v-model.number="formTriage.frecuencia_respiratoria" type="number" class="form-control form-control-sm mt-1" placeholder="16">
             </div>
-            <div class="vital-item" v-if="triageVisitaActual.peso !== null && triageVisitaActual.peso !== undefined && triageVisitaActual.peso !== ''">
+
+            <!-- Peso -->
+            <div class="vital-item">
                 <span class="vital-label">Peso</span>
-                <div class="vital-value-row">
+                <div v-if="!editandoSignosInline" class="vital-value-row">
                     <span class="vital-value">{{ triageVisitaActual.peso }}</span>
                     <span class="vital-unit">kg</span>
                 </div>
+                <input v-else v-model.number="formTriage.peso" type="number" step="0.1" class="form-control form-control-sm mt-1" placeholder="70">
             </div>
-            <div class="vital-item" v-if="triageVisitaActual.talla !== null && triageVisitaActual.talla !== undefined && triageVisitaActual.talla !== ''">
+
+            <!-- Talla -->
+            <div class="vital-item">
                 <span class="vital-label">Talla</span>
-                <div class="vital-value-row">
+                <div v-if="!editandoSignosInline" class="vital-value-row">
                     <span class="vital-value">{{ triageVisitaActual.talla }}</span>
                     <span class="vital-unit">cm</span>
                 </div>
+                <input v-else v-model.number="formTriage.talla" type="number" class="form-control form-control-sm mt-1" placeholder="170">
             </div>
 
-            <div class="vital-item vital-item-imc" v-if="imcGuardado">
+            <!-- IMC (Muestra el valor actual o la vista previa en vivo si se está editando peso/talla) -->
+            <div class="vital-item vital-item-imc" v-if="imcGuardado || editandoSignosInline">
                 <span class="vital-label">
                     IMC
-                    <span v-if="imcGuardado.tipo === 'pediatrico'" class="vital-imc-percentil">Percentil {{ imcGuardado.percentil }}</span>
+                    <span v-if="(editandoSignosInline ? imcModalPreview : imcGuardado)?.tipo === 'pediatrico'" class="vital-imc-percentil">
+                        Percentil {{ (editandoSignosInline ? imcModalPreview : imcGuardado)?.percentil }}
+                    </span>
                 </span>
                 <span class="vital-value">
-                    {{ imcGuardado.bmi }}
-                    <span class="vital-imc-badge" :class="claseImc(imcGuardado)">{{ imcGuardado.clasificacion }}</span>
+                    {{ (editandoSignosInline ? imcModalPreview : imcGuardado)?.bmi || '---' }}
+                    <span class="vital-imc-badge" :class="claseImc(editandoSignosInline ? imcModalPreview : imcGuardado)">
+                        {{ (editandoSignosInline ? imcModalPreview : imcGuardado)?.clasificacion || 'Calculando...' }}
+                    </span>
                 </span>
             </div>
         </div>
@@ -216,7 +257,7 @@
     </div>
 </template>
 <script>
-import axios from 'axios'
+import ApiService from '../../services/ApiService.js'
 import { evaluarIMC } from '@/utils/bmiPercentile.js'
 import lmsTable from '@/data/bmi-lms-cdc.json'
 
@@ -231,7 +272,6 @@ var route = document.querySelector("[name=route]").value
 // frecuencia_cardiaca, frecuencia_respiratoria, peso, talla }.
 // Shape de la respuesta asumido: { success: true, triage: {...} }
 // — si el controlador devuelve algo distinto, ajustar en guardarTriage().
-var urlTriage = route + '/triage/guardar'
 
 export default {
     name: 'SignosVitales',
@@ -264,7 +304,9 @@ export default {
             // tenía algún triage viejo, sin dar forma de registrar uno
             // nuevo para esta consulta.
             triageGuardadoLocal: null,
-            formTriage: this.formTriageVacio()
+            formTriage: this.formTriageVacio(),
+            editandoTriage: false,
+            editandoSignosInline: false
         }
     },
 
@@ -441,37 +483,94 @@ export default {
 
         async guardarTriage() {
             if (this.guardandoTriage) return
-
             this.guardandoTriage = true
             this.errorTriage = ''
 
             try {
-                const response = await axios.post(urlTriage, {
+                // Preparamos el payload incluyendo el lista_espera_id obligatorio para asociar la visita
+                const payload = {
                     paciente_id: this.paciente?.id,
+                    lista_espera_id: this.listaEsperaId, // <-- Aseguramos el envío de este ID
                     ...this.formTriage
-                })
+                }
+
+                let response
+
+                // Usamos ApiService según corresponda (Crear o Editar)
+                if (this.editandoTriage && this.triageVisitaActual?.id) {
+                    // Si prefieres usar PUT para actualizar (o la ruta con ID)
+                    response = await ApiService.put(`/triage/${this.triageVisitaActual.id}`, payload)
+                } else {
+                    // Ruta base que me compartiste: /triage/guardar
+                    response = await ApiService.post('/triage/guardar', payload)
+                }
 
                 if (response.data.success === false) {
                     this.errorTriage = response.data.error || 'No se pudo guardar el triage.'
                     return
                 }
 
-                // Si el backend regresa el triage guardado lo usamos tal
-                // cual; si no, reflejamos localmente lo que se envió.
-                const nuevoTriage = response.data.triage || { ...this.formTriage }
-
-                this.triageGuardadoLocal = nuevoTriage
+                const triageActualizado = response.data.triage || { ...payload }
+                this.triageGuardadoLocal = triageActualizado
                 this.mostrarModalTriage = false
+                this.editandoTriage = false
 
-                // Avisamos al padre por si necesita refrescar `paciente`
-                // (por ejemplo, para que el próximo fetch ya traiga este
-                // triage dentro de paciente.triages).
-                this.$emit('triage-agregado', nuevoTriage)
-
+                this.$emit('triage-agregado', triageActualizado)
             } catch (error) {
                 console.error('Error al guardar triage:', error)
-                this.errorTriage = error.response?.data?.error
+                this.errorTriage = error.response?.data?.message || error.response?.data?.error
                     || 'No se pudo guardar el triage. Intenta de nuevo.'
+            } finally {
+                this.guardandoTriage = false
+            }
+        },
+        activarEdicionInline() {
+            if (!this.triageVisitaActual) return
+            this.editandoSignosInline = true
+            // Cargamos los datos actuales en el formulario reactivo
+            this.formTriage = {
+                presion: this.triageVisitaActual.presion || '',
+                saturacion: this.triageVisitaActual.saturacion,
+                temperatura: this.triageVisitaActual.temperatura,
+                frecuencia_cardiaca: this.triageVisitaActual.frecuencia_cardiaca,
+                frecuencia_respiratoria: this.triageVisitaActual.frecuencia_respiratoria,
+                peso: this.triageVisitaActual.peso,
+                talla: this.triageVisitaActual.talla
+            }
+        },
+        cancelarEdicionInline() {
+            this.editandoSignosInline = false
+            this.formTriage = this.formTriageVacio()
+        },
+
+        async guardarEdicionInline() {
+            if (this.guardandoTriage) return
+            this.guardandoTriage = true
+
+            try {
+                const payload = {
+                    paciente_id: this.paciente?.id,
+                    lista_espera_id: this.listaEsperaId,
+                    ...this.formTriage
+                }
+
+                // Llamada PUT al backend usando el ID del triage actual
+                const response = await ApiService.put(`/triage/${this.triageVisitaActual.id}`, payload)
+
+                if (response.data.success) {
+                    const triageActualizado = response.data.triage || { ...payload }
+                    this.triageGuardadoLocal = triageActualizado
+                    this.editandoSignosInline = false
+                    this.editandoTriage = false
+                    
+                    // Notificamos al componente padre por si lo requiere
+                    this.$emit('triage-agregado', triageActualizado)
+                } else {
+                    alert(response.data.message || 'No se pudo actualizar el triage.')
+                }
+            } catch (error) {
+                console.error('Error al actualizar signos vitales:', error)
+                alert('Ocurrió un error al guardar los cambios.')
             } finally {
                 this.guardandoTriage = false
             }

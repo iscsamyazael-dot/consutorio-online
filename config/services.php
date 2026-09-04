@@ -29,6 +29,16 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'icd' => [
+        'client_id'     => env('ICD_CLIENT_ID'),
+        'client_secret' => env('ICD_CLIENT_SECRET'),
+    ],
+    
+    'waha' => [
+    'base_url' => env('WAHA_BASE_URL'),
+    'api_key' => env('WAHA_API_KEY'),
+    ],
+
     'ai' => [
         'key' => env('DEEPSEEK_API_KEY'),
     ],

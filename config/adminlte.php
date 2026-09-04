@@ -518,6 +518,12 @@ return [
                     'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
                 ],
                 [
+                    'text' => 'Vincular Whatsapp', // texto que quieras mostrar
+                    'url'  => 'vinculacion-whatsapp',    // la ruta hacia tu vista conf.admin
+                    'icon' => 'fab fa-fw fa-whatsapp',
+                    'can'  => 'acceso-medico-admin', // 🔒 Oculta el botón
+                ],
+                [
                     'text' => 'Cambiar contraseña',
                     'url'  => 'cambiar-contraseña',
                     'icon' => 'fas fa-fw fa-lock',

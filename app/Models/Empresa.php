@@ -27,6 +27,15 @@ class Empresa extends Model
         'mail_password',
         'mail_encryption',
         'mail_configurado',
+        'waha_session',
+        'waha_numero_telefono',
+        'waha_status',
+        'waha_configurado',
+        'waha_updated_at',
+    ];
+
+    protected $casts = [
+        'waha_updated_at' => 'datetime',
     ];
 
     public function ubicaciones()

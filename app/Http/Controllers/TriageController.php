@@ -255,7 +255,117 @@ class TriageController extends Controller
 
     public function edit(string $id) {}
 
-    public function update(Request $request, string $id) {}
+    public function update(Request $request, string $id)
+    {
+        $triage = Triage::findOrFail($id);
+        $paciente = $triage->paciente ?? Paciente::findOrFail($request->input('paciente_id'));
+
+        $data = $request->validate([
+            'presion'                 => 'nullable|string|max:255',
+             'saturacion'             => 'nullable|numeric|min:0|max:100',
+            'temperatura'             => 'nullable|numeric',
+            'frecuencia_cardiaca'     => 'nullable|integer',
+            'frecuencia_respiratoria' => 'nullable|integer',
+            'peso'                    => 'nullable|numeric|min:0',
+            'talla'                   => 'nullable|numeric|min:0',
+            'paciente_id'             => 'required|exists:pacientes,id',
+            'lista_espera_id'         => 'nullable|exists:lista_espera,id',
+            'motivo_consulta'         => 'nullable|string',
+            'sintomas'                => 'nullable|string',
+        ]);
+
+        $imcCalculado = null;
+        $edad = null;
+
+        // Recalcular IMC, percentil y clasificación si vienen peso y talla
+        if (isset($data['peso'], $data['talla']) && $data['peso'] > 0 && $data['talla'] > 0) {
+            $talla = (float) $data['talla'];
+            $peso = (float) $data['peso'];
+
+            if ($talla > 3) {
+                $talla = $talla / 100; // cm -> m
+            }
+
+            $imcCalculado = round($peso / ($talla * $talla), 2);
+            $data['imc'] = $imcCalculado;
+
+            // Obtener edad del paciente
+            $edad = $paciente->edad;
+            if ($edad === null && $paciente->fecha_nacimiento) {
+                $edad = \Carbon\Carbon::parse($paciente->fecha_nacimiento)->age;
+            }
+
+            if ($edad !== null && $edad < 18) {
+                // === LÓGICA PEDIÁTRICA ===
+                if ($edad < 5) {
+                    if ($imcCalculado < 14) {
+                        $data['imc_percentil'] = 3.0;
+                        $data['imc_clasificacion'] = 'Bajo peso (Pediátrico)';
+                    } elseif ($imcCalculado > 18) {
+                        $data['imc_percentil'] = 97.0;
+                        $data['imc_clasificacion'] = 'Obesidad (Pediátrico)';
+                    } else {
+                        $data['imc_percentil'] = 50.0;
+                        $data['imc_clasificacion'] = 'Peso normal (Pediátrico)';
+                    }
+                } else {
+                    if ($imcCalculado < 13.5) {
+                        $data['imc_percentil'] = 4.0;
+                        $data['imc_clasificacion'] = 'Bajo peso (Pediátrico)';
+                    } elseif ($imcCalculado >= 13.5 && $imcCalculado < 19.0) {
+                        $data['imc_percentil'] = 50.0;
+                        $data['imc_clasificacion'] = 'Peso normal (Pediátrico)';
+                    } elseif ($imcCalculado >= 19.0 && $imcCalculado < 22.0) {
+                        $data['imc_percentil'] = 88.0;
+                        $data['imc_clasificacion'] = 'Sobrepeso (Pediátrico)';
+                    } else {
+                        $data['imc_percentil'] = 96.5;
+                        $data['imc_clasificacion'] = 'Obesidad (Pediátrico)';
+                    }
+                }
+            } else {
+                // === LÓGICA DE ADULTOS (OMS) ===
+                $data['imc_percentil'] = null;
+                if ($imcCalculado < 18.5) {
+                    $data['imc_clasificacion'] = 'Bajo peso';
+                } elseif ($imcCalculado >= 18.5 && $imcCalculado < 25) {
+                    $data['imc_clasificacion'] = 'Peso normal (Saludable)';
+                } elseif ($imcCalculado >= 25 && $imcCalculado < 30) {
+                    $data['imc_clasificacion'] = 'Sobrepeso';
+                } else {
+                    $data['imc_clasificacion'] = 'Obesidad';
+                }
+            }
+        } else {
+            // Si limpian peso o talla, limpiamos también sus derivados
+            $data['imc'] = null;
+            $data['imc_percentil'] = null;
+            $data['imc_clasificacion'] = null;
+        }
+
+        // Snapshot de los valores ANTERIORES antes de sobrescribir
+        $historial = $triage->historial_ediciones ?? [];
+        $historial[] = [
+            'valores_anteriores' => $triage->only([
+                'presion', 'saturacion', 'temperatura',
+                'frecuencia_cardiaca', 'frecuencia_respiratoria',
+                'peso', 'talla', 'imc', 'imc_percentil', 'imc_clasificacion'
+            ]),
+            'editado_por' => Auth::id(),
+            'editado_en'  => now()->toDateTimeString(),
+        ];
+
+        $triage->update(array_merge($data, [
+            'historial_ediciones' => $historial,
+            'usuario_triage_id'   => Auth::id(),
+        ]));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Triage corregido y actualizado correctamente',
+            'triage'  => $triage->fresh(),
+        ]);
+    }
 
     public function destroy(string $id) {}
 
@@ -289,6 +399,13 @@ class TriageController extends Controller
 
         $paciente = Paciente::findOrFail($pacienteId);
 
+        // 1. Limpiamos los inputs vacíos ("") para que Laravel los trate como null real
+        $inputLimpio = collect($request->all())->map(function ($value) {
+            return $value === '' ? null : $value;
+        })->toArray();
+
+        $request->merge($inputLimpio);
+
         $data = $request->validate([
             'lista_espera_id'         => 'nullable|exists:lista_espera,id',
             'presion'                 => 'nullable|string|max:20',
@@ -305,7 +422,9 @@ class TriageController extends Controller
             'sintomas'                => 'nullable|string',
             'estado_triage'           => 'nullable|string|in:leve,estable,grave,urgente',
         ]);
-            // Calcular IMC automáticamente si existen peso y talla
+        $imcCalculado = null;
+        $edad = null;    
+        // Calcular IMC automáticamente si existen peso y talla
         if (
             isset($data['peso'], $data['talla']) &&
             $data['peso'] > 0 &&
@@ -318,8 +437,71 @@ class TriageController extends Controller
             if ($talla > 3) {
                 $talla = $talla / 100;
             }
+            
+            $imcCalculado = round($peso / ($talla * $talla), 2);
+            $data['imc'] = $imcCalculado;
 
-            $data['imc'] = round($peso / ($talla * $talla), 2);
+            // Calculamos la edad del paciente a partir de su fecha de nacimiento
+            // (Asumiendo que el campo en tu modelo Paciente se llama 'fecha_nacimiento')
+            $edad = $paciente->edad;
+            
+            if ($edad === null && $paciente->fecha_nacimiento) {
+                $edad = \Carbon\Carbon::parse($paciente->fecha_nacimiento)->age;
+            }
+
+            // Capturamos el sexo y normalizamos a minúsculas
+            $sexoPaciente = strtolower(trim($paciente->sexo ?? 'masculino'));
+
+            if ($edad !== null && $edad < 18) {
+                // === LÓGICA PEDIÁTRICA ===
+                $data['imc_clasificacion'] = 'Pendiente / Pediátrico (Menor de edad)'; 
+                $data['imc_percentil'] = null; // Se llenará cuando implementes la fórmula de percentiles OMS
+                // Estimación de percentil y clasificación OMS infantil básica
+                if ($edad < 5) {
+                    if ($imcCalculado < 14) {
+                        $data['imc_percentil'] = 3.0;
+                        $data['imc_clasificacion'] = 'Bajo peso (Pediátrico)';
+                    } elseif ($imcCalculado > 18) {
+                        $data['imc_percentil'] = 97.0;
+                        $data['imc_clasificacion'] = 'Obesidad (Pediátrico)';
+                    } else {
+                        $data['imc_percentil'] = 50.0;
+                        $data['imc_clasificacion'] = 'Peso normal (Pediátrico)';
+                    }
+                } else {
+                    if ($imcCalculado < 13.5) {
+                        $data['imc_percentil'] = 4.0;
+                        $data['imc_clasificacion'] = 'Bajo peso (Pediátrico)';
+                    } elseif ($imcCalculado >= 13.5 && $imcCalculado < 19.0) {
+                        $data['imc_percentil'] = 50.0;
+                        $data['imc_clasificacion'] = 'Peso normal (Pediátrico)';
+                    } elseif ($imcCalculado >= 19.0 && $imcCalculado < 22.0) {
+                        $data['imc_percentil'] = 88.0;
+                        $data['imc_clasificacion'] = 'Sobrepeso (Pediátrico)';
+                    } else {
+                        $data['imc_percentil'] = 96.5;
+                        $data['imc_clasificacion'] = 'Obesidad (Pediátrico)';
+                    }
+                }
+            
+            // Aquí puedes implementar o llamar a tu lógica/librería de percentiles de la OMS
+            // usando $edad, el sexo ($paciente.genero o sexo) y el $imcCalculado
+            // $data['imc_percentil'] = TuClaseDePercentiles::calcular(...);
+
+            } else {
+                // === LÓGICA DE ADULTOS (OMS) ===
+                $data['imc_percentil'] = null;
+                // Clasificación estándar de la OMS para el IMC
+                if ($imcCalculado < 18.5) {
+                    $data['imc_clasificacion'] = 'Bajo peso';
+                } elseif ($imcCalculado >= 18.5 && $imcCalculado < 25) {
+                    $data['imc_clasificacion'] = 'Peso normal (Saludable)';
+                } elseif ($imcCalculado >= 25 && $imcCalculado < 30) {
+                    $data['imc_clasificacion'] = 'Sobrepeso';
+                } else {
+                    $data['imc_clasificacion'] = 'Obesidad';
+                }
+            }
         }
                 $estadoExplicito = $data['estado_triage'] ?? null;
                 unset($data['estado_triage']);
@@ -365,6 +547,7 @@ class TriageController extends Controller
                     'paciente_id'     => $paciente->id,
                     'codigo_paciente' => $paciente->paciente_id,
                     'estado'          => $estado,
+                    'imc'             => $imcCalculado ?? ($data['imc'] ?? null),
                 ]));
             });
 
@@ -375,11 +558,11 @@ class TriageController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error en TriageController@guardarTriageRapido: ' . $e->getMessage());
+            Log::error('Error en TriageController@guardarTriageRapido: ' . $e->getMessage() . ' Linea: ' . $e->getLine());
 
             return response()->json([
                 'success' => false,
-                'message' => 'No se pudieron guardar los signos vitales.',
+                'message' => 'No se pudieron guardar los signos vitales.' . $e->getMessage(),
             ], 500);
         }
     }

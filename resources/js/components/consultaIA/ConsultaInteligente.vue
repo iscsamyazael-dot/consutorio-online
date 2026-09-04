@@ -59,6 +59,8 @@
         directo del contenedor alto, no de un wrapper corto).
     -->
     <div v-else class="consulta-contenedor">
+        <HeaderConsulta 
+            :pacienteId="pacienteId" />
         <!-- BARRA SUPERIOR: salida explícita de la consulta -->
         <div class="row mb-2">
             <div class="col-12 d-flex justify-content-end">
@@ -154,6 +156,7 @@ import DerivacionClinica from './DerivacionClinica.vue'
 import RecetaInteligente from './RecetaInteligente.vue'
 import NotaPSOAPP from './NotaPSOAPP.vue'
 import SignosVitales from './SignosVitales.vue'
+import HeaderConsulta from './HeaderConsulta.vue'
 
 export default {
     components: {
@@ -165,7 +168,8 @@ export default {
         DerivacionClinica,
         RecetaInteligente,
         NotaPSOAPP,
-        SignosVitales
+        SignosVitales,
+        HeaderConsulta
     },
     props: {
         pacienteId: {

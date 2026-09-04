@@ -32,10 +32,13 @@ class Triage extends Model
     'estado',
     'nivel_urgencia',
     'evaluacion_ia',
-    'requiere_medico'
+    'requiere_medico',
+    'historial_ediciones'
 ];
     
-
+    protected $casts = [
+        'historial_ediciones' => 'array',
+    ];
     /**
      * El triage pertenece a un paciente
      */
@@ -45,7 +48,7 @@ class Triage extends Model
     }
 
     /**
-     * Usuario que realizó el triage
+     * Usuario que realizó el triages
      */
     public function usuario()
     {

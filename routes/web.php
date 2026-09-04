@@ -33,6 +33,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ConfiguracionImpresoraController;
 use App\Http\Controllers\ImpresionTicketController;
 use App\Http\Controllers\ConfiguracionCorreoController;
+use App\Http\Controllers\WahaController;
 
 
 
@@ -311,6 +312,14 @@ Route::middleware('auth')->group(function () {
             //NUEVAS RUTAS DE CONFIGURACION EMPRESA 
             Route::get('/configuracion-empresa', [ConfiguracionEmpresaController::class, 'show']);
             Route::put('/configuracion-empresa/config-correo', [ConfiguracionEmpresaController::class, 'guardarConfigCorreo']);
+            
+            //RUTAS PARA LAS SESSIONES DE WAHA //
+            Route::prefix('waha')->group(function () {
+                Route::post('/iniciar', [WahaController::class, 'iniciarSesion']);
+                Route::get('/qr', [WahaController::class, 'obtenerQr']);
+                Route::get('/estatus', [WahaController::class, 'estatus']);
+            });
+
             Route::get('Sucursales',function(){ return view('Ubicaciones.index'); })->name('Ubicaciones.index');
             Route::get('Agenda',function(){ return view('Citas.index'); })->name('Citas.index');
             Route::get('AgendarCitas',function(){ $datos = (new CitaController())->create(); return view('Citas.create',$datos); });
@@ -328,6 +337,7 @@ Route::middleware('auth')->group(function () {
             Route::get('agregar-impresora', function () { return view('Kiosco.impresora');})->name('agregar-impresora');
             //Vista para vincular correo electronico como parte de la configuracion Omboarding//
             Route::get('vincular-correo', function () { return view('configuracion-sistema.vincularCorreo');})->name('vincular-correo');
+            Route::get('vinculacion-whatsapp', function () { return view('configuracion-sistema.VincularWhatsaap');})->name('vinculacion-whatsapp');
         });
 
 });

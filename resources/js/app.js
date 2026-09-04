@@ -58,6 +58,8 @@ import PantallaKiosco from './components/Kiosco/Kioscoautoregistro.vue'
 import AgregaDispositivo from './components/Kiosco/AgregaDispositivo.vue'
 import ConfiguracionImpresora from './components/Kiosco/ConfiguracionImpresora.vue'
 import VinculacionCorreo from './components/configuracion-sistema/VincularCorreo.vue'
+import VinculacionWhatsapp from './components/configuracion-sistema/vincularWhatsapp.vue'
+import headerConsulta from './components/consultaIA/HeaderConsulta.vue'
 // ------------------------------------------------------
 // Instancia única de la app
 // ------------------------------------------------------
@@ -100,6 +102,8 @@ app.component('pantalla-kiosco', PantallaKiosco);
 app.component('agrega-dispositivo', AgregaDispositivo);
 app.component('configuracion-impresora', ConfiguracionImpresora);
 app.component('vincular-correo', VinculacionCorreo);
+app.component('vincular-whatsapp', VinculacionWhatsapp);
+app.component('vincular-consulta', headerConsulta);
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 
