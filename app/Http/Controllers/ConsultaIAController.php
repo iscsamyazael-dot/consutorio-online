@@ -996,7 +996,7 @@ class ConsultaIAController extends Controller
         try {
             $validated = $request->validate([
                 'consulta_id' => 'nullable|integer|exists:consultas,id',
-                'sintomas'    => 'nullable|array|min:1',
+                'sintomas'    => 'nullable|array',
                 'sintomas.*'  => 'string'
             ]);
 
