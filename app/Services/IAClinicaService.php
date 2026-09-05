@@ -1248,11 +1248,13 @@ class IAClinicaService
     /**
      * Sugerencia de medicamentos con triage completo - LENGUAJE MÉDICO PROFESIONAL
      */
-    public function sugerirMedicamentoLibre(array $sintomas, array $especialidadesDisponibles = [])
+    public function sugerirMedicamentoLibre(array $sintomas, array $especialidadesDisponibles = [], ?string $diagnosticoConfirmado = null)
     {
         set_time_limit(300);
-        $textoSintomas = implode(', ', $sintomas);
-
+        //$textoSintomas = implode(', ', $sintomas);
+        $textoSintomas = !empty($sintomas)
+            ? implode(', ', $sintomas)
+            : 'No se registraron síntomas individuales; usar el diagnóstico confirmado como única referencia.';
         $textoEspecialidades = !empty($especialidadesDisponibles)
             ? implode(', ', $especialidadesDisponibles)
             : 'No disponible (no se proporcionó catálogo, usa tu mejor criterio clínico general)';
@@ -1261,7 +1263,37 @@ class IAClinicaService
         // extraído del Manual de Terminología Médica.
         $vocabularioSintomas = DiccionarioMedico::textoReferencia();
 
+
+        // NUEVO: si el médico ya confirmó un diagnóstico (con o sin código
+        // ICD-11 oficial), se lo anclamos a la IA como un HECHO, no como algo
+        // a razonar. Esto reemplaza la FASE 4 (diagnósticos probables) cuando
+        // aplica: ya no hay que adivinar el diagnóstico, solo generar la
+        // receta/derivación coherente con él.
+        $bloqueDiagnosticoConfirmado = '';
+        if ($diagnosticoConfirmado) {
+            $bloqueDiagnosticoConfirmado = "
+
+            =========================================================
+            DIAGNÓSTICO YA CONFIRMADO POR EL MÉDICO (NO LO REEVALÚES)
+            =========================================================
+
+            El médico tratante YA CONFIRMÓ el siguiente diagnóstico tras revisar al
+            paciente, usando como referencia la clasificación oficial ICD-11 de la OMS:
+
+            \"$diagnosticoConfirmado\"
+
+            Este diagnóstico es un HECHO CLÍNICO ESTABLECIDO, no una hipótesis a evaluar.
+            NO generes diagnósticos probables alternativos ni reconsideres si es correcto.
+            Usa este diagnóstico como ancla única para las FASES 5, 6, 6B y 7
+            (decisión clínica, receta inteligente y/o derivación). El campo
+            \"diagnosticos_probables\" de tu respuesta debe contener EXCLUSIVAMENTE este
+            diagnóstico con 100% de probabilidad.
+            ";
+        }
+
         $prompt = " 
+
+        $bloqueDiagnosticoConfirmado
 
         Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE como apoyo para médicos durante consultas PRESENCIALES.
 
@@ -2518,5 +2550,67 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
             ?? null;
 
         return $data;
+    }
+
+    /**
+     * Sugerencia RÁPIDA de especialidad médica, usada como respaldo cuando
+     * sugerirMedicamentoLibre() (el triage completo de 8 fases) no logró
+     * mapear su sugerencia a ninguna especialidad activa real del catálogo.
+     * A diferencia de aquel, este prompt es mínimo -- una sola pregunta, sin
+     * fases de triage/receta -- para responder en segundos y no depender de
+     * mantener un diccionario de palabras clave que nunca cubre todos los
+     * casos posibles (rodilla, articular, gonalgia, etc.).
+     */
+    public function sugerirEspecialidadSimple(string $textoAnclaje, array $especialidadesDisponibles = []): ?string
+    {
+        $textoEspecialidades = !empty($especialidadesDisponibles)
+            ? implode(', ', $especialidadesDisponibles)
+            : 'No disponible';
+
+        $prompt = "
+        Eres un asistente clínico. A partir del siguiente diagnóstico o síntomas,
+        indica cuál es la especialidad médica más adecuada para atender este caso.
+
+        DIAGNÓSTICO / SÍNTOMAS:
+        \"$textoAnclaje\"
+
+        CATÁLOGO DE ESPECIALIDADES DISPONIBLES EN EL SISTEMA:
+        $textoEspecialidades
+
+        Si alguna especialidad del catálogo es coherente con el caso, respóndela
+        EXACTAMENTE como aparece escrita en el catálogo. Si ninguna es coherente,
+        responde con el nombre de la especialidad médicamente correcta aunque no
+        esté en el catálogo (ej. \"Traumatología\", \"Neumología\", \"Dermatología\").
+
+        Responde EXCLUSIVAMENTE con este JSON, sin texto adicional ni Markdown:
+        {\"especialidad\": \"\"}
+        ";
+
+        try {
+            $apiKey = env('GEMINI_API_KEY');
+            $modelo = 'gemini-3.5-flash-lite';
+            $urlGemini = "https://generativelanguage.googleapis.com/v1beta/models/{$modelo}:generateContent?key={$apiKey}";
+
+            $response = $this->llamarGeminiConReintentos(
+                $urlGemini,
+                [['text' => $prompt]],
+                2,
+                ['responseMimeType' => 'application/json']
+            );
+
+            if (!$response->successful()) {
+                Log::error('Error HTTP en sugerirEspecialidadSimple', ['body' => $response->body()]);
+                return null;
+            }
+
+            $contenido = $response->json('candidates.0.content.parts.0.text');
+            $data = $this->decodificarJsonDesdeTexto($contenido, 'sugerirEspecialidadSimple', $response->json() ?? []);
+
+            return is_array($data) ? (trim((string) ($data['especialidad'] ?? '')) ?: null) : null;
+
+        } catch (\Exception $e) {
+            Log::error('Excepción en sugerirEspecialidadSimple: ' . $e->getMessage());
+            return null;
+        }
     }
 }

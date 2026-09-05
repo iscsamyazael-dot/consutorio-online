@@ -34,6 +34,7 @@ use App\Http\Controllers\ConfiguracionImpresoraController;
 use App\Http\Controllers\ImpresionTicketController;
 use App\Http\Controllers\ConfiguracionCorreoController;
 use App\Http\Controllers\WahaController;
+use App\Http\Controllers\Icd11Controller;
 
 
 
@@ -220,6 +221,10 @@ Route::middleware('auth')->group(function () {
         //Ruta para descargar o imprimir el pdf expediente del paciente//
         Route::get('Descargar-Expediente-pdf/{paciente}', [PacienteController::class, 'descargarExpedientePdf'])
                 ->name('pacientes.descargarExpedientePdf');
+
+        //Ruta para el consumo de las APIS ICD 11 International Classification of Diseasses 11th Revision//
+        Route::get('/icd11/buscar', [Icd11Controller::class, 'buscar']);
+        Route::post('/consultaIA/{consultaId}/diagnostico', [ConsultaIAController::class, 'guardarDiagnostico']);
         
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas

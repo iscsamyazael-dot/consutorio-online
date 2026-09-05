@@ -116,16 +116,20 @@
                 <PanelIA
                     :ia-data="iaData"
                     :has-error="iaError"
+                    :consulta-id="consultaId"
+                    @diagnostico-guardado="onDiagnosticoGuardado"
                 />
             </div>
             <div class="col-lg-3">
                 <RecetaInteligente
                     :sintomas="sintomasDetectados"
                     :consulta-id="consultaId"
+                    :diagnostico-confirmado="diagnosticoConfirmado"
                 />
                 <DerivacionClinica
                     :sintomas="sintomasDetectados"
                     :consulta-id="consultaId"
+                    :diagnostico-confirmado="diagnosticoConfirmado"
                 />
             </div>
         </div>
@@ -198,7 +202,8 @@ export default {
             buscando: false,
             debounceTimer: null,
             listaEsperaIdHoy: null,
-            todosPacientes: []
+            todosPacientes: [],
+            diagnosticoConfirmado: null  
         }
     },
     computed: {
@@ -504,6 +509,16 @@ export default {
                 // sin importar cuál link del sidebar se haya clickeado.
                 this.navegarFuera(this.rutaListaConsultas)
             })
+        },
+
+        onDiagnosticoGuardado({ diagnostico, recomendaciones }) {
+            this.diagnosticoConfirmado = diagnostico 
+            if (this.$refs.notaPsoapp) {
+                this.$refs.notaPsoapp.sobrescribirSeccion('A', diagnostico)
+                if (recomendaciones) {
+                    this.$refs.notaPsoapp.sobrescribirSeccion('P2', recomendaciones)
+                }
+            }
         }
     }
 }

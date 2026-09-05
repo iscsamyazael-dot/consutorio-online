@@ -13,6 +13,20 @@
                 <h6 class="text-success">
                     🤖 Sugerencias IA
                 </h6>
+                 <!-- NUEVO: botón para refrescar receta con el diagnóstico ya confirmado -->
+            <button
+                v-if="diagnosticoConfirmado"
+                class="btn btn-outline-primary btn-sm mb-2"
+                :disabled="cargandoSugerencias"
+                @click="buscarSugerencias(sintomas)"
+            >
+                <i class="fas fa-sync" :class="{ 'fa-spin': cargandoSugerencias }"></i>
+                Actualizar con diagnóstico confirmado
+            </button>
+            <div v-else class="small text-muted mb-2">
+                <i class="fas fa-info-circle"></i>
+                Confirma el diagnóstico en el panel de IA para anclar la receta a él.
+            </div>
 
                 <div v-if="cargandoSugerencias" class="text-muted small">
                     <i class="fas fa-spinner fa-spin"></i> Analizando triage clínico...
@@ -285,6 +299,10 @@ export default {
         consultaId: {
             type: [String, Number],
             default: null
+        },
+        diagnosticoConfirmado: { 
+            type: String, 
+            default: null 
         }
     },
 
@@ -374,7 +392,8 @@ export default {
 
             try {
                 const response = await axios.post(urlRecetaInteligente, {
-                    sintomas: sintomas
+                    sintomas: sintomas,
+                    consulta_id: this.consultaId 
                 })
 
                 if (response.data.success) {

@@ -22,8 +22,22 @@
             >
                 ⚠️ No se pudo determinar la especialidad sugerida.
             </div>
+            
 
             <template v-else>
+                <div v-if="diagnosticoConfirmado" class="mb-2">
+                    <button
+                        class="btn btn-outline-primary btn-sm"
+                        :disabled="cargando"
+                        @click="buscarEspecialidad(sintomas)">
+                        <i class="fas fa-sync" :class="{ 'fa-spin': cargando }"></i>
+                        Actualizar con diagnóstico confirmado
+                    </button>
+                </div>
+                <div v-else class="small text-muted mb-2">
+                    <i class="fas fa-info-circle"></i>
+                    Confirma el diagnóstico en el panel de IA para anclar la derivación a él.
+                </div>
 
                 <!-- ALERTA DE URGENCIA -->
                 <div
@@ -90,7 +104,7 @@
                         class="badge ml-1"
                         :class="fuente === 'ia_triage' ? 'badge-info' : 'badge-secondary'"
                     >
-                        {{ fuente === 'ia_triage' ? 'triage IA' : 'respaldo por palabras clave' }}
+                        {{ fuente === 'ia_triage' ? 'triage IA' : 'sugerencia IA (respaldo)' }}
                     </span>
                     <span
                         v-if="especialidadFueraCatalogo"
@@ -168,6 +182,10 @@ export default {
         hospital: {
             type: String,
             default: null
+        },
+        diagnosticoConfirmado: { 
+            type: String, 
+            default: null 
         }
     },
 
@@ -258,7 +276,8 @@ export default {
 
             try {
                 const response = await axios.post(urlDerivacionInteligente, {
-                    sintomas: sintomas
+                    sintomas: sintomas,
+                    consulta_id: this.consultaId
                 })
 
                 if (response.data.success) {

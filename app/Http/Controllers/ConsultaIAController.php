@@ -996,21 +996,40 @@ class ConsultaIAController extends Controller
         try {
             $validated = $request->validate([
                 'consulta_id' => 'nullable|integer|exists:consultas,id',
-                'sintomas'    => 'required|array|min:1',
+                'sintomas'    => 'nullable|array|min:1',
                 'sintomas.*'  => 'string'
             ]);
 
-            $sintomas = $validated['sintomas'];
+            $sintomas = $validated['sintomas'] ?? [];
 
-            // Catálogo real de especialidades activas, para anclar a la IA
-            // y evitar que invente nombres que no existen en el sistema.
+            // NUEVO: si hay consulta_id y ya tiene diagnóstico confirmado por
+            // el médico, lo usamos como ancla para la IA.
+            $diagnosticoConfirmado = null;
+            if (!empty($validated['consulta_id'])) {
+                $consulta = Consulta::find($validated['consulta_id']);
+                $diagnosticoConfirmado = $consulta->diagnostico ?? null;
+            }
+
+            // Si no hay síntomas Y tampoco hay diagnóstico confirmado, no hay
+            // nada con qué trabajar -- ahí sí es un error real que reportar.
+            if (empty($sintomas) && !$diagnosticoConfirmado) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'No hay síntomas detectados ni un diagnóstico confirmado para generar sugerencias.'
+                ], 422);
+            }
+
             $nombresEspecialidades = Specialty::where('estado', 'Activo')
                 ->orderBy('nombre')
                 ->pluck('nombre')
                 ->toArray();
 
-            // 1. La IA hace el triage completo y decide tipo: receta_inteligente | derivacion
-            $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre($sintomas, $nombresEspecialidades);
+            $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre(
+                $sintomas,
+                $nombresEspecialidades,
+                $diagnosticoConfirmado   // <-- nuevo tercer parámetro
+            );
+
 
             if (!$respuestaIA) {
                 return response()->json([
@@ -1018,7 +1037,6 @@ class ConsultaIAController extends Controller
                     'error'   => 'No se pudo obtener respuesta de la IA.'
                 ], 500);
             }
-
             // 2. Si la IA decide DERIVACIÓN (triage naranja/rojo, o amarillo con
             //    signos de alarma), no buscamos medicamentos.
             if (($respuestaIA['tipo'] ?? null) === 'derivacion') {
@@ -1119,11 +1137,26 @@ class ConsultaIAController extends Controller
         try {
             $validated = $request->validate([
                 'consulta_id' => 'nullable|integer|exists:consultas,id',
-                'sintomas'    => 'required|array|min:1',
+                'sintomas'    => 'nullable|array',
                 'sintomas.*'  => 'string'
             ]);
 
-            $sintomas = $validated['sintomas'];
+            $sintomas = $validated['sintomas'] ?? [];
+
+            // NUEVO: si hay consulta_id y ya tiene diagnóstico confirmado por
+            // el médico, lo usamos como ancla para la IA.
+            $diagnosticoConfirmado = null;
+            if (!empty($validated['consulta_id'])) {
+                $consulta = Consulta::find($validated['consulta_id']);
+                $diagnosticoConfirmado = $consulta->diagnostico ?? null;
+            }
+
+            if (empty($sintomas) && !$diagnosticoConfirmado) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'No hay síntomas detectados ni un diagnóstico confirmado para generar sugerencias.'
+                ], 422);
+            }
 
             // Listado completo activo, para poblar el <select> del frontend
             // y para anclar a la IA (evita que invente especialidades).
@@ -1134,7 +1167,12 @@ class ConsultaIAController extends Controller
             $nombresEspecialidades = $todasLasEspecialidades->pluck('nombre')->toArray();
 
             // 1. FUENTE PRINCIPAL: triage de la IA, ya anclado al catálogo real
-            $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre($sintomas, $nombresEspecialidades);
+            //    y, si existe, al diagnóstico confirmado por el médico.
+            $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre(
+                $sintomas,
+                $nombresEspecialidades,
+                $diagnosticoConfirmado
+            );
 
             $triage = null;
             $diagnosticosProbables = [];
@@ -1174,10 +1212,16 @@ class ConsultaIAController extends Controller
             }
 
             if (!$especialidad) {
-                $especialidad = $this->buscarEspecialidadPorMapaDeRespaldo($sintomas);
-                $fuente = 'mapa_respaldo';
-                $especialidadFueraCatalogo = false;
-                $especialidadIdealNoDisponible = null;
+                $resultadoRespaldo = $this->resolverEspecialidadDeRespaldo($sintomas, $diagnosticoConfirmado);
+
+                $especialidad = $resultadoRespaldo['especialidad'];
+                $fuente = 'ia_respaldo';
+                $especialidadFueraCatalogo = $resultadoRespaldo['especialidad_fuera_catalogo'];
+                $especialidadIdealNoDisponible = $resultadoRespaldo['especialidad_ideal_no_disponible'];
+
+                if (empty($especialidad) && !empty($resultadoRespaldo['sin_catalogo_configurado'])) {
+                    $motivoDerivacionIA = "No hay especialidades activas configuradas en el catálogo de este consultorio. La especialidad recomendada es {$especialidadIdealNoDisponible}, pero es necesario dar de alta al menos una especialidad para poder registrar la derivación.";
+                }
             }
 
             return response()->json([
@@ -1202,82 +1246,68 @@ class ConsultaIAController extends Controller
             ], 500);
         }
     }
-
-    private function buscarEspecialidadPorMapaDeRespaldo(array $sintomas)
+    
+    /**
+     * Resuelve una especialidad de respaldo cuando el triage completo de la
+     * IA (sugerirMedicamentoLibre) no encontró match en el catálogo. En vez
+     * de un diccionario de palabras clave, usa una llamada ligera a la IA
+     * (sugerirEspecialidadSimple), anclada al diagnóstico confirmado si
+     * existe, o a los síntomas en su defecto.
+     */
+    private function resolverEspecialidadDeRespaldo(array $sintomas, ?string $diagnosticoConfirmado): array
     {
-        $textoSintomas = mb_strtolower(implode(' ', $sintomas));
+        $especialidadesActivas = Specialty::where('estado', 'Activo')
+            ->orderBy('nombre')
+            ->pluck('nombre')
+            ->toArray();
 
-        $mapaEspecialidades = [
-            'diente'        => 'Dentista',
-            'muela'         => 'Dentista',
-            'encía'         => 'Dentista',
-            'encia'         => 'Dentista',
-            'boca'          => 'Dentista',
-            'dental'        => 'Dentista',
-            'estómago'      => 'Gastroenterología',
-            'estomago'      => 'Gastroenterología',
-            'digestivo'     => 'Gastroenterología',
-            'digestión'     => 'Gastroenterología',
-            'digestion'     => 'Gastroenterología',
-            'hígado'        => 'Gastroenterología',
-            'higado'        => 'Gastroenterología',
-            'intestino'     => 'Gastroenterología',
-            'colon'         => 'Gastroenterología',
-            'colitis'       => 'Gastroenterología',
-            'gastritis'     => 'Gastroenterología',
-            'náusea'        => 'Gastroenterología',
-            'nausea'        => 'Gastroenterología',
-            'vómito'        => 'Gastroenterología',
-            'vomito'        => 'Gastroenterología',
-            'diarrea'       => 'Gastroenterología',
-            'estreñimiento' => 'Gastroenterología',
-            'estrenimiento' => 'Gastroenterología',
-            'abdominal'     => 'Gastroenterología',
-            'abdomen'       => 'Gastroenterología',
-            'reflujo'       => 'Gastroenterología',
-            'acidez'        => 'Gastroenterología',
-            'alimentación'  => 'Nutricion',
-            'alimentacion'  => 'Nutricion',
-            'peso'          => 'Nutricion',
-            'dieta'         => 'Nutricion',
-            'niño'          => 'Pediatría',
-            'nino'          => 'Pediatría',
-            'bebé'          => 'Pediatría',
-            'bebe'          => 'Pediatría',
-            'infante'       => 'Pediatría',
-            'ansiedad'      => 'Psicología',
-            'depresión'     => 'Psicología',
-            'depresion'     => 'Psicología',
-            'estrés'        => 'Psicología',
-            'estres'        => 'Psicología',
-            'emocional'     => 'Psicología',
-            'hueso'         => 'Traumatologia',
-            'fractura'      => 'Traumatologia',
-            'articulación'  => 'Traumatologia',
-            'articulacion'  => 'Traumatologia',
-            'músculo'       => 'Traumatologia',
-            'musculo'       => 'Traumatologia',
-            'esguince'      => 'Traumatologia',
-        ];
+        $textoAnclaje = $diagnosticoConfirmado
+            ?: (!empty($sintomas) ? implode(', ', $sintomas) : null);
 
-        $especialidadSugerida = null;
+        $especialidadIdeal = $textoAnclaje
+            ? $this->iaClinicaService->sugerirEspecialidadSimple($textoAnclaje, $especialidadesActivas)
+            : null;
 
-        foreach ($mapaEspecialidades as $palabraClave => $nombreEspecialidad) {
-            if (str_contains($textoSintomas, $palabraClave)) {
-                $especialidadSugerida = $nombreEspecialidad;
-                break;
-            }
+        if (!$especialidadIdeal) {
+            $especialidadIdeal = 'Medicina General';
         }
 
-        if (!$especialidadSugerida) {
-            $especialidadSugerida = 'Medicina general';
-        }
-
-        return Specialty::where('estado', 'Activo')
-            ->where('nombre', $especialidadSugerida)
+        // CASO 1: la especialidad ideal existe activa en el catálogo
+        $especialidad = Specialty::where('estado', 'Activo')
+            ->whereRaw('LOWER(nombre) = ?', [mb_strtolower($especialidadIdeal)])
             ->first();
-    }
 
+        if ($especialidad) {
+            return [
+                'especialidad'                     => $especialidad,
+                'especialidad_fuera_catalogo'      => false,
+                'especialidad_ideal_no_disponible' => null,
+            ];
+        }
+
+        // CASO 2: la ideal no existe, pero sí hay otras especialidades activas
+        $especialidadRespaldo = Specialty::where('estado', 'Activo')
+            ->where('nombre', 'LIKE', '%medicina general%')
+            ->first()
+            ?? Specialty::where('estado', 'Activo')->orderBy('nombre')->first();
+
+        if ($especialidadRespaldo) {
+            return [
+                'especialidad'                     => $especialidadRespaldo,
+                'especialidad_fuera_catalogo'      => true,
+                'especialidad_ideal_no_disponible' => $especialidadIdeal,
+            ];
+        }
+
+        // CASO 3: no hay absolutamente ninguna especialidad activa configurada
+        return [
+            'especialidad'                     => null,
+            'especialidad_fuera_catalogo'      => true,
+            'especialidad_ideal_no_disponible' => $especialidadIdeal,
+            'sin_catalogo_configurado'         => true,
+        ];
+    }
+    
     /**
      * Historial clínico completo de un paciente (todas sus consultas +
      * transcripciones), usado por ExpedienteTabs.vue -> obtenerConsultas().
@@ -1378,6 +1408,52 @@ class ConsultaIAController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => 'No se pudieron obtener las notas PSOAPP.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Guarda el diagnóstico final (editado/confirmado por el médico, con o
+     * sin código ICD-11 oficial) y las recomendaciones, capturados en
+     * PanelIA.vue. A diferencia de EvaluacionIA (bitácora de lo que sugirió
+     * la IA en cada análisis), esto es el diagnóstico OFICIAL de la
+     * consulta, el que el médico confirma.
+     */
+    public function guardarDiagnostico(Request $request, $consultaId)
+    {
+        try {
+            $consulta = Consulta::find($consultaId);
+            if (!$consulta) {
+                return response()->json(['success' => false, 'error' => 'Consulta no encontrada'], 404);
+            }
+
+            $validated = $request->validate([
+                'diagnostico'               => 'required|string',
+                'diagnostico_icd11_codigo'  => 'nullable|string|max:20',
+                'diagnostico_icd11_titulo'  => 'nullable|string|max:255',
+                'recomendaciones'           => 'nullable|string',
+            ]);
+
+            $consulta->update($validated);
+
+            return response()->json([
+                'success'  => true,
+                'consulta' => $consulta->fresh(),
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error'   => 'Datos inválidos.',
+                'detalle' => $e->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            \Log::error("Error en guardarDiagnostico: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'error'   => 'No se pudo guardar el diagnóstico.'
             ], 500);
         }
     }

@@ -255,6 +255,18 @@ export default {
       this.estado[key].completado =
         this.estado[key].texto.trim().length > 0
     },
+    
+    // Reemplaza (no concatena) el contenido de una sección. A diferencia de
+    // actualizarDesdeIA() -- que va acumulando texto de la IA en vivo -- este
+    // método se usa cuando el médico CONFIRMA una corrección manual desde
+    // PanelIA.vue (diagnóstico o recomendaciones) y debe pisar por completo
+    // lo que hubiera antes, sin arrastrar una versión previa incorrecta.
+    sobrescribirSeccion(key, texto) {
+        if (!this.estado[key]) return
+        this.estado[key].texto = texto || ''
+        this.estado[key].completado = !!(texto && texto.trim().length > 0)
+    },
+
     // Llama a este método antes de permitir que el usuario salga de la
     // vista (cambie de paciente, navegue a otra sección, etc.). Si falta
     // descargar la receta y/o el diagnóstico, muestra una alerta y solo
