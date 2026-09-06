@@ -518,6 +518,7 @@ export default {
                 if (recomendaciones) {
                     this.$refs.notaPsoapp.sobrescribirSeccion('P2', recomendaciones)
                 }
+                this.$refs.notaPsoapp.guardar('borrador')
             }
         }
     }

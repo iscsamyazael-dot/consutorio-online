@@ -263,7 +263,7 @@ class EvaluacionesIAController extends Controller
 
             $evaluacionesData = $evaluaciones->map(fn ($eva) => [
                 'id' => $eva->id,
-                'diagnostico_probable' => $eva->diagnostico_probable ?? 'Sin diagnóstico',
+                'diagnostico_probable' => $consulta->diagnostico ?: ($evaluacionPrincipal->diagnostico_probable ?? 'Sin diagnóstico'),
                 'sintomas_array' => $eva->sintomas_array ?? [],
                 'riesgo' => $eva->riesgo ?? 'Bajo',
                 'confianza' => (float) ($eva->confianza ?? 0),
@@ -317,7 +317,8 @@ class EvaluacionesIAController extends Controller
                 'fecha' => optional($evaluacionPrincipal->created_at)->format('Y-m-d H:i') ?? 'N/A',
                 'evaluaciones' => $evaluacionesData,
                 'confianzas' => $confianzas,
-                'diagnostico_probable' => $evaluacionPrincipal->diagnostico_probable ?? 'Sin diagnóstico',
+                'diagnostico_probable' => $consulta->diagnostico ?: ($evaluacionPrincipal->diagnostico_probable ?? 'Sin diagnóstico'),
+                'diagnostico_confirmado' => !empty($consulta->diagnostico),
                 'sintomas_array' => $evaluacionPrincipal->sintomas_array ?? [],
                 'riesgo' => $evaluacionPrincipal->riesgo ?? 'Bajo',
                 'confianza' => (float) ($evaluacionPrincipal->confianza ?? 0),

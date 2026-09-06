@@ -47,6 +47,11 @@ class IcdApiService
             return [];
         }
 
+        $textoBusqueda = $texto;
+        if (preg_match('/\(([^)]+)\)/', $texto, $m)) {
+            $textoBusqueda = trim(str_ireplace('probable', '', $m[1]));
+        }
+
         $response = Http::withToken($token)
             ->withHeaders([
                 'Accept'          => 'application/json',
@@ -54,7 +59,7 @@ class IcdApiService
                 'API-Version'     => 'v2',
             ])
             ->get(self::SEARCH_URL, [
-                'q'                        => $texto,
+                'q'                        => $textoBusqueda,
                 'flatResults'              => 'true',
                 'useFlexisearch'           => 'true',
                 'medicalCodingMode'        => 'true',
@@ -66,7 +71,7 @@ class IcdApiService
         }
 
         $destinationEntities = $response->json('destinationEntities') ?? [];
-        
+
         $resultados = collect($destinationEntities)
             ->map(function ($entidad) {
                 return [
@@ -76,29 +81,66 @@ class IcdApiService
             })
             ->filter(fn ($e) => $e['codigo'] && $e['titulo'])
             ->values();
-        
-        // El "score" que regresa la ICD-API con Flexisearch activado no
-        // discrimina bien términos clínicamente lejanos que comparten una
-        // sola palabra (ej. "Hipertensión neonatal" para una búsqueda de
-        // "Hipertensión arterial sistémica"). En vez de confiar en ese score,
-        // calculamos relevancia propia: cuántas palabras del texto buscado
-        // aparecen también en el título de cada resultado. A mayor
-        // coincidencia de palabras, más relevante.
-        $palabrasBuscadas = collect(preg_split('/\s+/', mb_strtolower($texto)))
-            ->filter(fn ($p) => mb_strlen($p) > 2) // ignoramos conectores muy cortos
+
+        return $this->reordenarPorRelevancia($resultados, $textoBusqueda);
+    }
+
+    /**
+     * Palabras que por sí solas no aportan especificidad clínica y causan
+     * falsos positivos en el conteo de relevancia (ej. "aguda" hace match
+     * tanto con "Pielonefritis aguda" como con "Infección respiratoria
+     * aguda", sin ninguna relación clínica real entre ambas).
+     */
+    private function palabrasIgnorables(): array
+    {
+        return [
+            'de', 'del', 'la', 'las', 'el', 'los', 'en', 'y', 'o', 'con', 'sin',
+            'por', 'no', 'un', 'una', 'unos', 'unas',
+            'aguda', 'agudo', 'cronica', 'crónica', 'cronico', 'crónico',
+            'probable', 'probables', 'especificacion', 'especificación',
+            'otro', 'otra', 'otros', 'otras', 'sitio', 'multiples', 'múltiples',
+        ];
+    }
+
+    private function normalizar(string $texto): string
+    {
+        $texto = mb_strtolower(trim($texto));
+        return str_replace(['á', 'é', 'í', 'ó', 'ú', 'ñ'], ['a', 'e', 'i', 'o', 'u', 'n'], $texto);
+    }
+
+    /**
+     * El "score" que regresa la ICD-API con Flexisearch activado no
+     * discrimina bien términos clínicamente lejanos que comparten solo
+     * palabras genéricas (ej. "aguda", "vías", "altas"). En vez de confiar
+     * en ese score, calculamos relevancia propia: cuántas palabras
+     * DISTINTIVAS del texto buscado aparecen en el título de cada
+     * resultado, más un bono grande si el título contiene la frase casi
+     * completa (para que un match de frase gane sobre varios matches de
+     * palabras sueltas y comunes).
+     */
+    private function reordenarPorRelevancia($resultados, string $textoBusqueda): array
+    {
+        $stopwords = $this->palabrasIgnorables();
+        $fraseNormalizada = $this->normalizar($textoBusqueda);
+
+        $palabrasBuscadas = collect(preg_split('/[\s,]+/', $fraseNormalizada))
+            ->filter(fn ($p) => mb_strlen($p) > 2 && !in_array($p, $stopwords))
             ->values();
 
         return $resultados
-            ->map(function ($r) use ($palabrasBuscadas) {
-                $tituloNormalizado = mb_strtolower($r['titulo']);
+            ->map(function ($r) use ($palabrasBuscadas, $fraseNormalizada) {
+                $tituloNormalizado = $this->normalizar($r['titulo']);
+
                 $coincidencias = $palabrasBuscadas
                     ->filter(fn ($palabra) => str_contains($tituloNormalizado, $palabra))
                     ->count();
 
-                $r['relevancia'] = $coincidencias;
+                $bonusFrase = str_contains($tituloNormalizado, $fraseNormalizada) ? 50 : 0;
+
+                $r['relevancia'] = $coincidencias + $bonusFrase;
                 return $r;
             })
-            ->filter(fn ($r) => $r['relevancia'] > 0) // descarta los que no comparten NINGUNA palabra
+            ->filter(fn ($r) => $r['relevancia'] > 0) // descarta los que no comparten NINGUNA palabra distintiva
             ->sortByDesc('relevancia')
             ->take(6) // top 6 más relevantes
             ->map(fn ($r) => ['codigo' => $r['codigo'], 'titulo' => $r['titulo']]) // sin 'relevancia', el frontend no la necesita

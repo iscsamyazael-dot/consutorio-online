@@ -59,8 +59,10 @@
               <h3 class="card-title"><i class="fas fa-robot mr-1"></i> IA Clínica & Diagnóstico</h3>
             </div>
             <div class="card-body">
-              <p><strong>Diagnóstico Probable:</strong> {{ detalle.diagnostico_probable || 'Sin diagnóstico registrado' }}</p>
-
+              <p>
+                  <strong>{{ detalle.diagnostico_confirmado ? 'Diagnóstico Confirmado:' : 'Diagnóstico Probable:' }}</strong>
+                  {{ detalle.diagnostico_probable || 'Sin diagnóstico registrado' }}
+              </p>
               <div class="mb-3">
                 <label class="d-block font-weight-bold mb-1">Síntomas Detectados:</label>
                 <span 

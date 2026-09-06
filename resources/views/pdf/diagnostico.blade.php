@@ -436,11 +436,18 @@
         @endif
     </div> -->
 
-    {{-- Diagnóstico probable (evaluaciones_ia.diagnostico_probable) --}}
-    @if($evaluacion && !empty($evaluacion->diagnostico_probable))
+    {{-- Diagnóstico: prioriza el confirmado por el médico (consultas.diagnostico);
+     si aún no se ha confirmado ninguno, cae al diagnóstico_probable crudo
+     de la IA (evaluaciones_ia) como respaldo. --}}
+    @php
+        $diagnosticoMostrar = $consulta->diagnostico ?: ($evaluacion->diagnostico_probable ?? null);
+    @endphp
+    @if(!empty($diagnosticoMostrar))
     <div class="diagnostico-box">
-        <h2 style="border-bottom:none; margin:0 0 6px; padding-bottom:0;">Diagnóstico probable</h2>
-        <p>{{ $evaluacion->diagnostico_probable }}</p>
+        <h2 style="border-bottom:none; margin:0 0 6px; padding-bottom:0;">
+            {{ $consulta->diagnostico ? 'Diagnóstico confirmado' : 'Diagnóstico probable' }}
+        </h2>
+        <p>{{ $diagnosticoMostrar }}</p>
     </div>
     @endif
 

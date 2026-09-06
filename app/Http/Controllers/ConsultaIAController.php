@@ -1337,7 +1337,7 @@ class ConsultaIAController extends Controller
                         ]);
                 }])
                 ->orderBy('created_at', 'desc')
-                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta', 'estado_consulta', 'created_at']);
+                ->get(['id', 'folio', 'paciente_id', 'motivo_consulta','diagnostico','estado_consulta', 'created_at']);
 
             $evaluaciones = EvaluacionIA::whereIn('consulta_id', $consultas->pluck('id'))
                 ->orderBy('created_at', 'desc')

@@ -883,7 +883,7 @@ body {
                         estado: consulta.estado_consulta,
                         tipo_consulta: this.formatearEstado(consulta.estado_consulta),
                         motivo: consulta.motivo_consulta,
-                        diagnostico: evaluacion ? evaluacion.diagnostico_probable : null,
+                        diagnostico: consulta.diagnostico || (evaluacion ? evaluacion.diagnostico_probable : null),
                         descripcion: evaluacion ? evaluacion.recomendacion : null
                       }
                     })
