@@ -8,6 +8,7 @@ use App\Models\EvaluacionIA;
 use App\Models\AlertaClinica;
 use App\Models\EventoIA;
 use App\Models\NotaPsoapp;
+use App\Models\ExpedienteClinico;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Smalot\PdfParser\Parser as PdfParser;
@@ -70,6 +71,22 @@ class IAClinicaService
                 'nota_psoapp' => null,
             ];
         }
+
+        // --- HISTORIA CLÍNICA: ¿este paciente ya la tiene completa? ---
+        // Una sola fila por paciente (no por consulta, a diferencia de
+        // NotaPsoapp). Mientras falte al menos uno de los 7 campos, le
+        // pedimos a la IA que intente llenarlos con lo que diga ESTA
+        // consulta puntual. En cuanto está completa, dejamos de pedirlo
+        // en automático (ver decodificarJsonDesdeTexto/consultarIA).
+        $expedienteClinico = ExpedienteClinico::firstOrNew(['paciente_id' => $consulta->paciente_id]);
+        $solicitarHistoriaClinica = !$expedienteClinico->completado_ia;
+
+        $data = $this->consultarIA(
+            $texto,
+            $historial,
+            $ultimaNota,
+            $solicitarHistoriaClinica
+        );
 
         // ============================================================
         // VALIDACIÓN DE ANCLAJE DE SÍNTOMAS (capa de seguridad opcional)
@@ -149,6 +166,13 @@ class IAClinicaService
             'created_at' => now(),
         ]);
 
+        // Merge inteligente: solo sobrescribe un campo si la IA trajo
+        // contenido nuevo para ESTA consulta; nunca borra lo capturado antes.
+        $progresoHistoriaClinica = $this->actualizarExpedienteClinico(
+            $expedienteClinico,
+            $data['historia_clinica'] ?? null
+        );
+
         $alertasDetectadas = $data['alertas'] ?? [];
         $nivelRiesgo = $this->calcularNivelRiesgo($alertasDetectadas);
 
@@ -223,6 +247,7 @@ class IAClinicaService
             'sintomas' => $data['sintomas'] ?? [],
             'alertas' => $alertasDetectadas,
             'nota_psoapp' => $notaPsoapp,
+            'historia_clinica_progreso' => $progresoHistoriaClinica,
             'debug_usage' => $data['debug_usage'] ?? null,
         ];
     }
@@ -313,6 +338,65 @@ class IAClinicaService
         }
 
         return $maxNivel;
+    }
+
+    /**
+     * Mezcla lo que la IA extrajo de Historia Clínica en ESTA consulta con
+     * lo que ya existía en el expediente permanente del paciente. Nunca
+     * sobrescribe un campo con vacío: solo actualiza si la IA trajo
+     * contenido real para ese campo (ver instrucción explícita en el
+     * prompt de consultarIA -- FASE 8B -- de responder "" cuando el texto
+     * de hoy no aporta nada nuevo a un apartado).
+     *
+     * Recalcula 'completado_ia' y regresa el progreso (para el badge
+     * "X/7" en Consulta Inteligente y el checklist en el Expediente).
+     */
+    private function actualizarExpedienteClinico(ExpedienteClinico $expediente, ?array $historiaClinicaIA): array
+    {
+        $campos = ExpedienteClinico::CAMPOS_CLINICOS;
+
+        if (is_array($historiaClinicaIA)) {
+            $huboCambios = false;
+
+            foreach ($campos as $campo) {
+                $valorNuevo = trim((string) ($historiaClinicaIA[$campo] ?? ''));
+
+                if ($valorNuevo !== '') {
+                    $expediente->{$campo} = $valorNuevo;
+                    $huboCambios = true;
+                }
+            }
+
+            if ($huboCambios) {
+                $expediente->ultima_evaluacion_ia = now();
+            }
+        }
+
+        // Recalculamos completitud siempre (incluso sin cambios nuevos hoy),
+        // por si el expediente ya se completó manualmente desde el tab.
+        $completados = 0;
+        $faltantes = [];
+
+        foreach ($campos as $campo) {
+            if (trim((string) $expediente->{$campo}) !== '') {
+                $completados++;
+            } else {
+                $faltantes[] = $campo;
+            }
+        }
+
+        $expediente->completado_ia = ($completados === count($campos)) ? 1 : 0;
+
+        if ($expediente->paciente_id) {
+            $expediente->save();
+        }
+
+        return [
+            'completados'      => $completados,
+            'total'            => count($campos),
+            'completa'         => $completados === count($campos),
+            'campos_faltantes' => $faltantes,
+        ];
     }
 
     /**
@@ -1808,7 +1892,8 @@ class IAClinicaService
     private function consultarIA(
         $texto,
         array $historial = [],
-        $ultimaNota = null
+        $ultimaNota = null,
+        bool $solicitarHistoriaClinica = false 
     ) 
     { // Forzamos el límite de ejecución de PHP para evitar cortes inesperados
         set_time_limit(300);
@@ -1850,6 +1935,68 @@ PRONÓSTICO ANTERIOR:
         // Vocabulario de referencia (síntoma coloquial -> término médico),
         // extraído del Manual de Terminología Médica.
         $vocabularioSintomas = DiccionarioMedico::textoReferencia();
+
+                // --- BLOQUE CONDICIONAL: Historia Clínica (NOM-004-SSA3-2012) ---
+        // Solo se le pide a la IA si el expediente del paciente todavía no
+        // está completo (ver analizarTranscripcion()). Una vez completo, se
+        // deja de incluir en el prompt para no gastar tokens en algo que
+        // ya no hace falta generar automáticamente.
+        $bloqueHistoriaClinica = '';
+        $campoJsonHistoriaClinica = '';
+
+        if ($solicitarHistoriaClinica) {
+            $bloqueHistoriaClinica = "
+        =========================================================
+        FASE 8B - HISTORIA CLÍNICA (NOM-004-SSA3-2012)
+        =========================================================
+
+        Además de la nota PSOAPP de esta consulta, este paciente TODAVÍA NO
+        tiene su Historia Clínica completa (documento base y permanente del
+        expediente, distinto de las notas de evolución). Extrae de ESTE MISMO
+        texto, si lo dice, información para los siguientes 7 apartados:
+
+        - antecedentes_heredofamiliares: enfermedades de padres, hermanos,
+          abuelos u otros familiares directos.
+        - antecedentes_medicos: antecedentes personales PATOLÓGICOS —
+          enfermedades previas propias, cirugías, alergias, transfusiones,
+          tabaquismo, alcoholismo, uso de sustancias (la norma exige incluir
+          estos tres últimos aquí explícitamente).
+        - antecedentes_no_patologicos: antecedentes personales NO
+          patológicos — alimentación, vivienda, ocupación, actividad física,
+          hábitos generales.
+        - padecimiento_actual: motivo de consulta narrado y su evolución
+          (puede superponerse con 'subjetivo' de la nota PSOAPP; repetirlo
+          aquí es válido y esperado).
+        - interrogatorio_aparatos_sistemas: síntomas por aparatos y sistemas
+          DISTINTOS del padecimiento actual (respiratorio, digestivo,
+          urinario, neurológico, etc.) que el paciente haya mencionado.
+        - exploracion_fisica: habitus exterior, signos vitales y hallazgos
+          por región (puede superponerse con 'objetivo' de la nota PSOAPP).
+        - plan_tratamiento_inicial: indicación terapéutica general, sin
+          dosis exactas (eso va en la receta, no aquí).
+
+        REGLA CRÍTICA: para CADA uno de estos 7 campos, si el texto de ESTA
+        consulta NO aporta información nueva o relevante para ese apartado
+        específico, responde con una cadena VACÍA (\"\") para ese campo.
+        NUNCA escribas \"No disponible\" aquí ni inventes contenido para
+        rellenar — una cadena vacía significa \"nada que agregar hoy\", y el
+        sistema conserva automáticamente lo que ya se había capturado en
+        consultas anteriores. Solo rellena un campo si el texto de HOY
+        realmente aporta algo nuevo o más completo que antes.
+        ";
+
+            $campoJsonHistoriaClinica = ",
+
+\"historia_clinica\": {
+\"antecedentes_heredofamiliares\": \"\",
+\"antecedentes_medicos\": \"\",
+\"antecedentes_no_patologicos\": \"\",
+\"padecimiento_actual\": \"\",
+\"interrogatorio_aparatos_sistemas\": \"\",
+\"exploracion_fisica\": \"\",
+\"plan_tratamiento_inicial\": \"\"
+}";
+        }
 
         $prompt = "
 
@@ -2222,7 +2369,8 @@ El formato exacto del JSON será el definido en la FASE 9.
           los factores concretos de los que dependería la evolución (ej. apego al tratamiento,
           control de comorbilidades, ausencia de complicaciones), siempre aclarando que es una
           estimación preliminar sujeta a valoración médica presencial.
-
+       
+          {$bloqueHistoriaClinica}
       =========================================================
 FASE 9 - RESPUESTA
 =========================================================
@@ -2278,7 +2426,7 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
 \"descripcion\": \"\",
 \"nivel\": \"alto|medio|bajo\"
 }
-]
+] {$campoJsonHistoriaClinica}
 
 }
 

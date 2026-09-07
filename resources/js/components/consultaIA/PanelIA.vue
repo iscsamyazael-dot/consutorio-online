@@ -43,14 +43,34 @@
                             <!-- MODO EDICIÓN: diagnóstico + buscador ICD-11 -->
                             <template v-else>
                                 <label class="d-block text-white-50 small mb-1">Diagnóstico</label>
-                                <div class="position-relative">
+
+                                <!-- FIX BUG 1: ref="contenedorIcd" para que el listener global
+                                     de click pueda detectar clics dentro del buscador y NO
+                                     cierre la lista de resultados. Antes este ref no existía,
+                                     por lo que this.$refs.contenedorIcd era siempre undefined
+                                     y CUALQUIER clic (incluso dentro del <ul>) cerraba la lista. -->
+                                <div class="position-relative" ref="contenedorIcd">
                                     <input
                                         type="text"
-                                        class="form-control form-control-sm mb-1"
+                                        class="form-control form-control-sm mb-1 pr-4"
                                         v-model="formDiagnostico"
                                         placeholder="Escribe o busca en ICD-11..."
                                         @input="buscarIcd11"
+                                        @keyup.enter="buscarAhoraIcd11"
                                     >
+
+                                    <!-- FIX BUG 2: botón de lupa embebido en el input para
+                                         volver a lanzar la búsqueda sin tener que cancelar
+                                         y reabrir el modo edición. También funciona con Enter. -->
+                                    <button
+                                        type="button"
+                                        class="btn-lupa-icd"
+                                        title="Buscar de nuevo"
+                                        @click="buscarAhoraIcd11"
+                                    >
+                                        <i class="fas fa-search"></i>
+                                    </button>
+
                                     <ul v-if="resultadosIcd.length" class="icd-dropdown">
                                         <li
                                             v-for="r in resultadosIcd"
@@ -62,6 +82,7 @@
                                     </ul>
                                     <small v-if="buscandoIcd" class="text-white-50">Buscando en ICD-11...</small>
                                 </div>
+
                                 <small v-if="formIcdCodigo" class="badge badge-light text-dark">
                                     Código ICD-11: {{ formIcdCodigo }}
                                 </small>
@@ -286,6 +307,18 @@ export default {
                 this.buscandoIcd = false
             }
         },
+
+        // FIX BUG 2: dispara una búsqueda inmediata (cancelando cualquier
+        // debounce pendiente) al presionar Enter en el input o al hacer
+        // clic en el ícono de lupa. Así el médico puede volver a buscar
+        // sin tener que cancelar y reabrir el modo edición.
+        buscarAhoraIcd11() {
+            clearTimeout(this.debounceIcd)
+            const texto = this.formDiagnostico.trim()
+            if (texto.length < 3) return
+            this.buscarIcd11Inmediato(texto)
+        },
+
         seleccionarIcd(resultado) {
             this.formDiagnostico = resultado.titulo
             this.formIcdCodigo = resultado.codigo
@@ -355,6 +388,8 @@ export default {
         cerrarDropdownIcd(evento) {
             // Si el clic fue dentro del contenedor del buscador (input o
             // lista), no cerramos -- eso ya lo maneja @click en cada <li>.
+            // (Ahora this.$refs.contenedorIcd SÍ existe porque el div lo
+            // referencia con ref="contenedorIcd" en el template.)
             if (this.$refs.contenedorIcd && this.$refs.contenedorIcd.contains(evento.target)) {
                 return
             }
@@ -393,6 +428,27 @@ export default {
 }
 .icd-dropdown li:hover {
     background: #f1f3f5;
+}
+
+/* Botón de lupa embebido dentro del input de diagnóstico */
+.btn-lupa-icd {
+    position: absolute;
+    top: 3px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    z-index: 3;
+}
+.btn-lupa-icd:hover {
+    color: #495057;
 }
 
 /* Botón de editar dentro del box azul (diagnóstico) */

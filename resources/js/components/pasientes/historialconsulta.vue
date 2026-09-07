@@ -46,6 +46,16 @@
             </button>
           </li>
 
+          <li class="nav-item">
+            <button
+              class="nav-link"
+              :class="{ active: tabActiva === 'historiaClinica' }"
+              @click="tabActiva = 'historiaClinica'"
+              type="button">
+              <i class="fas fa-notes-medical"></i> Historia Clínica
+            </button>
+          </li>
+
         </ul>
       </div>
 
@@ -112,206 +122,205 @@
           <!-- fin .consultas-scroll -->
         </div>
 
-          <!-- RECETAS -->
-<div v-if="tabActiva === 'recetas'">
+        <!-- RECETAS -->
+        <div v-if="tabActiva === 'recetas'">
 
-  <div class="section-title">
-    <h5>Historial de recetas</h5>
-    <small>Tratamientos indicados al paciente</small>
-  </div>
+          <div class="section-title">
+            <h5>Historial de recetas</h5>
+            <small>Tratamientos indicados al paciente</small>
+          </div>
 
-  <div class="recetas-scroll">
+          <div class="recetas-scroll">
 
-    <div
-      v-if="infoRecetas.length === 0"
-      class="alert alert-info text-center"
-    >
-      <i class="fas fa-prescription me-2"></i>
-      No se encuentran recetas registradas para este paciente.
-    </div>
-
-    <div
-      v-else
-      v-for="receta in infoRecetas"
-      :key="receta.id"
-      class="record-card"
-      :class="{ 'record-card--editando': recetaEditando === receta.id }"
-    >
-
-      <!-- MODO LECTURA -->
-      <template v-if="recetaEditando !== receta.id">
-
-        <div>
-
-          <h6 class="fw-bold mb-1">
-            <i class="fas fa-calendar-alt text-primary me-2"></i>
-
-            {{ formatearFecha(receta.created_at) }}
-            <span class="text-muted fw-normal">
-              &middot; {{ formatearHora(receta.created_at) }}
-            </span>
-          </h6>
-
-          <p class="mb-1">
-            <strong>Medicamentos:</strong>
-          </p>
-
-          <ul
-            v-if="parseMedicamentos(receta.medicamentos).length"
-            class="mb-2"
-          >
-            <li
-              v-for="(med, index) in parseMedicamentos(receta.medicamentos)"
-              :key="index"
+            <div
+              v-if="infoRecetas.length === 0"
+              class="alert alert-info text-center"
             >
-              {{ med.nombre }}
+              <i class="fas fa-prescription me-2"></i>
+              No se encuentran recetas registradas para este paciente.
+            </div>
 
-              <span v-if="med.dosis">
-                - {{ med.dosis }}
-              </span>
+            <div
+              v-else
+              v-for="receta in infoRecetas"
+              :key="receta.id"
+              class="record-card"
+              :class="{ 'record-card--editando': recetaEditando === receta.id }"
+            >
 
-              <span v-if="med.frecuencia">
-                - {{ med.frecuencia }}
-              </span>
+              <!-- MODO LECTURA -->
+              <template v-if="recetaEditando !== receta.id">
 
-              <span v-if="med.duracion">
-                - {{ med.duracion }}
-              </span>
+                <div>
 
-              <span v-if="med.instrucciones">
-                ({{ med.instrucciones }})
-              </span>
-            </li>
-          </ul>
+                  <h6 class="fw-bold mb-1">
+                    <i class="fas fa-calendar-alt text-primary me-2"></i>
 
-          <p
-            v-if="receta.indicaciones_generales"
-            class="mb-0 text-muted"
-          >
-            <strong>Indicaciones:</strong>
-            {{ receta.indicaciones_generales }}
-          </p>
+                    {{ formatearFecha(receta.created_at) }}
+                    <span class="text-muted fw-normal">
+                      &middot; {{ formatearHora(receta.created_at) }}
+                    </span>
+                  </h6>
 
-        </div>
+                  <p class="mb-1">
+                    <strong>Medicamentos:</strong>
+                  </p>
 
-        <div class="d-flex flex-column gap-2">
-          <button
-            class="btn btn-sm btn-outline-secondary rounded-pill px-3"
-            @click="iniciarEdicionReceta(receta)"
-          >
-            <i class="fas fa-pen me-1"></i>
-            Editar
-          </button>
+                  <ul
+                    v-if="parseMedicamentos(receta.medicamentos).length"
+                    class="mb-2"
+                  >
+                    <li
+                      v-for="(med, index) in parseMedicamentos(receta.medicamentos)"
+                      :key="index"
+                    >
+                      {{ med.nombre }}
 
-          <button
-            class="btn btn-sm btn-outline-primary rounded-pill px-3"
-            @click="verPdfReceta(receta)"
-          >
-            <i class="fas fa-file-pdf me-1"></i>
-            Ver PDF
-          </button>
-        </div>
+                      <span v-if="med.dosis">
+                        - {{ med.dosis }}
+                      </span>
 
-      </template>
+                      <span v-if="med.frecuencia">
+                        - {{ med.frecuencia }}
+                      </span>
 
-      <!-- MODO EDICIÓN -->
-      <template v-else>
+                      <span v-if="med.duracion">
+                        - {{ med.duracion }}
+                      </span>
 
-        <div class="w-100">
+                      <span v-if="med.instrucciones">
+                        ({{ med.instrucciones }})
+                      </span>
+                    </li>
+                  </ul>
 
-          <h6 class="fw-bold mb-3">
-            <i class="fas fa-calendar-alt text-primary me-2"></i>
-            {{ formatearFecha(receta.created_at) }}
-            <span class="text-muted fw-normal">
-              &middot; {{ formatearHora(receta.created_at) }}
-            </span>
-          </h6>
+                  <p
+                    v-if="receta.indicaciones_generales"
+                    class="mb-0 text-muted"
+                  >
+                    <strong>Indicaciones:</strong>
+                    {{ receta.indicaciones_generales }}
+                  </p>
 
-          <p class="mb-2"><strong>Medicamentos:</strong></p>
+                </div>
 
-          <div
-            v-for="(med, index) in edicionReceta.medicamentos"
-            :key="index"
-            class="receta-med-edit-row"
-          >
-            <input
-              type="text"
-              class="form-control form-control-sm"
-              v-model="med.nombre"
-              placeholder="Nombre">
-            <input
-              type="text"
-              class="form-control form-control-sm"
-              v-model="med.dosis"
-              placeholder="Dosis">
-            <input
-              type="text"
-              class="form-control form-control-sm"
-              v-model="med.frecuencia"
-              placeholder="Frecuencia">
-            <input
-              type="text"
-              class="form-control form-control-sm"
-              v-model="med.duracion"
-              placeholder="Duración">
-            <input
-              type="text"
-              class="form-control form-control-sm"
-              v-model="med.instrucciones"
-              placeholder="Instrucciones">
+                <div class="d-flex flex-column gap-2">
+                  <button
+                    class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                    @click="iniciarEdicionReceta(receta)"
+                  >
+                    <i class="fas fa-pen me-1"></i>
+                    Editar
+                  </button>
 
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-danger"
-              @click="eliminarMedicamentoEdicion(index)"
-              title="Quitar medicamento">
-              <i class="fas fa-trash"></i>
-            </button>
+                  <button
+                    class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                    @click="verPdfReceta(receta)"
+                  >
+                    <i class="fas fa-file-pdf me-1"></i>
+                    Ver PDF
+                  </button>
+                </div>
+
+              </template>
+
+              <!-- MODO EDICIÓN -->
+              <template v-else>
+
+                <div class="w-100">
+
+                  <h6 class="fw-bold mb-3">
+                    <i class="fas fa-calendar-alt text-primary me-2"></i>
+                    {{ formatearFecha(receta.created_at) }}
+                    <span class="text-muted fw-normal">
+                      &middot; {{ formatearHora(receta.created_at) }}
+                    </span>
+                  </h6>
+
+                  <p class="mb-2"><strong>Medicamentos:</strong></p>
+
+                  <div
+                    v-for="(med, index) in edicionReceta.medicamentos"
+                    :key="index"
+                    class="receta-med-edit-row"
+                  >
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      v-model="med.nombre"
+                      placeholder="Nombre">
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      v-model="med.dosis"
+                      placeholder="Dosis">
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      v-model="med.frecuencia"
+                      placeholder="Frecuencia">
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      v-model="med.duracion"
+                      placeholder="Duración">
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      v-model="med.instrucciones"
+                      placeholder="Instrucciones">
+
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      @click="eliminarMedicamentoEdicion(index)"
+                      title="Quitar medicamento">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary rounded-pill px-3 mb-3"
+                    @click="agregarMedicamentoEdicion">
+                    <i class="fas fa-plus me-1"></i>
+                    Agregar medicamento
+                  </button>
+
+                  <div class="mb-2">
+                    <label class="fw-bold small mb-1 d-block">Indicaciones</label>
+                    <textarea
+                      class="form-control"
+                      rows="2"
+                      v-model="edicionReceta.indicaciones_generales"
+                      placeholder="Indicaciones generales..."></textarea>
+                  </div>
+
+                  <div class="psoapp-actions">
+                    <button
+                      class="btn btn-sm btn-primary rounded-pill px-3"
+                      :disabled="guardandoReceta"
+                      @click="guardarEdicionReceta(receta)">
+                      <i class="fas fa-save me-1"></i>
+                      {{ guardandoReceta ? 'Guardando...' : 'Guardar cambios' }}
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                      :disabled="guardandoReceta"
+                      @click="cancelarEdicionReceta">
+                      Cancelar
+                    </button>
+                  </div>
+
+                </div>
+
+              </template>
+
+            </div>
+
           </div>
+          <!-- fin .recetas-scroll -->
 
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary rounded-pill px-3 mb-3"
-            @click="agregarMedicamentoEdicion">
-            <i class="fas fa-plus me-1"></i>
-            Agregar medicamento
-          </button>
-
-          <div class="mb-2">
-            <label class="fw-bold small mb-1 d-block">Indicaciones</label>
-            <textarea
-              class="form-control"
-              rows="2"
-              v-model="edicionReceta.indicaciones_generales"
-              placeholder="Indicaciones generales..."></textarea>
-          </div>
-
-          <div class="psoapp-actions">
-            <button
-              class="btn btn-sm btn-primary rounded-pill px-3"
-              :disabled="guardandoReceta"
-              @click="guardarEdicionReceta(receta)">
-              <i class="fas fa-save me-1"></i>
-              {{ guardandoReceta ? 'Guardando...' : 'Guardar cambios' }}
-            </button>
-            <button
-              class="btn btn-sm btn-outline-secondary rounded-pill px-3"
-              :disabled="guardandoReceta"
-              @click="cancelarEdicionReceta">
-              Cancelar
-            </button>
-          </div>
-
-        </div>
-
-      </template>
-
-    </div>
-
-  </div>
-  <!-- fin .recetas-scroll -->
-
-</div>
         </div>
 
         <!-- ARCHIVOS -->
@@ -542,42 +551,154 @@
           <!-- fin .psoapp-scroll -->
         </div>
 
+        <!-- HISTORIA CLÍNICA -->
+        <div v-if="tabActiva === 'historiaClinica'">
+          <div class="section-title">
+            <h5>Historia Clínica</h5>
+            <small>Documento base del expediente (NOM-004-SSA3-2012)</small>
+          </div>
+
+          <div class="psoapp-hist-card" v-if="infoExpediente">
+
+            <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+              <h6 class="fw-bold mb-0">
+                <i class="fas fa-clipboard-check text-primary me-2"></i>
+                Progreso: {{ progresoExpediente.completados }}/{{ progresoExpediente.total }}
+              </h6>
+              <span
+                class="badge rounded-pill px-3 py-2"
+                :class="infoExpediente.revisado_medico ? 'bg-success' : 'bg-warning text-dark'">
+                {{ infoExpediente.revisado_medico ? 'Revisado por el médico' : 'Pendiente de revisión' }}
+              </span>
+            </div>
+
+            <!-- MODO LECTURA -->
+            <template v-if="!editandoExpediente">
+
+              <div class="psoapp-item" v-for="campo in camposExpediente" :key="campo.clave">
+                <span class="psoapp-letra bg-info">{{ campo.letra }}</span>
+                <div>
+                  <strong>{{ campo.etiqueta }}</strong>
+                  <p class="mb-0 text-muted">
+                    {{ infoExpediente[campo.clave] || 'Sin datos capturados todavía.' }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="psoapp-item" v-if="infoExpediente.tipo_sangre || infoExpediente.alergias || infoExpediente.enfermedades_cronicas">
+                <span class="psoapp-letra bg-secondary">G</span>
+                <div>
+                  <strong>Datos generales</strong>
+                  <p class="mb-0 text-muted">
+                    <span v-if="infoExpediente.tipo_sangre">Tipo de sangre: {{ infoExpediente.tipo_sangre }}. </span>
+                    <span v-if="infoExpediente.alergias">Alergias: {{ infoExpediente.alergias }}. </span>
+                    <span v-if="infoExpediente.enfermedades_cronicas">Enfermedades crónicas: {{ infoExpediente.enfermedades_cronicas }}.</span>
+                  </p>
+                </div>
+              </div>
+
+              <div class="psoapp-actions">
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="iniciarEdicionExpediente">
+                  <i class="fas fa-pen me-1"></i> Editar
+                </button>
+                <button
+                  v-if="!infoExpediente.revisado_medico"
+                  class="btn btn-sm btn-outline-success rounded-pill px-3"
+                  @click="marcarExpedienteRevisado">
+                  <i class="fas fa-check me-1"></i> Marcar como revisado
+                </button>
+              </div>
+
+            </template>
+
+            <!-- MODO EDICIÓN -->
+            <template v-else>
+
+              <div class="psoapp-edit-field" v-for="campo in camposExpediente" :key="campo.clave">
+                <label class="fw-bold small mb-1 d-block">{{ campo.etiqueta }}</label>
+                <textarea
+                  class="form-control"
+                  rows="2"
+                  v-model="edicionExpediente[campo.clave]"
+                  :placeholder="campo.placeholder"></textarea>
+              </div>
+
+              <div class="row g-2 mb-2">
+                <div class="col-md-4">
+                  <label class="fw-bold small mb-1 d-block">Tipo de sangre</label>
+                  <input type="text" class="form-control form-control-sm" v-model="edicionExpediente.tipo_sangre">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-bold small mb-1 d-block">Alergias</label>
+                  <input type="text" class="form-control form-control-sm" v-model="edicionExpediente.alergias">
+                </div>
+                <div class="col-md-4">
+                  <label class="fw-bold small mb-1 d-block">Enfermedades crónicas</label>
+                  <input type="text" class="form-control form-control-sm" v-model="edicionExpediente.enfermedades_cronicas">
+                </div>
+              </div>
+
+              <div class="psoapp-actions">
+                <button
+                  class="btn btn-sm btn-primary rounded-pill px-3"
+                  :disabled="guardandoExpediente"
+                  @click="guardarEdicionExpediente">
+                  <i class="fas fa-save me-1"></i>
+                  {{ guardandoExpediente ? 'Guardando...' : 'Guardar cambios' }}
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                  :disabled="guardandoExpediente"
+                  @click="editandoExpediente = false">
+                  Cancelar
+                </button>
+              </div>
+
+            </template>
+
+          </div>
+        </div>
+
+      </div>
+      <!-- fin .card-body -->
+    </div>
+    <!-- fin .card -->
+
+    <!--Modal para mostrar los archivos a traves de un modal-->
+    <div class="modal fade" id="modalArchivo">
+      <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title">Vista De Los Archivos Clínicos</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                  </button>
+              </div>
+              <div class="modal-body">
+                  <img
+                      v-if="archivoSeleccionado && esImagen()"
+                      :src="archivoSeleccionado"
+                      class="img-fluid">
+                  <iframe
+                      v-else-if="archivoSeleccionado && esPDF()"
+                      :src="archivoSeleccionado"
+                      width="100%"
+                      height="700"
+                      frameborder="0"
+                  ></iframe>
+                  <div v-else-if="archivoSeleccionado" class="text-center p-5">
+                      <i class="fas fa-file-alt text-secondary mb-3" style="font-size:60px;"></i>
+                      <p>Este tipo de archivo no se puede previsualizar en el navegador.</p>
+                      <a :href="archivoSeleccionado" class="btn btn-primary" target="_blank" download>
+                          <i class="fas fa-download me-2"></i>Descargar archivo
+                      </a>
+                  </div>
+              </div>
+          </div>
       </div>
     </div>
-  
-  <!--Modal para mostrar los archivos a traves de un modal-->
-  <div class="modal fade" id="modalArchivo">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Vista De Los Archivos Clínicos</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                </button>
-            </div>
-            <div class="modal-body">
-                <img
-                    v-if="archivoSeleccionado && esImagen()"
-                    :src="archivoSeleccionado"
-                    class="img-fluid">
-                <iframe
-                    v-else-if="archivoSeleccionado && esPDF()"
-                    :src="archivoSeleccionado"
-                    width="100%"
-                    height="700"
-                    frameborder="0"
-                ></iframe>
-                <div v-else-if="archivoSeleccionado" class="text-center p-5">
-                    <i class="fas fa-file-alt text-secondary mb-3" style="font-size:60px;"></i>
-                    <p>Este tipo de archivo no se puede previsualizar en el navegador.</p>
-                    <a :href="archivoSeleccionado" class="btn btn-primary" target="_blank" download>
-                        <i class="fas fa-download me-2"></i>Descargar archivo
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!--Aqui termina el modal para ver los archivos-->
+    <!--Aqui termina el modal para ver los archivos-->
+
+  </div>
 </template>
 
 <style scoped>
@@ -849,7 +970,22 @@ body {
                 medicamentos: [],
                 indicaciones_generales: ''
               },
-              guardandoReceta: false
+              guardandoReceta: false,
+              
+              infoExpediente: null,
+              progresoExpediente: { completados: 0, total: 7 },
+              editandoExpediente: false,
+              edicionExpediente: {},
+              guardandoExpediente: false,
+              camposExpediente: [
+                { clave: 'antecedentes_heredofamiliares', letra: 'H', etiqueta: 'Antecedentes heredofamiliares', placeholder: 'Enfermedades de padres, hermanos, abuelos...' },
+                { clave: 'antecedentes_medicos', letra: 'P', etiqueta: 'Antecedentes personales patológicos', placeholder: 'Cirugías, alergias, transfusiones, tabaquismo, alcoholismo...' },
+                { clave: 'antecedentes_no_patologicos', letra: 'N', etiqueta: 'Antecedentes personales no patológicos', placeholder: 'Alimentación, vivienda, ocupación, actividad física...' },
+                { clave: 'padecimiento_actual', letra: 'A', etiqueta: 'Padecimiento actual', placeholder: 'Motivo de consulta y evolución...' },
+                { clave: 'interrogatorio_aparatos_sistemas', letra: 'I', etiqueta: 'Interrogatorio por aparatos y sistemas', placeholder: 'Síntomas por aparato distintos al padecimiento actual...' },
+                { clave: 'exploracion_fisica', letra: 'E', etiqueta: 'Exploración física', placeholder: 'Habitus exterior, signos vitales, hallazgos por región...' },
+                { clave: 'plan_tratamiento_inicial', letra: 'T', etiqueta: 'Plan de tratamiento inicial', placeholder: 'Indicación terapéutica general...' },
+              ],
             }
         },
         mounted() {
@@ -1094,6 +1230,67 @@ body {
               this.guardandoReceta = false
             }
           },
+          
+          async obtenerExpedienteClinico() {
+            try {
+              const response = await ApiService.get('/expedienteClinico/' + this.pacienteId)
+              this.infoExpediente = response.data.expediente
+              this.progresoExpediente = response.data.progreso
+            } catch (error) {
+              console.error('Error al obtener el expediente clínico:', error)
+            }
+          },
+
+          iniciarEdicionExpediente() {
+            this.edicionExpediente = { ...this.infoExpediente }
+            this.editandoExpediente = true
+          },
+
+          async guardarEdicionExpediente() {
+            if (this.guardandoExpediente) return
+            this.guardandoExpediente = true
+
+            try {
+              const respuesta = await window.axios.post(
+                `/expedienteClinico/${this.pacienteId}`,
+                this.edicionExpediente
+              )
+
+              if (respuesta.data && respuesta.data.success) {
+                this.infoExpediente = respuesta.data.expediente
+                this.editandoExpediente = false
+                await this.obtenerExpedienteClinico() // refresca el progreso X/7
+
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Expediente actualizado',
+                  timer: 1800,
+                  showConfirmButton: false
+                })
+              }
+            } catch (error) {
+              console.error('Error al guardar el expediente clínico:', error)
+              const mensaje = error?.response?.data?.error || 'No se pudo guardar el expediente clínico.'
+              Swal.fire({ icon: 'error', title: 'Error', text: mensaje })
+            } finally {
+              this.guardandoExpediente = false
+            }
+          },
+
+          async marcarExpedienteRevisado() {
+              try {
+                const respuesta = await window.axios.post(`/expedienteClinico/${this.pacienteId}`, {
+                  marcar_revisado: true
+                })
+                if (respuesta.data && respuesta.data.success) {
+                  this.infoExpediente = respuesta.data.expediente
+                  Swal.fire({ icon: 'success', title: 'Marcado como revisado', timer: 1500, showConfirmButton: false })
+                }
+              } catch (error) {
+                console.error('Error al marcar como revisado:', error)
+              }
+            },
+          
 
           //Formatea la fecha que llega en created_at (ej: 2026-05-10T14:32:00.000000Z)//
           formatearFecha(fecha){
@@ -1164,7 +1361,7 @@ body {
                 return 'bg-secondary'
             }
           },
-            async obtenerArchivos(){
+          async obtenerArchivos(){
                 try {
                     const response = await ApiService.get('/ExpedienteDetalle/' + this.pacienteId)
                     this.infoArchivos = response.data.archivos || []
@@ -1285,7 +1482,7 @@ body {
             esPDF(){
                 return this.archivoExtension === 'pdf'
             },
-             obtenerIcono(ruta){
+            obtenerIcono(ruta){
               console.log('Ruta recibida:', ruta);
               if(!ruta){
                   return 'fas fa-file-alt text-secondary';
@@ -1312,7 +1509,7 @@ body {
                   default:
                       return 'fas fa-file-alt text-secondary';
                 }
-             }
+          }
         },
         props:{
             pacienteId:{
@@ -1328,6 +1525,7 @@ body {
                         this.obtenerArchivos();
                         this.obtenerConsultas();
                         this.obtenerNotasPsoapp();
+                        this.obtenerExpedienteClinico();
                     }
                 }
             }

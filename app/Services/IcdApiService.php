@@ -47,11 +47,45 @@ class IcdApiService
             return [];
         }
 
-        $textoBusqueda = $texto;
-        if (preg_match('/\(([^)]+)\)/', $texto, $m)) {
-            $textoBusqueda = trim(str_ireplace('probable', '', $m[1]));
+        $textoBusqueda = $this->extraerTerminoBusqueda($texto);
+
+        $resultados = $this->ejecutarBusquedaEnApi($token, $textoBusqueda);
+
+        // Si el término extraído (del paréntesis) no dio resultados, y era
+        // distinto del texto completo, reintentamos con el texto completo
+        // como respaldo -- para no perder el diagnóstico por una extracción
+        // de paréntesis que resultó incorrecta o demasiado específica.
+        if (empty($resultados) && $textoBusqueda !== $texto) {
+            $resultados = $this->ejecutarBusquedaEnApi($token, $texto);
+            $textoBusqueda = $texto;
         }
 
+        return $this->reordenarPorRelevancia($resultados, $textoBusqueda);
+    }
+
+    /**
+     * Decide qué texto usar como búsqueda: si el diagnóstico trae un
+     * paréntesis y ese paréntesis contiene la palabra "probable" (patrón
+     * típico de la IA: "Término general (término específico probable)"),
+     * usamos ese término específico. Si el paréntesis no contiene
+     * "probable" (puede ser una causa, una nota, una aclaración -- no un
+     * diagnóstico en sí), no confiamos en él y usamos el texto completo.
+     */
+    private function extraerTerminoBusqueda(string $texto): string
+    {
+        if (preg_match('/\(([^)]+)\)/', $texto, $m)) {
+            $contenidoParentesis = trim($m[1]);
+
+            if (stripos($contenidoParentesis, 'probable') !== false) {
+                return trim(str_ireplace('probable', '', $contenidoParentesis));
+            }
+        }
+
+        return $texto;
+    }
+
+    private function ejecutarBusquedaEnApi(string $token, string $textoBusqueda): \Illuminate\Support\Collection
+    {
         $response = Http::withToken($token)
             ->withHeaders([
                 'Accept'          => 'application/json',
@@ -67,22 +101,18 @@ class IcdApiService
 
         if (!$response->successful()) {
             Log::error('Error al buscar en ICD-API: ' . $response->body());
-            return [];
+            return collect();
         }
 
         $destinationEntities = $response->json('destinationEntities') ?? [];
 
-        $resultados = collect($destinationEntities)
-            ->map(function ($entidad) {
-                return [
-                    'codigo' => $entidad['theCode'] ?? null,
-                    'titulo' => strip_tags($entidad['title'] ?? ''),
-                ];
-            })
+        return collect($destinationEntities)
+            ->map(fn ($entidad) => [
+                'codigo' => $entidad['theCode'] ?? null,
+                'titulo' => strip_tags($entidad['title'] ?? ''),
+            ])
             ->filter(fn ($e) => $e['codigo'] && $e['titulo'])
             ->values();
-
-        return $this->reordenarPorRelevancia($resultados, $textoBusqueda);
     }
 
     /**

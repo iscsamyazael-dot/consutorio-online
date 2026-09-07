@@ -225,6 +225,11 @@ Route::middleware('auth')->group(function () {
         //Ruta para el consumo de las APIS ICD 11 International Classification of Diseasses 11th Revision//
         Route::get('/icd11/buscar', [Icd11Controller::class, 'buscar']);
         Route::post('/consultaIA/{consultaId}/diagnostico', [ConsultaIAController::class, 'guardarDiagnostico']);
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //Ruta para el uso del Expediente Clinico ó Historia Clinica //
+        Route::get('/expedienteClinico/{pacienteId}', [ExpedienteClinicoController::class, 'obtener']);
+        Route::post('/expedienteClinico/{pacienteId}', [ExpedienteClinicoController::class, 'guardar']);
         
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
