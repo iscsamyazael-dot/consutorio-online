@@ -71,6 +71,20 @@
                             class="badge bg-light text-muted border rounded-pill px-3 py-2">
                             Sin alergias registradas
                         </span>
+
+                        <!-- HISTORIA CLÍNICA: progreso X/7 -->
+                        <!-- Verde cuando ya está completa (7/7), amarillo mientras
+                             falten campos. El tooltip lista qué apartados faltan,
+                             igual que el ícono ℹ️ de contacto de arriba. -->
+                        <span
+                            v-if="progresoHistoriaClinica"
+                            class="badge rounded-pill px-3 py-2"
+                            :class="progresoHistoriaClinica.completa ? 'bg-success' : 'bg-warning text-dark'"
+                            style="cursor:help;"
+                            :title="tooltipHistoriaClinica">
+                            <i class="fas fa-notes-medical me-1"></i>
+                            Historia Clínica: {{ progresoHistoriaClinica.completados }}/{{ progresoHistoriaClinica.total }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -123,10 +137,25 @@
 
 <script>
     import ApiService from '../../services/ApiService.js'
+
+    // Traduce la clave interna del campo (igual que ExpedienteClinico::CAMPOS_CLINICOS)
+    // a una etiqueta legible para el tooltip del badge.
+    const ETIQUETAS_CAMPOS_CLINICOS = {
+        antecedentes_heredofamiliares: 'Antecedentes heredofamiliares',
+        antecedentes_medicos: 'Antecedentes personales patológicos',
+        antecedentes_no_patologicos: 'Antecedentes personales no patológicos',
+        padecimiento_actual: 'Padecimiento actual',
+        interrogatorio_aparatos_sistemas: 'Interrogatorio por aparatos y sistemas',
+        exploracion_fisica: 'Exploración física',
+        plan_tratamiento_inicial: 'Plan de tratamiento inicial',
+    }
+
     export default {
         data(){
             return {
-                infoPacientes:{}
+                infoPacientes:{},
+                // { completados, total, completa, campos_faltantes }
+                progresoHistoriaClinica: null
             }
         },
         computed: {
@@ -141,6 +170,19 @@
                     partes.push('Correo: ' + this.infoPacientes.email);
                 }
                 return partes.join(' | ');
+            },
+            // Tooltip del badge de Historia Clínica: lista qué falta,
+            // o confirma que ya está completa.
+            tooltipHistoriaClinica() {
+                if (!this.progresoHistoriaClinica) return '';
+                if (this.progresoHistoriaClinica.completa) {
+                    return 'Historia clínica completa';
+                }
+                const faltantes = (this.progresoHistoriaClinica.campos_faltantes || [])
+                    .map(clave => ETIQUETAS_CAMPOS_CLINICOS[clave] || clave);
+                return faltantes.length
+                    ? 'Falta: ' + faltantes.join(', ')
+                    : '';
             }
         },
         mounted(){
@@ -167,6 +209,25 @@
                         error
                     );
                 }
+            },
+
+            // Carga inicial del progreso al entrar a la consulta (usa el
+            // mismo endpoint que ya consume el tab de Historia Clínica en
+            // ExpedienteTabs.vue). Después, mientras la consulta esté en
+            // vivo, el progreso se actualiza vía el prop `progresoIA`
+            // (ver watcher más abajo) sin volver a llamar a este endpoint.
+            async obtenerProgresoHistoriaClinica(){
+                try{
+                    const response = await ApiService.get(
+                        '/expedienteClinico/' + this.pacienteId
+                    );
+                    this.progresoHistoriaClinica = response.data.progreso;
+                }catch(error){
+                    console.error(
+                        'Error al obtener progreso de historia clínica:',
+                        error
+                    );
+                }
             }
         },
 
@@ -174,6 +235,15 @@
             pacienteId:{
                 type:[Number,String],
                 required:true
+            },
+            // Progreso EN VIVO de historia clínica, que el padre
+            // (ConsultaInteligente.vue) le pasa cada vez que llega
+            // ia_data.historia_clinica_progreso en la respuesta de la IA.
+            // Mientras no haya nada nuevo, se queda con lo que ya trajo
+            // obtenerProgresoHistoriaClinica() al montar el componente.
+            progresoIA:{
+                type: Object,
+                default: null
             }
         },
         watch:{
@@ -182,7 +252,15 @@
                 handler(id){
                     if(id){
                         this.obtenerPacientes();
+                        this.obtenerProgresoHistoriaClinica();
                     }
+                }
+            },
+            // Cada vez que el padre reciba una nueva respuesta de la IA
+            // con progreso de historia clínica, se refleja aquí de inmediato.
+            progresoIA(nuevoValor){
+                if (nuevoValor) {
+                    this.progresoHistoriaClinica = nuevoValor;
                 }
             }
         }

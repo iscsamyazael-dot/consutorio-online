@@ -35,7 +35,7 @@ use App\Http\Controllers\ImpresionTicketController;
 use App\Http\Controllers\ConfiguracionCorreoController;
 use App\Http\Controllers\WahaController;
 use App\Http\Controllers\Icd11Controller;
-
+use App\Http\Controllers\ExpedienteClinicoController;
 
 
 Route::get('/', function () { return view('auth.login'); });

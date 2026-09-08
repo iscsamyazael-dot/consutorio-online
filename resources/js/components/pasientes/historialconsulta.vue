@@ -572,6 +572,80 @@
               </span>
             </div>
 
+            <!-- FICHA DE IDENTIFICACIÓN -->
+            <div class="ficha-identificacion mb-4">
+              <h6 class="fw-bold text-muted mb-2" style="font-size:13px; letter-spacing:0.5px;">
+                FICHA DE IDENTIFICACIÓN
+              </h6>
+              <div class="row g-2">
+                <div class="col-md-4 col-6">
+                  <small class="text-muted d-block">Nombre completo</small>
+                  <strong>{{ infoPacienteCompleto.nombre || '—' }} {{ infoPacienteCompleto.apellido_paterno }} {{ infoPacienteCompleto.apellido_materno }}</strong>
+                </div>
+                <div class="col-md-2 col-6">
+                  <small class="text-muted d-block">Edad</small>
+                  <strong>{{ infoPacienteCompleto.edad || 'N/D' }} años</strong>
+                </div>
+                <div class="col-md-2 col-6">
+                  <small class="text-muted d-block">Sexo</small>
+                  <strong>{{ infoPacienteCompleto.sexo || 'N/D' }}</strong>
+                </div>
+                <div class="col-md-2 col-6">
+                  <small class="text-muted d-block">Tipo de sangre</small>
+                  <strong>{{ infoExpediente.tipo_sangre || 'N/D' }}</strong>
+                </div>
+                <div class="col-md-2 col-6">
+                  <small class="text-muted d-block">Teléfono</small>
+                  <strong>{{ infoPacienteCompleto.telefono || 'N/D' }}</strong>
+                </div>
+                 <div class="col-md-4 col-6">
+                  <small class="text-muted d-block">Correo</small>
+                  <strong>{{ infoPacienteCompleto.email || 'N/D' }}</strong>
+               </div>
+               <div class="col-md-2 col-6">
+                 <small class="text-muted d-block">Fecha de nacimiento</small>
+                 <strong>{{ formatearFecha(infoPacienteCompleto.fecha_nacimiento) || 'N/D' }}</strong>
+               </div>
+               <div class="col-md-2 col-6">
+                 <small class="text-muted d-block">CURP</small>
+                 <strong>{{ infoPacienteCompleto.curp || 'N/D' }}</strong>
+               </div>
+               <div class="col-md-6 col-12">
+                 <small class="text-muted d-block">Dirección</small>
+                 <strong>{{ infoPacienteCompleto.direccion || 'N/D' }}</strong>
+               </div>
+                <div class="col-12">
+                  <small class="text-muted d-block">Alergias</small>
+                  <strong :class="infoExpediente.alergias ? 'text-danger' : ''">
+                    {{ infoExpediente.alergias || 'Ninguna registrada' }}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- SIGNOS VITALES DE REFERENCIA -->
+            <div class="signos-vitales-ref mb-4" v-if="infoTriage">
+              <h6 class="fw-bold text-muted mb-2" style="font-size:13px; letter-spacing:0.5px;">
+                SIGNOS VITALES DE REFERENCIA
+                <small class="text-muted fw-normal">(último registro: {{ formatearFecha(infoTriage.created_at) }})</small>
+              </h6>
+              <div class="row g-2">
+                <div class="col-4 col-md-2" v-for="dato in datosVitales" :key="dato.etiqueta">
+                  <div class="text-center p-2 border rounded-3 bg-light">
+                    <small class="text-muted d-block">{{ dato.etiqueta }}</small>
+                    <strong>{{ dato.valor || 'N/D' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="alert alert-light border text-muted small mb-4" v-else>
+              <i class="fas fa-info-circle me-1"></i> Este paciente aún no tiene signos vitales registrados.
+            </div>
+
+            <h6 class="fw-bold text-muted mb-2" style="font-size:13px; letter-spacing:0.5px;">
+              INTERROGATORIO Y EXPLORACIÓN
+            </h6>
+
             <!-- MODO LECTURA -->
             <template v-if="!editandoExpediente">
 
@@ -585,15 +659,11 @@
                 </div>
               </div>
 
-              <div class="psoapp-item" v-if="infoExpediente.tipo_sangre || infoExpediente.alergias || infoExpediente.enfermedades_cronicas">
+              <div class="psoapp-item" v-if="infoExpediente.enfermedades_cronicas">
                 <span class="psoapp-letra bg-secondary">G</span>
                 <div>
-                  <strong>Datos generales</strong>
-                  <p class="mb-0 text-muted">
-                    <span v-if="infoExpediente.tipo_sangre">Tipo de sangre: {{ infoExpediente.tipo_sangre }}. </span>
-                    <span v-if="infoExpediente.alergias">Alergias: {{ infoExpediente.alergias }}. </span>
-                    <span v-if="infoExpediente.enfermedades_cronicas">Enfermedades crónicas: {{ infoExpediente.enfermedades_cronicas }}.</span>
-                  </p>
+                  <strong>Enfermedades crónicas</strong>
+                  <p class="mb-0 text-muted">{{ infoExpediente.enfermedades_cronicas }}</p>
                 </div>
               </div>
 
@@ -611,7 +681,7 @@
 
             </template>
 
-            <!-- MODO EDICIÓN -->
+            <!-- MODO EDICIÓN (igual que ya la tenías) -->
             <template v-else>
 
               <div class="psoapp-edit-field" v-for="campo in camposExpediente" :key="campo.clave">
@@ -655,6 +725,47 @@
               </div>
 
             </template>
+
+                          <!-- EVOLUCIÓN DEL PADECIMIENTO (solo lectura, reutiliza Notas PSOAPP) -->
+              <hr class="my-4">
+              <h6 class="fw-bold text-muted mb-1" style="font-size:13px; letter-spacing:0.5px;">
+                EVOLUCIÓN DEL PADECIMIENTO
+              </h6>
+              <small class="text-muted d-block mb-3">
+                Comparación cronológica de cómo llegó el paciente en cada consulta (ver también el tab "Notas PSOAPP" para la nota completa y editarla).
+              </small>
+
+              <div v-if="infoNotasPsoapp.length === 0" class="alert alert-light border text-muted small">
+                <i class="fas fa-info-circle me-1"></i> Este paciente aún no tiene notas de evolución registradas.
+              </div>
+
+              <div v-else class="evolucion-scroll">
+                <div
+                  class="evolucion-card"
+                  v-for="nota in infoNotasPsoapp"
+                  :key="'evo-' + nota.id">
+
+                  <h6 class="fw-bold mb-2 small">
+                    <i class="fas fa-calendar-alt text-primary me-2"></i>
+                    {{ formatearFecha(nota.fecha) }}
+                    <span class="text-muted fw-normal">&middot; {{ formatearHora(nota.fecha) }}</span>
+                  </h6>
+
+                  <p class="mb-1" v-if="nota.subjetivo">
+                    <strong>Padecimiento referido:</strong> {{ nota.subjetivo }}
+                  </p>
+                  <p class="mb-1" v-if="nota.objetivo">
+                    <strong>Exploración:</strong> {{ nota.objetivo }}
+                  </p>
+                  <p class="mb-0" v-if="nota.plan">
+                    <strong>Plan:</strong> {{ nota.plan }}
+                  </p>
+
+                  <p v-if="!nota.subjetivo && !nota.objetivo && !nota.plan" class="text-muted small mb-0">
+                    Esta consulta todavía no tiene nota de evolución capturada.
+                  </p>
+                </div>
+              </div>
 
           </div>
         </div>
@@ -918,6 +1029,30 @@ body {
   word-break: break-word;
 }
 
+.evolucion-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.evolucion-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.evolucion-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+.evolucion-card {
+  background: #f9fafb;
+  border: 1px solid #edf0f4;
+  border-left: 3px solid #0d6efd;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
 @media (max-width: 768px) {
   .record-card {
     flex-direction: column;
@@ -971,15 +1106,18 @@ body {
                 indicaciones_generales: ''
               },
               guardandoReceta: false,
-              
+              infoPacienteCompleto: {},
+              infoTriage: null,
               infoExpediente: null,
-              progresoExpediente: { completados: 0, total: 7 },
+              progresoExpediente: { completados: 0, total: 9 },
               editandoExpediente: false,
               edicionExpediente: {},
               guardandoExpediente: false,
               camposExpediente: [
                 { clave: 'antecedentes_heredofamiliares', letra: 'H', etiqueta: 'Antecedentes heredofamiliares', placeholder: 'Enfermedades de padres, hermanos, abuelos...' },
-                { clave: 'antecedentes_medicos', letra: 'P', etiqueta: 'Antecedentes personales patológicos', placeholder: 'Cirugías, alergias, transfusiones, tabaquismo, alcoholismo...' },
+                { clave: 'antecedentes_medicos', letra: 'P', etiqueta: 'Antecedentes personales patológicos', placeholder: 'Alergias, transfusiones, tabaquismo, alcoholismo, uso de sustancias...' },
+                { clave: 'antecedentes_quirurgicos', letra: 'Q', etiqueta: 'Antecedentes quirúrgicos', placeholder: 'Cirugías previas, año aproximado y motivo...' },
+                { clave: 'medicamentos_actuales', letra: 'M', etiqueta: 'Medicamentos actuales', placeholder: 'Medicamentos que el paciente ya toma de forma habitual...' },
                 { clave: 'antecedentes_no_patologicos', letra: 'N', etiqueta: 'Antecedentes personales no patológicos', placeholder: 'Alimentación, vivienda, ocupación, actividad física...' },
                 { clave: 'padecimiento_actual', letra: 'A', etiqueta: 'Padecimiento actual', placeholder: 'Motivo de consulta y evolución...' },
                 { clave: 'interrogatorio_aparatos_sistemas', letra: 'I', etiqueta: 'Interrogatorio por aparatos y sistemas', placeholder: 'Síntomas por aparato distintos al padecimiento actual...' },
@@ -990,6 +1128,22 @@ body {
         },
         mounted() {
             console.log('PROP PacienteId:', this.pacienteId);
+        },
+        computed: {
+          datosVitales() {
+            if (!this.infoTriage) return []
+            const t = this.infoTriage
+            return [
+              { etiqueta: 'Presión', valor: t.presion ? t.presion + ' mmHg' : null },
+              { etiqueta: 'Saturación', valor: t.saturacion ? t.saturacion + '%' : null },
+              { etiqueta: 'Temperatura', valor: t.temperatura ? t.temperatura + '°C' : null },
+              { etiqueta: 'F. Cardiaca', valor: t.frecuencia_cardiaca ? t.frecuencia_cardiaca + ' lpm' : null },
+              { etiqueta: 'F. Respiratoria', valor: t.frecuencia_respiratoria ? t.frecuencia_respiratoria + ' rpm' : null },
+              { etiqueta: 'Peso', valor: t.peso ? t.peso + ' kg' : null },
+              { etiqueta: 'Talla', valor: t.talla ? t.talla + ' cm' : null },
+              { etiqueta: 'IMC', valor: t.imc || null },
+            ]
+          }
         },
         methods: {
           parseMedicamentos(meds) {
@@ -1236,6 +1390,12 @@ body {
               const response = await ApiService.get('/expedienteClinico/' + this.pacienteId)
               this.infoExpediente = response.data.expediente
               this.progresoExpediente = response.data.progreso
+              
+
+              // Ficha de identificación completa (nombre, edad, sexo, teléfono)
+              const respPaciente = await ApiService.get('/ExpedienteDetalle/' + this.pacienteId)
+              this.infoPacienteCompleto = respPaciente.data
+              this.infoTriage = (respPaciente.data.triages && respPaciente.data.triages[0]) || null
             } catch (error) {
               console.error('Error al obtener el expediente clínico:', error)
             }

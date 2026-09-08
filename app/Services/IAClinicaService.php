@@ -74,7 +74,7 @@ class IAClinicaService
 
         // --- HISTORIA CLÍNICA: ¿este paciente ya la tiene completa? ---
         // Una sola fila por paciente (no por consulta, a diferencia de
-        // NotaPsoapp). Mientras falte al menos uno de los 7 campos, le
+        // NotaPsoapp). Mientras falte al menos uno de los 9 campos, le
         // pedimos a la IA que intente llenarlos con lo que diga ESTA
         // consulta puntual. En cuanto está completa, dejamos de pedirlo
         // en automático (ver decodificarJsonDesdeTexto/consultarIA).
@@ -349,7 +349,7 @@ class IAClinicaService
      * de hoy no aporta nada nuevo a un apartado).
      *
      * Recalcula 'completado_ia' y regresa el progreso (para el badge
-     * "X/7" en Consulta Inteligente y el checklist en el Expediente).
+     * "X/9" en Consulta Inteligente y el checklist en el Expediente).
      */
     private function actualizarExpedienteClinico(ExpedienteClinico $expediente, ?array $historiaClinicaIA): array
     {
@@ -1944,7 +1944,7 @@ PRONÓSTICO ANTERIOR:
         $bloqueHistoriaClinica = '';
         $campoJsonHistoriaClinica = '';
 
-        if ($solicitarHistoriaClinica) {
+            if ($solicitarHistoriaClinica) {
             $bloqueHistoriaClinica = "
         =========================================================
         FASE 8B - HISTORIA CLÍNICA (NOM-004-SSA3-2012)
@@ -1953,14 +1953,31 @@ PRONÓSTICO ANTERIOR:
         Además de la nota PSOAPP de esta consulta, este paciente TODAVÍA NO
         tiene su Historia Clínica completa (documento base y permanente del
         expediente, distinto de las notas de evolución). Extrae de ESTE MISMO
-        texto, si lo dice, información para los siguientes 7 apartados:
+        texto, si lo dice, información para los siguientes 9 apartados:
 
         - antecedentes_heredofamiliares: enfermedades de padres, hermanos,
           abuelos u otros familiares directos.
         - antecedentes_medicos: antecedentes personales PATOLÓGICOS —
-          enfermedades previas propias, cirugías, alergias, transfusiones,
-          tabaquismo, alcoholismo, uso de sustancias (la norma exige incluir
-          estos tres últimos aquí explícitamente).
+          enfermedades previas propias, alergias, transfusiones, tabaquismo,
+          alcoholismo, uso de sustancias (la norma exige incluir estos tres
+          últimos aquí explícitamente). NO incluyas cirugías aquí, van en
+          'antecedentes_quirurgicos'.
+        - antecedentes_quirurgicos: cirugías o intervenciones previas que el
+          paciente haya tenido, con año aproximado y motivo si se menciona
+          (ej. 'apendicectomía en 2019', 'cesárea hace 3 años'). Si el
+          paciente niega cirugías previas de forma explícita, regístralo
+          también (ej. 'Niega antecedentes quirúrgicos').
+        - medicamentos_actuales: medicamentos que el paciente YA TOMABA de
+          forma habitual ANTES de esta consulta, por prescripción previa o
+          automedicación (ej. 'metformina 850mg desde hace 2 años para
+          diabetes', 'se automedica ibuprofeno ocasionalmente').
+          ADVERTENCIA CRÍTICA: este campo es un ANTECEDENTE, nunca la receta
+          que el médico indique HOY como resultado de esta consulta. Si el
+          texto dice algo como 'te voy a recetar X' o 'te indico X' (una
+          decisión terapéutica nueva del médico para el padecimiento actual),
+          ESO NO va aquí — va en la receta del sistema, no en este campo. Solo
+          registra aquí lo que el paciente reporta que YA consumía antes de
+          llegar a esta consulta.
         - antecedentes_no_patologicos: antecedentes personales NO
           patológicos — alimentación, vivienda, ocupación, actividad física,
           hábitos generales.
@@ -1975,7 +1992,7 @@ PRONÓSTICO ANTERIOR:
         - plan_tratamiento_inicial: indicación terapéutica general, sin
           dosis exactas (eso va en la receta, no aquí).
 
-        REGLA CRÍTICA: para CADA uno de estos 7 campos, si el texto de ESTA
+        REGLA CRÍTICA: para CADA uno de estos 9 campos, si el texto de ESTA
         consulta NO aporta información nueva o relevante para ese apartado
         específico, responde con una cadena VACÍA (\"\") para ese campo.
         NUNCA escribas \"No disponible\" aquí ni inventes contenido para
@@ -1990,6 +2007,8 @@ PRONÓSTICO ANTERIOR:
 \"historia_clinica\": {
 \"antecedentes_heredofamiliares\": \"\",
 \"antecedentes_medicos\": \"\",
+\"antecedentes_quirurgicos\": \"\",
+\"medicamentos_actuales\": \"\",
 \"antecedentes_no_patologicos\": \"\",
 \"padecimiento_actual\": \"\",
 \"interrogatorio_aparatos_sistemas\": \"\",
@@ -1997,6 +2016,7 @@ PRONÓSTICO ANTERIOR:
 \"plan_tratamiento_inicial\": \"\"
 }";
         }
+        
 
         $prompt = "
 

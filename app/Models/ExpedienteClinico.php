@@ -11,6 +11,8 @@ class ExpedienteClinico extends Model
         'alergias',
         'enfermedades_cronicas',
         'antecedentes_medicos',
+        'antecedentes_quirurgicos',
+        'medicamentos_actuales',
         'antecedentes_heredofamiliares',
         'antecedentes_no_patologicos',
         'padecimiento_actual',
@@ -34,11 +36,13 @@ class ExpedienteClinico extends Model
         'ultima_evaluacion_ia' => 'datetime',
     ];
 
-    // Los 7 apartados del interrogatorio + exploración física + plan que
+    // Los 9 apartados del interrogatorio + exploración física + plan que
     // exige la NOM-004-SSA3-2012 (numeral 6.1) y que se autollenan por IA.
     public const CAMPOS_CLINICOS = [
         'antecedentes_heredofamiliares',
         'antecedentes_medicos', // antecedentes personales PATOLÓGICOS
+        'antecedentes_quirurgicos',
+        'medicamentos_actuales',
         'antecedentes_no_patologicos',
         'padecimiento_actual',
         'interrogatorio_aparatos_sistemas',

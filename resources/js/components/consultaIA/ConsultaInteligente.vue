@@ -60,7 +60,8 @@
     -->
     <div v-else class="consulta-contenedor">
         <HeaderConsulta 
-            :pacienteId="pacienteId" />
+            :pacienteId="pacienteId"
+            :progreso-ia="progresoHistoriaClinica" />
         <!-- BARRA SUPERIOR: salida explícita de la consulta -->
         <div class="row mb-2">
             <div class="col-12 d-flex justify-content-end">
@@ -203,7 +204,8 @@ export default {
             debounceTimer: null,
             listaEsperaIdHoy: null,
             todosPacientes: [],
-            diagnosticoConfirmado: null  
+            diagnosticoConfirmado: null,
+            progresoHistoriaClinica: null  
         }
     },
     computed: {
@@ -350,6 +352,14 @@ export default {
             this.iaData = iaData;
             this.iaError = false;
             console.log('Datos recibidos de la IA:', iaData);
+
+            // NUEVO: progreso de Historia Clínica (NOM-004), para el badge
+            // del hero header. Se mantiene el valor anterior si esta
+            // respuesta puntual no trajera el campo (no debería pasar, pero
+            // así el badge nunca "retrocede" a null por un evento aislado).
+            if (iaData && iaData.historia_clinica_progreso) {
+                this.progresoHistoriaClinica = iaData.historia_clinica_progreso;
+            }
 
             // --- IMPRESIÓN DE TOKENS EN LA CONSOLA DEL NAVEGADOR ---
             if (iaData && iaData.debug_usage) {
