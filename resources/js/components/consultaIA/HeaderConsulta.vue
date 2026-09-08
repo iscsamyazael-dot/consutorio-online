@@ -241,7 +241,7 @@
             // ia_data.historia_clinica_progreso en la respuesta de la IA.
             // Mientras no haya nada nuevo, se queda con lo que ya trajo
             // obtenerProgresoHistoriaClinica() al montar el componente.
-            progresoIA:{
+            progresoIa:{
                 type: Object,
                 default: null
             }
@@ -258,7 +258,7 @@
             },
             // Cada vez que el padre reciba una nueva respuesta de la IA
             // con progreso de historia clínica, se refleja aquí de inmediato.
-            progresoIA(nuevoValor){
+            progresoIa(nuevoValor){
                 if (nuevoValor) {
                     this.progresoHistoriaClinica = nuevoValor;
                 }
