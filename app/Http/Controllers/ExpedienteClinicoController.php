@@ -9,7 +9,7 @@ class ExpedienteClinicoController extends Controller
 {
     /**
      * Devuelve el expediente clínico del paciente (o uno vacío si aún no
-     * existe) junto con el progreso de los 7 campos exigidos por la
+     * existe) junto con el progreso de los 9 campos exigidos por la
      * NOM-004-SSA3-2012. Mismo cálculo que ya usa
      * IAClinicaService::actualizarExpedienteClinico, pero solo de lectura.
      */
@@ -43,7 +43,7 @@ class ExpedienteClinicoController extends Controller
 
     /**
      * Guarda ediciones manuales del médico sobre el expediente clínico
-     * (los mismos 7 campos que autollena la IA, más los generales:
+     * (los mismos 9 campos que autollena la IA, más los generales:
      * tipo_sangre, alergias, enfermedades_cronicas, notas_generales).
      *
      * Si el médico marca "revisado", se registra quién y cuándo lo
@@ -58,6 +58,8 @@ class ExpedienteClinicoController extends Controller
             'enfermedades_cronicas'            => 'nullable|string',
             'antecedentes_heredofamiliares'    => 'nullable|string',
             'antecedentes_medicos'             => 'nullable|string',
+            'antecedentes_quirurgicos'         => 'nullable|string',
+            'medicamentos_actuales'            => 'nullable|string',
             'antecedentes_no_patologicos'      => 'nullable|string',
             'padecimiento_actual'              => 'nullable|string',
             'interrogatorio_aparatos_sistemas' => 'nullable|string',

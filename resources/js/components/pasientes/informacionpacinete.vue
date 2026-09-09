@@ -221,10 +221,17 @@
 import ApiService from '../../services/ApiService.js'
 // Importar SweetAlert2 para mostrar alertas
 export default {
+    props: {
+        paciente: {
+            type: Object,
+            default: () => ({})
+        }
+    },
     data() {
         return {
             fotoPreview: null,
             edadError: '',
+            pacienteId: null,
             activeStep: 'sec-personal',
             steps: [
                 { id: 'sec-personal',       num: '01', label: 'Personal' },
@@ -263,34 +270,16 @@ export default {
     },
 // Precargar datos del paciente desde localStorage si existen
     mounted() {
-        const raw = localStorage.getItem('pacientePrecargar')
-        if (!raw) return
-
-        const p = JSON.parse(raw)
-        localStorage.removeItem('pacientePrecargar')
-// Precargar datos del paciente en el formulario
-        this.form.nombre      = [p.nombre, p.apellido_paterno, p.apellido_materno].filter(Boolean).join(' ')
-        this.form.sexo        = p.sexo        || ''
-        this.form.curp        = p.curp        || ''
-        this.form.telefono    = p.telefono    || ''
-        this.form.email       = p.email       || ''
-        this.form.direccion   = p.direccion   || ''
-        this.form.tipo_sangre = p.tipo_sangre || ''
-        this.form.edad_anios  = p.edad        || ''
-        this.form.estado      = p.estado      || ''
-        this.form.alergias    = p.alergias    || ''
-        this.form.fecha_nacimiento = p.fecha_nacimiento || ''
-        this.form.alergia_medicamentos = p.alergia_medicamentos || ''
-        this.form.antecedentes = p.antecedentes || ''
-        this.form.presion_arterial = p.presion_arterial || ''
-        this.form.saturacion = p.saturacion || ''
-        this.form.temperatura = p.temperatura || ''
-        this.form.frecuencia_cardiaca = p.frecuencia_cardiaca || ''
-        this.form.frecuencia_respiratoria = p.frecuencia_respiratoria || ''
-        this.form.peso = p.peso || ''
-        this.form.talla = p.talla || ''
-        this.form.sintomas = p.sintomas || ''
-        this.form.motivo_consulta = p.motivo_consulta || ''
+        if (this.paciente && this.paciente.id) {
+            this.precargarDatos(this.paciente)
+        }
+    },
+    watch: {
+        paciente(p) {
+            if (p && p.id) {
+                this.precargarDatos(p)
+            }
+        }
     },
 // Computed properties for evaluating vital signs and overall triage status
     computed: {
@@ -349,19 +338,44 @@ export default {
     },
 // Funciones y métodos
     methods: {
+        precargarDatos(p) {
+            this.pacienteId = p.id
+            this.form.nombre = p.nombre || ''
+            this.form.sexo        = p.sexo        || ''
+            this.form.curp        = p.curp        || ''
+            this.form.telefono    = p.telefono    || ''
+            this.form.email       = p.email       || ''
+            this.form.direccion   = p.direccion   || ''
+            this.form.tipo_sangre = p.tipo_sangre || ''
+            this.form.edad_anios  = p.edad        || ''
+            this.form.estado      = p.estado      || ''
+            this.form.alergias    = p.alergias    || ''
+            this.form.fecha_nacimiento = p.fecha_nacimiento || ''
+            this.form.alergia_medicamentos = p.alergia_medicamentos || ''
+            this.form.antecedentes = p.antecedentes_medicos || ''
+            this.form.presion_arterial = p.presion_arterial || ''
+            this.form.saturacion = p.saturacion || ''
+            this.form.temperatura = p.temperatura || ''
+            this.form.frecuencia_cardiaca = p.frecuencia_cardiaca || ''
+            this.form.frecuencia_respiratoria = p.frecuencia_respiratoria || ''
+            this.form.peso = p.peso || ''
+            this.form.talla = p.talla || ''
+            this.form.sintomas = p.sintomas || ''
+            this.form.motivo_consulta = p.motivo_consulta || ''
+        },
         statusLabel(status) {
             if (status === 'critical') return 'Fuera de rango'
             if (status === 'warning') return 'Vigilar'
             if (status === 'normal') return 'Normal'
             return ''
         },
-// Navegar a la sección correspondiente al hacer clic en un paso
+        // Navegar a la sección correspondiente al hacer clic en un paso
         scrollToSection(id) {
             this.activeStep = id
             const el = document.getElementById(id)
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
         },
-// Calcular edad a partir de la fecha de nacimiento
+        // Calcular edad a partir de la fecha de nacimiento
         calcularEdad() {
             if (!this.form.fecha_nacimiento) return
             const fechaNacimiento = new Date(this.form.fecha_nacimiento)
@@ -378,19 +392,19 @@ export default {
             const file = e.target.files[0]
             if (file) this.procesarFoto(file)
         },
-// Manejar arrastrar y soltar foto
+        // Manejar arrastrar y soltar foto
         onFotoDrop(e) {
             const file = e.dataTransfer.files[0]
             if (file && file.type.startsWith('image/')) this.procesarFoto(file)
         },
-// Procesar la foto seleccionada
+        // Procesar la foto seleccionada
         procesarFoto(file) {
             this.form.foto = file
             const reader = new FileReader()
             reader.onload = (e) => { this.fotoPreview = e.target.result }
             reader.readAsDataURL(file)
         },
-// Quitar foto seleccionada
+        // Quitar foto seleccionada
         removeFoto() {
             this.fotoPreview = null
             this.form.foto = null
@@ -400,7 +414,7 @@ export default {
         resetForm() {
             this.limpiarFormulario()
         },
-// Limpiar todos los campos del formulario
+        // Limpiar todos los campos del formulario
         limpiarFormulario() {
             this.fotoPreview = null
             this.form = {
@@ -446,6 +460,29 @@ export default {
                     text: 'El nombre y el CURP son necesarios para verificar si el paciente ya está registrado.',
                     confirmButtonText: 'Aceptar'
                 })
+                return
+            }
+
+            if (this.pacienteId) {
+                try {
+                    await ApiService.put('/pacientes/' + this.pacienteId, this.form)
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Paciente actualizado',
+                        text: 'Los cambios fueron guardados exitosamente.',
+                        confirmButtonText: 'Aceptar'
+                    }).then(() => {
+                        window.location.href = '/ListaPacientes'
+                    })
+                } catch (error) {
+                    console.error(error)
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Ocurrió un error al actualizar el paciente.',
+                        confirmButtonText: 'Aceptar'
+                    })
+                }
                 return
             }
 

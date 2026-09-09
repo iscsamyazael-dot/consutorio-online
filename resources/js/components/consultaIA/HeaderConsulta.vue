@@ -13,14 +13,14 @@
         <div class="card-body">
             <div class="row align-items-center">
                 <!-- AVATAR -->
-                <div class="col-lg-1 col-md-2 col-12 text-center mb-3 mb-md-0">
+                <div class="col-lg-1 col-md-3 col-12 text-center mb-3 mb-md-0">
                     <div class="avatar-xl mx-auto">
                         {{ infoPacientes.nombre?.substring(0, 2) }}
                     </div>
                 </div>
 
                 <!-- INFORMACIÓN PACIENTE -->
-                <div class="col-lg-8 col-md-7 col-12">
+                <div class="col-lg-11 col-md-9 col-12">
                     <h3 class="fw-bold mb-3 nombre-paciente">
                         {{ infoPacientes.nombre }}
                         {{ infoPacientes.apellido_paterno }}
@@ -70,6 +70,20 @@
                             v-else-if="infoPacientes.id"
                             class="badge bg-light text-muted border rounded-pill px-3 py-2">
                             Sin alergias registradas
+                        </span>
+
+                        <!-- ALERGIA A MEDICAMENTOS -->
+                        <span
+                            v-if="hayAlergiaMedicamentos"
+                            class="badge badge-alergia-medicamentos rounded-pill px-3 py-2">
+                            <i class="fas fa-pills me-1"></i>
+                            Alergia a medicamentos: {{ infoPacientes.alergia_medicamentos }}
+                        </span>
+
+                        <span
+                            v-else-if="infoPacientes.id"
+                            class="badge bg-light text-muted border rounded-pill px-3 py-2">
+                            Sin alergia a medicamentos registrada
                         </span>
 
                         <!-- HISTORIA CLÍNICA: progreso X/7 -->
@@ -126,6 +140,12 @@
     font-size:0.85rem;
     padding:10px 15px;
 }
+
+.badge-alergia-medicamentos {
+    background-color: #7c3aed; /* morado, distinto a los rojos ya usados */
+    color: #fff;
+}
+
 /* RESPONSIVE */
 @media(max-width:768px){
     .botones-consulta{
@@ -183,6 +203,10 @@
                 return faltantes.length
                     ? 'Falta: ' + faltantes.join(', ')
                     : '';
+            },
+            hayAlergiaMedicamentos() {
+                const valor = this.infoPacientes.alergia_medicamentos
+                return !!(valor && valor.trim() && valor.trim().toLowerCase() !== 'ninguna')
             }
         },
         mounted(){

@@ -26,7 +26,7 @@
                 <div>
 
                     <strong class="d-block text-dark mb-1">
-                        Alergia a {{ infoPacientes.alergias }}
+                        {{ textoAlergiaMedicamentos }}
                     </strong>
 
                     <small class="text-muted">
@@ -49,7 +49,7 @@
                         Sin alergias registradas
                     </strong>
 
-                    <small class="text-muted">
+                    <small v-if="hayAlergiaMedicamentos" class="text-muted">
                         Revisar el expediente, datos no disponibles.
                     </small>
                 </div>
@@ -91,6 +91,28 @@ export default {
             required: true
         }
     },
+    
+    computed: {
+        textoAlergiaMedicamentos() {
+            const valor = this.infoPacientes?.alergia_medicamentos
+
+            if (!valor || !valor.trim()) {
+                return 'No se encontraron alergia a medicamentos'
+            }
+
+            if (valor.trim().toLowerCase() === 'ninguna') {
+                return 'Ninguna'
+            }
+
+            return 'Alergia a ' + valor
+        },
+
+        hayAlergiaMedicamentos() {
+            const valor = this.infoPacientes?.alergia_medicamentos
+            return !!(valor && valor.trim() && valor.trim().toLowerCase() !== 'ninguna')
+        }
+    },
+
     watch:{
         pacienteId:{
             immediate:true,

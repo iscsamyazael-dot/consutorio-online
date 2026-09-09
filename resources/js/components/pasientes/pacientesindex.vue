@@ -71,7 +71,7 @@
                                     v-if="tieneDatosFaltantes(paciente)"
                                     class="alert-indicator me-2"
                                     :title="'Faltan: ' + datosFaltantes(paciente).join(', ')"
-                                    @click="irARegistroConDatos(paciente)"
+                                    @click="irAEditarPaciente(paciente)"
                                     style="cursor:pointer"
                                 >
                                     <i class="fas fa-exclamation-triangle alert-icon"></i>
@@ -98,9 +98,7 @@
                                 <!-- EDITAR -->
                                 <button
                                     class="btn btn-light btn-sm action-btn me-2"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editarpacienteModal"
-                                    @click="verModificarPacientes(paciente.id)"
+                                    @click="irAEditarPaciente(paciente)"
                                 >
                                     <i class="fas fa-edit text-warning"></i>
                                 </button>
@@ -372,10 +370,9 @@ export default {
 
         // ─── ✅ NUEVO: Redirige al registro precargando datos del paciente ─────────
 
-        irARegistroConDatos(paciente) {
-                localStorage.setItem('pacientePrecargar', JSON.stringify(paciente));
-                window.location.href = '/PacienteNuevo';
-            },
+        irAEditarPaciente(paciente) {
+            window.location.href = '/PacienteNuevo/' + paciente.id
+        },
 
         // ─── COLORES AVATAR ───────────────────────────────────────────────────────
 

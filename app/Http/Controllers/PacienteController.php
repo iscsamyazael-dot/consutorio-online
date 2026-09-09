@@ -195,6 +195,7 @@ class PacienteController extends Controller
                     'foto' => "null", // Guardamos la ruta de la foto en la base de datos
                     'notas_generales' => $request->notas_generales,
                     'alergias' => $request->alergias,
+                    'alergia_medicamentos' => $request->alergia_medicamentos,
                     'antecedentes_medicos' => $request->antecedentes,
                     'fecha_nacimiento' => $request->fecha_nacimiento,
                     'whatsapp_id' => null,
@@ -439,12 +440,24 @@ class PacienteController extends Controller
     {
         $paciente = Paciente::findOrFail($id);
 
-        // Excluimos relaciones y campos que no deben (o no pueden)
-        // actualizarse por aquí. 'triages' se maneja por separado en
-        // TriageController@guardarTriageRapido.
-        $datos = $request->except(['triages', 'id', 'paciente_id']);
-
-        $paciente->update($datos);
+         $paciente->update([
+            'nombre' => $request->nombre,
+            'telefono' => $request->telefono,
+            'email' => $request->email,
+            'edad' => $request->edad_anios,
+            'sexo' => $request->sexo,
+            'direccion' => $request->direccion,
+            'tipo_sangre' => $request->tipo_sangre,
+            'contacto_emergencia' => $request->contacto_emergencia,
+            'telefono_emergencia' => $request->telefono_emergencia,
+            'curp' => $request->curp,
+            'estado' => $request->estado,
+            'notas_generales' => $request->notas_generales,
+            'alergias' => $request->alergias,
+            'alergia_medicamentos' => $request->alergia_medicamentos,
+            'antecedentes_medicos' => $request->antecedentes,
+            'fecha_nacimiento' => $request->fecha_nacimiento,
+        ]);
 
         // Regresamos el paciente actualizado junto con sus triages,
         // para que el frontend pueda refrescar el panel sin pegarle

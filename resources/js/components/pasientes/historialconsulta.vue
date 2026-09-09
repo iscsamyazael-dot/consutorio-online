@@ -620,6 +620,12 @@
                     {{ infoExpediente.alergias || 'Ninguna registrada' }}
                   </strong>
                 </div>
+                <div class="col-12">
+                    <small class="text-muted d-block">Alergia a medicamentos</small>
+                    <strong :class="hayAlergiaMedicamentos ? 'text-danger' : ''">
+                        {{ textoAlergiaMedicamentos }}
+                    </strong>
+                </div>
               </div>
             </div>
 
@@ -1143,7 +1149,25 @@ body {
               { etiqueta: 'Talla', valor: t.talla ? t.talla + ' cm' : null },
               { etiqueta: 'IMC', valor: t.imc || null },
             ]
-          }
+          },
+
+          textoAlergiaMedicamentos() {
+                const valor = this.infoPacienteCompleto?.alergia_medicamentos
+
+                if (!valor || !valor.trim()) {
+                    return 'No se encontraron alergia a medicamentos'
+                }
+
+                if (valor.trim().toLowerCase() === 'ninguna') {
+                    return 'Ninguna'
+                }
+
+                return valor
+           },
+            hayAlergiaMedicamentos() {
+                const valor = this.infoPacienteCompleto?.alergia_medicamentos
+                return !!(valor && valor.trim() && valor.trim().toLowerCase() !== 'ninguna')
+            }
         },
         methods: {
           parseMedicamentos(meds) {

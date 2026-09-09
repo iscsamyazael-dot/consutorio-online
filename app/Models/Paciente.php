@@ -30,6 +30,7 @@ class Paciente extends Model
         'foto',
         'notas_generales',
         'alergias',
+        'alergia_medicamentos',
         'antecedentes_medicos',
         'antecedentes_quirurgicos',
         'enfermedades_cronicas',
