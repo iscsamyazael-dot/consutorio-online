@@ -285,6 +285,11 @@ export default {
             type: [Number, String], 
             required: false, 
             default: null 
+        },
+        consultaId: { 
+            type: [Number, String],
+            required: false,
+            default: null
         }
     },
 
@@ -366,9 +371,9 @@ export default {
         // hoy, comparando por lista_espera_id.
         triageVisitaActual() {
             if (this.triageGuardadoLocal) return this.triageGuardadoLocal
-            if (!this.listaEsperaId) return null
+            if (!this.consultaId) return null
             const triages = this.paciente?.triages || []
-            return triages.find(t => t.lista_espera_id == this.listaEsperaId) || null
+            return triages.find(t => t.consulta_id == this.consultaId) || null
         }
     },
     methods: {
@@ -501,6 +506,7 @@ export default {
                 const payload = {
                     paciente_id: this.paciente?.id,
                     lista_espera_id: this.listaEsperaId, // <-- Aseguramos el envío de este ID
+                    consulta_id: this.consultaId,
                     ...this.formTriage
                 }
 
@@ -561,6 +567,7 @@ export default {
                 const payload = {
                     paciente_id: this.paciente?.id,
                     lista_espera_id: this.listaEsperaId,
+                    consulta_id: this.consultaId,
                     ...this.formTriage
                 }
 

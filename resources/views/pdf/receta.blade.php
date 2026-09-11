@@ -232,6 +232,15 @@
             line-height: 1.5;
             text-align: center;
         }
+
+        .med-label-posologia {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .med-label-indicaciones {
+            color: #e65100;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -348,11 +357,27 @@
                     @foreach($receta->medicamentos as $index => $med)
                         <div class="med-item">
                             <div class="med-nombre">{{ $index + 1 }}. {{ $med['nombre'] ?? '' }}</div>
-                            <div class="med-detalles">
-                                {{ $med['dosis'] ?? '' }} &nbsp;·&nbsp; {{ $med['frecuencia'] ?? '' }} &nbsp;·&nbsp; {{ $med['duracion'] ?? '' }}
-                            </div>
-                            @if(!empty($med['instrucciones']))
-                                <div class="med-instrucciones">{{ $med['instrucciones'] }}</div>
+
+                            @if(array_key_exists('posologia', $med))
+                                {{-- Formato nuevo: Nombre / Posología / Indicaciones --}}
+                                @if(!empty($med['posologia']))
+                                    <div class="med-detalles">
+                                        <span class="med-label-posologia">Posología:</span> {{ $med['posologia'] }}
+                                    </div>
+                                @endif
+                                @if(!empty($med['instrucciones']))
+                                    <div class="med-instrucciones">
+                                        <span class="med-label-indicaciones">Indicaciones:</span> {{ $med['instrucciones'] }}
+                                    </div>
+                                @endif
+                            @else
+                                {{-- Formato antiguo: recetas guardadas antes de este cambio --}}
+                                <div class="med-detalles">
+                                    {{ $med['dosis'] ?? '' }} &nbsp;·&nbsp; {{ $med['frecuencia'] ?? '' }} &nbsp;·&nbsp; {{ $med['duracion'] ?? '' }}
+                                </div>
+                                @if(!empty($med['instrucciones']))
+                                    <div class="med-instrucciones">{{ $med['instrucciones'] }}</div>
+                                @endif
                             @endif
                         </div>
                     @endforeach

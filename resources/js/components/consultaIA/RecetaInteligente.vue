@@ -14,19 +14,19 @@
                     🤖 Sugerencias IA
                 </h6>
                  <!-- NUEVO: botón para refrescar receta con el diagnóstico ya confirmado -->
-            <button
-                v-if="diagnosticoConfirmado"
-                class="btn btn-outline-primary btn-sm mb-2"
-                :disabled="cargandoSugerencias"
-                @click="buscarSugerencias(sintomas)"
-            >
-                <i class="fas fa-sync" :class="{ 'fa-spin': cargandoSugerencias }"></i>
-                Actualizar con diagnóstico confirmado
-            </button>
-            <div v-else class="small text-muted mb-2">
-                <i class="fas fa-info-circle"></i>
-                Confirma el diagnóstico en el panel de IA para anclar la receta a él.
-            </div>
+                <button
+                    v-if="diagnosticoConfirmado"
+                    class="btn btn-outline-primary btn-sm mb-2"
+                    :disabled="cargandoSugerencias"
+                    @click="buscarSugerencias(sintomas)"
+                >
+                    <i class="fas fa-sync" :class="{ 'fa-spin': cargandoSugerencias }"></i>
+                    Actualizar con diagnóstico confirmado
+                </button>
+                <div v-else class="small text-muted mb-2">
+                    <i class="fas fa-info-circle"></i>
+                    Confirma el diagnóstico en el panel de IA para anclar la receta a él.
+                </div>
 
                 <div v-if="cargandoSugerencias" class="text-muted small">
                     <i class="fas fa-spinner fa-spin"></i> Analizando triage clínico...
@@ -34,10 +34,6 @@
 
                 <div v-else-if="errorSugerencias" class="alert alert-danger py-1 px-2 small mb-2">
                     ⚠️ No se pudo consultar la base de medicamentos.
-                </div>
-
-                <div v-else-if="sintomas.length === 0" class="text-muted small">
-                    Esperando síntomas clínicos...
                 </div>
 
                 <!-- CASO: la IA determinó que este caso requiere DERIVACIÓN, no receta -->
@@ -103,6 +99,11 @@
                         Estas sugerencias NO fueron verificadas contra tu inventario ni contraindicaciones.
                         No incluyen dosis — decisión y prescripción exclusiva del médico.
                     </div>
+                </div>
+
+                <!-- CASO: sin diagnóstico ni síntomas todavía -> placeholder inicial -->
+                <div v-else-if="sintomas.length === 0 && !tipoRespuesta" class="text-muted small">
+                    Esperando síntomas clínicos...
                 </div>
 
                 <div v-else class="text-muted small">
@@ -187,8 +188,8 @@
                     </div>
 
                     <div class="mt-1" v-if="cimaSeleccionado.documentos && cimaSeleccionado.documentos.length">
-                        <a
-                            v-for="doc in cimaSeleccionado.documentos"
+                        
+                          <a  v-for="doc in cimaSeleccionado.documentos"
                             :key="doc.url"
                             :href="doc.url"
                             target="_blank"
@@ -224,18 +225,19 @@
                         </button>
                     </div>
 
-                    <div class="form-group mb-1">
-                        <input type="text" class="form-control form-control-sm" v-model="med.nombre" placeholder="Nombre del medicamento">
+                    <div class="form-group mb-2">
+                        <label class="campo-label campo-nombre">Nombre del medicamento</label>
+                        <input type="text" class="form-control form-control-sm campo-input-nombre" v-model="med.nombre" placeholder="Ej. Paracetamol 500mg">
                     </div>
 
-                    <div class="row-2col mb-1">
-                        <input type="text" class="form-control form-control-sm" v-model="med.dosis" placeholder="Dosis">
-                        <input type="text" class="form-control form-control-sm" v-model="med.frecuencia" placeholder="Frecuencia">
+                    <div class="form-group mb-2">
+                        <label class="campo-label campo-posologia">Posología</label>
+                        <input type="text" class="form-control form-control-sm campo-input-posologia" v-model="med.posologia" placeholder="Ej. 1 tableta cada 8 horas por 5 días">
                     </div>
 
-                    <div class="row-2col mb-1">
-                        <input type="text" class="form-control form-control-sm" v-model="med.duracion" placeholder="Duración">
-                        <input type="text" class="form-control form-control-sm" v-model="med.instrucciones" placeholder="Indicaciones">
+                    <div class="form-group mb-0">
+                        <label class="campo-label campo-indicaciones">Indicaciones</label>
+                        <input type="text" class="form-control form-control-sm campo-input-indicaciones" v-model="med.instrucciones" placeholder="Ej. Tomar con alimentos">
                     </div>
                 </div>
 
@@ -480,39 +482,28 @@ export default {
                 return
             }
 
-            const dosisSugerida = this.cimaSeleccionado.principios_activos && this.cimaSeleccionado.principios_activos.length
-                ? this.textoPrincipiosActivos(this.cimaSeleccionado.principios_activos)
-                : ''
-
-            // Indicaciones sugeridas: sección 4.2 (posología y forma de
-            // administración) de la ficha técnica de CIMA. Queda editable.
-            const indicacionesSugeridas = this.cimaSeleccionado.posologia
+            const posologiaSugerida = this.cimaSeleccionado.posologia
                 ? this.recortarTexto(this.cimaSeleccionado.posologia, 300)
                 : ''
 
             this.medicamentos.push({
                 nombre: this.cimaSeleccionado.nombre,
-                dosis: dosisSugerida,
-                frecuencia: '',
-                duracion: '',
-                instrucciones: indicacionesSugeridas
+                posologia: posologiaSugerida,
+                instrucciones: ''
             })
 
-            // Solo autocompletamos la recomendación general si el médico
-            // todavía no escribió nada ahí, para no pisarle el texto.
-            if (!this.recomendacionGeneral.trim() && indicacionesSugeridas) {
-                this.recomendacionGeneral = indicacionesSugeridas
+            if (!this.recomendacionGeneral.trim() && posologiaSugerida) {
+                this.recomendacionGeneral = posologiaSugerida
             }
 
             this.mostrarToast('Medicamento agregado desde CIMA ✓')
             this.cimaSeleccionado = null
             this.cimaQuery = ''
         },
-
         // ---- Lista de medicamentos manual ----
 
         agregarMedicamento() {
-            this.medicamentos.push({ nombre: '', dosis: '', frecuencia: '', duracion: '', instrucciones: '' })
+            this.medicamentos.push({ nombre: '', posologia: '', instrucciones: '' })
         },
 
         eliminarMedicamento(index) {
@@ -525,13 +516,7 @@ export default {
 
             this.medicamentos.push({
                 nombre: med.nombre,
-                dosis: med.concentracion || '',
-                frecuencia: '',
-                duracion: '',
-                // Los medicamentos del inventario (Medicamento::$fillable)
-                // ya traen su propio campo "indicaciones" desde
-                // recetaInteligente(); los sugeridos genéricos de la IA
-                // (no verificados) no lo traen, así que queda vacío.
+                posologia: med.concentracion || '',
                 instrucciones: med.indicaciones || ''
             })
 
@@ -613,4 +598,20 @@ export default {
 }
 .fade-enter-active, .fade-leave-active { transition: opacity .2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.campo-label {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 3px;
+}
+.campo-nombre { color: #1565c0; }
+.campo-posologia { color: #2e7d32; }
+.campo-indicaciones { color: #e65100; }
+
+.campo-input-nombre { border-left: 3px solid #1565c0; }
+.campo-input-posologia { border-left: 3px solid #2e7d32; }
+.campo-input-indicaciones { border-left: 3px solid #e65100; }
 </style>

@@ -711,9 +711,7 @@ class ConsultaIAController extends Controller
             $validated = $request->validate([
                 'medicamentos'               => 'required|array|min:1',
                 'medicamentos.*.nombre'      => 'required|string',
-                'medicamentos.*.dosis'       => 'nullable|string',
-                'medicamentos.*.frecuencia'  => 'nullable|string',
-                'medicamentos.*.duracion'    => 'nullable|string',
+                'medicamentos.*.posologia'   => 'nullable|string',
                 'medicamentos.*.instrucciones' => 'nullable|string',
                 // Recomendación general de la receta (cómo tomar los
                 // medicamentos), capturada en el textarea de

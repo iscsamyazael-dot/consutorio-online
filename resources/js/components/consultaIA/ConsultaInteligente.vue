@@ -201,6 +201,7 @@
         <SignosVitales
             :paciente="paciente"
             :lista-espera-id="listaEsperaIdHoy"
+            :consulta-id="consultaId"
             @triage-agregado="onTriageAgregado"
         />
 
@@ -346,9 +347,9 @@ export default {
         },
         ultimoTriage() {
             if (this.triageLocalConsulta) return this.triageLocalConsulta;
-            if (!this.listaEsperaIdHoy) return null;
+            if (!this.consultaId) return null;
             const triages = this.paciente?.triages || [];
-            return triages.find(t => t.lista_espera_id == this.listaEsperaIdHoy) || null;
+            return triages.find(t => t.consulta_id == this.consultaId) || null;
         },
         edadPacienteMesesTriage() {
             if (this.paciente?.fecha_nacimiento) {

@@ -1833,7 +1833,7 @@ class IAClinicaService
                     'model' => 'deepseek-v4-flash',
                     'messages' => [['role' => 'user', 'content' => $prompt]],
                     'response_format' => ['type' => 'json_object'],
-                    //'max_tokens' => self::MAX_TOKENS_ANALISIS,
+                    'max_tokens' => 8000,
                 ]);
 
             if (!$response->successful()) {

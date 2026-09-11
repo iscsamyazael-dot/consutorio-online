@@ -15,6 +15,7 @@ class Triage extends Model
     'triage_codigo',
     'paciente_id',
     'lista_espera_id',
+    'consulta_id',
     'codigo_paciente',
     'usuario_triage_id',
     'presion',
@@ -56,12 +57,21 @@ class Triage extends Model
     }
 
     /**
-     * Un triage genera una consulta
+     * El triage pertenece a una consulta específica (visita puntual).
+     *
+     * ANTES: hasOne(Consulta::class, 'triage_id') — nunca funcionó porque
+     * la columna `triage_id` no existe en la tabla `consultas` (confirmado
+     * con SHOW COLUMNS y en Tinker, tronaba con QueryException).
+     *
+     * AHORA: belongsTo con la FK real `consulta_id` que vive en `triage`
+     * (agregada vía ALTER TABLE), que es el vínculo directo y sin
+     * ambigüedad entre un triage y la visita/consulta a la que pertenece.
      */
     public function consulta()
     {
-        return $this->hasOne(Consulta::class, 'triage_id');
+        return $this->belongsTo(Consulta::class, 'consulta_id');
     }
+
 
     //Relacion del Triage a la lista de espera//
     public function listaEspera()
