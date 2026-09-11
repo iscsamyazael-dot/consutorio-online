@@ -50,7 +50,7 @@
 
 
                         <span class="badge bg-info rounded-pill px-3 py-2">
-                            {{ infoPacientes.edad }} Años
+                            {{ infoPacientes.edad_formateada }}
                         </span>
 
 

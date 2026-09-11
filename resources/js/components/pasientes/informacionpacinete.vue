@@ -51,11 +51,11 @@
                     <span class="input-line"></span>
                 </div>
             </div>
-            <div class="col-md-3 field-wrap" style="--delay:.1s">
+                <div class="col-md-3 field-wrap" style="--delay:.1s">
                 <label class="form-label">Edad</label>
                 <div class="input-box">
-                    <input type="number" v-model.number="form.edad_anios" class="premium-input" placeholder="Años" min="0" max="120">
-                    <span class="unit-badge">años</span>
+                    <input type="number" v-model.number="form.edad_anios" class="premium-input" readonly placeholder="0">
+                    <span class="unit-badge">{{ etiquetaUnidad }}</span>
                     <span class="input-line"></span>
                 </div>
             </div>
@@ -245,6 +245,7 @@ export default {
                 sexo: '',
                 fecha_nacimiento: '',
                 edad_anios: 0,
+                edad_unidad: 'anios',
                 curp: '',
                 telefono: '',
                 email: '',
@@ -283,6 +284,10 @@ export default {
     },
 // Computed properties for evaluating vital signs and overall triage status
     computed: {
+        etiquetaUnidad() {
+            const mapa = { dias: 'días', meses: 'meses', anios: 'años' }
+            return mapa[this.form.edad_unidad] || 'años'
+        },
         presionStatus() {
             const raw = this.form.presion_arterial
             if (!raw || !raw.includes('/')) return ''
@@ -347,7 +352,8 @@ export default {
             this.form.email       = p.email       || ''
             this.form.direccion   = p.direccion   || ''
             this.form.tipo_sangre = p.tipo_sangre || ''
-            this.form.edad_anios  = p.edad        || ''
+            this.form.edad_anios  = p.edad        ?? ''
+            this.form.edad_unidad = p.edad_unidad || 'anios'
             this.form.estado      = p.estado      || ''
             this.form.alergias    = p.alergias    || ''
             this.form.fecha_nacimiento = p.fecha_nacimiento || ''
@@ -375,17 +381,43 @@ export default {
             const el = document.getElementById(id)
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
         },
-        // Calcular edad a partir de la fecha de nacimiento
+        
+        // Convierte un string "YYYY-MM-DD" (como el de un <input type="date">) a un
+        // objeto Date en HORA LOCAL, evitando el bug de `new Date("YYYY-MM-DD")`
+        // que JS interpreta como UTC y puede recorrer la fecha un día hacia atrás
+        // según la zona horaria del navegador.
+        parsearFechaLocal(fechaStr) {
+            if (!fechaStr) return null
+            const [anio, mes, dia] = fechaStr.split('-').map(Number)
+            return new Date(anio, mes - 1, dia)
+        },
+
+        // Calcular edad (y su unidad: días, meses o años) a partir de la fecha de nacimiento
         calcularEdad() {
             if (!this.form.fecha_nacimiento) return
-            const fechaNacimiento = new Date(this.form.fecha_nacimiento)
+            const nacimiento = this.parsearFechaLocal(this.form.fecha_nacimiento)
+            if (!nacimiento) return
             const hoy = new Date()
-            let edad = hoy.getFullYear() - fechaNacimiento.getFullYear()
-            const mes = hoy.getMonth() - fechaNacimiento.getMonth()
-            if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-                edad--
+
+            let totalMeses = (hoy.getFullYear() - nacimiento.getFullYear()) * 12
+                            + (hoy.getMonth() - nacimiento.getMonth())
+            if (hoy.getDate() < nacimiento.getDate()) totalMeses--
+
+            if (totalMeses < 1) {
+                const dias = Math.floor((hoy - nacimiento) / (1000 * 60 * 60 * 24))
+                this.form.edad_anios = dias
+                this.form.edad_unidad = 'dias'
+                return
             }
-            this.form.edad_anios = edad
+
+            if (totalMeses < 24) {
+                this.form.edad_anios = totalMeses
+                this.form.edad_unidad = 'meses'
+                return
+            }
+
+            this.form.edad_anios = Math.floor(totalMeses / 12)
+            this.form.edad_unidad = 'anios'
         },
 
         onFotoChange(e) {
@@ -422,6 +454,7 @@ export default {
                 sexo: '',
                 fecha_nacimiento: '',
                 edad_anios: '',
+                edad_unidad: 'anios',
                 curp: '',
                 telefono: '',
                 email: '',

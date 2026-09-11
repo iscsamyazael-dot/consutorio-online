@@ -54,7 +54,7 @@
                             <td>{{ paciente.telefono }}</td>
 
                             <!-- EDAD -->
-                            <td>{{ paciente.edad }} años</td>
+                            <td>{{ paciente.edad_formateada }}</td>
 
                             <!-- ESTADO -->
                             <td>

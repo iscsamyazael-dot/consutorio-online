@@ -1189,12 +1189,30 @@ export default {
         return null
       }
 
-      let edadAnios = Number(paciente.edad) || 0
+      // Fallback inicial basado en edad + edad_unidad (se sobreescribe abajo
+      // si hay fecha_nacimiento válida, que es más preciso)
+      let edadAnios = 0
       let edadMeses = 0
 
+      const unidadEdad = paciente.edad_unidad || 'anios'
+      const valorEdad = Number(paciente.edad) || 0
+
+      if (unidadEdad === 'anios') {
+        edadAnios = valorEdad
+      } else if (unidadEdad === 'meses') {
+        edadAnios = Math.floor(valorEdad / 12)
+        edadMeses = valorEdad % 12
+      } else if (unidadEdad === 'dias') {
+        const totalMesesAprox = Math.floor(valorEdad / 30)
+        edadAnios = Math.floor(totalMesesAprox / 12)
+        edadMeses = totalMesesAprox % 12
+      }
+
       // Si tenemos fecha de nacimiento, calculamos la edad con mayor precisión
+      // (esto tiene prioridad y sobreescribe el fallback de arriba)
       if (paciente.fecha_nacimiento) {
-        const nacimiento = new Date(paciente.fecha_nacimiento)
+        const [anioN, mesN, diaN] = paciente.fecha_nacimiento.split('-').map(Number)
+        const nacimiento = new Date(anioN, mesN - 1, diaN)
         const hoy = new Date()
 
         if (!isNaN(nacimiento.getTime())) {

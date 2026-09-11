@@ -307,7 +307,7 @@
         <tr>
             <td class="datos-label">Edad / Sexo:</td>
             <td>
-                {{ $consulta->paciente->edad ?? 'N/D' }} años
+                {{ $consulta->paciente->edad_formateada ?? 'N/D' }}
                 &nbsp;·&nbsp;
                 {{ $consulta->paciente->sexo ?? 'N/D' }}
                 @if(!empty($consulta->paciente->tipo_sangre))

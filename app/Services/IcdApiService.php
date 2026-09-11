@@ -44,12 +44,13 @@ class IcdApiService
         $token = $this->obtenerToken();
 
         if (!$token) {
+            Log::warning('ICD-11: no se obtuvo token, buscar() aborta.');
             return [];
         }
 
         $textoBusqueda = $this->extraerTerminoBusqueda($texto);
-
         $resultados = $this->ejecutarBusquedaEnApi($token, $textoBusqueda);
+        Log::info('ICD-11 resultados crudos ANTES de filtrar relevancia:', $resultados->toArray());
 
         // Si el término extraído (del paréntesis) no dio resultados, y era
         // distinto del texto completo, reintentamos con el texto completo
@@ -106,10 +107,14 @@ class IcdApiService
 
         $destinationEntities = $response->json('destinationEntities') ?? [];
 
+        // TEMPORAL: ver qué campos trae cada entidad, sin filtrar nada todavía
+        Log::info('ICD-11 entidad CRUDA completa (primeros 3):', array_slice($destinationEntities, 0, 3));
+
         return collect($destinationEntities)
             ->map(fn ($entidad) => [
                 'codigo' => $entidad['theCode'] ?? null,
                 'titulo' => strip_tags($entidad['title'] ?? ''),
+                'score'  => $entidad['score'] ?? 0, // <-- NUEVO: score real de la OMS
             ])
             ->filter(fn ($e) => $e['codigo'] && $e['titulo'])
             ->values();
@@ -150,32 +155,17 @@ class IcdApiService
      */
     private function reordenarPorRelevancia($resultados, string $textoBusqueda): array
     {
-        $stopwords = $this->palabrasIgnorables();
-        $fraseNormalizada = $this->normalizar($textoBusqueda);
-
-        $palabrasBuscadas = collect(preg_split('/[\s,]+/', $fraseNormalizada))
-            ->filter(fn ($p) => mb_strlen($p) > 2 && !in_array($p, $stopwords))
-            ->values();
-
+        // El campo "score" ya viene calculado por la propia API de la OMS
+        // (Flexisearch), que entiende sinónimos y terminología médica real
+        // -- por ejemplo, ya sabe que "lumbalgia" es sinónimo de "lumbago"
+        // aunque el título no contenga esa palabra literal. Por eso ya no
+        // recalculamos relevancia nosotros mismos comparando palabras
+        // sueltas: eso descartaba sinónimos válidos que la API sí conocía.
         return $resultados
-            ->map(function ($r) use ($palabrasBuscadas, $fraseNormalizada) {
-                $tituloNormalizado = $this->normalizar($r['titulo']);
-
-                $coincidencias = $palabrasBuscadas
-                    ->filter(fn ($palabra) => str_contains($tituloNormalizado, $palabra))
-                    ->count();
-
-                $bonusFrase = str_contains($tituloNormalizado, $fraseNormalizada) ? 50 : 0;
-
-                $r['relevancia'] = $coincidencias + $bonusFrase;
-                return $r;
-            })
-            ->filter(fn ($r) => $r['relevancia'] > 0) // descarta los que no comparten NINGUNA palabra distintiva
-            ->sortByDesc('relevancia')
-            ->take(6) // top 6 más relevantes
-            ->map(fn ($r) => ['codigo' => $r['codigo'], 'titulo' => $r['titulo']]) // sin 'relevancia', el frontend no la necesita
+            ->sortByDesc('score')
+            ->take(6)
+            ->map(fn ($r) => ['codigo' => $r['codigo'], 'titulo' => $r['titulo']])
             ->values()
             ->toArray();
     }
-
 }

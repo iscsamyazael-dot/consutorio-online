@@ -327,6 +327,7 @@ class EvaluacionesIAController extends Controller
                     'id' => $paciente->paciente_id ?? $paciente->id ?? 'N/A',
                     'nombre' => $paciente->nombre ?? 'Paciente no registrado',
                     'edad' => $paciente->edad ?? null,
+                    'edad_formateada' => $paciente->edad_formateada ?? null,
                     'sexo' => $paciente->sexo ?? null,
                 ],
                 'nota_psoapp' => $consulta->notaPsoapp ?? $evaluacionPrincipal->notaPsoapp ?? null,

@@ -20,6 +20,7 @@ class Paciente extends Model
         'telefono',
         'email',
         'edad',
+        'edad_unidad',
         'sexo',
         'direccion',
         'tipo_sangre',
@@ -40,6 +41,8 @@ class Paciente extends Model
         'consentimiento_datos',
         'ultima_interaccion'
     ];
+
+    protected $appends = ['edad_formateada'];
 
 
     /**
@@ -115,8 +118,30 @@ class Paciente extends Model
         'id'                 // PK local en 'consultas'
     );
     }
+    
+    /**
+     * Devuelve la edad ya formateada con su unidad correcta, ej. "7 meses",
+     * "2 años", "15 días" — singular/plural correcto incluido.
+     * Uso: $paciente->edad_formateada
+     */
+    public function getEdadFormateadaAttribute(): ?string
+    {
+        if (is_null($this->edad)) {
+            return null;
+        }
 
+        $unidades = [
+            'dias'  => $this->edad == 1 ? 'día'  : 'días',
+            'meses' => $this->edad == 1 ? 'mes'  : 'meses',
+            'anios' => $this->edad == 1 ? 'año'  : 'años',
+        ];
 
+        $etiqueta = $unidades[$this->edad_unidad] ?? 'años';
+
+        return $this->edad . ' ' . $etiqueta;
+    }
+
+    
     protected static function boot()
     {
         parent::boot();

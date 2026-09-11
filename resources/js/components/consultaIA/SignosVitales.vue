@@ -316,7 +316,8 @@ export default {
         // disponible, caemos a la columna `edad` (años) del paciente.
         edadPacienteMeses() {
             if (this.paciente?.fecha_nacimiento) {
-                const nacimiento = new Date(this.paciente.fecha_nacimiento)
+                const [anioN, mesN, diaN] = this.paciente.fecha_nacimiento.split('-').map(Number)
+                const nacimiento = new Date(anioN, mesN - 1, diaN)
                 if (!isNaN(nacimiento.getTime())) {
                     const hoy = new Date()
                     let meses = (hoy.getFullYear() - nacimiento.getFullYear()) * 12
@@ -325,9 +326,18 @@ export default {
                     return Math.max(meses, 0)
                 }
             }
+
+            // Fallback SOLO si no hay fecha_nacimiento válida: usamos edad + edad_unidad
+            // en vez de asumir que 'edad' siempre está en años.
             if (this.paciente?.edad !== null && this.paciente?.edad !== undefined && this.paciente?.edad !== '') {
-                return Number(this.paciente.edad) * 12
+                const valor = Number(this.paciente.edad)
+                const unidad = this.paciente?.edad_unidad || 'anios'
+
+                if (unidad === 'dias')  return Math.floor(valor / 30)
+                if (unidad === 'meses') return valor
+                return valor * 12 // 'anios'
             }
+
             return null
         },
 
@@ -605,6 +615,7 @@ export default {
     box-shadow: 0 2px 10px rgba(15,23,42,.05);
 
     position: sticky;
+    
 }
 
 .vitals-panel-head {

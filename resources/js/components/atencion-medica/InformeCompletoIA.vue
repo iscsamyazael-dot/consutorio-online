@@ -38,7 +38,7 @@
           </div>
           <div class="col-md-3">
             <strong>Edad:</strong> 
-            {{ detalle.paciente?.edad ? `${detalle.paciente.edad} años` : 'Sin edad registrada' }}
+            {{ detalle.paciente?.edad_formateada || 'Sin edad registrada' }}
           </div>
           <div class="col-md-3">
             <strong>Sexo:</strong> 

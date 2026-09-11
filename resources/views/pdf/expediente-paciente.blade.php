@@ -41,7 +41,7 @@
     <div class="titulo-seccion">EXPEDIENTE DEL PACIENTE</div>
     <table class="datos">
         <tr><td class="etiqueta">Nombre</td><td>{{ $paciente->nombre }}</td></tr>
-        <tr><td class="etiqueta">Edad</td><td>{{ $paciente->edad }}</td></tr>
+        <tr><td class="etiqueta">Edad</td><td>{{ $paciente->edad_formateada }}</td></tr>
         <tr><td class="etiqueta">Sexo</td><td>{{ $paciente->sexo }}</td></tr>
         <tr><td class="etiqueta">Fecha de nacimiento</td><td>{{ $paciente->fecha_nacimiento }}</td></tr>
         <tr><td class="etiqueta">Teléfono</td><td>{{ $paciente->telefono }}</td></tr>

@@ -469,7 +469,7 @@
 
             <td class="patient-value">
 
-                {{ $consulta->paciente->edad ?? '' }} años
+                {{ $consulta->paciente->edad_formateada ?? '' }}
 
                 &nbsp; · &nbsp;
 

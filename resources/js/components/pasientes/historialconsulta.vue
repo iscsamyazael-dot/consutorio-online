@@ -584,7 +584,7 @@
                 </div>
                 <div class="col-md-2 col-6">
                   <small class="text-muted d-block">Edad</small>
-                  <strong>{{ infoPacienteCompleto.edad || 'N/D' }} años</strong>
+                  <strong>{{ infoPacienteCompleto.edad_formateada || 'N/D' }}</strong>
                 </div>
                 <div class="col-md-2 col-6">
                   <small class="text-muted d-block">Sexo</small>
@@ -592,21 +592,21 @@
                 </div>
                 <div class="col-md-2 col-6">
                   <small class="text-muted d-block">Tipo de sangre</small>
-                  <strong>{{ infoExpediente.tipo_sangre || 'N/D' }}</strong>
+                  <strong>{{ infoPacienteCompleto.tipo_sangre || 'N/D' }}</strong>
                 </div>
                 <div class="col-md-2 col-6">
                   <small class="text-muted d-block">Teléfono</small>
                   <strong>{{ infoPacienteCompleto.telefono || 'N/D' }}</strong>
                 </div>
-                 <div class="col-md-4 col-6">
+                 <div class="col-md-5 col-6">
                   <small class="text-muted d-block">Correo</small>
                   <strong>{{ infoPacienteCompleto.email || 'N/D' }}</strong>
                </div>
-               <div class="col-md-2 col-6">
+               <div class="col-md-3 col-6">
                  <small class="text-muted d-block">Fecha de nacimiento</small>
                  <strong>{{ formatearFecha(infoPacienteCompleto.fecha_nacimiento) || 'N/D' }}</strong>
                </div>
-               <div class="col-md-2 col-6">
+               <div class="col-md-4 col-6">
                  <small class="text-muted d-block">CURP</small>
                  <strong>{{ infoPacienteCompleto.curp || 'N/D' }}</strong>
                </div>
@@ -614,13 +614,13 @@
                  <small class="text-muted d-block">Dirección</small>
                  <strong>{{ infoPacienteCompleto.direccion || 'N/D' }}</strong>
                </div>
-                <div class="col-12">
+                <div class="col-md-3 col-6">
                   <small class="text-muted d-block">Alergias</small>
                   <strong :class="infoExpediente.alergias ? 'text-danger' : ''">
-                    {{ infoExpediente.alergias || 'Ninguna registrada' }}
+                    {{ infoPacienteCompleto.alergias || 'Ninguna registrada' }}
                   </strong>
                 </div>
-                <div class="col-12">
+                <div class="col-md-3 col-6">
                     <small class="text-muted d-block">Alergia a medicamentos</small>
                     <strong :class="hayAlergiaMedicamentos ? 'text-danger' : ''">
                         {{ textoAlergiaMedicamentos }}

@@ -13,6 +13,7 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class PacienteController extends Controller
@@ -178,13 +179,14 @@ class PacienteController extends Controller
 
                 // Generamos el código del paciente (PAC-AÑO-0001)
                 $clave = $this->generarCodigoConReinicioAnual(Paciente::class, 'paciente_id', 'PAC');
-
+                $edadCalculada = $this->calcularEdadDesdeFecha($request->fecha_nacimiento);
                 $paciente = Paciente::create([
                     'paciente_id' => $clave,
                     'nombre' => $request->nombre,
                     'telefono' => $request->telefono,
                     'email' => $request->email,
-                    'edad' => $request->edad_anios, // Guardamos la edad en años
+                    'edad' => $edadCalculada['edad'],
+                    'edad_unidad' => $edadCalculada['edad_unidad'],
                     'sexo' => $request->sexo,
                     'direccion' => $request->direccion,
                     'tipo_sangre' => $request->tipo_sangre,
@@ -317,6 +319,29 @@ class PacienteController extends Controller
     }
 
     /**
+     * Calcula edad y unidad (días/meses/años) a partir de la fecha de
+     * nacimiento. Se calcula SIEMPRE en el servidor (no se confía en el
+     * valor que manda el frontend) para que 'edad' y 'edad_unidad' nunca
+     * queden desincronizados de 'fecha_nacimiento'.
+     */
+    private function calcularEdadDesdeFecha(?string $fechaNacimiento): array
+    {
+        if (empty($fechaNacimiento)) {
+            return ['edad' => null, 'edad_unidad' => 'anios'];
+        }
+        $nacimiento = Carbon::parse($fechaNacimiento);
+        $hoy = Carbon::now();
+        $totalMeses = (int) $nacimiento->diffInMonths($hoy);
+        if ($totalMeses < 1) {
+            return ['edad' => (int) $nacimiento->diffInDays($hoy), 'edad_unidad' => 'dias'];
+        }
+        if ($totalMeses < 24) {
+            return ['edad' => $totalMeses, 'edad_unidad' => 'meses'];
+        }
+        return ['edad' => (int) $nacimiento->diffInYears($hoy), 'edad_unidad' => 'anios'];
+    }
+
+    /**
      * Genera la imagen PNG del QR para un paciente, usando su qr_token
      * (no sus datos personales — ver decisión en la Pieza B).
      * Devuelve la ruta absoluta del archivo generado.
@@ -439,12 +464,13 @@ class PacienteController extends Controller
     public function update(Request $request, string $id)
     {
         $paciente = Paciente::findOrFail($id);
-
+         $edadCalculada = $this->calcularEdadDesdeFecha($request->fecha_nacimiento);
          $paciente->update([
             'nombre' => $request->nombre,
             'telefono' => $request->telefono,
             'email' => $request->email,
-            'edad' => $request->edad_anios,
+            'edad' => $edadCalculada['edad'],
+            'edad_unidad' => $edadCalculada['edad_unidad'],
             'sexo' => $request->sexo,
             'direccion' => $request->direccion,
             'tipo_sangre' => $request->tipo_sangre,

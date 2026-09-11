@@ -65,6 +65,28 @@
                         >
                             Ver consulta completa
                         </button>
+                        
+                        <button
+                            v-if="recetaDeConsulta(consulta.id)"
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                            style="font-size:12px;"
+                            @click="verReceta(consulta)"
+                        >
+                            <i class="fas fa-prescription mr-1"></i> Ver receta
+                        </button>
+
+                         <button
+                            v-else
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                            style="font-size:12px;"
+                            disabled
+                            title="Esta consulta no tiene receta registrada"
+                        >
+                            <i class="fas fa-prescription mr-1"></i> Sin receta
+                        </button>
+
                     </div>
                 </div>
             </div>
@@ -175,8 +197,35 @@
                 </div>
             </div>
         </div>
-        <!-- fin modal -->
+        <!-- fin modal Detalle de la consulta -->
 
+        <!-- Modal: Ver Receta (PDF) -->
+        <div class="modal fade" id="modalVerReceta" tabindex="-1" ref="modalVerReceta">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header" style="background:#0d6efd; color:#fff;">
+                        <h5 class="modal-title">
+                            <i class="fas fa-prescription mr-2"></i>
+                            Receta médica
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <iframe
+                            v-if="pdfRecetaUrl"
+                            :src="pdfRecetaUrl"
+                            width="100%"
+                            height="600"
+                            frameborder="0"
+                        ></iframe>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- fin modal Receta -->
     </div>
 </template>
 
@@ -221,7 +270,13 @@ export default {
         maxConsultas: {
             type: Number,
             default: 5
+        },
+        //Props para mostrar las recetas en el historial clinico//
+        recetas: {
+            type: Array,
+            default: () => []
         }
+
     },
     data() {
         return {
@@ -232,7 +287,10 @@ export default {
             // Modal de detalle de consulta
             detalleConsulta: null,
             cargandoDetalle: false,
-            errorDetalle: false
+            errorDetalle: false,
+            
+            //URL para ver la receta en pdf//
+            pdfRecetaUrl:null
         }
     },
     computed: {
@@ -406,7 +464,21 @@ export default {
                 case 'urgencia': return 'bg-danger'
                 default: return 'bg-secondary'
             }
+        },
+
+        verReceta(consulta) {
+            const baseURL = document.querySelector('meta[name="base-url"]').getAttribute('content');
+            const base = baseURL.replace(/\/$/, '');
+
+            this.pdfRecetaUrl = `${base}/consultaIA/${consulta.id}/pdf/receta/ver`;
+
+            $('#modalVerReceta').modal('show');
+        },
+
+        recetaDeConsulta(consultaId) {
+            return this.recetas.find(r => r.consulta_id == consultaId) || null;
         }
+    
     }
 }
 </script>

@@ -39,7 +39,7 @@
                             Folio:  {{ infoPacientes.paciente_id }}
                         </span>
                         <span class="badge bg-info rounded-pill px-3 py-2">
-                            {{ infoPacientes.edad }} Años
+                             {{ infoPacientes.edad_formateada }}
                         </span>
                         <span class="badge bg-secondary rounded-pill px-3 py-2">
                             {{ infoPacientes.sexo }}
