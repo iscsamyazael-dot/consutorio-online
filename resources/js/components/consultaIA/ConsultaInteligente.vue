@@ -325,11 +325,10 @@ export default {
             todosPacientes: [],
             diagnosticoConfirmado: null,
             progresoHistoriaClinica: null,
-            
             mostrarFlotante: false,
             ultimoScrollY: 0,
-
-            triageLocalConsulta: null
+            triageLocalConsulta: null,
+             promesaListaEsperaIdHoy: null
         }
     },
     computed: {
@@ -403,7 +402,7 @@ export default {
 
         if (this.hasPaciente) {
             this.obtenerPaciente();
-            this.obtenerListaEsperaIdHoy();
+            this.promesaListaEsperaIdHoy = this.obtenerListaEsperaIdHoy();
         } else {
             this.cargarListaPacientes();
         }
@@ -631,9 +630,32 @@ export default {
             console.error('Se produjo un error en el procesamiento de IA.');
         },
 
-        actualizarConsultaId(consultaId) {
+        async actualizarConsultaId(consultaId) {
             this.consultaId = consultaId;
             console.log('Consulta ID actualizado:', consultaId);
+            // Espera a que termine la consulta de lista_espera de hoy, sin
+            // importar cuál de las dos llamadas paralelas (esta o esa) haya
+            // respondido primero — evita que este código corra antes de que
+            // listaEsperaIdHoy esté listo.
+            if (this.promesaListaEsperaIdHoy) {
+                await this.promesaListaEsperaIdHoy;
+            }
+            console.log('listaEsperaIdHoy al vincular:', this.listaEsperaIdHoy);
+            if (this.listaEsperaIdHoy) {
+                try {
+                    const { data } = await ApiService.post('/triage/vincular-consulta', {
+                        paciente_id: this.pacienteId,
+                        lista_espera_id: this.listaEsperaIdHoy,
+                        consulta_id: consultaId
+                    });
+                    console.log('Respuesta vincular-consulta:', data);
+                    if (data.vinculado) {
+                        await this.obtenerPaciente();
+                    }
+                } catch (error) {
+                    console.error('Error al vincular triage con la consulta:', error);
+                }
+            }
         },
 
         refrescarArchivos() {

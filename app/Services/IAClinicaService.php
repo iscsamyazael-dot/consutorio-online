@@ -36,7 +36,9 @@ class IAClinicaService
         $texto,
         $consulta,
         array $historial = [],
-        $ultimaNota = null
+        $ultimaNota = null,
+        $triage = null
+
     ) {
         // --- CONTROL DE TOKENS DE ENTRADA ---
         if (!empty($historial)) {
@@ -57,7 +59,9 @@ class IAClinicaService
         $data = $this->consultarIA(
             $texto,
             $historial,
-            $ultimaNota
+            $ultimaNota,
+            false,
+            $triage
         );
 
         if (!is_array($data) || !isset($data['sintomas'], $data['diagnostico'])) {
@@ -85,7 +89,8 @@ class IAClinicaService
             $texto,
             $historial,
             $ultimaNota,
-            $solicitarHistoriaClinica
+            $solicitarHistoriaClinica,
+            $triage
         );
 
         // ============================================================
@@ -320,6 +325,52 @@ class IAClinicaService
         }
 
         return $bloque;
+    }
+
+    /**
+     * Arma el bloque de texto con los signos vitales reales capturados en
+     * el triage de esta consulta (tabla `triage`, columnas: presion,
+     * frecuencia_cardiaca, frecuencia_respiratoria, temperatura, saturacion,
+     * peso, talla). Estos valores NUNCA vienen en la transcripción hablada
+     * del paciente -- se capturan aparte en lista de espera o al abrir la
+     * consulta manualmente -- así que sin este bloque la IA no tenía forma
+     * de citarlos en el apartado "objetivo" de la nota PSOAPP y terminaba
+     * generando una frase genérica en vez de los valores reales.
+     */
+    private function bloqueSignosVitalesTriage($triage): string
+    {
+        if (!$triage) {
+            return '';
+        }
+
+        $lineas = [];
+        if (!empty($triage->presion))              $lineas[] = "Presión arterial: {$triage->presion} mmHg";
+        if (!empty($triage->frecuencia_cardiaca))   $lineas[] = "Frecuencia cardiaca: {$triage->frecuencia_cardiaca} lpm";
+        if (!empty($triage->frecuencia_respiratoria)) $lineas[] = "Frecuencia respiratoria: {$triage->frecuencia_respiratoria} rpm";
+        if (!empty($triage->temperatura))           $lineas[] = "Temperatura: {$triage->temperatura} °C";
+        if (!empty($triage->saturacion))            $lineas[] = "Saturación de oxígeno: {$triage->saturacion} %";
+        if (!empty($triage->peso))                  $lineas[] = "Peso: {$triage->peso} kg";
+        if (!empty($triage->talla))                 $lineas[] = "Talla: {$triage->talla} cm";
+
+        if (empty($lineas)) {
+            return '';
+        }
+
+        $textoLineas = implode("\n", $lineas);
+
+        return "
+            SIGNOS VITALES YA MEDIDOS EN TRIAGE (datos reales, capturados por el
+            personal clínico antes de esta consulta -- NO provienen de la
+            transcripción del paciente ni deben confundirse con algo que él dijo):
+
+            {$textoLineas}
+
+            Estos valores DEBEN transcribirse tal cual (mismo valor y unidad) en
+            el apartado 'objetivo' de la nota PSOAPP, exactamente igual que
+            cualquier otro dato objetivo mencionado en el texto. No los
+            reinterpretes, no los redondees ni los sustituyas por una descripción
+            genérica -- son mediciones reales, no una impresión clínica.
+        ";
     }
 
     /**
@@ -1893,7 +1944,8 @@ class IAClinicaService
         $texto,
         array $historial = [],
         $ultimaNota = null,
-        bool $solicitarHistoriaClinica = false 
+        bool $solicitarHistoriaClinica = false,
+        $triage = null
     ) 
     { // Forzamos el límite de ejecución de PHP para evitar cortes inesperados
         set_time_limit(300);
@@ -2046,6 +2098,7 @@ PRONÓSTICO ANTERIOR:
         (síntoma coloquial -> término médico):
         $vocabularioSintomas
         {$this->bloqueContextoPrevio($historialTexto, $notaAnteriorTexto)}
+        {$this->bloqueSignosVitalesTriage($triage)}
         NOTA MÉDICA DEL PACIENTE (registro actual):
 
         $texto

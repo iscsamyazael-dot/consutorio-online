@@ -150,7 +150,7 @@
             <div class="vital-item vital-item-imc" v-if="imcGuardado || editandoSignosInline">
                 <span class="vital-label">
                     IMC
-                    <span v-if="(editandoSignosInline ? imcModalPreview : imcGuardado)?.tipo === 'pediatrico'" class="vital-imc-percentil">
+                    <span v-if="['pediatrico','pediatrico_oms'].includes((editandoSignosInline ? imcModalPreview : imcGuardado)?.tipo)" class="vital-imc-percentil">
                         Percentil {{ (editandoSignosInline ? imcModalPreview : imcGuardado)?.percentil }}
                     </span>
                 </span>
@@ -220,7 +220,7 @@
                                 <input v-model.number="formTriage.talla" type="number" step="1" placeholder="170" :disabled="guardandoTriage">
                             </label>
 
-                            <div class="campo-triage campo-triage-imc" v-if="imcModalPreview">
+                           <div class="campo-triage campo-triage-imc" v-if="imcModalPreview">
                                 <span>IMC (calculado)</span>
                                 <div class="imc-preview">
                                     <strong class="imc-preview-valor">{{ imcModalPreview.bmi }}</strong>
@@ -230,6 +230,28 @@
                                     <small v-if="imcModalPreview.tipo === 'pediatrico'" class="imc-preview-percentil">
                                         Percentil {{ imcModalPreview.percentil }} (tabla CDC)
                                     </small>
+                                    <small v-if="imcModalPreview.tipo === 'pediatrico_oms'" class="imc-preview-percentil">
+                                        Percentil {{ imcModalPreview.percentil }} · Z {{ imcModalPreview.zScore }} (tabla OMS, IMC-para-edad)
+                                    </small>
+                                </div>
+
+                                <!-- Gráfica de curva OMS -->
+                                <div v-if="imcModalPreview.tipo === 'pediatrico_oms' && graficaOMS" class="oms-chart-wrap">
+                                    <svg :viewBox="`0 0 ${graficaOMS.anchoSvg} ${graficaOMS.altoSvg}`" class="oms-chart">
+                                        <polygon :points="graficaOMS.zonaNormal" class="oms-zona-normal" />
+                                        <polyline :points="graficaOMS.lineas.sd3" class="oms-linea oms-linea-extrema" />
+                                        <polyline :points="graficaOMS.lineas.sd2" class="oms-linea oms-linea-alerta" />
+                                        <polyline :points="graficaOMS.lineas.sd_2" class="oms-linea oms-linea-alerta" />
+                                        <polyline :points="graficaOMS.lineas.sd_3" class="oms-linea oms-linea-extrema" />
+                                        <polyline :points="graficaOMS.lineas.sd0" class="oms-linea oms-linea-mediana" />
+                                        <circle :cx="graficaOMS.punto.x" :cy="graficaOMS.punto.y" r="4" class="oms-punto-paciente" />
+                                        <text v-for="tick in graficaOMS.ejeX" :key="tick.m" :x="tick.x" :y="graficaOMS.altoSvg - 4" class="oms-eje-texto" text-anchor="middle">{{ tick.m }}m</text>
+                                    </svg>
+                                    <div class="oms-leyenda">
+                                        <span><i class="oms-swatch oms-swatch-normal"></i> Normal (-2 a +1 DE)</span>
+                                        <span><i class="oms-swatch oms-swatch-alerta"></i> Alerta (±2 a ±3 DE)</span>
+                                        <span><i class="oms-swatch oms-swatch-punto"></i> Este paciente</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="campo-triage campo-triage-imc campo-triage-imc-vacio" v-else-if="formTriage.peso || formTriage.talla">
@@ -260,6 +282,7 @@
 import ApiService from '../../services/ApiService.js'
 import { evaluarIMC } from '@/utils/bmiPercentile.js'
 import lmsTable from '@/data/bmi-lms-cdc.json'
+import lmsTableOMS from '@/data/bmi-lms-oms-0-2.json'
 
 // Mismo patrón de rutas que usa el componente de chat de consulta IA.
 var route = document.querySelector("[name=route]").value
@@ -374,7 +397,39 @@ export default {
             if (!this.consultaId) return null
             const triages = this.paciente?.triages || []
             return triages.find(t => t.consulta_id == this.consultaId) || null
-        }
+        },
+        graficaOMS() {
+            const info = this.editandoSignosInline ? this.imcModalPreview : (this.editandoSignosInline ? null : this.imcGuardado)
+            const activo = this.mostrarModalTriage ? this.imcModalPreview : this.imcGuardado
+            const target = activo && activo.tipo === 'pediatrico_oms' ? activo : null
+            if (!target || !target.curva?.length) return null
+
+            const curva = target.curva
+            const anchoSvg = 300, altoSvg = 150
+            const padIzq = 30, padDer = 8, padArriba = 10, padAbajo = 20
+
+            const minAge = curva[0].agemos
+            const maxAge = curva[curva.length - 1].agemos
+            const valores = curva.flatMap(p => [p.sd_3, p.sd3])
+            const minVal = Math.min(...valores, target.bmi) * 0.95
+            const maxVal = Math.max(...valores, target.bmi) * 1.05
+
+            const x = agemos => padIzq + ((agemos - minAge) / (maxAge - minAge)) * (anchoSvg - padIzq - padDer)
+            const y = valor => altoSvg - padAbajo - ((valor - minVal) / (maxVal - minVal)) * (altoSvg - padArriba - padAbajo)
+
+            const linea = clave => curva.map(p => `${x(p.agemos).toFixed(1)},${y(p[clave]).toFixed(1)}`).join(' ')
+
+            const zonaNormal = linea('sd1') + ' ' +
+                curva.slice().reverse().map(p => `${x(p.agemos).toFixed(1)},${y(p.sd_2).toFixed(1)}`).join(' ')
+
+            return {
+                anchoSvg, altoSvg,
+                lineas: { sd3: linea('sd3'), sd2: linea('sd2'), sd_1: linea('sd_1'), sd0: linea('sd0'), sd_2: linea('sd_2'), sd_3: linea('sd_3') },
+                zonaNormal,
+                punto: { x: x(target.agemos), y: y(target.bmi) },
+                ejeX: [0, 6, 12, 18, 24].filter(m => m >= minAge && m <= maxAge).map(m => ({ m, x: x(m) }))
+            }
+        },
     },
     methods: {
         formTriageVacio() {
@@ -401,7 +456,6 @@ export default {
             const sexo = this.sexoPacienteNormalizado
 
             if (agemos === null || !sexo) {
-                // No hay edad o sexo confiables: mostramos el IMC crudo, sin clasificar
                 const bmi = pesoKg / Math.pow(tallaCm / 100, 2)
                 return {
                     bmi: Number(bmi.toFixed(2)),
@@ -416,7 +470,7 @@ export default {
                 edadAnios: Math.floor(agemos / 12),
                 edadMeses: agemos % 12,
                 sexo
-            }, lmsTable)
+            }, lmsTable, lmsTableOMS) // <-- se agrega lmsTableOMS aquí
         },
 
         // Color del badge de clasificación según severidad
@@ -424,10 +478,10 @@ export default {
             if (!info) return ''
             if (info.tipo === 'sin_clasificar') return 'imc-badge-neutro'
             const c = (info.clasificacion || '').toLowerCase()
+            if (c.includes('desnutrición aguda severa') || c.includes('obesidad')) return 'imc-badge-critical'
+            if (c.includes('desnutrición') || c.includes('sobrepeso') || c.includes('riesgo')) return 'imc-badge-warning'
             if (c.includes('normal')) return 'imc-badge-normal'
             if (c.includes('bajo')) return 'imc-badge-warning'
-            if (c.includes('sobrepeso')) return 'imc-badge-warning'
-            if (c.includes('obesidad')) return 'imc-badge-critical'
             return 'imc-badge-neutro'
         },
 
@@ -1064,4 +1118,75 @@ export default {
 .modal-fade-leave-to {
     opacity: 0;
 }
+.oms-chart-wrap {
+    margin-top: 10px;
+    grid-column: span 2;
+}
+
+.oms-chart {
+    width: 100%;
+    height: auto;
+    background: #fff;
+    border: 1px solid var(--line, #E3E8EF);
+    border-radius: 8px;
+}
+
+.oms-zona-normal {
+    fill: rgba(14, 159, 110, 0.12);
+    stroke: none;
+}
+
+.oms-linea {
+    fill: none;
+    stroke-width: 1.2;
+}
+
+.oms-linea-mediana {
+    stroke: #0E9F6E;
+    stroke-width: 1.6;
+}
+
+.oms-linea-alerta {
+    stroke: #D97706;
+    stroke-dasharray: 3 2;
+}
+
+.oms-linea-extrema {
+    stroke: #DC2626;
+    stroke-dasharray: 2 2;
+}
+
+.oms-punto-paciente {
+    fill: #0F172A;
+    stroke: #fff;
+    stroke-width: 1.5;
+}
+
+.oms-eje-texto {
+    font-size: 5.5px;
+    fill: var(--ink-faint, #94A3B8);
+    font-family: 'Inter', sans-serif;
+}
+
+.oms-leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 6px;
+    font-size: .62rem;
+    color: var(--ink-soft, #51607A);
+}
+
+.oms-swatch {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 3px;
+    vertical-align: middle;
+}
+
+.oms-swatch-normal { background: rgba(14,159,110,.4); }
+.oms-swatch-alerta { background: #D97706; }
+.oms-swatch-punto { background: #0F172A; }
 </style>

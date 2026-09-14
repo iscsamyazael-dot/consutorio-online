@@ -107,9 +107,17 @@
                   <p class="text-muted small mb-3" v-if="consulta.diagnostico">
                     Diagnóstico: {{ consulta.diagnostico }}
                   </p>
-                  <a :href="`/HistorialConsulta/${consulta.id}`" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  <!-- <a :href="`/HistorialConsulta/${consulta.id}`" class="btn btn-sm btn-outline-primary rounded-pill px-3">
                     Ver consulta completa
-                  </a>
+                  </a> -->
+                   <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                      data-bs-toggle="modal"
+                      data-bs-target="#detalleConsultaModalTabs"
+                      @click="verConsultaCompleta(consulta)">
+                      Ver consulta completa
+                    </button>
                 </template>
 
                 <p class="mt-2 mb-0 text-muted" v-else>
@@ -815,6 +823,113 @@
     </div>
     <!--Aqui termina el modal para ver los archivos-->
 
+    <!-- Modal Detalle de la Consulta (inline, sin salir de la página) -->
+    <div class="modal fade" id="detalleConsultaModalTabs" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4">
+          <div class="modal-header bg-primary text-white border-0">
+            <h5 class="modal-title">
+              <i class="fas fa-notes-medical me-2"></i>
+              Detalle de la Consulta
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="modal-body p-4">
+
+            <div v-if="cargandoDetalleConsulta" class="text-center text-muted py-4">
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              Cargando consulta...
+            </div>
+
+            <div v-else-if="!consultaDetalle" class="alert alert-warning mb-0">
+              No se encontró información de esta consulta.
+            </div>
+
+            <template v-else>
+              <div class="mb-4">
+                <h5 class="fw-bold text-primary mb-3">
+                  <i class="fas fa-info-circle me-2"></i> Datos de la consulta
+                </h5>
+                <div class="row g-4">
+                  <div class="col-md-6">
+                    <label class="fw-bold">Fecha</label>
+                    <p class="text-muted mb-0">{{ formatearFecha(consultaDetalle.created_at) }}</p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="fw-bold">Médico</label>
+                    <p class="text-muted mb-0">
+                      {{ consultaDetalle.medico ? (consultaDetalle.medico.nombre || consultaDetalle.medico.name) : 'Sin asignar' }}
+                    </p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="fw-bold">Paciente</label>
+                    <p class="text-muted mb-0">
+                      {{ consultaDetalle.paciente ? consultaDetalle.paciente.nombre : 'Sin paciente registrado' }}
+                    </p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="fw-bold">Folio</label>
+                    <p class="text-muted mb-0">{{ consultaDetalle.folio || 'Sin folio' }}</p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="fw-bold">Motivo de consulta</label>
+                    <p class="text-muted mb-0">{{ consultaDetalle.motivo_consulta || 'Sin motivo registrado' }}</p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="fw-bold">Diagnóstico</label>
+                    <p class="text-danger fw-semibold mb-0">{{ consultaDetalle.diagnostico || 'Sin diagnóstico registrado' }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <hr>
+
+              <div class="mb-4">
+                <h5 class="fw-bold text-primary mb-3">
+                  <i class="fas fa-file-medical me-2"></i> Nota PSOAPP
+                </h5>
+
+                <div v-if="consultaDetalle.nota_psoapp">
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-dark">Presentación</h6>
+                    <p class="text-muted mb-0">{{ consultaDetalle.nota_psoapp.presentacion || 'Sin información registrada.' }}</p>
+                  </div>
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-dark">Subjetivo</h6>
+                    <p class="text-muted mb-0">{{ consultaDetalle.nota_psoapp.subjetivo || 'Sin información registrada.' }}</p>
+                  </div>
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-dark">Objetivo</h6>
+                    <p class="text-muted mb-0">{{ consultaDetalle.nota_psoapp.objetivo || 'Sin información registrada.' }}</p>
+                  </div>
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-dark">Análisis</h6>
+                    <p class="text-muted mb-0">{{ consultaDetalle.nota_psoapp.analisis || 'Sin información registrada.' }}</p>
+                  </div>
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-dark">Plan</h6>
+                    <p class="text-muted mb-0">{{ consultaDetalle.nota_psoapp.plan || 'Sin información registrada.' }}</p>
+                  </div>
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-dark">Pronóstico</h6>
+                    <p class="text-muted mb-0">{{ consultaDetalle.nota_psoapp.pronostico || 'Sin información registrada.' }}</p>
+                  </div>
+                </div>
+
+                <div v-else class="alert alert-light border text-muted mb-0">
+                  <i class="fas fa-info-circle me-2"></i>
+                  No se encontró una Nota PSOAPP registrada para esta consulta.
+                </div>
+              </div>
+            </template>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--Aqui termina el modal para ver el detalle de la consulta-->
+
   </div>
 </template>
 
@@ -1130,6 +1245,8 @@ body {
                 { clave: 'exploracion_fisica', letra: 'E', etiqueta: 'Exploración física', placeholder: 'Habitus exterior, signos vitales, hallazgos por región...' },
                 { clave: 'plan_tratamiento_inicial', letra: 'T', etiqueta: 'Plan de tratamiento inicial', placeholder: 'Indicación terapéutica general...' },
               ],
+              consultaDetalle: null,
+              cargandoDetalleConsulta: false
             }
         },
         mounted() {
@@ -1693,7 +1810,46 @@ body {
                   default:
                       return 'fas fa-file-alt text-secondary';
                 }
-          }
+            },
+            // Carga el detalle completo de una consulta (para el modal), reutilizando
+            // el endpoint /consultas/{id} que ya usaba HistorialConsulta.vue.
+            // La Nota PSOAPP NO se vuelve a pedir al backend: se toma de
+            // infoNotasPsoapp (ya cargada por obtenerNotasPsoapp) buscando por
+            // consulta_id, evitando el mismatch nota_psoap/nota_psoapp que tenía
+            // la página anterior.
+            async verConsultaCompleta(consultaResumen) {
+              this.cargandoDetalleConsulta = true
+              this.consultaDetalle = null
+
+              try {
+                const response = await ApiService.get('/consultas/' + consultaResumen.id)
+                const consulta = response.data || null
+
+                if (consulta) {
+                  // Si la columna diagnostico venía vacía (consultas de Consulta
+                  // Inteligente), usamos el diagnóstico ya resuelto por
+                  // obtenerConsultas() (que sí revisa evaluaciones_ia).
+                  if (!consulta.diagnostico && consultaResumen.diagnostico) {
+                    consulta.diagnostico = consultaResumen.diagnostico
+                  }
+
+                  consulta.nota_psoapp = this.infoNotasPsoapp.find(
+                    nota => String(nota.consulta_id) === String(consulta.id)
+                  ) || null
+                }
+
+                this.consultaDetalle = consulta
+              } catch (error) {
+                console.error('Error al cargar el detalle de la consulta:', error)
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'No se pudo cargar el detalle de la consulta.'
+                })
+              } finally {
+                this.cargandoDetalleConsulta = false
+              }
+            }
         },
         props:{
             pacienteId:{

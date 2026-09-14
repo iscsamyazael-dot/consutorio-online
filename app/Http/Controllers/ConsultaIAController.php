@@ -126,6 +126,15 @@ class ConsultaIAController extends Controller
             $iaData = null;
             if ($request->has('transcripcion') && !empty($request->transcripcion)) {
 
+               
+
+                // $iaData = $this->iaClinicaService->analizarTranscripcion(
+                //     $request->transcripcion,
+                //     $consulta,
+                //     $historial,
+                //     $ultimaNota
+                // );
+
                 // Guardamos la pregunta/mensaje del paciente
                 $transcripcion = ConsultaTranscripcion::create([
                     'consulta_id' => $consulta->id,
@@ -149,13 +158,19 @@ class ConsultaIAController extends Controller
                 $ultimaNota = NotaPsoapp::where('consulta_id', $consulta->id)
                     ->orderBy('created_at', 'desc')
                     ->first();
+                
+                // Signos vitales ya capturados en triage para esta consulta (lista de
+                // espera o captura manual en la misma vista). Se recarga en cada
+                // mensaje por si el médico lo captura/edita a mitad de la consulta.
+                $triage = \App\Models\Triage::where('consulta_id', $consulta->id)->first();
 
                 // Llamada al servicio de IA, ya con el contexto de la consulta
                 $iaData = $this->iaClinicaService->analizarTranscripcion(
                     $request->transcripcion,
                     $consulta,
                     $historial,
-                    $ultimaNota
+                    $ultimaNota,
+                    $triage
                 );
 
                 // Guardamos la respuesta de la IA en la MISMA fila, para el historial clínico
@@ -411,7 +426,8 @@ class ConsultaIAController extends Controller
             $ultimaNota = NotaPsoapp::where('consulta_id', $consulta->id)
                 ->orderBy('created_at', 'desc')
                 ->first();
-
+            
+            $triage = \App\Models\Triage::where('consulta_id', $consulta->id)->first();
             // ÚNICA llamada al pipeline de análisis IA (antes se llamaba
             // dos veces: una dentro del bloque de imagen, cuyo resultado se
             // descartaba, y otra aquí).
@@ -419,7 +435,8 @@ class ConsultaIAController extends Controller
                 $textoExtraido,
                 $consulta,
                 $historial,
-                $ultimaNota
+                $ultimaNota,
+                $triage
             );
 
             if ($iaData) {
@@ -875,8 +892,7 @@ class ConsultaIAController extends Controller
         // los signos vitales (presión, temperatura, peso, talla, etc.).
         // La tabla `triage` es donde el sistema guarda estos datos;
         // no existe una tabla separada de signos_vitales.
-        $triage = \App\Models\Triage::where('paciente_id', $consulta->paciente_id)
-            ->orderBy('created_at', 'desc')
+       $triage = \App\Models\Triage::where('consulta_id', $consulta->id)
             ->first();
 
         // 2. Mapeo de vistas según el tipo solicitado

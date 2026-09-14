@@ -227,6 +227,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/consultaIA/{consultaId}/diagnostico', [ConsultaIAController::class, 'guardarDiagnostico']);
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+        //Ruta para cuando el triage se guarda directamente de la lista de espera //
+        Route::post('/triage/vincular-consulta', [TriageController::class, 'vincularConsulta']);
+        ///////////////////////////////////////////////////////////////////////////////////////
+        
         //Ruta para el uso del Expediente Clinico ó Historia Clinica //
         Route::get('/expedienteClinico/{pacienteId}', [ExpedienteClinicoController::class, 'obtener']);
         Route::post('/expedienteClinico/{pacienteId}', [ExpedienteClinicoController::class, 'guardar']);

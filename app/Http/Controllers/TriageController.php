@@ -654,4 +654,62 @@ class TriageController extends Controller
             'fuente'        => $resultado['fuente'],
         ]);
     }
+    
+    /**
+     * Vincula el triage huérfano (consulta_id aún null) de esta visita a la
+     * consulta que se acaba de crear/detectar en el frontend.
+     *
+     * Identifica el triage correcto por paciente_id + lista_espera_id (si
+     * viene) — es decir, el triage capturado específicamente en ESA fila
+     * de la lista de espera, no "el más reciente del paciente". Si no hay
+     * lista_espera_id (consulta abierta manualmente, sin pasar por la
+     * fila), no hay nada que vincular por este medio: el triage de esta
+     * consulta se captura directo con consulta_id ya presente desde el
+     * inicio (ver SignosVitales.vue).
+     *
+     * Solo toca triages con consulta_id NULL — nunca reasigna uno que ya
+     * pertenece a otra consulta, así que no reintroduce la ambigüedad del
+     * bug original (caso Ana Sofía).
+     *
+     * Ruta: POST /triage/vincular-consulta
+     */
+    public function vincularConsulta(Request $request)
+    {
+        $data = $request->validate([
+            'paciente_id'     => 'required|exists:pacientes,id',
+            'lista_espera_id' => 'nullable|exists:lista_espera,id',
+            'consulta_id'     => 'required|exists:consultas,id',
+        ]);
+
+        if (empty($data['lista_espera_id'])) {
+            return response()->json([
+                'success'   => true,
+                'vinculado' => false,
+                'message'   => 'Sin lista_espera_id, no hay triage que vincular por este medio.',
+            ]);
+        }
+
+        $triage = Triage::where('paciente_id', $data['paciente_id'])
+            ->where('lista_espera_id', $data['lista_espera_id'])
+            ->whereNull('consulta_id')
+            ->latest('id')
+            ->first();
+
+        if (!$triage) {
+            return response()->json([
+                'success'   => true,
+                'vinculado' => false,
+                'message'   => 'No se encontró triage huérfano para esta visita.',
+            ]);
+        }
+
+        $triage->update(['consulta_id' => $data['consulta_id']]);
+
+        return response()->json([
+            'success'   => true,
+            'vinculado' => true,
+            'triage'    => $triage->fresh(),
+        ]);
+    }
+
 }

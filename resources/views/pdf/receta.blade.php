@@ -319,34 +319,26 @@
             <td><span class="badge-alerta">{{ $consulta->paciente->alergias }}</span></td>
         </tr>
         @endif
-        @if($evaluacion)
+        {{-- AQUÍ VA EL BLOQUE NUEVO --}}
+        @if($consulta->diagnostico || $evaluacion)
         <tr>
             <td class="datos-label">Diagnóstico:</td>
-            <td>{{ $evaluacion->diagnostico_probable }}</td>
+            <td>
+                @if(!empty($consulta->diagnostico))
+                    {{ $consulta->diagnostico }}
+                    @if(!empty($consulta->diagnostico_icd11_codigo))
+                        <span class="text-muted" style="font-size: 10px;">({{ $consulta->diagnostico_icd11_codigo }})</span>
+                    @endif
+                @else
+                    {{ $evaluacion->diagnostico_probable }}
+                    <span style="font-size: 9.5px; color: #9ca3af;">(probable, pendiente de confirmar)</span>
+                @endif
+            </td>
         </tr>
         @endif
     </table>
 
     {{-- Indicaciones y recomendación del médico (evaluaciones_ia.indicaciones_medico / .recomendacion) --}}
-    @if($evaluacion && (!empty($evaluacion->indicaciones_medico) || !empty($evaluacion->recomendacion)))
-    <div class="indicaciones-medico-box">
-        <h2>Indicaciones / Recomendaciones del médico</h2>
-
-        @if(!empty($evaluacion->indicaciones_medico))
-        <div class="bloque">
-            <span class="bloque-label">Indicaciones</span>
-            <p>{{ $evaluacion->indicaciones_medico }}</p>
-        </div>
-        @endif
-
-        @if(!empty($evaluacion->recomendacion))
-        <div class="bloque">
-            <span class="bloque-label">Recomendación</span>
-            <p>{{ $evaluacion->recomendacion }}</p>
-        </div>
-        @endif
-    </div>
-    @endif
 
     @if($receta || $triage)
     <table class="cuerpo-table">

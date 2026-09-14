@@ -147,9 +147,9 @@ export function edadAMeses(anios, meses = 0) {
  * @param {object} datos - { pesoKg, tallaCm, edadAnios, edadMeses, sexo: 'M'|'F' }
  * @param {Array} lmsTable - tabla LMS del CDC (bmi-lms-cdc.json)
  */
-export function evaluarIMC({ pesoKg, tallaCm, edadAnios, edadMeses = 0, sexo }, lmsTable) {
+export function evaluarIMC({ pesoKg, tallaCm, edadAnios, edadMeses = 0, sexo }, lmsTable, lmsTableOMS = null) {
   const bmi = calcularIMC(pesoKg, tallaCm);
-  const esAdulto = edadAnios >= 20; // la tabla CDC pediátrica cubre 2-20 años
+  const esAdulto = edadAnios >= 20;
 
   if (esAdulto) {
     return {
@@ -159,16 +159,40 @@ export function evaluarIMC({ pesoKg, tallaCm, edadAnios, edadMeses = 0, sexo }, 
     };
   }
 
+  const agemosNum = edadAMeses(edadAnios, edadMeses);
+  const sexNum = sexo === 'M' || sexo === 'm' || Number(sexo) === 1 ? 1 : 2;
+
   if (edadAnios < 2) {
+    if (!lmsTableOMS) {
+      return {
+        bmi: Number(bmi.toFixed(2)),
+        tipo: 'no_aplica',
+        clasificacion: 'La tabla CDC de percentiles aplica de 2 a 20 años. Para menores de 2 años se deben usar las tablas OMS de peso/talla.'
+      };
+    }
+
+    const filaOMS = buscarFilaLMS(lmsTableOMS, sexNum, agemosNum);
+    if (!filaOMS) {
+      return {
+        bmi: Number(bmi.toFixed(2)),
+        tipo: 'error',
+        clasificacion: 'No se encontró una fila LMS de la OMS para esta edad/sexo.'
+      };
+    }
+
+    const { zScore, percentile } = calcularZScoreLMS(bmi, filaOMS);
+
     return {
       bmi: Number(bmi.toFixed(2)),
-      tipo: 'no_aplica',
-      clasificacion: 'La tabla CDC de percentiles aplica de 2 a 20 años. Para menores de 2 años se deben usar las tablas OMS de peso/talla.'
+      tipo: 'pediatrico_oms',
+      zScore: Number(zScore.toFixed(2)),
+      percentil: Number(Math.min(Math.max(percentile, 0.1), 99.9).toFixed(1)),
+      clasificacion: clasificarZScoreOMS(zScore),
+      agemos: agemosNum,
+      curva: curvasOMS(lmsTableOMS, sexNum)
     };
   }
 
-  const agemosNum = edadAMeses(edadAnios, edadMeses);
-  const sexNum = sexo === 'M' || sexo === 'm' || Number(sexo) === 1 ? 1 : 2;
   const fila = buscarFilaLMS(lmsTable, sexNum, agemosNum);
 
   if (!fila) {
@@ -188,4 +212,60 @@ export function evaluarIMC({ pesoKg, tallaCm, edadAnios, edadMeses = 0, sexo }, 
     percentil: Number(percentile.toFixed(1)),
     clasificacion: clasificarPercentilPediatrico(percentile)
   };
+}
+
+/**
+ * Clasificación clínica OMS por z-score de IMC-para-edad (0-5 años).
+ * Cortes oficiales WHO Child Growth Standards.
+ */
+export function clasificarZScoreOMS(zScore) {
+  if (zScore < -3) return "Desnutrición aguda severa";
+  if (zScore < -2) return "Desnutrición aguda moderada";
+  if (zScore <= 1) return "Normal";
+  if (zScore <= 2) return "Riesgo de sobrepeso";
+  if (zScore <= 3) return "Sobrepeso";
+  return "Obesidad";
+}
+
+/**
+ * Z-score y percentil vía LMS puro (sin la extensión CDC>P95 del
+ * método de adultos/2-20 años). Usado para las tablas OMS 0-2 años,
+ * cuyo rango de -3 a +3 DE cubre de sobra el uso clínico real.
+ */
+export function calcularZScoreLMS(x, { L, M, S }) {
+  const zScore = L !== 0
+    ? (Math.pow(x / M, L) - 1) / (L * S)
+    : Math.log(x / M) / S;
+  const percentile = normalCDF(zScore) * 100;
+  return { zScore, percentile };
+}
+
+/**
+ * Valor de IMC en una línea de desviación estándar dada (inversa de la
+ * fórmula LMS). Se usa para dibujar las curvas de referencia OMS.
+ */
+export function valorEnDesviacion({ L, M, S }, z) {
+  if (L !== 0) return M * Math.pow(1 + L * S * z, 1 / L);
+  return M * Math.exp(S * z);
+}
+
+/**
+ * Genera los puntos de las curvas OMS (-3 a +3 DE) para un sexo dado,
+ * uno por cada mes de la tabla (0 a 24), listos para graficar.
+ */
+export function curvasOMS(lmsTableOMS, sexNum) {
+  const filas = lmsTableOMS
+    .filter(r => Number(r.sex) === Number(sexNum))
+    .sort((a, b) => a.agemos - b.agemos);
+
+  return filas.map(fila => ({
+    agemos: fila.agemos,
+    sd_3: Number(valorEnDesviacion(fila, -3).toFixed(2)),
+    sd_2: Number(valorEnDesviacion(fila, -2).toFixed(2)),
+    sd_1: Number(valorEnDesviacion(fila, -1).toFixed(2)),
+    sd0:  Number(valorEnDesviacion(fila, 0).toFixed(2)),
+    sd1:  Number(valorEnDesviacion(fila, 1).toFixed(2)),
+    sd2:  Number(valorEnDesviacion(fila, 2).toFixed(2)),
+    sd3:  Number(valorEnDesviacion(fila, 3).toFixed(2))
+  }));
 }
