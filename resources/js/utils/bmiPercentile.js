@@ -210,7 +210,9 @@ export function evaluarIMC({ pesoKg, tallaCm, edadAnios, edadMeses = 0, sexo }, 
     tipo: 'pediatrico',
     zScore: Number(zScore.toFixed(2)),
     percentil: Number(percentile.toFixed(1)),
-    clasificacion: clasificarPercentilPediatrico(percentile)
+    clasificacion: clasificarPercentilPediatrico(percentile),
+    agemos: agemosNum,                     // <-- nuevo
+    curva: curvasCDC(lmsTable, sexNum)     // <-- nuevo
   };
 }
 
@@ -267,5 +269,27 @@ export function curvasOMS(lmsTableOMS, sexNum) {
     sd1:  Number(valorEnDesviacion(fila, 1).toFixed(2)),
     sd2:  Number(valorEnDesviacion(fila, 2).toFixed(2)),
     sd3:  Number(valorEnDesviacion(fila, 3).toFixed(2))
+  }));
+}
+
+/**
+ * Genera los puntos de las curvas de referencia CDC (percentiles 5,
+ * 50, 85, 95 — los cortes oficiales de clasificación CDC) para un
+ * sexo dado, uno por cada fila de la tabla (2 a 20 años).
+ */
+export function curvasCDC(lmsTable, sexNum) {
+  const filas = lmsTable
+    .filter(r => Number(r.sex) === Number(sexNum))
+    .sort((a, b) => a.agemos - b.agemos);
+
+  // z-scores fijos correspondientes a cada percentil de corte CDC
+  const Z_P5 = -1.6449, Z_P50 = 0, Z_P85 = 1.0364, Z_P95 = 1.6449;
+
+  return filas.map(fila => ({
+    agemos: fila.agemos,
+    p5:  Number(valorEnDesviacion(fila, Z_P5).toFixed(2)),
+    p50: Number(valorEnDesviacion(fila, Z_P50).toFixed(2)),
+    p85: Number(valorEnDesviacion(fila, Z_P85).toFixed(2)),
+    p95: Number(valorEnDesviacion(fila, Z_P95).toFixed(2))
   }));
 }

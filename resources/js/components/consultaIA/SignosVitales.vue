@@ -161,7 +161,26 @@
                     </span>
                 </span>
             </div>
+            <!-- Gráfica pediátrica de la OMS -->
+            <div class="vital-item-grafica" v-if="mostrarGraficaOMS || mostrarGraficaCDC">
+                <GraficaCrecimientoOMS
+                    v-if="mostrarGraficaOMS"
+                    :curva="infoImcActual.curva"
+                    :agemos="infoImcActual.agemos"
+                    :bmi="infoImcActual.bmi"
+                    :z-score="infoImcActual.zScore"
+                />
+                <GraficaCrecimientoCDC
+                    v-if="mostrarGraficaCDC"
+                    :curva="infoImcActual.curva"
+                    :agemos="infoImcActual.agemos"
+                    :bmi="infoImcActual.bmi"
+                    :z-score="infoImcActual.zScore"
+                />
+            </div>
         </div>
+        
+        
 
         <!-- MODAL: agregar triage nuevo (sin cambios respecto al que ya tienes) -->
         <Teleport to="body">
@@ -236,23 +255,20 @@
                                 </div>
 
                                 <!-- Gráfica de curva OMS -->
-                                <div v-if="imcModalPreview.tipo === 'pediatrico_oms' && graficaOMS" class="oms-chart-wrap">
-                                    <svg :viewBox="`0 0 ${graficaOMS.anchoSvg} ${graficaOMS.altoSvg}`" class="oms-chart">
-                                        <polygon :points="graficaOMS.zonaNormal" class="oms-zona-normal" />
-                                        <polyline :points="graficaOMS.lineas.sd3" class="oms-linea oms-linea-extrema" />
-                                        <polyline :points="graficaOMS.lineas.sd2" class="oms-linea oms-linea-alerta" />
-                                        <polyline :points="graficaOMS.lineas.sd_2" class="oms-linea oms-linea-alerta" />
-                                        <polyline :points="graficaOMS.lineas.sd_3" class="oms-linea oms-linea-extrema" />
-                                        <polyline :points="graficaOMS.lineas.sd0" class="oms-linea oms-linea-mediana" />
-                                        <circle :cx="graficaOMS.punto.x" :cy="graficaOMS.punto.y" r="4" class="oms-punto-paciente" />
-                                        <text v-for="tick in graficaOMS.ejeX" :key="tick.m" :x="tick.x" :y="graficaOMS.altoSvg - 4" class="oms-eje-texto" text-anchor="middle">{{ tick.m }}m</text>
-                                    </svg>
-                                    <div class="oms-leyenda">
-                                        <span><i class="oms-swatch oms-swatch-normal"></i> Normal (-2 a +1 DE)</span>
-                                        <span><i class="oms-swatch oms-swatch-alerta"></i> Alerta (±2 a ±3 DE)</span>
-                                        <span><i class="oms-swatch oms-swatch-punto"></i> Este paciente</span>
-                                    </div>
-                                </div>
+                                <GraficaCrecimientoOMS
+                                    v-if="imcModalPreview && imcModalPreview.tipo === 'pediatrico_oms'"
+                                    :curva="imcModalPreview.curva"
+                                    :agemos="imcModalPreview.agemos"
+                                    :bmi="imcModalPreview.bmi"
+                                    :z-score="imcModalPreview.zScore"
+                                />
+                                <GraficaCrecimientoCDC
+                                    v-if="imcModalPreview && imcModalPreview.tipo === 'pediatrico'"
+                                    :curva="imcModalPreview.curva"
+                                    :agemos="imcModalPreview.agemos"
+                                    :bmi="imcModalPreview.bmi"
+                                    :z-score="imcModalPreview.zScore"
+                                />
                             </div>
                             <div class="campo-triage campo-triage-imc campo-triage-imc-vacio" v-else-if="formTriage.peso || formTriage.talla">
                                 <span>IMC (calculado)</span>
@@ -283,6 +299,8 @@ import ApiService from '../../services/ApiService.js'
 import { evaluarIMC } from '@/utils/bmiPercentile.js'
 import lmsTable from '@/data/bmi-lms-cdc.json'
 import lmsTableOMS from '@/data/bmi-lms-oms-0-2.json'
+import GraficaCrecimientoOMS from './GraficaCrecimientoOMS.vue'
+import GraficaCrecimientoCDC from './GraficaCrecimientoCDC.vue'
 
 // Mismo patrón de rutas que usa el componente de chat de consulta IA.
 var route = document.querySelector("[name=route]").value
@@ -298,6 +316,7 @@ var route = document.querySelector("[name=route]").value
 
 export default {
     name: 'SignosVitales',
+    components: { GraficaCrecimientoOMS,GraficaCrecimientoCDC },
     props: {
         paciente: {
             type: Object,
@@ -387,6 +406,15 @@ export default {
         imcGuardado() {
             if (!this.triageVisitaActual) return null
             return this.calcularIMCInfo(this.triageVisitaActual.peso, this.triageVisitaActual.talla)
+        },
+        infoImcActual() {
+            return this.editandoSignosInline ? this.imcModalPreview : this.imcGuardado
+        },
+        mostrarGraficaOMS() {
+            return this.infoImcActual?.tipo === 'pediatrico_oms'
+        },
+        mostrarGraficaCDC() {
+            return this.infoImcActual?.tipo === 'pediatrico'
         },
         // NUEVO: el triage a mostrar. Prioriza el recién guardado en ESTA
         // sesión (triageGuardadoLocal); si no hay uno nuevo, busca en el
@@ -1118,75 +1146,29 @@ export default {
 .modal-fade-leave-to {
     opacity: 0;
 }
-.oms-chart-wrap {
-    margin-top: 10px;
-    grid-column: span 2;
+
+.vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    padding: 0 2px;
+    align-items: start; /* nuevo: evita que las tarjetas cortas se estiren a la altura de la gráfica */
 }
 
-.oms-chart {
-    width: 100%;
-    height: auto;
-    background: #fff;
-    border: 1px solid var(--line, #E3E8EF);
-    border-radius: 8px;
+.vital-item-grafica {
+    grid-column: 3 / 8; /* desde la línea 3 (después del IMC) hasta el final de la fila de 7 columnas */
 }
 
-.oms-zona-normal {
-    fill: rgba(14, 159, 110, 0.12);
-    stroke: none;
+@media (max-width: 900px) {
+    .vital-item-grafica {
+        grid-column: 1 / -1; /* en pantallas más chicas, ocupa toda la fila debajo */
+    }
 }
 
-.oms-linea {
-    fill: none;
-    stroke-width: 1.2;
+@media (max-width: 500px) {
+    .vital-item-grafica {
+        grid-column: 1 / -1;
+    }
 }
 
-.oms-linea-mediana {
-    stroke: #0E9F6E;
-    stroke-width: 1.6;
-}
-
-.oms-linea-alerta {
-    stroke: #D97706;
-    stroke-dasharray: 3 2;
-}
-
-.oms-linea-extrema {
-    stroke: #DC2626;
-    stroke-dasharray: 2 2;
-}
-
-.oms-punto-paciente {
-    fill: #0F172A;
-    stroke: #fff;
-    stroke-width: 1.5;
-}
-
-.oms-eje-texto {
-    font-size: 5.5px;
-    fill: var(--ink-faint, #94A3B8);
-    font-family: 'Inter', sans-serif;
-}
-
-.oms-leyenda {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 6px;
-    font-size: .62rem;
-    color: var(--ink-soft, #51607A);
-}
-
-.oms-swatch {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    margin-right: 3px;
-    vertical-align: middle;
-}
-
-.oms-swatch-normal { background: rgba(14,159,110,.4); }
-.oms-swatch-alerta { background: #D97706; }
-.oms-swatch-punto { background: #0F172A; }
 </style>
