@@ -205,15 +205,23 @@
        
         <!-- ══ BOTONES ══ -->
         <div class="action-row mt-5">
-            <button type="button" class="btn cancel-btn" @click="resetForm">
+            <button type="button" class="btn cancel-btn" :disabled="guardando" @click="resetForm">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" clip-rule="evenodd"/></svg>
                 Cancelar
             </button>
-            <button type="button" class="btn save-btn" @click="guardarPaciente">
-                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/></svg>
-                Guardar datos
+
+            <button type="button" class="btn save-btn" :disabled="guardando" @click="guardarPaciente(false)">
+                <svg v-if="botonPresionado === 'guardar'" class="spin" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 018 8h-2a6 6 0 00-6-6V2z"/></svg>
+                <svg v-else viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h1v-5a1 1 0 011-1h8a1 1 0 011 1v5h1a1 1 0 001-1V6.414a1 1 0 00-.293-.707l-2.414-2.414A1 1 0 0012.586 3H4zm3 0v3h6V3H7zm1 11v3h4v-3H8z"/></svg>
+                {{ guardando && botonPresionado === 'guardar' ? 'Guardando...' : (pacienteId ? 'Guardar y actualizar' : 'Guardar') }}
+            </button>
+
+            <button type="button" class="btn save-consulta-btn" :disabled="guardando" @click="guardarPaciente(true)">
+                <svg v-if="botonPresionado === 'consulta'" class="spin" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 018 8h-2a6 6 0 00-6-6V2z"/></svg>
+                <svg v-else viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clip-rule="evenodd"/></svg>
+                {{ guardando && botonPresionado === 'consulta' ? 'Guardando...' : 'Guardar e iniciar consulta' }}
             </button>
         </div>
-
     </div>
 </template>
 
@@ -232,6 +240,8 @@ export default {
             fotoPreview: null,
             edadError: '',
             pacienteId: null,
+            guardando: false,
+            botonPresionado: null,
             activeStep: 'sec-personal',
             steps: [
                 { id: 'sec-personal',       num: '01', label: 'Personal' },
@@ -477,15 +487,15 @@ export default {
                 motivo_consulta: ''
             }
         },
-        // Guardar paciente en la base de datos.
-        // El backend (PacienteController@store) verifica si ya existe un
-        // paciente con el mismo nombre + CURP:
-        //   - Si YA EXISTE (data.existe === true): no se crea nada nuevo,
-        //     se redirige a ListaConsultas.
-        //   - Si es NUEVO (data.existe === false): se crea el paciente
-        //     (+ triage) y se redirige a ConsultaInteligente/{id} del
-        //     paciente recién creado.
-        async guardarPaciente() {
+        // Guarda o actualiza al paciente (según pacienteId) y redirige al
+        // terminar, según qué botón se haya presionado:
+        //   - iniciarConsulta = true  -> ConsultaInteligente/{id} (con los
+        //     datos ya guardados/actualizados y precargados)
+        //   - iniciarConsulta = false -> ListaPacientes
+        // Esta misma lógica de destino aplica igual en modo edición y en
+        // modo registro nuevo: la única diferencia entre botones es a dónde
+        // se va después, nunca cuál acción de guardado se ejecuta.
+        async guardarPaciente(iniciarConsulta = false) {
             if (!this.form.nombre) {
                 Swal.fire({
                     icon: 'warning',
@@ -496,16 +506,23 @@ export default {
                 return
             }
 
+            if (this.guardando) return
+            this.guardando = true
+            this.botonPresionado = iniciarConsulta ? 'consulta' : 'guardar' // <-- NUEVO
+
             if (this.pacienteId) {
                 try {
                     await ApiService.put('/pacientes/' + this.pacienteId, this.form)
+
                     Swal.fire({
                         icon: 'success',
                         title: 'Paciente actualizado',
                         text: 'Los cambios fueron guardados exitosamente.',
                         confirmButtonText: 'Aceptar'
                     }).then(() => {
-                        window.location.href = '/ListaPacientes'
+                        window.location.href = iniciarConsulta
+                            ? '/ConsultaInteligente/' + this.pacienteId
+                            : '/ListaPacientes'
                     })
                 } catch (error) {
                     console.error(error)
@@ -515,6 +532,9 @@ export default {
                         text: 'Ocurrió un error al actualizar el paciente.',
                         confirmButtonText: 'Aceptar'
                     })
+                } finally {
+                    this.guardando = false
+                    this.botonPresionado = null // <-- NUEVO
                 }
                 return
             }
@@ -522,27 +542,25 @@ export default {
             try {
                 const response = await ApiService.post('/pacientes', this.form)
                 const data = response.data
-                console.log('Guardado:', data)
 
                 if (data.existe) {
-                    // Paciente ya registrado con ese nombre + CURP: no se
-                    // duplica, se manda directo a la lista de consultas.
+                    const idExistente = data.data?.Paciente?.id
+
                     Swal.fire({
                         icon: 'info',
                         title: 'Paciente ya registrado',
-                        text: 'Ya existe un paciente con ese nombre y CURP. Te llevaremos a la lista de consultas.',
+                        text: 'Ya existe un paciente con ese nombre y CURP.',
                         confirmButtonText: 'Continuar'
                     }).then(() => {
-                        window.location.href = '/ListaConsultas'
+                        window.location.href = (iniciarConsulta && idExistente)
+                            ? '/ConsultaInteligente/' + idExistente
+                            : '/ListaPacientes'
                     })
                     return
                 }
 
-                // Paciente nuevo: se guardó correctamente, se abre
-                // Consulta Inteligente para ese paciente.
                 const pacienteId = data.data.Paciente.id
 
-                // NUEVO: descarga automática del PDF del expediente (si se generó)
                 if (data.expediente_pdf_url) {
                     this.descargarExpedientePdf(data.expediente_pdf_url, data.data.Paciente.paciente_id)
                 }
@@ -553,7 +571,9 @@ export default {
                     text: 'El paciente fue guardado exitosamente.',
                     confirmButtonText: 'Continuar'
                 }).then(() => {
-                    window.location.href = '/ConsultaInteligente/' + pacienteId
+                    window.location.href = iniciarConsulta
+                        ? '/ConsultaInteligente/' + pacienteId
+                        : '/ListaPacientes'
                 })
 
             } catch (error) {
@@ -564,6 +584,9 @@ export default {
                     text: 'Ocurrió un error al guardar el paciente.',
                     confirmButtonText: 'Aceptar'
                 })
+            } finally {
+                this.guardando = false
+                this.botonPresionado = null // <-- NUEVO
             }
         },
 
@@ -858,4 +881,42 @@ export default {
 @media (prefers-reduced-motion: reduce) {
     .field-wrap, .vital-card, .section-header, .overall-dot { animation: none !important; }
 }
+
+.save-consulta-btn {
+    background: #0E9F6E;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(14,159,110,.28);
+}
+.save-consulta-btn:hover:not(:disabled) {
+    background: #0c8a5f;
+    box-shadow: 0 8px 22px rgba(14,159,110,.36);
+}
+.btn:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.cancel-btn {
+    background: #FEF2F2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+}
+.cancel-btn:hover:not(:disabled) {
+    background: #FEE2E2;
+    border-color: #FCA5A5;
+}
+
+.spin {
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 </style>
