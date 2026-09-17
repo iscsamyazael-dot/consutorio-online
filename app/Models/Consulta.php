@@ -17,7 +17,8 @@ class Consulta extends Model
         'motivo_consulta',
         'diagnostico',
         'diagnostico_icd11_codigo',   
-        'diagnostico_icd11_titulo',   
+        'diagnostico_icd11_titulo',
+        'diagnosticos_confirmados',   
         'recomendaciones_medico',     
         'observaciones',
         'origen',
@@ -33,6 +34,13 @@ class Consulta extends Model
         'transcripcion_activa',
         'audio_consulta',
         'estado_consulta'
+    ];
+
+    // NUEVO: sin esto, Laravel guarda/lee diagnosticos_confirmados como
+    // texto JSON crudo en vez de array PHP — $consulta->diagnosticos_confirmados
+    // no funcionaría como array en ningún lado del controlador/servicio.
+    protected $casts = [
+        'diagnosticos_confirmados' => 'array',
     ];
 
     public function paciente()

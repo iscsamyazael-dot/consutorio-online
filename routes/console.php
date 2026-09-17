@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Automatización para cambiar el estado de la cita de agenado a inasistencia
 Schedule::command('app:actualizar-citas-inasistencias')->everyTenMinutes();
+
+//Verificación para ver los logs del DiccionarioMedico//
+Schedule::command('diccionario:sugerir-terminos --dias=30 --min=3')->weekly();

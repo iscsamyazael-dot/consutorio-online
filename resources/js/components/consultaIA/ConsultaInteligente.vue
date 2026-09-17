@@ -242,12 +242,12 @@
                 <RecetaInteligente
                     :sintomas="sintomasDetectados"
                     :consulta-id="consultaId"
-                    :diagnostico-confirmado="diagnosticoConfirmado"
+                    :diagnosticos-confirmados="diagnosticosConfirmados"
                 />
                 <DerivacionClinica
                     :sintomas="sintomasDetectados"
                     :consulta-id="consultaId"
-                    :diagnostico-confirmado="diagnosticoConfirmado"
+                    :diagnosticos-confirmados="diagnosticosConfirmados"
                 />
             </div>
         </div>
@@ -323,12 +323,12 @@ export default {
             debounceTimer: null,
             listaEsperaIdHoy: null,
             todosPacientes: [],
-            diagnosticoConfirmado: null,
+            diagnosticosConfirmados: [],
             progresoHistoriaClinica: null,
             mostrarFlotante: false,
             ultimoScrollY: 0,
             triageLocalConsulta: null,
-             promesaListaEsperaIdHoy: null
+            promesaListaEsperaIdHoy: null
         }
     },
     computed: {
@@ -798,10 +798,11 @@ export default {
             })
         },
 
-        onDiagnosticoGuardado({ diagnostico, recomendaciones }) {
-            this.diagnosticoConfirmado = diagnostico 
+        onDiagnosticoGuardado({ diagnosticos, recomendaciones }) {
+            this.diagnosticosConfirmados = diagnosticos
             if (this.$refs.notaPsoapp) {
-                this.$refs.notaPsoapp.sobrescribirSeccion('A', diagnostico)
+                const textoDiagnosticos = diagnosticos.map(d => d.diagnostico).join('; ')
+                this.$refs.notaPsoapp.sobrescribirSeccion('A', textoDiagnosticos)
                 if (recomendaciones) {
                     this.$refs.notaPsoapp.sobrescribirSeccion('P2', recomendaciones)
                 }

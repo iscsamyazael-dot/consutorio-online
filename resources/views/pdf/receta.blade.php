@@ -320,21 +320,32 @@
         </tr>
         @endif
         {{-- AQUÍ VA EL BLOQUE NUEVO --}}
-        @if($consulta->diagnostico || $evaluacion)
-        <tr>
-            <td class="datos-label">Diagnóstico:</td>
-            <td>
-                @if(!empty($consulta->diagnostico))
-                    {{ $consulta->diagnostico }}
-                    @if(!empty($consulta->diagnostico_icd11_codigo))
-                        <span class="text-muted" style="font-size: 10px;">({{ $consulta->diagnostico_icd11_codigo }})</span>
+        @php
+            $diagnosticosConfirmadosList = is_array($consulta->diagnosticos_confirmados ?? null)
+                ? $consulta->diagnosticos_confirmados
+                : [];
+        @endphp
+        @if(count($diagnosticosConfirmadosList) > 0 || $evaluacion)
+            <tr>
+                <td class="datos-label">Diagnóstico:</td>
+                <td>
+                    @if(count($diagnosticosConfirmadosList) > 0)
+                        @php
+                            $textoDiagnosticos = collect($diagnosticosConfirmadosList)->map(function ($dx) {
+                                $texto = $dx['diagnostico'] ?? '';
+                                if (!empty($dx['icd11_codigo'])) {
+                                    $texto .= ' (' . $dx['icd11_codigo'] . ')';
+                                }
+                                return $texto;
+                            })->implode('; ');
+                        @endphp
+                        {{ $textoDiagnosticos }}
+                    @else
+                        {{ $evaluacion->diagnostico_probable }}
+                        <span style="font-size: 9.5px; color: #9ca3af;">(probable, pendiente de confirmar)</span>
                     @endif
-                @else
-                    {{ $evaluacion->diagnostico_probable }}
-                    <span style="font-size: 9.5px; color: #9ca3af;">(probable, pendiente de confirmar)</span>
-                @endif
-            </td>
-        </tr>
+                </td>
+            </tr>
         @endif
     </table>
 

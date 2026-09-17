@@ -127,6 +127,13 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'anclaje_descartes' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/anclaje-descartes.log'),
+            'level' => 'warning',
+            'days' => 90,
+        ],
+
     ],
 
 ];

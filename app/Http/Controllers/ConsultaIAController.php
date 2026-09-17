@@ -1016,20 +1016,17 @@ class ConsultaIAController extends Controller
 
             $sintomas = $validated['sintomas'] ?? [];
 
-            // NUEVO: si hay consulta_id y ya tiene diagnóstico confirmado por
-            // el médico, lo usamos como ancla para la IA.
-            $diagnosticoConfirmado = null;
+            // NUEVO: si hay consulta_id, usamos TODOS los diagnósticos confirmados como ancla.
+            $diagnosticosConfirmados = [];
             if (!empty($validated['consulta_id'])) {
                 $consulta = Consulta::find($validated['consulta_id']);
-                $diagnosticoConfirmado = $consulta->diagnostico ?? null;
+                $diagnosticosConfirmados = $consulta->diagnosticos_confirmados ?? [];
             }
 
-            // Si no hay síntomas Y tampoco hay diagnóstico confirmado, no hay
-            // nada con qué trabajar -- ahí sí es un error real que reportar.
-            if (empty($sintomas) && !$diagnosticoConfirmado) {
+            if (empty($sintomas) && empty($diagnosticosConfirmados)) {
                 return response()->json([
                     'success' => false,
-                    'error'   => 'No hay síntomas detectados ni un diagnóstico confirmado para generar sugerencias.'
+                    'error'   => 'No hay síntomas detectados ni diagnósticos confirmados para generar sugerencias.'
                 ], 422);
             }
 
@@ -1041,7 +1038,7 @@ class ConsultaIAController extends Controller
             $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre(
                 $sintomas,
                 $nombresEspecialidades,
-                $diagnosticoConfirmado   // <-- nuevo tercer parámetro
+                $diagnosticosConfirmados   // <-- nuevo tercer parámetro
             );
 
 
@@ -1159,16 +1156,16 @@ class ConsultaIAController extends Controller
 
             // NUEVO: si hay consulta_id y ya tiene diagnóstico confirmado por
             // el médico, lo usamos como ancla para la IA.
-            $diagnosticoConfirmado = null;
+            $diagnosticosConfirmados = [];
             if (!empty($validated['consulta_id'])) {
                 $consulta = Consulta::find($validated['consulta_id']);
-                $diagnosticoConfirmado = $consulta->diagnostico ?? null;
+                $diagnosticosConfirmados = $consulta->diagnosticos_confirmados ?? [];
             }
 
-            if (empty($sintomas) && !$diagnosticoConfirmado) {
+            if (empty($sintomas) && empty($diagnosticosConfirmados)) {
                 return response()->json([
                     'success' => false,
-                    'error'   => 'No hay síntomas detectados ni un diagnóstico confirmado para generar sugerencias.'
+                    'error'   => 'No hay síntomas detectados ni diagnósticos confirmados para generar sugerencias.'
                 ], 422);
             }
 
@@ -1185,7 +1182,7 @@ class ConsultaIAController extends Controller
             $respuestaIA = $this->iaClinicaService->sugerirMedicamentoLibre(
                 $sintomas,
                 $nombresEspecialidades,
-                $diagnosticoConfirmado
+                $diagnosticosConfirmados
             );
 
             $triage = null;
@@ -1226,7 +1223,7 @@ class ConsultaIAController extends Controller
             }
 
             if (!$especialidad) {
-                $resultadoRespaldo = $this->resolverEspecialidadDeRespaldo($sintomas, $diagnosticoConfirmado);
+                $resultadoRespaldo = $this->resolverEspecialidadDeRespaldo($sintomas, $diagnosticosConfirmados);
 
                 $especialidad = $resultadoRespaldo['especialidad'];
                 $fuente = 'ia_respaldo';
@@ -1268,15 +1265,21 @@ class ConsultaIAController extends Controller
      * (sugerirEspecialidadSimple), anclada al diagnóstico confirmado si
      * existe, o a los síntomas en su defecto.
      */
-    private function resolverEspecialidadDeRespaldo(array $sintomas, ?string $diagnosticoConfirmado): array
+    private function resolverEspecialidadDeRespaldo(array $sintomas, ?array $diagnosticosConfirmados): array
     {
         $especialidadesActivas = Specialty::where('estado', 'Activo')
             ->orderBy('nombre')
             ->pluck('nombre')
             ->toArray();
 
-        $textoAnclaje = $diagnosticoConfirmado
-            ?: (!empty($sintomas) ? implode(', ', $sintomas) : null);
+        $textoDiagnosticos = collect($diagnosticosConfirmados ?? [])
+            ->map(fn($d) => is_array($d) ? ($d['diagnostico'] ?? '') : $d)
+            ->filter()
+            ->implode(', ');
+
+        $textoAnclaje = $textoDiagnosticos !== ''
+            ? $textoDiagnosticos
+            : (!empty($sintomas) ? implode(', ', $sintomas) : null);
 
         $especialidadIdeal = $textoAnclaje
             ? $this->iaClinicaService->sugerirEspecialidadSimple($textoAnclaje, $especialidadesActivas)
@@ -1442,13 +1445,44 @@ class ConsultaIAController extends Controller
             }
 
             $validated = $request->validate([
-                'diagnostico'               => 'required|string',
-                'diagnostico_icd11_codigo'  => 'nullable|string|max:20',
-                'diagnostico_icd11_titulo'  => 'nullable|string|max:255',
-                'recomendaciones'           => 'nullable|string',
+                'diagnosticos'                  => 'required|array|min:1',
+                'diagnosticos.*.diagnostico'    => 'required|string',
+                'diagnosticos.*.icd11_codigo'   => 'nullable|string|max:20',
+                'diagnosticos.*.icd11_titulo'   => 'nullable|string|max:255',
+                'recomendaciones'               => 'nullable|string',
             ]);
 
-            $consulta->update($validated);
+            $diagnosticosLimpios = collect($validated['diagnosticos'])
+                ->map(fn($d) => [
+                    'diagnostico'  => trim($d['diagnostico']),
+                    'icd11_codigo' => $d['icd11_codigo'] ?? null,
+                    'icd11_titulo' => $d['icd11_titulo'] ?? null,
+                ])
+                ->filter(fn($d) => $d['diagnostico'] !== '')
+                ->values()
+                ->all();
+
+            if (empty($diagnosticosLimpios)) {
+                return response()->json(['success' => false, 'error' => 'Debes confirmar al menos un diagnóstico.'], 422);
+            }
+
+            $datosActualizar = [
+                'diagnosticos_confirmados' => $diagnosticosLimpios,
+                // Legacy: se conserva 'diagnostico' (texto, join de todos) para
+                // que los PDFs existentes (pdf.diagnostico/pdf.notasoapp) sigan
+                // mostrando algo correcto sin tocarlos.
+                'diagnostico'              => collect($diagnosticosLimpios)->pluck('diagnostico')->implode('; '),
+                'diagnostico_icd11_codigo' => $diagnosticosLimpios[0]['icd11_codigo'] ?? null,
+                'diagnostico_icd11_titulo' => $diagnosticosLimpios[0]['icd11_titulo'] ?? null,
+            ];
+
+            // FIX: la columna real es recomendaciones_medico, no recomendaciones.
+            if (array_key_exists('recomendaciones', $validated)) {
+                $datosActualizar['recomendaciones_medico'] = $validated['recomendaciones'];
+            }
+
+
+            $consulta->update($datosActualizar);
 
             return response()->json([
                 'success'  => true,

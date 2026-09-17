@@ -442,6 +442,22 @@
     {{-- =====================================================
          DATOS DEL PACIENTE
     ====================================================== --}}
+    @php
+        $diagnosticosConfirmadosList = is_array($consulta->diagnosticos_confirmados ?? null)
+            ? $consulta->diagnosticos_confirmados
+            : [];
+
+        $diagnosticoTexto = count($diagnosticosConfirmadosList) > 0
+            ? implode('; ', array_map(function ($dx) {
+                $texto = $dx['diagnostico'] ?? '';
+                if (!empty($dx['icd11_codigo'])) {
+                    $texto .= ' (' . $dx['icd11_codigo'] . ')';
+                }
+                return $texto;
+            }, $diagnosticosConfirmadosList))
+            : null;
+    @endphp
+
 
     <table class="patient-table">
 
@@ -580,7 +596,7 @@
 
             <td class="patient-value">
 
-                {{ $consulta->diagnostico ?? 'No registrado' }}
+                {{ $diagnosticoTexto ?? 'No registrado' }}
 
             </td>
 
@@ -637,7 +653,7 @@
             <div class="soap-text">
 
                 {{ $nota->analisis
-                    ?? $consulta->diagnostico
+                    ?? $diagnosticoTexto
                     ?? 'No se registró análisis clínico.'
                 }}
 

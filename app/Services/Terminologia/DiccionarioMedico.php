@@ -144,7 +144,10 @@ class DiccionarioMedico
             'sudoración excesiva' => 'Hiperhidrosis',
             'hinchazón generalizada del cuerpo' => 'Edema generalizado',
             'sangrado (en general)' => 'Hemorragia',
+            'azúcar alta / descontrolada' => 'Hiperglucemia',
+            'azúcar baja' => 'Hipoglucemia'
         ],
+
     ];
 
     /**

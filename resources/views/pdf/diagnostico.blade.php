@@ -440,14 +440,29 @@
      si aún no se ha confirmado ninguno, cae al diagnóstico_probable crudo
      de la IA (evaluaciones_ia) como respaldo. --}}
     @php
-        $diagnosticoMostrar = $consulta->diagnostico ?: ($evaluacion->diagnostico_probable ?? null);
+        $diagnosticosConfirmadosList = is_array($consulta->diagnosticos_confirmados ?? null)
+            ? $consulta->diagnosticos_confirmados
+            : [];
     @endphp
-    @if(!empty($diagnosticoMostrar))
+
+    @if(count($diagnosticosConfirmadosList) > 0)
     <div class="diagnostico-box">
         <h2 style="border-bottom:none; margin:0 0 6px; padding-bottom:0;">
-            {{ $consulta->diagnostico ? 'Diagnóstico confirmado' : 'Diagnóstico probable' }}
+            Diagnóstico{{ count($diagnosticosConfirmadosList) > 1 ? 's confirmados' : ' confirmado' }}
         </h2>
-        <p>{{ $diagnosticoMostrar }}</p>
+        @foreach($diagnosticosConfirmadosList as $dx)
+            <p style="margin:0 0 4px;">
+                {{ $dx['diagnostico'] ?? '' }}
+                @if(!empty($dx['icd11_codigo']))
+                    <span style="color:#6b7280; font-size:10px;"> (ICD-11: {{ $dx['icd11_codigo'] }})</span>
+                @endif
+            </p>
+        @endforeach
+    </div>
+    @elseif(!empty($evaluacion->diagnostico_probable ?? null))
+    <div class="diagnostico-box">
+        <h2 style="border-bottom:none; margin:0 0 6px; padding-bottom:0;">Diagnóstico probable</h2>
+        <p>{{ $evaluacion->diagnostico_probable }}</p>
     </div>
     @endif
 

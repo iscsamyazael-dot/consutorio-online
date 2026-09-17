@@ -530,6 +530,18 @@ export default {
             return combinados
         },
 
+        // Nuevo método, junto a combinarSintomas()
+        formatearDiagnosticosProbables(iaData) {
+            const lista = Array.isArray(iaData?.diagnosticos_probables) ? iaData.diagnosticos_probables : []
+            if (lista.length > 0) {
+                return lista
+                    .map(dp => dp.porcentaje ? `${dp.diagnostico} (${dp.porcentaje}%)` : dp.diagnostico)
+                    .join(', ')
+            }
+            // Fallback por compatibilidad, si algún endpoint aún no manda el array
+            return iaData?.diagnostico_probable || null
+        },
+
         /**
          * Punto de entrada único del botón de enviar (y del Enter en el
          * textarea).
@@ -681,8 +693,9 @@ export default {
                     this.$emit('actualizarIaData', respTexto.data.ia_data)
                     this.$emit('actualizarSintomas', this.sintomas)
 
-                    this.mensajes[idxAnalizando].texto = respTexto.data.ia_data.diagnostico_probable
-                        ? `Diagnóstico probable (según ${nombreArchivo} y el mensaje): ${respTexto.data.ia_data.diagnostico_probable}`
+                    const textoDx = this.formatearDiagnosticosProbables(respTexto.data.ia_data)
+                    this.mensajes[idxAnalizando].texto = textoDx
+                        ? `Diagnósticos probables (según ${nombreArchivo} y el mensaje): ${textoDx}`
                         : 'Análisis completado.'
 
                 } else {
@@ -783,8 +796,9 @@ export default {
                             this.$emit('actualizarSintomas', this.sintomas)
 
                             // REEMPLAZAR MENSAJE "analizando..." POR EL DIAGNÓSTICO REAL
-                            this.mensajes[idxAnalizando].texto = response.data.ia_data.diagnostico_probable
-                                ? `Diagnóstico probable: ${response.data.ia_data.diagnostico_probable}`
+                            const textoDx = this.formatearDiagnosticosProbables(response.data.ia_data)
+                            this.mensajes[idxAnalizando].texto = textoDx
+                                ? `Diagnósticos probables: ${textoDx}`
                                 : 'Análisis completado.'
 
                         } else {
@@ -924,8 +938,9 @@ export default {
                         );
                     }
 
-                    this.mensajes[idxAnalizando].texto = response.data.ia_data?.diagnostico_probable
-                        ? `Diagnóstico probable (según ${nombreArchivo}): ${response.data.ia_data.diagnostico_probable}`
+                    const textoDx = this.formatearDiagnosticosProbables(response.data.ia_data)
+                    this.mensajes[idxAnalizando].texto = textoDx
+                        ? `Diagnósticos probables (según ${nombreArchivo}): ${textoDx}`
                         : `Archivo "${nombreArchivo}" analizado.`
 
                     // Avisamos al padre para que refresque ArchivosClinicos.vue

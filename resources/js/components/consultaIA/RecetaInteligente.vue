@@ -15,7 +15,7 @@
                 </h6>
                  <!-- NUEVO: botón para refrescar receta con el diagnóstico ya confirmado -->
                 <button
-                    v-if="diagnosticoConfirmado"
+                    v-if="diagnosticosConfirmados?.length"
                     class="btn btn-outline-primary btn-sm mb-2"
                     :disabled="cargandoSugerencias"
                     @click="buscarSugerencias(sintomas)"
@@ -302,9 +302,9 @@ export default {
             type: [String, Number],
             default: null
         },
-        diagnosticoConfirmado: { 
-            type: String, 
-            default: null 
+        diagnosticosConfirmados: { 
+            type: Array, 
+            default: () => []
         }
     },
 

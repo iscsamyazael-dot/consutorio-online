@@ -25,7 +25,7 @@
             
 
             <template v-else>
-                <div v-if="diagnosticoConfirmado" class="mb-2">
+                <div v-if="diagnosticosConfirmados?.length" class="mb-2">
                     <button
                         class="btn btn-outline-primary btn-sm"
                         :disabled="cargando"
@@ -183,9 +183,9 @@ export default {
             type: String,
             default: null
         },
-        diagnosticoConfirmado: { 
-            type: String, 
-            default: null 
+        diagnosticosConfirmados: { 
+            type: Array,
+            default: () => []
         }
     },
 

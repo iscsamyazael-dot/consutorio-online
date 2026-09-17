@@ -117,7 +117,7 @@ class IAClinicaService
         // primer paso) y no esta capa extra, comenta la llamada de abajo.
         // ============================================================
         if (!empty($data['sintomas'])) {
-            $data['sintomas'] = $this->validarAnclajeSintomas($data['sintomas'], $texto, $consulta);
+             $data['sintomas'] = $this->validarAnclajeSintomas($data['sintomas'], $texto, $consulta, $triage);
         }
 
         // Guardar síntomas
@@ -245,6 +245,9 @@ class IAClinicaService
 
         return [
             'diagnostico_probable' => $data['diagnostico'] ?? 'No determinado',
+            // NUEVO: la IA ya generaba esto en 'diagnosticos_probables' (Fase 4),
+            // solo faltaba reenviarlo — antes se perdía en el camino.
+            'diagnosticos_probables' => $data['diagnosticos_probables'] ?? [],
             'nivel_riesgo' => $nivelRiesgo,
             'recomendaciones' => [$recomendacionFinal],
             'indicaciones_medico' => $data['indicaciones_medico'] ?? null,
@@ -258,38 +261,91 @@ class IAClinicaService
     }
 
     /**
-     * Descarta síntomas que la IA generó pero que no tienen ninguna
-     * coincidencia léxica razonable con el texto original (transcripción o
-     * reporte de estudio). Ver el comentario extenso en el punto donde se
-     * llama, dentro de analizarTranscripcion(), para el detalle de por qué
-     * existe esta capa y sus limitaciones (heurística de subcadenas, no
-     * análisis semántico completo).
+     * Descarta síntomas que la IA generó pero que no tienen ningún respaldo
+     * real en las fuentes legítimas de esta consulta: la transcripción, los
+     * signos vitales del triage, o una traducción médica reconocida de algo
+     * que el paciente sí dijo en lenguaje coloquial.
+     *
+     * Tres capas de anclaje, en orden:
+     * 1) Numérica: si el síntoma trae una cifra (temperatura, glucosa, etc.)
+     *    y esa misma cifra aparece en el texto o en el triage, se ancla sin
+     *    importar el resto de palabras (cubre "Pirexia de 38.4°C" cuando el
+     *    dato viene del triage, no de lo que el paciente dijo con palabras).
+     * 2) Léxica directa: subcadena del propio síntoma en el texto (como antes).
+     * 3) Por diccionario médico: si el síntoma es la traducción médica de un
+     *    término del DiccionarioMedico, y el término COLOQUIAL correspondiente
+     *    sí aparece en el texto, se ancla (cubre "Tos productiva" cuando el
+     *    paciente dijo "flemas", o "Dolor pleurítico" cuando dijo "duele al
+     *    respirar hondo").
+     *
+     * Sigue siendo una heurística de subcadenas/prefijos, no análisis
+     * semántico completo -- prioriza no perder datos reales sobre ser
+     * perfectamente estricta. Revisa los logs de "descartado por falta de
+     * anclaje" periódicamente para detectar si necesita más ajuste.
      */
-    private function validarAnclajeSintomas(array $sintomas, string $textoOriginal, $consulta): array
+    private function validarAnclajeSintomas(array $sintomas, string $textoOriginal, $consulta, $triage = null): array
     {
-        $textoNormalizado = mb_strtolower($textoOriginal);
+        $textoCompleto = mb_strtolower($textoOriginal);
+
+        // Los signos vitales del triage son una fuente tan legítima como la
+        // transcripción -- el propio prompt le pide a la IA citarlos tal cual
+        // en la nota PSOAPP. Antes no se incluían aquí, así que un dato real
+        // capturado en triage (ej. temperatura medida por el personal clínico)
+        // se descartaba solo porque el paciente no lo dijo con esas palabras.
+        if ($triage) {
+            $camposTriage = [
+                $triage->presion ?? null,
+                $triage->frecuencia_cardiaca ?? null,
+                $triage->frecuencia_respiratoria ?? null,
+                $triage->temperatura ?? null,
+                $triage->saturacion ?? null,
+                $triage->peso ?? null,
+                $triage->talla ?? null,
+            ];
+            $textoCompleto .= ' ' . mb_strtolower(implode(' ', array_filter($camposTriage)));
+        }
+
         $sintomasValidados = [];
 
         foreach ($sintomas as $sintoma) {
-            $palabrasClave = preg_split('/[\s,\/()\-]+/', mb_strtolower($sintoma));
+            $sintomaNormalizado = mb_strtolower($sintoma);
+
+            // --- CAPA 1: coincidencia numérica directa ---
+            preg_match_all('/\d+(?:[.,]\d+)?/', $sintoma, $numerosSintoma);
+            $ancladoPorNumero = false;
+            foreach ($numerosSintoma[0] as $numero) {
+                if (mb_strlen($numero) >= 2 && str_contains($textoCompleto, $numero)) {
+                    $ancladoPorNumero = true;
+                    break;
+                }
+            }
+
+            if ($ancladoPorNumero) {
+                $sintomasValidados[] = $sintoma;
+                continue;
+            }
+
+            // --- CAPA 2: coincidencia léxica directa (la que ya existía) ---
+            $palabrasClave = preg_split('/[\s,\/()\-]+/', $sintomaNormalizado);
             $palabrasClave = array_filter($palabrasClave, fn($p) => mb_strlen($p) > 4);
 
-            // Si no quedan palabras "significativas" (todo el término es corto),
-            // no filtramos: preferimos dejarlo pasar antes que descartar por
-            // un falso negativo de la heurística.
             $tieneCoincidencia = empty($palabrasClave);
-
             foreach ($palabrasClave as $palabra) {
-                if (str_contains($textoNormalizado, mb_substr($palabra, 0, 5))) {
+                if (str_contains($textoCompleto, mb_substr($palabra, 0, 5))) {
                     $tieneCoincidencia = true;
                     break;
                 }
             }
 
+            // --- CAPA 3: anclaje vía diccionario médico ---
+            if (!$tieneCoincidencia) {
+                $tieneCoincidencia = $this->ancladoPorDiccionario($sintomaNormalizado, $textoCompleto);
+            }
+
             if ($tieneCoincidencia) {
                 $sintomasValidados[] = $sintoma;
             } else {
-                Log::warning('Síntoma descartado por falta de anclaje en el texto original', [
+                Log::channel('anclaje_descartes')->warning('Síntoma descartado por falta de anclaje en el texto original', [
                     'sintoma' => $sintoma,
                     'consulta_id' => $consulta->id ?? null,
                 ]);
@@ -298,6 +354,65 @@ class IAClinicaService
 
         return $sintomasValidados;
     }
+
+    /**
+     * Verifica si $sintomaNormalizado es la traducción médica reconocida
+     * (según DiccionarioMedico) de algo que el paciente sí dijo en lenguaje
+     * coloquial dentro de $textoNormalizado.
+     *
+     * Ej: sintoma "Tos productiva" -> coincide con la entrada coloquial
+     * "tos con flema" -> médico "Tos productiva" -> se busca "flema" en el
+     * texto -> el paciente dijo "flemas más oscuras" -> ancla.
+     */
+    private function ancladoPorDiccionario(string $sintomaNormalizado, string $textoNormalizado): bool
+    {
+        foreach (DiccionarioMedico::aplanado() as $coloquial => $medico) {
+            // Los términos médicos a veces vienen como "A / B" (sinónimos
+            // intercambiables, ej. "Dolor torácico / Precordialgia").
+            $variantesMedicas = array_map('trim', explode('/', mb_strtolower($medico)));
+
+            $matchMedico = false;
+            foreach ($variantesMedicas as $variante) {
+                if ($variante === '') continue;
+
+                if (str_contains($sintomaNormalizado, $variante) || str_contains($variante, $sintomaNormalizado)) {
+                    $matchMedico = true;
+                    break;
+                }
+
+                // Fallback más laxo: comparten la primera palabra significativa
+                // (ej. "Pirexia de 38.4°C" vs "Pirexia / Hipertermia" -> "pirexia").
+                $primeraPalabra = explode(' ', $variante)[0] ?? '';
+                if (mb_strlen($primeraPalabra) > 4 && str_contains($sintomaNormalizado, mb_substr($primeraPalabra, 0, 6))) {
+                    $matchMedico = true;
+                    break;
+                }
+            }
+
+            if (!$matchMedico) {
+                continue;
+            }
+
+            // El síntoma médico coincide con esta entrada; ahora verificamos
+            // que el término COLOQUIAL (lo que el paciente pudo haber dicho
+            // realmente) tenga respaldo real en el texto original. Sin esto,
+            // cualquier síntoma cuyo nombre médico simplemente "suene parecido"
+            // se anclaría sin haber sido mencionado -- eso reabriría la puerta
+            // a alucinaciones, que es justo lo que este filtro existe para evitar.
+            $coloquialLimpio = preg_replace('/\(.*?\)/', '', mb_strtolower($coloquial));
+            $palabrasColoquial = preg_split('/[\s,\/]+/', $coloquialLimpio);
+            $palabrasColoquial = array_filter($palabrasColoquial, fn($p) => mb_strlen($p) > 3);
+
+            foreach ($palabrasColoquial as $palabra) {
+                if (str_contains($textoNormalizado, mb_substr($palabra, 0, 5))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+   
 
     /**
      * Arma el bloque de texto con el historial de consultas anteriores y la
@@ -1383,7 +1498,7 @@ class IAClinicaService
     /**
      * Sugerencia de medicamentos con triage completo - LENGUAJE MÉDICO PROFESIONAL
      */
-    public function sugerirMedicamentoLibre(array $sintomas, array $especialidadesDisponibles = [], ?string $diagnosticoConfirmado = null)
+    public function sugerirMedicamentoLibre(array $sintomas, array $especialidadesDisponibles = [],  ?array $diagnosticosConfirmados = null)
     {
         set_time_limit(300);
         //$textoSintomas = implode(', ', $sintomas);
@@ -1405,24 +1520,35 @@ class IAClinicaService
         // aplica: ya no hay que adivinar el diagnóstico, solo generar la
         // receta/derivación coherente con él.
         $bloqueDiagnosticoConfirmado = '';
-        if ($diagnosticoConfirmado) {
-            $bloqueDiagnosticoConfirmado = "
 
+        $listaDiagnosticos = collect($diagnosticosConfirmados ?? [])
+        ->map(fn($d) => is_array($d) ? trim((string) ($d['diagnostico'] ?? '')) : trim((string) $d))
+        ->filter(fn($d) => $d !== '')
+        ->values();
+
+        if ($listaDiagnosticos->isNotEmpty()) {
+            $textoDiagnosticos = $listaDiagnosticos
+                ->map(fn($d, $i) => ($i + 1) . ". $d")
+                ->implode("\n            ");
+
+        $bloqueDiagnosticoConfirmado = "
             =========================================================
-            DIAGNÓSTICO YA CONFIRMADO POR EL MÉDICO (NO LO REEVALÚES)
+            DIAGNÓSTICOS YA CONFIRMADOS POR EL MÉDICO (NO LOS REEVALÚES)
             =========================================================
 
-            El médico tratante YA CONFIRMÓ el siguiente diagnóstico tras revisar al
-            paciente, usando como referencia la clasificación oficial ICD-11 de la OMS:
+            El médico tratante YA CONFIRMÓ los siguientes diagnósticos tras revisar al
+            paciente. Un paciente puede cursar con MÁS DE UNA condición al mismo
+            tiempo (comorbilidad o padecimientos independientes en la misma consulta):
 
-            \"$diagnosticoConfirmado\"
+                $textoDiagnosticos
 
-            Este diagnóstico es un HECHO CLÍNICO ESTABLECIDO, no una hipótesis a evaluar.
-            NO generes diagnósticos probables alternativos ni reconsideres si es correcto.
-            Usa este diagnóstico como ancla única para las FASES 5, 6, 6B y 7
-            (decisión clínica, receta inteligente y/o derivación). El campo
-            \"diagnosticos_probables\" de tu respuesta debe contener EXCLUSIVAMENTE este
-            diagnóstico con 100% de probabilidad.
+            Estos diagnósticos son HECHOS CLÍNICOS ESTABLECIDOS, no hipótesis a evaluar.
+            Usa el CONJUNTO COMPLETO de estos diagnósticos como ancla para las
+            FASES 5, 6, 6B y 7: la receta sugerida y/o la especialidad de derivación
+            deben ser coherentes con TODOS ellos, no solo con el primero. El campo
+            \"diagnosticos_probables\" de tu respuesta debe contener EXCLUSIVAMENTE
+            estos diagnósticos, repartiendo el porcentaje entre ellos de forma que
+            sumen exactamente 100 (si solo hay uno, 100%).
             ";
         }
 
@@ -2251,6 +2377,16 @@ un diagnóstico con un hallazgo que no está en tu propio arreglo de síntomas,
 ese diagnóstico está mal fundamentado: bájale el porcentaje o elimínalo, no lo
 sostengas con datos que no existen en el caso.
 
+REGLA DE COHERENCIA CON COMORBILIDADES:
+Si entre los síntomas extraídos en la FASE 3 existe un hallazgo sistémico o metabólico
+relevante que modifique el curso clínico esperado
+(ej. hiperglucemia, hipoglucemia, descontrol metabólico, inmunosupresión, embarazo),
+ese hallazgo DEBE quedar reflejado explícitamente en al menos uno de los diagnósticos probables
+— como calificador del diagnóstico principal (ej. \"Neumonía adquirida en la comunidad con descompensación metabólica asociada\")
+o como diagnóstico diferencial propio (ej. \"Sepsis de origen pulmonar en paciente con hiperglucemia descompensada\").
+No basta con que el hallazgo aparezca solo en el arreglo \"sintomas\" o en las alertas de la FASE 6:
+el listado de diagnósticos probables debe ser coherente con el cuadro clínico completo, no solo con el síntoma predominante.
+
 FORMATO
 
 Genera únicamente una lista de diagnósticos con su porcentaje de probabilidad.
@@ -2750,6 +2886,13 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
         }
 
         $data = json_decode($contenido, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $jsonBalanceado = $this->extraerPrimerJsonBalanceado($contenido);
+            if ($jsonBalanceado !== null) {
+                $data = json_decode($jsonBalanceado, true);
+            }
+        }
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             Log::error("JSON inválido o incompleto devuelto por la IA ({$origen})", [
@@ -2759,7 +2902,6 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
             ]);
             return null;
         }
-
         // FIX: el uso de tokens viene fuera del JSON que genera el modelo.
         // DeepSeek lo trae en la clave 'usage' de la respuesta HTTP; Gemini
         // lo trae en 'usageMetadata'. Se soportan ambos formatos aquí para
@@ -2833,5 +2975,60 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
             Log::error('Excepción en sugerirEspecialidadSimple: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Extrae el primer objeto JSON balanceado dentro de un texto que puede
+     * traer basura antes y/o después (eco de parámetros, razonamiento del
+     * modelo dejado fuera de <think>...</think>, etc.). A diferencia de un
+     * simple "probar desde la última {", esto encuentra el CIERRE correcto
+     * del objeto contando llaves, sin dejarse engañar por texto adicional
+     * después del JSON válido -- que es lo que rompía json_decode() aunque
+     * el JSON en sí estuviera perfecto.
+     */
+    private function extraerPrimerJsonBalanceado(string $contenido): ?string
+    {
+        $inicio = strpos($contenido, '{');
+        if ($inicio === false) {
+            return null;
+        }
+
+        $profundidad = 0;
+        $dentroString = false;
+        $escapando = false;
+
+        for ($i = $inicio; $i < strlen($contenido); $i++) {
+            $char = $contenido[$i];
+
+            if ($escapando) {
+                $escapando = false;
+                continue;
+            }
+
+            if ($char === '\\' && $dentroString) {
+                $escapando = true;
+                continue;
+            }
+
+            if ($char === '"') {
+                $dentroString = !$dentroString;
+                continue;
+            }
+
+            if ($dentroString) {
+                continue;
+            }
+
+            if ($char === '{') {
+                $profundidad++;
+            } elseif ($char === '}') {
+                $profundidad--;
+                if ($profundidad === 0) {
+                    return substr($contenido, $inicio, $i - $inicio + 1);
+                }
+            }
+        }
+
+        return null; // nunca cerró correctamente
     }
 }

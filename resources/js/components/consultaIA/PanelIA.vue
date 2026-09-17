@@ -21,77 +21,113 @@
                 <div class="col-md-6">
                     <div class="small-box bg-primary position-relative">
 
-                        <!-- ÍCONO DE EDITAR DENTRO DEL BOX -->
                         <button
-                            v-if="!editandoDiagnostico"
+                            v-if="!editandoDiagnosticos"
                             type="button"
                             class="btn-editar-box"
-                            title="Editar diagnóstico"
-                            @click="activarEdicionDiagnostico"
+                            :class="{ 'btn-editar-box--pendiente': diagnosticosProbablesIA.length && !diagnosticosConfirmadosLocal.length }"
+                            title="Editar diagnósticos"
+                            @click="activarEdicionDiagnosticos"
                         >
                             <i class="fas fa-pen"></i>
                         </button>
 
                         <div class="inner">
 
-                            <!-- MODO LECTURA -->
-                            <template v-if="!editandoDiagnostico">
-                                <h5>{{ diagnosticoPrincipal }}</h5>
-                                <p>{{ compatibilidad }}</p>
+                            <!-- MODO LECTURA: lista de diagnósticos confirmados -->
+                            <template v-if="!editandoDiagnosticos">
+                                <template v-if="diagnosticosConfirmadosLocal.length">
+                                    <div v-for="(dx, i) in diagnosticosConfirmadosLocal" :key="i" class="mb-1">
+                                        <h5 class="mb-0">{{ dx.diagnostico }}</h5>
+                                        <small v-if="dx.icd11_codigo" class="text-white-50">ICD-11: {{ dx.icd11_codigo }}</small>
+                                    </div>
+                                    <p class="mt-1 mb-0">Confirmado por el médico</p>
+                                </template>
+                                <template v-else-if="diagnosticosProbablesIA.length">
+                                    <h5 class="mb-1">
+                                        {{ diagnosticosProbablesIA.length }} diagnóstico{{ diagnosticosProbablesIA.length > 1 ? 's' : '' }} sugerido{{ diagnosticosProbablesIA.length > 1 ? 's' : '' }} por IA
+                                    </h5>
+                                    <p
+                                        v-for="(dp, i) in diagnosticosProbablesIA"
+                                        :key="'probable-' + i" 
+                                        class="mb-0"
+                                        style="font-size: 13px; line-height: 1.4;"
+                                        >
+                                        {{ dp.diagnostico }} ({{ dp.porcentaje }}%)
+                                    </p>
+                                    <small class="text-white-50 d-block mt-1">Pendiente de confirmar</small>
+                                </template>
+                                <template v-else>
+                                    <h5>Sin diagnóstico</h5>
+                                    <p>{{ hasError ? 'Último análisis disponible' : (iaData ? 'Análisis realizado (sin confirmar)' : 'Esperando datos clínicos') }}</p>
+                                </template>
                             </template>
 
-                            <!-- MODO EDICIÓN: diagnóstico + buscador ICD-11 -->
+                            <!-- MODO EDICIÓN: lista editable de diagnósticos -->
                             <template v-else>
-                                <label class="d-block text-white-50 small mb-1">Diagnóstico</label>
+                                <label class="d-block text-white-50 small mb-1">
+                                    Diagnósticos ({{ formDiagnosticos.length }})
+                                </label>
 
-                                <!-- FIX BUG 1: ref="contenedorIcd" para que el listener global
-                                     de click pueda detectar clics dentro del buscador y NO
-                                     cierre la lista de resultados. Antes este ref no existía,
-                                     por lo que this.$refs.contenedorIcd era siempre undefined
-                                     y CUALQUIER clic (incluso dentro del <ul>) cerraba la lista. -->
-                                <div class="position-relative" ref="contenedorIcd">
-                                    <input
-                                        type="text"
-                                        class="form-control form-control-sm mb-1 pr-4"
-                                        v-model="formDiagnostico"
-                                        placeholder="Escribe o busca en ICD-11..."
-                                        @input="buscarIcd11"
-                                        @keyup.enter="buscarAhoraIcd11"
-                                    >
-
-                                    <!-- FIX BUG 2: botón de lupa embebido en el input para
-                                         volver a lanzar la búsqueda sin tener que cancelar
-                                         y reabrir el modo edición. También funciona con Enter. -->
+                                <!-- Sugerencias rápidas de la IA (diagnósticos probables) -->
+                                <div v-if="diagnosticosProbablesIA.length" class="mb-2">
+                                    <small class="text-white-50 d-block mb-1">Sugeridos por IA:</small>
                                     <button
+                                        v-for="(dp, i) in diagnosticosProbablesIA"
+                                        :key="'sug-'+i"
                                         type="button"
-                                        class="btn-lupa-icd"
-                                        title="Buscar de nuevo"
-                                        @click="buscarAhoraIcd11"
+                                        class="badge badge-light text-dark mr-1 mb-1 btn-sugerencia-dx"
+                                        @click="agregarDesdeSugerencia(dp)"
                                     >
-                                        <i class="fas fa-search"></i>
+                                        + {{ dp.diagnostico }} ({{ dp.porcentaje }}%)
                                     </button>
-
-                                    <ul v-if="resultadosIcd.length" class="icd-dropdown">
-                                        <li
-                                            v-for="r in resultadosIcd"
-                                            :key="r.codigo"
-                                            @click="seleccionarIcd(r)"
-                                        >
-                                            <strong>{{ r.codigo }}</strong> — {{ r.titulo }}
-                                        </li>
-                                    </ul>
-                                    <small v-if="buscandoIcd" class="text-white-50">Buscando en ICD-11...</small>
                                 </div>
 
-                                <small v-if="formIcdCodigo" class="badge badge-light text-dark">
-                                    Código ICD-11: {{ formIcdCodigo }}
-                                </small>
+                                <div v-for="(dx, index) in formDiagnosticos" :key="index" class="position-relative mb-2 dx-row">
+                                    <div class="position-relative" :ref="'contenedorIcd' + index">
+                                        <input
+                                            type="text"
+                                            class="form-control form-control-sm mb-1 pr-5"
+                                            v-model="dx.diagnostico"
+                                            placeholder="Escribe o busca en ICD-11..."
+                                            @input="buscarIcd11(index)"
+                                            @keyup.enter="buscarAhoraIcd11(index)"
+                                        >
+                                        <button type="button" class="btn-lupa-icd" title="Buscar de nuevo" @click="buscarAhoraIcd11(index)">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                        <button
+                                            v-if="formDiagnosticos.length > 1"
+                                            type="button"
+                                            class="btn-quitar-dx"
+                                            title="Quitar este diagnóstico"
+                                            @click="quitarDiagnostico(index)"
+                                        >
+                                            <i class="fas fa-times"></i>
+                                        </button>
+
+                                        <ul v-if="dx.resultadosIcd && dx.resultadosIcd.length" class="icd-dropdown">
+                                            <li v-for="r in dx.resultadosIcd" :key="r.codigo" @click="seleccionarIcd(index, r)">
+                                                <strong>{{ r.codigo }}</strong> — {{ r.titulo }}
+                                            </li>
+                                        </ul>
+                                        <small v-if="dx.buscandoIcd" class="text-white-50">Buscando en ICD-11...</small>
+                                    </div>
+
+                                    <small v-if="dx.icd11_codigo" class="badge badge-light text-dark">
+                                        Código ICD-11: {{ dx.icd11_codigo }}
+                                    </small>
+                                </div>
+
+                                <button type="button" class="btn btn-sm btn-outline-light mb-2" @click="agregarDiagnosticoVacio">
+                                    <i class="fas fa-plus"></i> Agregar diagnóstico
+                                </button>
 
                                 <div class="mt-2 d-flex" style="gap:6px;">
-                                    <button type="button" class="btn btn-sm btn-light" :disabled="guardando" @click="cancelarEdicionDiagnostico">
+                                    <button type="button" class="btn btn-sm btn-light" :disabled="guardando" @click="cancelarEdicionDiagnosticos">
                                         Cancelar
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-success" :disabled="guardando" @click="guardarDiagnostico">
+                                    <button type="button" class="btn btn-sm btn-success" :disabled="guardando" @click="guardarDiagnosticos">
                                         <span v-if="guardando"><i class="fas fa-spinner fa-spin"></i></span>
                                         <span v-else><i class="fas fa-check"></i> Guardar</span>
                                     </button>
@@ -99,9 +135,7 @@
                             </template>
 
                         </div>
-                        <div class="icon">
-                            <i class="fas fa-brain"></i>
-                        </div>
+                        <div class="icon"><i class="fas fa-brain"></i></div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -154,7 +188,7 @@
                     <button type="button" class="btn btn-sm btn-secondary" :disabled="guardando" @click="cancelarEdicionRecomendaciones">
                         Cancelar
                     </button>
-                    <button type="button" class="btn btn-sm btn-success" :disabled="guardando" @click="guardarDiagnostico">
+                    <button type="button" class="btn btn-sm btn-success" :disabled="guardando" @click="guardarDiagnosticos">
                         <span v-if="guardando"><i class="fas fa-spinner fa-spin"></i> Guardando...</span>
                         <span v-else><i class="fas fa-check"></i> Guardar cambios</span>
                     </button>
@@ -178,7 +212,7 @@ export default {
     data() {
         return {
             // Toggles independientes: cada bloque se edita por su cuenta
-            editandoDiagnostico: false,
+            editandoDiagnosticos: false,
             editandoRecomendaciones: false,
 
             guardando: false,
@@ -189,16 +223,21 @@ export default {
 
             // Overrides locales: una vez guardado, priman sobre iaData
             // (que sigue siendo la sugerencia cruda de la IA, sin tocar).
+            diagnosticosConfirmadosLocal: [], 
             diagnosticoConfirmado: null,
             recomendacionesConfirmadas: null,
 
             formDiagnostico: '',
             formIcdCodigo: '',
             formIcdTitulo: '',
+            formDiagnosticos: [],
             formRecomendaciones: ''
         }
     },
     computed: {
+        diagnosticosProbablesIA() {
+            return Array.isArray(this.iaData?.diagnosticos_probables) ? this.iaData.diagnosticos_probables : []
+        },
         diagnosticoPrincipal() {
             if (this.diagnosticoConfirmado) return this.diagnosticoConfirmado
             return this.iaData?.diagnostico_probable ?? 'Sin Diagnóstico';
@@ -236,25 +275,71 @@ export default {
         }
     },
     methods: {
-        activarEdicionDiagnostico() {
+        activarEdicionDiagnosticos() {
             this.errorGuardado = ''
-            this.formDiagnostico = this.diagnosticoPrincipal === 'Sin Diagnóstico' ? '' : this.diagnosticoPrincipal
-            this.formIcdCodigo = ''
-            this.formIcdTitulo = ''
-            this.resultadosIcd = []
-            this.editandoDiagnostico = true
 
-            // Si la IA ya sugirió un diagnóstico, buscamos de inmediato en
-            // ICD-11 con ese mismo texto, para que el médico ya vea las
-            // opciones oficiales de la OMS sin tener que escribir nada.
-            if (this.formDiagnostico.trim().length >= 3) {
-                this.buscarIcd11Inmediato(this.formDiagnostico.trim())
+            if (this.diagnosticosConfirmadosLocal.length) {
+                this.formDiagnosticos = this.diagnosticosConfirmadosLocal.map(dx => ({
+                    diagnostico: dx.diagnostico,
+                    icd11_codigo: dx.icd11_codigo || '',
+                    icd11_titulo: dx.icd11_titulo || '',
+                    resultadosIcd: [],
+                    buscandoIcd: false
+                }))
+            } else if (this.diagnosticosProbablesIA.length) {
+                this.formDiagnosticos = this.diagnosticosProbablesIA.map(dp => ({
+                    diagnostico: dp.diagnostico,
+                    icd11_codigo: '', icd11_titulo: '',
+                    resultadosIcd: [], buscandoIcd: false
+                }))
+            } else {
+                this.formDiagnosticos = [this.filaVacia()]
+            }
+
+            this.editandoDiagnosticos = true
+
+            this.formDiagnosticos.forEach((dx, i) => {
+                if (dx.diagnostico && dx.diagnostico.trim().length >= 3) {
+                    this.buscarIcd11Inmediato(i, dx.diagnostico.trim())
+                }
+            })
+        },
+         filaVacia() {
+            return { 
+                diagnostico: '', 
+                icd11_codigo: '', 
+                icd11_titulo: '', 
+                resultadosIcd: [], 
+                buscandoIcd: false 
             }
         },
-        cancelarEdicionDiagnostico() {
+        cancelarEdicionDiagnosticos() {
             if (this.guardando) return
-            this.editandoDiagnostico = false
-            this.resultadosIcd = []
+            this.editandoDiagnosticos = false
+            this.formDiagnosticos = []
+        },
+
+        agregarDiagnosticoVacio() {
+            this.formDiagnosticos.push(this.filaVacia())
+        },
+
+        quitarDiagnostico(index) {
+            this.formDiagnosticos.splice(index, 1)
+        },
+
+        agregarDesdeSugerencia(dp) {
+            const yaExiste = this.formDiagnosticos.some(
+                dx => dx.diagnostico.trim().toLowerCase() === dp.diagnostico.trim().toLowerCase()
+            )
+            if (yaExiste) return
+
+            if (this.formDiagnosticos.length === 1 && !this.formDiagnosticos[0].diagnostico.trim()) {
+                this.formDiagnosticos[0].diagnostico = dp.diagnostico
+            } else {
+                this.formDiagnosticos.push({ ...this.filaVacia(), diagnostico: dp.diagnostico })
+            }
+
+            this.buscarIcd11Inmediato(this.formDiagnosticos.length - 1, dp.diagnostico)
         },
 
         activarEdicionRecomendaciones() {
@@ -269,42 +354,34 @@ export default {
             this.editandoRecomendaciones = false
         },
 
-        buscarIcd11() {
+        buscarIcd11(index) {
             clearTimeout(this.debounceIcd)
-            const texto = this.formDiagnostico.trim()
-            // Si el médico sigue escribiendo, cualquier código ya elegido
-            // deja de ser válido hasta que vuelva a seleccionar uno.
-            this.formIcdCodigo = ''
-            this.formIcdTitulo = ''
+            const fila = this.formDiagnosticos[index]
+            const texto = fila.diagnostico.trim()
+
+            fila.icd11_codigo = ''
+            fila.icd11_titulo = ''
 
             if (texto.length < 3) {
-                this.resultadosIcd = []
+                fila.resultadosIcd = []
                 return
             }
 
-            this.debounceIcd = setTimeout(async () => {
-                this.buscandoIcd = true
-                try {
-                    const response = await ApiService.get('/icd11/buscar', { params: { texto } })
-                    this.resultadosIcd = response.data.resultados || []
-                } catch (error) {
-                    console.error('Error al buscar en ICD-11:', error)
-                    this.resultadosIcd = []
-                } finally {
-                    this.buscandoIcd = false
-                }
-            }, 400)
+            this.debounceIcd = setTimeout(() => this.buscarIcd11Inmediato(index, texto), 400)
         },
-        async buscarIcd11Inmediato(texto) {
-            this.buscandoIcd = true
+        
+        async buscarIcd11Inmediato(index, texto) {
+            const fila = this.formDiagnosticos[index]
+            if (!fila) return
+            fila.buscandoIcd = true
             try {
                 const response = await ApiService.get('/icd11/buscar', { params: { texto } })
-                this.resultadosIcd = response.data.resultados || []
+                fila.resultadosIcd = response.data.resultados || []
             } catch (error) {
                 console.error('Error al buscar en ICD-11:', error)
-                this.resultadosIcd = []
+                fila.resultadosIcd = []
             } finally {
-                this.buscandoIcd = false
+                fila.buscandoIcd = false
             }
         },
 
@@ -312,39 +389,45 @@ export default {
         // debounce pendiente) al presionar Enter en el input o al hacer
         // clic en el ícono de lupa. Así el médico puede volver a buscar
         // sin tener que cancelar y reabrir el modo edición.
-        buscarAhoraIcd11() {
+        buscarAhoraIcd11(index) {
             clearTimeout(this.debounceIcd)
-            const texto = this.formDiagnostico.trim()
+            const texto = this.formDiagnosticos[index].diagnostico.trim()
             if (texto.length < 3) return
-            this.buscarIcd11Inmediato(texto)
+            this.buscarIcd11Inmediato(index, texto)
         },
 
-        seleccionarIcd(resultado) {
-            this.formDiagnostico = resultado.titulo
-            this.formIcdCodigo = resultado.codigo
-            this.formIcdTitulo = resultado.titulo
-            this.resultadosIcd = []
+        seleccionarIcd(index, resultado) {
+            const fila = this.formDiagnosticos[index]
+            fila.diagnostico = resultado.titulo
+            fila.icd11_codigo = resultado.codigo
+            fila.icd11_titulo = resultado.titulo
+            fila.resultadosIcd = []
         },
-
         // Guarda lo que esté vigente en ese momento para AMBOS campos: si
         // solo se editó el diagnóstico, "formRecomendaciones" no se toca y
         // se manda el valor ya confirmado (o el de la IA si nunca se
         // confirmó); y viceversa si solo se editaron recomendaciones. Así
         // un solo endpoint sirve para los dos toggles independientes sin
         // pisar el campo que no se estaba editando.
-        async guardarDiagnostico() {
+        async guardarDiagnosticos() {
             if (this.guardando || !this.consultaId) return
 
-            const diagnosticoAEnviar = this.editandoDiagnostico
-                ? this.formDiagnostico.trim()
-                : (this.diagnosticoPrincipal === 'Sin Diagnóstico' ? '' : this.diagnosticoPrincipal)
+            const diagnosticosAEnviar = this.editandoDiagnosticos
+                ? this.formDiagnosticos
+                    .map(d => ({
+                        diagnostico: d.diagnostico.trim(),
+                        icd11_codigo: d.icd11_codigo || null,
+                        icd11_titulo: d.icd11_titulo || null
+                    }))
+                    .filter(d => d.diagnostico !== '')
+                : this.diagnosticosConfirmadosLocal
 
             const recomendacionesAEnviar = this.editandoRecomendaciones
                 ? this.formRecomendaciones.trim()
                 : (this.recomendaciones.includes('Esperando síntomas clínicos') ? '' : this.recomendaciones.join('\n'))
 
-            if (!diagnosticoAEnviar) {
-                this.errorGuardado = 'El diagnóstico no puede quedar vacío.'
+            if (diagnosticosAEnviar.length === 0) {
+                this.errorGuardado = 'Debes confirmar al menos un diagnóstico.'
                 return
             }
 
@@ -353,9 +436,7 @@ export default {
 
             try {
                 const response = await ApiService.post(`/consultaIA/${this.consultaId}/diagnostico`, {
-                    diagnostico: diagnosticoAEnviar,
-                    diagnostico_icd11_codigo: this.editandoDiagnostico ? (this.formIcdCodigo || null) : null,
-                    diagnostico_icd11_titulo: this.editandoDiagnostico ? (this.formIcdTitulo || null) : null,
+                    diagnosticos: diagnosticosAEnviar,          // <-- antes: diagnostico/diagnostico_icd11_codigo/diagnostico_icd11_titulo sueltos
                     recomendaciones: recomendacionesAEnviar || null
                 })
 
@@ -364,36 +445,32 @@ export default {
                     return
                 }
 
-                this.diagnosticoConfirmado = diagnosticoAEnviar
+                this.diagnosticosConfirmadosLocal = diagnosticosAEnviar
                 this.recomendacionesConfirmadas = recomendacionesAEnviar
-                this.editandoDiagnostico = false
+                this.editandoDiagnosticos = false
                 this.editandoRecomendaciones = false
 
-                // Avisa al padre para sincronizar la Nota PSOAPP
-                // (Análisis <- diagnóstico, Plan <- recomendaciones) y
-                // para habilitar el botón "Actualizar con diagnóstico
-                // confirmado" en Receta/Derivación.
                 this.$emit('diagnostico-guardado', {
-                    diagnostico: this.diagnosticoConfirmado,
+                    diagnosticos: this.diagnosticosConfirmadosLocal,   // <-- antes: diagnostico (string)
                     recomendaciones: this.recomendacionesConfirmadas
                 })
 
             } catch (error) {
-                console.error('Error al guardar diagnóstico:', error)
+                console.error('Error al guardar diagnósticos:', error)
                 this.errorGuardado = error.response?.data?.error || 'No se pudo guardar el diagnóstico.'
             } finally {
                 this.guardando = false
             }
         },
         cerrarDropdownIcd(evento) {
-            // Si el clic fue dentro del contenedor del buscador (input o
-            // lista), no cerramos -- eso ya lo maneja @click en cada <li>.
-            // (Ahora this.$refs.contenedorIcd SÍ existe porque el div lo
-            // referencia con ref="contenedorIcd" en el template.)
-            if (this.$refs.contenedorIcd && this.$refs.contenedorIcd.contains(evento.target)) {
-                return
+            const dentroDeAlgunaFila = Object.values(this.$refs)
+                .flat()
+                .filter(Boolean)
+                .some(el => el.contains && el.contains(evento.target))
+
+            if (!dentroDeAlgunaFila) {
+                this.formDiagnosticos.forEach(dx => { dx.resultadosIcd = [] })
             }
-            this.resultadosIcd = []
         }
     },
     mounted(){
@@ -502,4 +579,24 @@ export default {
 .btn-editar-box--claro:hover {
     background: #e9ecef;
 }
+
+.dx-row { padding-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,.15); }
+.dx-row:last-of-type { border-bottom: none; }
+
+.btn-quitar-dx {
+    position: absolute; top: 3px; right: 28px; width: 20px; height: 20px;
+    border: none; background: transparent; color: #dc3545; font-size: 12px;
+    cursor: pointer; z-index: 3;
+}
+
+.btn-sugerencia-dx { border: none; cursor: pointer; }
+
+.btn-editar-box--pendiente {
+    animation: pulseBadge 1.5s ease-in-out infinite;
+}
+@keyframes pulseBadge {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.4); }
+    50% { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
+}
+
 </style>
