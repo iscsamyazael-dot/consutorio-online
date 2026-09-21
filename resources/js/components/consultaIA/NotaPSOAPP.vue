@@ -232,28 +232,15 @@ export default {
     // Llama este método desde tu servicio de IA / websocket de transcripción
     // cada vez que detectes que un fragmento de la consulta pertenece a un punto.
     // Ejemplo: this.$refs.notaPsoapp.actualizarDesdeIA('S', 'Refiere dolor lumbar...')
-    actualizarDesdeIA(key, texto) {
+   actualizarDesdeIA(key, texto) {
       if (!this.estado[key]) {
         return
       }
       if (!texto || !texto.trim()) {
         return
       }
-      const textoNuevo = texto.trim()
-      const textoActual = this.estado[key].texto.trim()
-      // Si no existe información previa,
-      // simplemente agregamos el nuevo contenido
-      if (!textoActual) {
-        this.estado[key].texto = textoNuevo
-      } else {
-        // Evitar duplicar exactamente el mismo contenido
-        if (!textoActual.includes(textoNuevo)) {
-          this.estado[key].texto =
-            textoActual + '\n\n' + textoNuevo
-        }
-      }
-      this.estado[key].completado =
-        this.estado[key].texto.trim().length > 0
+      this.estado[key].texto = texto.trim()
+      this.estado[key].completado = true
     },
     
     // Reemplaza (no concatena) el contenido de una sección. A diferencia de

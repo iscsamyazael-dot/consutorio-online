@@ -117,6 +117,21 @@
                     </div>
                 </div>
 
+                <!-- HISTORIAL DE ESPECIALIDADES SUGERIDAS (cuando hay más de una, por comorbilidad) -->
+                <div v-if="especialidadesSugeridas.length > 1" class="mb-2">
+                    <strong class="d-block mb-1 small">Otras especialidades sugeridas en esta consulta:</strong>
+                    <span
+                        v-for="esp in especialidadesSugeridas"
+                        :key="esp.id"
+                        class="badge badge-outline-warning border mr-1 mb-1"
+                        style="cursor:pointer"
+                        @click="especialidadSeleccionada = esp.id"
+                        :title="'Seleccionar ' + esp.nombre"
+                    >
+                        {{ esp.nombre }}
+                    </span>
+                </div>
+
             </template>
 
             <select
@@ -205,6 +220,7 @@ export default {
             // campos especialidad_fuera_catalogo / especialidad_ideal_no_disponible).
             especialidadFueraCatalogo: false,
             especialidadIdealNoDisponible: null,
+            especialidadesSugeridas: [],
             cargando: false,
             error: false,
 
@@ -282,16 +298,36 @@ export default {
 
                 if (response.data.success) {
                     this.especialidades = response.data.especialidades || []
-                    this.especialidadSugerida = response.data.especialidad_sugerida || null
                     this.fuente = response.data.fuente || null
                     this.triage = response.data.triage || null
-                    this.diagnosticosProbables = response.data.diagnosticos_probables || []
-                    this.motivoDerivacionIA = response.data.motivo_derivacion_ia || null
-                    this.requiereUrgencias = response.data.requiere_urgencias || false
+                    this.requiereUrgencias = response.data.requiere_urgencias || this.requiereUrgencias
                     this.especialidadFueraCatalogo = response.data.especialidad_fuera_catalogo || false
                     this.especialidadIdealNoDisponible = response.data.especialidad_ideal_no_disponible || null
 
-                    // Preseleccionamos la sugerida, si existe en la lista
+                    // Fusiona diagnósticos probables por texto, igual que en RecetaInteligente,
+                    // para no perder los de una ronda anterior.
+                    const mapaProbables = new Map()
+                    this.diagnosticosProbables.forEach(dx => mapaProbables.set(dx.diagnostico, dx))
+                    ;(response.data.diagnosticos_probables || []).forEach(dx => mapaProbables.set(dx.diagnostico, dx))
+                    this.diagnosticosProbables = Array.from(mapaProbables.values())
+
+                    // Acumula el motivo de derivación en vez de reemplazarlo
+                    const nuevoMotivo = response.data.motivo_derivacion_ia || null
+                    if (nuevoMotivo && (!this.motivoDerivacionIA || !this.motivoDerivacionIA.includes(nuevoMotivo))) {
+                        this.motivoDerivacionIA = this.motivoDerivacionIA
+                            ? this.motivoDerivacionIA + ' ' + nuevoMotivo
+                            : nuevoMotivo
+                    }
+
+                    const nuevaEspecialidad = response.data.especialidad_sugerida || null
+                    this.especialidadSugerida = nuevaEspecialidad
+
+                    // Acumula en el historial de especialidades sugeridas, sin duplicar por id
+                    if (nuevaEspecialidad && !this.especialidadesSugeridas.some(e => e.id === nuevaEspecialidad.id)) {
+                        this.especialidadesSugeridas.push(nuevaEspecialidad)
+                    }
+
+                    // Preseleccionamos la más reciente, si existe en la lista
                     if (this.especialidadSugerida) {
                         this.especialidadSeleccionada = this.especialidadSugerida.id
                     }

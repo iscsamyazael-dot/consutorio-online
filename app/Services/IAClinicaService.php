@@ -37,7 +37,10 @@ class IAClinicaService
         $consulta,
         array $historial = [],
         $ultimaNota = null,
-        $triage = null
+        $triage = null,
+        array $sintomasAcumulados = [],
+        $paciente = null,
+        array $diagnosticosPrevios = []
 
     ) {
         // --- CONTROL DE TOKENS DE ENTRADA ---
@@ -56,25 +59,29 @@ class IAClinicaService
                 $historial = [$historialTexto]; 
             }
         }
-        $data = $this->consultarIA(
-            $texto,
-            $historial,
-            $ultimaNota,
-            false,
-            $triage
-        );
+        // $data = $this->consultarIA(
+        //     $texto,
+        //     $historial,
+        //     $ultimaNota,
+        //     false,
+        //     $triage,
+        //     $sintomasAcumulados,
+        //     $paciente,
+        //     $diagnosticosPrevios
+        // );
 
-        if (!is_array($data) || !isset($data['sintomas'], $data['diagnostico'])) {
-            Log::error('IA devolvió respuesta inválida', ['respuesta' => $data]);
-            return [
-                'diagnostico_probable' => 'No se pudo determinar',
-                'nivel_riesgo' => 'desconocido',
-                'recomendaciones' => ['No se pudo completar el análisis. Intenta nuevamente.'],
-                'indicaciones_medico' => null,
-                'alertas' => [],
-                'nota_psoapp' => null,
-            ];
-        }
+        // if (!is_array($data) || !isset($data['sintomas'], $data['diagnostico'])) {
+        //     Log::error('IA devolvió respuesta inválida', ['respuesta' => $data]);
+        //     return [
+        //         'diagnostico_probable' => 'No se pudo determinar',
+        //         'diagnosticos_probables' => $diagnosticosPrevios, // conserva lo previo
+        //         'nivel_riesgo' => 'desconocido',
+        //         'recomendaciones' => ['No se pudo completar el análisis. Intenta nuevamente.'],
+        //         'indicaciones_medico' => null,
+        //         'alertas' => [],
+        //         'nota_psoapp' => null,
+        //     ];
+        // }
 
         // --- HISTORIA CLÍNICA: ¿este paciente ya la tiene completa? ---
         // Una sola fila por paciente (no por consulta, a diferencia de
@@ -90,8 +97,24 @@ class IAClinicaService
             $historial,
             $ultimaNota,
             $solicitarHistoriaClinica,
-            $triage
+            $triage,
+            $sintomasAcumulados,
+            $paciente,
+            $diagnosticosPrevios
         );
+
+        if (!is_array($data) || !isset($data['sintomas'], $data['diagnostico'])) {
+            Log::error('IA devolvió respuesta inválida', ['respuesta' => $data]);
+            return [
+                'diagnostico_probable'   => 'No se pudo determinar',
+                'diagnosticos_probables' => $diagnosticosPrevios,
+                'nivel_riesgo'           => 'desconocido',
+                'recomendaciones'        => ['No se pudo completar el análisis. Intenta nuevamente.'],
+                'indicaciones_medico'    => null,
+                'alertas'                => [],
+                'nota_psoapp'            => null,
+            ];
+        }
 
         // ============================================================
         // VALIDACIÓN DE ANCLAJE DE SÍNTOMAS (capa de seguridad opcional)
@@ -244,10 +267,11 @@ class IAClinicaService
         $recomendacionFinal = $recomendacionTexto !== '' ? $recomendacionTexto : 'Sin recomendación';
 
         return [
-            'diagnostico_probable' => $data['diagnostico'] ?? 'No determinado',
-            // NUEVO: la IA ya generaba esto en 'diagnosticos_probables' (Fase 4),
-            // solo faltaba reenviarlo — antes se perdía en el camino.
-            'diagnosticos_probables' => $data['diagnosticos_probables'] ?? [],
+            'diagnostico_probable'   => $data['diagnostico'] ?? 'No determinado',
+            'diagnosticos_probables' => $this->fusionarDiagnosticos(
+                $diagnosticosPrevios,
+                is_array($data['diagnosticos_probables'] ?? null) ? $data['diagnosticos_probables'] : []
+            ),
             'nivel_riesgo' => $nivelRiesgo,
             'recomendaciones' => [$recomendacionFinal],
             'indicaciones_medico' => $data['indicaciones_medico'] ?? null,
@@ -258,6 +282,32 @@ class IAClinicaService
             'historia_clinica_progreso' => $progresoHistoriaClinica,
             'debug_usage' => $data['debug_usage'] ?? null,
         ];
+    }
+
+    /**
+     * Conserva los diagnósticos previos tal cual (mismo nombre y porcentaje)
+     * y agrega solo los nuevos que no estén ya en la lista.
+     */
+    private function fusionarDiagnosticos(array $previos, array $nuevos): array
+    {
+        // Los previos sin 'ronda' (anteriores a este cambio) cuentan como ronda 1
+        $resultado = array_map(fn($d) => $d + ['ronda' => 1], $previos);
+        $rondaNueva = ((int) collect($resultado)->max('ronda')) + 1;
+
+        $existentes = array_map(
+            fn($d) => mb_strtolower(trim($d['diagnostico'] ?? '')),
+            $resultado
+        );
+
+        foreach ($nuevos as $dx) {
+            $clave = mb_strtolower(trim($dx['diagnostico'] ?? ''));
+            if ($clave !== '' && !in_array($clave, $existentes, true)) {
+                $existentes[] = $clave;
+                $resultado[] = array_merge($dx, ['ronda' => $rondaNueva]);
+            }
+        }
+
+        return $resultado;
     }
 
     /**
@@ -426,19 +476,19 @@ class IAClinicaService
             return '';
         }
 
-        $bloque = "\n        CONTEXTO PREVIO DEL EXPEDIENTE (para dar continuidad, no para copiar tal cual):\n";
-        $bloque .= "        Este contexto es SOLO para que evalúes evolución/continuidad del padecimiento.\n";
-        $bloque .= "        No lo repitas como si fuera parte de la consulta actual, y no inventes que\n";
-        $bloque .= "        algo mencionado antes sigue vigente si el registro actual no lo confirma.\n";
+        $bloque = "\n       CONTEXTO PREVIO DE ESTA MISMA CONSULTA (mensajes y nota anteriores):\n";
+        $bloque .= "        Son registros anteriores de ESTA MISMA consulta. La nota PSOAPP que redactes debe ser\n";
+        $bloque .= "        ACUMULATIVA: integra lo dicho antes y lo de hoy en un solo cuadro clínico, sin perder\n";
+        $bloque .= "        ningún síntoma ni diagnóstico ya mencionado. No inventes que algo mencionado antes\n";
+        $bloque .= "        sigue vigente si el registro actual lo contradice.\n";
 
-        if (trim($historialTexto) !== '') {
-            $bloque .= "\n        HISTORIAL DE CONSULTAS ANTERIORES:\n{$historialTexto}\n";
+         if (trim($historialTexto) !== '') {
+            $bloque .= "\n        MENSAJES ANTERIORES DE ESTA MISMA CONSULTA:\n{$historialTexto}\n";
         }
 
         if (trim($notaAnteriorTexto) !== '') {
-            $bloque .= "\n        ÚLTIMA NOTA PSOAPP REGISTRADA:{$notaAnteriorTexto}\n";
+            $bloque .= "\n        ÚLTIMA NOTA PSOAPP REGISTRADA EN ESTA CONSULTA:{$notaAnteriorTexto}\n";
         }
-
         return $bloque;
     }
 
@@ -485,6 +535,50 @@ class IAClinicaService
             cualquier otro dato objetivo mencionado en el texto. No los
             reinterpretes, no los redondees ni los sustituyas por una descripción
             genérica -- son mediciones reales, no una impresión clínica.
+        ";
+    }
+
+    /**
+     * Arma el bloque de texto con los datos demográficos reales del paciente
+     * (edad y sexo), tal como los tiene el expediente -- NUNCA inferidos del
+     * relato ni de la transcripción. Sin este bloque, la IA no tenía forma de
+     * saber la edad/sexo real del paciente (no vienen en el texto hablado de
+     * la consulta) y terminaba generando la nota con placeholders genéricos
+     * tipo "paciente de edad no especificada" o "masculino/femenino", aunque
+     * el sistema sí tuviera el dato en el expediente.
+     */
+    private function bloqueDatosPaciente($paciente): string
+    {
+        if (!$paciente) {
+            return '';
+        }
+
+        $lineas = [];
+
+        if (!empty($paciente->edad_formateada)) {
+            $lineas[] = "Edad: {$paciente->edad_formateada}";
+        }
+
+        if (!empty($paciente->sexo)) {
+            $lineas[] = "Sexo: {$paciente->sexo}";
+        }
+
+        if (empty($lineas)) {
+            return '';
+        }
+
+        $textoLineas = implode("\n", $lineas);
+
+        return "
+            DATOS DEMOGRÁFICOS REALES DEL PACIENTE (del expediente -- NUNCA los
+            inventes ni los tomes de otra fuente, y NUNCA escribas 'no
+            especificado' para estos dos datos si aparecen aquí):
+
+            {$textoLineas}
+
+            Usa estos datos tal cual en el apartado 'presentacion' de la nota
+            PSOAPP y en cualquier parte de tu análisis donde sea relevante
+            mencionar la edad o el sexo del paciente.
         ";
     }
 
@@ -2071,7 +2165,10 @@ class IAClinicaService
         array $historial = [],
         $ultimaNota = null,
         bool $solicitarHistoriaClinica = false,
-        $triage = null
+        $triage = null,
+        array $sintomasAcumulados = [],
+        $paciente = null,
+        array $diagnosticosPrevios = []
     ) 
     { // Forzamos el límite de ejecución de PHP para evitar cortes inesperados
         set_time_limit(300);
@@ -2090,31 +2187,67 @@ class IAClinicaService
         if ($ultimaNota) {
             $notaAnteriorTexto = "
 
-PRESENTACIÓN ANTERIOR:
-{$ultimaNota->presentacion}
+            PRESENTACIÓN ANTERIOR:
+            {$ultimaNota->presentacion}
 
-SUBJETIVO ANTERIOR:
-{$ultimaNota->subjetivo}
+            SUBJETIVO ANTERIOR:
+            {$ultimaNota->subjetivo}
 
-OBJETIVO ANTERIOR:
-{$ultimaNota->objetivo}
+            OBJETIVO ANTERIOR:
+            {$ultimaNota->objetivo}
 
-ANÁLISIS ANTERIOR:
-{$ultimaNota->analisis}
+            ANÁLISIS ANTERIOR:
+            {$ultimaNota->analisis}
 
-PLAN ANTERIOR:
-{$ultimaNota->plan}
+            PLAN ANTERIOR:
+            {$ultimaNota->plan}
 
-PRONÓSTICO ANTERIOR:
-{$ultimaNota->pronostico}
-";
+            PRONÓSTICO ANTERIOR:
+            {$ultimaNota->pronostico}
+            ";
         }
 
         // Vocabulario de referencia (síntoma coloquial -> término médico),
         // extraído del Manual de Terminología Médica.
         $vocabularioSintomas = DiccionarioMedico::textoReferencia();
+        
+        $textoCalculo = !empty($diagnosticosPrevios)
+            ? "'alertas' y 'nivel_riesgo'"
+            : "'diagnosticos_probables', 'alertas' y 'nivel_riesgo'";
 
-                // --- BLOQUE CONDICIONAL: Historia Clínica (NOM-004-SSA3-2012) ---
+        // NUEVO: bloque de anclaje con lo ya detectado en rondas anteriores
+        $bloqueSintomasAcumulados = '';
+        if (!empty($sintomasAcumulados)) {
+            $listaAcumulados = implode(', ', $sintomasAcumulados);
+            $bloqueSintomasAcumulados = "
+
+            SÍNTOMAS YA DETECTADOS EN RONDAS ANTERIORES DE ESTA MISMA CONSULTA
+            (no los repitas en el arreglo 'sintomas' de salida si ya están
+            aquí, pero SÍ considéralos junto con el texto de HOY para calcular
+            {$textoCalculo} — el cuadro
+            clínico completo es la suma de todo esto, no solo lo dicho en
+            este mensaje):
+
+            $listaAcumulados
+
+            REGLA OBLIGATORIA SOBRE DIAGNÓSTICOS DIFERENCIALES POR SÍNTOMAS NUEVOS:
+            Revisa la lista de arriba contra el texto de HOY. Si el texto de HOY
+            introduce uno o más síntomas que NINGUNO de los diagnósticos ya
+            considerados explicaría razonablemente (ej. síntomas neurológicos como
+            cefalea o mareo apareciendo sobre un cuadro puramente digestivo, o
+            viceversa), DEBES incluir en 'diagnosticos_probables' al menos un
+            diagnóstico adicional específico para ese síntoma nuevo, aunque sea de
+            baja probabilidad relativa (ej. 'Cefalea tensional asociada a estrés',
+            'Vértigo posicional a descartar'). NO lo omitas ni lo diluyas
+            únicamente en 'recomendacion' o en la nota PSOAPP: el panel de
+            diagnósticos del médico debe reflejar TODOS los frentes clínicos
+            activos, no solo el dominante. Solo omite el diagnóstico adicional si
+            el síntoma nuevo es clínicamente parte esperada del mismo cuadro ya
+            diagnosticado (ej. náusea dentro de un cuadro gástrico ya cubierto).
+            ";
+        }
+
+        // --- BLOQUE CONDICIONAL: Historia Clínica (NOM-004-SSA3-2012) ---
         // Solo se le pide a la IA si el expediente del paciente todavía no
         // está completo (ver analizarTranscripcion()). Una vez completo, se
         // deja de incluir en el prompt para no gastar tokens en algo que
@@ -2194,6 +2327,45 @@ PRONÓSTICO ANTERIOR:
 \"plan_tratamiento_inicial\": \"\"
 }";
         }
+
+        $bloqueDiagnosticosPrevios = '';
+        if (!empty($diagnosticosPrevios)) {
+            $listaPrevios = collect($diagnosticosPrevios)
+                ->map(fn($d) => ($d['diagnostico'] ?? '') . ' (' . ($d['porcentaje'] ?? '?') . '%)')
+                ->implode(', ');
+
+            $bloqueDiagnosticosPrevios = "
+
+            DIAGNÓSTICOS YA EMITIDOS EN RONDAS ANTERIORES (FIJOS, NO NEGOCIABLES):
+            $listaPrevios
+
+            REGLA OBLIGATORIA (tiene prioridad sobre la FASE 4 en cuanto a QUÉ listar):
+            - NO repitas, NO renombres, NO fusiones ni recalcules estos diagnósticos.
+            Ya fueron entregados al médico y el sistema los conserva por su cuenta.
+            - En 'diagnosticos_probables' devuelve ÚNICAMENTE diagnósticos para los
+            síntomas o hallazgos NUEVOS del texto de HOY que los anteriores no
+            expliquen (máximo 3). Sus porcentajes se reparten entre ellos y suman 100.
+            - Si el texto de HOY no aporta nada que requiera un diagnóstico nuevo,
+            devuelve 'diagnosticos_probables' como arreglo vacío [].
+            EJEMPLO: si ya se emitieron 'Gastritis aguda' y 'Enfermedad por reflujo
+            gastroesofágico' y hoy el paciente agrega mareo y cefalea, devuelve SOLO
+            diagnósticos para mareo/cefalea. NO devuelvas 'Patología acidopéptica' ni
+            ninguna variante, agrupación o renombre de los diagnósticos anteriores.
+            
+            ALCANCE DE ESTA REGLA (importante):
+            - Lo anterior aplica ÚNICAMENTE al arreglo 'diagnosticos_probables'.
+            - La nota PSOAPP (presentacion, subjetivo, objetivo, analisis, plan, pronostico)
+              debe reflejar el CUADRO CLÍNICO COMPLETO de esta consulta: los diagnósticos ya
+              emitidos MÁS los nuevos de hoy.
+            - En 'analisis': redacta el razonamiento clínico de CADA diagnóstico, tanto los ya
+              emitidos (nómbralos tal cual) como los nuevos, y explica cómo se relacionan
+              (síntomas independientes o parte del mismo cuadro).
+            - En 'subjetivo': integra en un solo relato los síntomas de rondas anteriores y los de hoy.
+            - En 'plan' y 'pronostico': cubre todos los frentes clínicos activos, no solo el nuevo.
+            - En 'diagnostico': el diagnóstico principal del cuadro completo (normalmente el primero
+              de los ya emitidos), no el de los síntomas nuevos.
+            ";            
+        }
         
 
         $prompt = "
@@ -2224,7 +2396,10 @@ PRONÓSTICO ANTERIOR:
         (síntoma coloquial -> término médico):
         $vocabularioSintomas
         {$this->bloqueContextoPrevio($historialTexto, $notaAnteriorTexto)}
+        {$this->bloqueDatosPaciente($paciente)}
         {$this->bloqueSignosVitalesTriage($triage)}
+        {$bloqueSintomasAcumulados}
+        {$bloqueDiagnosticosPrevios}
         NOTA MÉDICA DEL PACIENTE (registro actual):
 
         $texto
@@ -2714,8 +2889,25 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
             }
 
             $contenido = $response->json('candidates.0.content.parts.0.text');
+            $data = $this->decodificarJsonDesdeTexto($contenido, 'consultarIA', $response->json() ?? []);
 
-            return $this->decodificarJsonDesdeTexto($contenido, 'consultarIA', $response->json() ?? []);
+            // NUEVO: si ni la reparación automática logró un JSON válido, se
+            // reintenta la llamada a Gemini una vez más antes de rendirse.
+            if ($data === null) {
+                Log::warning('JSON inválido en consultarIA tras reparación, reintentando...');
+                $response = $this->llamarGeminiConReintentos(
+                    $urlGemini,
+                    [['text' => $prompt]],
+                    1,
+                    ['responseMimeType' => 'application/json']
+                );
+                if ($response->successful()) {
+                    $contenido = $response->json('candidates.0.content.parts.0.text');
+                    $data = $this->decodificarJsonDesdeTexto($contenido, 'consultarIA (reintento)', $response->json() ?? []);
+                }
+            }
+
+            return $data;
 
         } catch (\Exception $e) {
             Log::error('Excepción al consultar IA clínica: ' . $e->getMessage());
@@ -2894,6 +3086,23 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
             }
         }
 
+        // NUEVO: reparación automática de valores de arreglo sin comillas
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $contenidoReparado = $this->repararValoresSinComillas($contenido);
+            $data = json_decode($contenidoReparado, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $jsonBalanceado = $this->extraerPrimerJsonBalanceado($contenidoReparado);
+                if ($jsonBalanceado !== null) {
+                    $data = json_decode($jsonBalanceado, true);
+                }
+            }
+
+            if (json_last_error() === JSON_ERROR_NONE) {
+                Log::warning('JSON reparado automáticamente (valores sin comillas)', ['origen' => $origen]);
+            }
+        }
+
         if (json_last_error() !== JSON_ERROR_NONE) {
             Log::error("JSON inválido o incompleto devuelto por la IA ({$origen})", [
                 'json_error' => json_last_error_msg(),
@@ -2978,6 +3187,117 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
     }
 
     /**
+     * Reescribe la sección "Análisis" de la nota PSOAPP para reflejar el/los
+     * diagnóstico(s) que el médico acaba de CONFIRMAR, sin perder el
+     * razonamiento clínico que la IA ya había redactado (evolución, signos
+     * vitales, hallazgos, diferenciales considerados). Se usa cuando el médico
+     * confirma un diagnóstico en PanelIA: antes de esto, el frontend solo
+     * concatenaba los nombres de los diagnósticos confirmados y sobrescribía
+     * por completo el análisis, perdiendo toda la redacción clínica.
+     *
+     * Solo AJUSTA LA CONCLUSIÓN del análisis existente (de "probable"/
+     * "diferencial" a "confirmado"), preservando el resto del razonamiento.
+     * No debe introducir hallazgos, síntomas ni datos nuevos que no estuvieran
+     * ya en el texto original.
+     */
+    public function regenerarAnalisisConDiagnosticoConfirmado(string $analisisActual, array $diagnosticosConfirmados): ?string
+    {
+        $analisisActual = trim($analisisActual);
+
+        $listaDiagnosticos = collect($diagnosticosConfirmados)
+            ->map(fn($d) => is_array($d) ? trim((string) ($d['diagnostico'] ?? '')) : trim((string) $d))
+            ->filter(fn($d) => $d !== '')
+            ->values();
+
+        if ($listaDiagnosticos->isEmpty()) {
+            return null;
+        }
+
+        $textoDiagnosticos = $listaDiagnosticos
+            ->map(fn($d, $i) => ($i + 1) . ". $d")
+            ->implode("\n");
+
+        // Si no había redacción previa (caso raro), no hay nada que preservar;
+        // devolvemos directamente la lista de confirmados como único contenido.
+        if ($analisisActual === '') {
+            return "Diagnóstico(s) confirmado(s): " . $listaDiagnosticos->implode('; ');
+        }
+
+        $prompt = "
+        Eres un asistente clínico de Inteligencia Artificial utilizado EXCLUSIVAMENTE
+        como apoyo para el médico dentro de un expediente médico digital.
+
+        A continuación se te da el ANÁLISIS CLÍNICO que redactaste previamente para
+        esta consulta, cuando los diagnósticos todavía eran probables/diferenciales:
+
+        ANÁLISIS ACTUAL:
+        \"\"\"
+        {$analisisActual}
+        \"\"\"
+
+        El médico tratante ACABA DE CONFIRMAR el/los siguiente(s) diagnóstico(s) tras
+        revisar al paciente (un paciente puede cursar con más de uno):
+
+        {$textoDiagnosticos}
+
+        TAREA:
+        Reescribe el ANÁLISIS ACTUAL actualizando ÚNICAMENTE la conclusión diagnóstica
+        -- de 'probable'/'impresión diagnóstica probable'/diferencial a 'diagnóstico
+        confirmado' -- para que sea coherente con el/los diagnóstico(s) confirmado(s)
+        de arriba.
+
+        REGLAS OBLIGATORIAS:
+        - Conserva TODO el razonamiento clínico existente: evolución del cuadro,
+        correlación con signos vitales, hallazgos de exploración, y menciones a
+        diagnósticos diferenciales que ya no aplican (acláralo brevemente, ej.
+        'se descartan como diagnóstico principal', si el texto los mencionaba).
+        - No inventes hallazgos, síntomas, signos vitales ni datos nuevos que no
+        estuvieran ya en el ANÁLISIS ACTUAL.
+        - Si el análisis actual mencionaba un diagnóstico distinto al confirmado
+        como principal, ajusta la redacción para que el diagnóstico confirmado
+        quede como la conclusión, mencionando los demás solo como antecedentes
+        del razonamiento (ya no como hipótesis abiertas).
+        - Usa terminología médica precisa y profesional.
+        - Devuelve un párrafo en prosa clínica, del mismo estilo y extensión
+        aproximada que el ANÁLISIS ACTUAL (no lo acortes a una sola línea ni lo
+        conviertas en una lista).
+
+        Responde EXCLUSIVAMENTE con el siguiente JSON, sin texto adicional ni Markdown:
+
+        {\"analisis\": \"\"}
+        ";
+
+        try {
+            $apiKey = env('GEMINI_API_KEY');
+            $modelo = 'gemini-3.5-flash-lite';
+            $urlGemini = "https://generativelanguage.googleapis.com/v1beta/models/{$modelo}:generateContent?key={$apiKey}";
+
+            $response = $this->llamarGeminiConReintentos(
+                $urlGemini,
+                [['text' => $prompt]],
+                2,
+                ['responseMimeType' => 'application/json']
+            );
+
+            if (!$response->successful()) {
+                Log::error('Error HTTP en regenerarAnalisisConDiagnosticoConfirmado', ['body' => $response->body()]);
+                return null;
+            }
+
+            $contenido = $response->json('candidates.0.content.parts.0.text');
+            $data = $this->decodificarJsonDesdeTexto($contenido, 'regenerarAnalisisConDiagnosticoConfirmado', $response->json() ?? []);
+
+            $textoNuevo = is_array($data) ? trim((string) ($data['analisis'] ?? '')) : '';
+
+            return $textoNuevo !== '' ? $textoNuevo : null;
+
+        } catch (\Exception $e) {
+            Log::error('Excepción en regenerarAnalisisConDiagnosticoConfirmado: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Extrae el primer objeto JSON balanceado dentro de un texto que puede
      * traer basura antes y/o después (eco de parámetros, razonamiento del
      * modelo dejado fuera de <think>...</think>, etc.). A diferencia de un
@@ -3030,5 +3350,42 @@ Devuelve EXCLUSIVAMENTE el siguiente JSON.
         }
 
         return null; // nunca cerró correctamente
+    }
+    /**
+     * Intenta reparar un JSON inválido causado por el patrón de error más
+     * común observado en las respuestas de Gemini: elementos dentro de un
+     * arreglo que deberían ser strings pero vienen sin comillas (ej.
+     * "diagnosticos_diferenciales": [Enfermedad ulcerosa péptica, Migraña]
+     * en vez de ["Enfermedad ulcerosa péptica", "Migraña"]).
+     *
+     * Busca líneas dentro de un contexto de arreglo que parezcan texto
+     * suelto sin comillas ni llaves, y les agrega comillas. No toca nada
+     * que ya esté bien formado (números, booleanos, objetos, strings ya
+     * entrecomillados), así que es seguro aplicarlo siempre como primer
+     * intento de reparación antes de gastar un reintento HTTP.
+     */
+    private function repararValoresSinComillas(string $contenido): string
+    {
+        $lineas = explode("\n", $contenido);
+        $reparado = [];
+
+        foreach ($lineas as $linea) {
+            $sinEspacios = trim($linea);
+
+            if (preg_match('/^([A-Za-zÁÉÍÓÚÑÁáéíóúñ0-9][^":{}\[\]]*?)(,?)\s*$/u', $sinEspacios, $m)) {
+                $indentacion = substr($linea, 0, strlen($linea) - strlen(ltrim($linea)));
+                $texto = trim($m[1]);
+                $coma = $m[2];
+
+                if ($texto !== '' && !str_contains($texto, ':')) {
+                    $reparado[] = $indentacion . '"' . addslashes($texto) . '"' . $coma;
+                    continue;
+                }
+            }
+
+            $reparado[] = $linea;
+        }
+
+        return implode("\n", $reparado);
     }
 }

@@ -430,7 +430,10 @@ export default {
             mostrarModalFinalizar: false,
             finalizando: false,
             consultaFinalizada: false,
-            errorFinalizar: ''
+            errorFinalizar: '',
+
+            // [{diagnostico, porcentaje}, ...] ya emitidos en esta consulta
+            diagnosticosAcumulados: []
 
         }
 
@@ -463,6 +466,9 @@ export default {
                 this.$emit('actualizarConsultaId', this.consultaId)
                 console.log('Consulta ID:', this.consultaId)
                 console.log(response.data)
+                if (response.data.reanudada) {
+                    await this.cargarSesionPrevia()
+                }
             }catch(error){
                 console.error('Error al iniciar consulta:', error)
                 this.consultaId = null
@@ -530,16 +536,57 @@ export default {
             return combinados
         },
 
+        async cargarSesionPrevia() {
+            try {
+                const response = await axios.get(`${urlConsultaIA}/${this.consultaId}/sesion`)
+                if (!response.data.success) return
+
+                const { transcripciones, sintomas } = response.data
+
+                transcripciones.forEach(t => {
+                    this.mensajes.push({
+                        tipo: 'paciente',
+                        texto: t.mensaje
+                    })
+                    if (t.analizado_ia && t.observaciones_ia) {
+                        this.mensajes.push({
+                            tipo: 'ia',
+                            texto: t.observaciones_ia
+                        })
+                    }
+                })
+
+                this.sintomas = sintomas || []
+                this.$emit('actualizarSintomas', this.sintomas)
+
+                this.mensajes.push({
+                    tipo: 'sistema',
+                    texto: 'Consulta reanudada — se recuperó el historial previo.'
+                })
+
+                this.scrollBottom()
+            } catch (error) {
+                console.error('Error al cargar la sesión previa:', error)
+            }
+        },
+
         // Nuevo método, junto a combinarSintomas()
         formatearDiagnosticosProbables(iaData) {
             const lista = Array.isArray(iaData?.diagnosticos_probables) ? iaData.diagnosticos_probables : []
-            if (lista.length > 0) {
-                return lista
-                    .map(dp => dp.porcentaje ? `${dp.diagnostico} (${dp.porcentaje}%)` : dp.diagnostico)
-                    .join(', ')
-            }
-            // Fallback por compatibilidad, si algún endpoint aún no manda el array
-            return iaData?.diagnostico_probable || null
+            if (lista.length === 0) return iaData?.diagnostico_probable || null
+
+            const fmt = dp => dp.porcentaje ? `${dp.diagnostico} (${dp.porcentaje}%)` : dp.diagnostico
+            const rondas = [...new Set(lista.map(d => d.ronda || 1))].sort((a, b) => a - b)
+
+            if (rondas.length === 1) return lista.map(fmt).join(', ')
+
+            return rondas.map((r, i) => {
+                const grupo = lista.filter(d => (d.ronda || 1) === r).map(fmt).join(', ')
+                const etiqueta = i === 0
+                    ? 'Cuadro inicial'
+                    : `Síntomas agregados${rondas.length > 2 ? ' #' + i : ''}`
+                return `${etiqueta}: ${grupo}`
+            }).join('\n')
         },
 
         /**
@@ -648,6 +695,8 @@ export default {
                 formData.append('consulta_id', this.consultaId)
                 formData.append('paciente_id', this.pacienteId)
                 formData.append('archivo', archivo)
+                formData.append('diagnosticos_previos', JSON.stringify(this.diagnosticosAcumulados))
+                formData.append('sintomas', JSON.stringify(this.sintomas))
 
                 const respArchivo = await axios.post(urlArchivoIA, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
@@ -663,8 +712,11 @@ export default {
                 // Avisamos al padre para que refresque ArchivosClinicos.vue
                 this.$emit('archivoSubido')
 
-                const diagnosticoArchivo = respArchivo.data.ia_data?.diagnostico_probable || ''
+                this.diagnosticosAcumulados = respArchivo.data.ia_data?.diagnosticos_probables || this.diagnosticosAcumulados
+                this.sintomas = this.combinarSintomas(this.sintomas,respArchivo.data.ia_data?.sintomas || [])
 
+                const diagnosticoArchivo = respArchivo.data.ia_data?.diagnostico_probable || ''
+                
                 this.mensajes[idxAnalizando].texto = 'IA analizando el mensaje junto con el archivo...'
                 this.scrollBottom()
 
@@ -681,7 +733,8 @@ export default {
                         consulta_id: this.consultaId,
                         paciente_id: this.pacienteId,
                         transcripcion: contextoArchivo + mensajePaciente,
-                        sintomas: this.sintomas
+                        sintomas: this.sintomas,
+                        diagnosticos_previos: this.diagnosticosAcumulados
                     }
                 )
 
@@ -692,7 +745,9 @@ export default {
 
                     this.$emit('actualizarIaData', respTexto.data.ia_data)
                     this.$emit('actualizarSintomas', this.sintomas)
-
+                    
+                    // El backend ya devuelve la lista fusionada (previos + nuevos)
+                   this.diagnosticosAcumulados = respTexto.data.ia_data.diagnosticos_probables || this.diagnosticosAcumulados
                     const textoDx = this.formatearDiagnosticosProbables(respTexto.data.ia_data)
                     this.mensajes[idxAnalizando].texto = textoDx
                         ? `Diagnósticos probables (según ${nombreArchivo} y el mensaje): ${textoDx}`
@@ -775,7 +830,8 @@ export default {
                                 consulta_id: this.consultaId,
                                 paciente_id: this.pacienteId,
                                 transcripcion: mensajePaciente,
-                                sintomas: this.sintomas
+                                sintomas: this.sintomas,
+                                diagnosticos_previos: this.diagnosticosAcumulados
                             }
                         )
                         console.log('Uso de tokens IA:', response.data.ia_data?.debug_usage)
@@ -794,6 +850,9 @@ export default {
                             // ENVIAR AL PADRE EL RESULTADO COMPLETO DE LA IA
                             this.$emit('actualizarIaData', response.data.ia_data)
                             this.$emit('actualizarSintomas', this.sintomas)
+
+                            // El backend ya devuelve la lista fusionada (previos + nuevos)
+                            this.diagnosticosAcumulados = response.data.ia_data.diagnosticos_probables || this.diagnosticosAcumulados
 
                             // REEMPLAZAR MENSAJE "analizando..." POR EL DIAGNÓSTICO REAL
                             const textoDx = this.formatearDiagnosticosProbables(response.data.ia_data)
@@ -901,6 +960,8 @@ export default {
             formData.append('consulta_id', this.consultaId)
             formData.append('paciente_id', this.pacienteId)
             formData.append('archivo', archivo)
+            formData.append('diagnosticos_previos', JSON.stringify(this.diagnosticosAcumulados))
+            formData.append('sintomas', JSON.stringify(this.sintomas))
 
             try {
 
@@ -921,9 +982,9 @@ export default {
                             }
                         );
                     }
-
+  
                     const sintomasNuevos = response.data.ia_data?.sintomas || []
-
+                    this.diagnosticosAcumulados = response.data.ia_data?.diagnosticos_probables || this.diagnosticosAcumulados
                     this.sintomas = this.combinarSintomas(this.sintomas, sintomasNuevos)
 
                     this.$emit('actualizarIaData', response.data.ia_data)
@@ -1415,5 +1476,10 @@ export default {
 .modal-fade-enter-from,
 .modal-fade-leave-to {
     opacity: 0;
+}
+
+.direct-chat-text{
+    border-radius: 10px;
+    white-space: pre-line;
 }
 </style>

@@ -15,6 +15,7 @@ use App\Models\EvaluacionIA;
 use App\Models\NotaPsoapp;
 use App\Models\Receta;
 use App\Models\Derivacion;
+use App\Models\SintomaDetectado; 
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\ListaEspera;
 use Carbon\Carbon; 
@@ -69,6 +70,25 @@ class ConsultaIAController extends Controller
                     'paciente_id' => 'required|integer|exists:pacientes,id',
                 ]);
 
+                // NUEVO: si ya existe una consulta en proceso de HOY para este
+                // paciente, la reanudamos en vez de crear una nueva. Evita perder
+                // todo lo capturado si la página se recarga a media consulta.
+                $consultaExistente = Consulta::where('paciente_id', $validated['paciente_id'])
+                    ->where('estado_consulta', 'en_proceso')
+                    ->whereDate('created_at', Carbon::now()->toDateString())
+                    ->latest('id')
+                    ->first();
+
+                if ($consultaExistente) {
+                    return response()->json([
+                        'success' => true,
+                        'consulta_id' => $consultaExistente->id,
+                        'consulta_folio' => $consultaExistente->folio,
+                        'session_uuid' => $consultaExistente->session_uuid,
+                        'reanudada' => true,
+                    ]);
+                }
+
                 $ultimaConsulta = Consulta::latest('id')->first();
                 $numero = $ultimaConsulta ? $ultimaConsulta->id + 1 : 1;
                 $folio = 'CONS-'.date('Y').'-'.str_pad($numero, 4, '0', STR_PAD_LEFT);
@@ -95,7 +115,8 @@ class ConsultaIAController extends Controller
                     'success' => true,
                     'consulta_id' => $consulta->id,
                     'consulta_folio' => $consulta->folio,
-                    'session_uuid' => $consulta->session_uuid
+                    'session_uuid' => $consulta->session_uuid,
+                    'reanudada' => false,
                 ]);
             }
 
@@ -170,7 +191,10 @@ class ConsultaIAController extends Controller
                     $consulta,
                     $historial,
                     $ultimaNota,
-                    $triage
+                    $triage,
+                    $request->sintomas ?? [],
+                    $consulta->paciente,
+                    (array) $request->input('diagnosticos_previos', [])
                 );
 
                 // Guardamos la respuesta de la IA en la MISMA fila, para el historial clínico
@@ -277,6 +301,40 @@ class ConsultaIAController extends Controller
                 'success' => false,
                 'error'   => 'No se pudo finalizar la consulta.'
             ], 500);
+        }
+    }
+
+    /**
+     * Devuelve el historial completo de la sesión activa (transcripciones,
+     * síntomas acumulados, última evaluación IA y nota PSOAPP) para que el
+     * frontend pueda reconstruir el chat cuando se reanuda una consulta
+     * (por ejemplo, tras recargar la página a media consulta).
+     */
+    public function obtenerHistorialSesion($consultaId)
+    {
+        try {
+            $consulta = Consulta::find($consultaId);
+            if (!$consulta) {
+                return response()->json(['success' => false, 'error' => 'Consulta no encontrada'], 404);
+            }
+
+            $transcripciones = ConsultaTranscripcion::where('consulta_id', $consultaId)
+                ->orderBy('created_at', 'asc')
+                ->get(['id', 'mensaje', 'tipo_usuario', 'analizado_ia', 'observaciones_ia', 'created_at']);
+
+            $sintomas = SintomaDetectado::where('consulta_id', $consultaId)
+                ->pluck('nombre_sintoma')
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'transcripciones' => $transcripciones,
+                'sintomas' => $sintomas,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error en obtenerHistorialSesion: " . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'No se pudo obtener el historial de la sesión.'], 500);
         }
     }
 
@@ -431,12 +489,22 @@ class ConsultaIAController extends Controller
             // ÚNICA llamada al pipeline de análisis IA (antes se llamaba
             // dos veces: una dentro del bloque de imagen, cuyo resultado se
             // descartaba, y otra aquí).
+
+            $diagnosticosPrevios = json_decode((string) $request->input('diagnosticos_previos', '[]'), true);
+            $diagnosticosPrevios = is_array($diagnosticosPrevios) ? $diagnosticosPrevios : [];
+
+            $sintomasPrevios = json_decode((string) $request->input('sintomas', '[]'), true);
+            $sintomasPrevios = is_array($sintomasPrevios) ? $sintomasPrevios : [];
+            
             $iaData = $this->iaClinicaService->analizarTranscripcion(
                 $textoExtraido,
                 $consulta,
                 $historial,
                 $ultimaNota,
-                $triage
+                $triage,
+                $sintomasPrevios,
+                $consulta->paciente,
+                $diagnosticosPrevios
             );
 
             if ($iaData) {
@@ -1468,25 +1536,43 @@ class ConsultaIAController extends Controller
 
             $datosActualizar = [
                 'diagnosticos_confirmados' => $diagnosticosLimpios,
-                // Legacy: se conserva 'diagnostico' (texto, join de todos) para
-                // que los PDFs existentes (pdf.diagnostico/pdf.notasoapp) sigan
-                // mostrando algo correcto sin tocarlos.
                 'diagnostico'              => collect($diagnosticosLimpios)->pluck('diagnostico')->implode('; '),
                 'diagnostico_icd11_codigo' => $diagnosticosLimpios[0]['icd11_codigo'] ?? null,
                 'diagnostico_icd11_titulo' => $diagnosticosLimpios[0]['icd11_titulo'] ?? null,
             ];
 
-            // FIX: la columna real es recomendaciones_medico, no recomendaciones.
             if (array_key_exists('recomendaciones', $validated)) {
                 $datosActualizar['recomendaciones_medico'] = $validated['recomendaciones'];
             }
 
-
             $consulta->update($datosActualizar);
 
+            // NUEVO: regenerar el Análisis de la nota PSOAPP más reciente para
+            // reflejar el diagnóstico confirmado, sin perder la redacción clínica.
+            $analisisActualizado = null;
+            $nota = NotaPsoapp::where('consulta_id', $consulta->id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($nota) {
+                $textoRegenerado = $this->iaClinicaService->regenerarAnalisisConDiagnosticoConfirmado(
+                    (string) $nota->analisis,
+                    $diagnosticosLimpios
+                );
+
+                if ($textoRegenerado !== null) {
+                    $nota->update(['analisis' => $textoRegenerado]);
+                    $analisisActualizado = $textoRegenerado;
+                }
+            }
+
             return response()->json([
-                'success'  => true,
-                'consulta' => $consulta->fresh(),
+                'success'              => true,
+                'consulta'             => $consulta->fresh(),
+                // NUEVO: el frontend lo usa para actualizar la sección "Análisis"
+                // del acordeón sin perder la redacción clínica. Si viene null,
+                // el frontend no debe tocar esa sección.
+                'analisis_actualizado' => $analisisActualizado,
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {

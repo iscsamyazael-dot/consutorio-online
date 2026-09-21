@@ -14,12 +14,12 @@ use App\Http\Controllers\ConsultaIAController; // IA
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DerivacionController; 
+use App\Http\Controllers\DerivacionController;
 use App\Http\Controllers\UserRegisterController;
 use App\Http\Controllers\ListaEsperaController;
 use App\Models\Paciente;
-use App\Http\Controllers\CitaController;//agenda        
-use App\Http\Controllers\UbicacionController;//agenda 
+use App\Http\Controllers\CitaController;//agenda
+use App\Http\Controllers\UbicacionController;//agenda
 use App\Http\Controllers\Api_Ionic\AuthController; //Login APP-IONIC
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\CimaMedicamentoController;
@@ -41,6 +41,12 @@ use App\Http\Controllers\ExpedienteClinicoController;
 Route::get('/', function () { return view('auth.login'); });
 
 Route::middleware('auth')->group(function () {
+
+        // ═════════════════════════════════════════════════════════════
+        // BLOQUE 1: RUTAS GENERALES (sin datos clínicos sensibles)
+        // Accesibles por cualquier usuario autenticado del tenant.
+        // ═════════════════════════════════════════════════════════════
+
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -63,17 +69,14 @@ Route::middleware('auth')->group(function () {
         // Ruta para procesar el formulario y guardar el registro en las tablas
         Route::get('/api/specialties', [SpecialtyController::class, 'list']);// Agenda: filtro por especialidad
         Route::get('pacientes/buscar', [PacienteController::class, 'filtrar_paciente'])->name('pacientes.filtrar_paciente');
-       
+
         //para traer actualizar y eliminar medicos
         // Route::get('buscarMedico/{id}', [MedicoController::class, 'show']);
         // Route::put('actualizarMedico/{id}', [MedicoController::class, 'update']);
         // Route::delete('eliminarMedico/{id}', [MedicoController::class, 'destroy']);
 
-
-
         ///*** RUTAS PARA LAS APIS Y CONSUMO DE DATOS */
         // Vista principal (Blade)
-    
 
         // Endpoints consumidos por el API Service
        Route::prefix('api')->group(function () {
@@ -84,19 +87,17 @@ Route::middleware('auth')->group(function () {
         });
         //RUTA PARA ACTUALIZAR EL ESTADO DE CONSULTA
         Route::patch('/pacientes/{paciente}/estado-consulta', [ConsultaController::class, 'actualizarEstadoConsulta']);
-        //RUTA PARA ACTUALIZAR TIPO Y ESTADO DE ARCHIVO
-        Route::put('/archivos-clinicos/{id}', [ArchivosClinicosController::class, 'update']);
         //RUTA PARA ACTUALIZAR EL ESTADO DE DERIVACION
         Route::put('/derivaciones/{id}/estado', [DerivacionController::class, 'actualizarEstado']);
         //Ruta para obtener estadisticas de las cartas de derivacion
         Route::get('/derivaciones/estadisticas', [DerivacionController::class, 'obtenerEstadisticas']);
-        //RUTA QUE OBTIENE TODAS LAS DERIVACIONES 
+        //RUTA QUE OBTIENE TODAS LAS DERIVACIONES
         Route::get('/derivaciones', [DerivacionController::class, 'index']);
         Route::get('medicoEstadistica', [MedicoController::class, 'obtenerEstadisticas']);
         Route::get('listaUbicaciones', [UbicacionController::class, 'listar']);// Agenda: filtro por ubicación/sucursal
         Route::post('/medicos', [MedicoController::class, 'store'])->name('medicos.store');
         Route::get('/medicos-horarios', [MedicoController::class, 'index']);
-        //ruta que filtra los medicos locales de la tabla 
+        //ruta que filtra los medicos locales de la tabla
         Route::get('buscarMedico', [MedicoController::class, 'filtrar_medico']);// Agenda: filtro por médico
         //metodo de buscara medicamento
         Route::prefix('cima')->group(function () {
@@ -104,19 +105,19 @@ Route::middleware('auth')->group(function () {
             Route::get('/{nregistro}', [CimaMedicamentoController::class, 'detalle']);
         });
         Route::resource('especialidades', SpecialtyController::class);
-        Route::resource('pacientes', PacienteController::class);
-        Route::resource('consultas', ConsultaController::class);
+        // NOTA DE SEGURIDAD: se excluye 'show' del resource de pacientes porque
+        // ese endpoint expone el expediente/datos clínicos del paciente. Se
+        // redefine más abajo, dentro del bloque protegido con
+        // can:acceso-medico-admin, para que 'asistente' no pueda consultarlo
+        // directamente por URL/ID aunque no tenga el link en su menú.
+        Route::resource('pacientes', PacienteController::class)->except(['show']);
         Route::get('medicamentos/resumen', [MedicamentoController::class, 'resumen']);
-        // rutas nuevas de medicamentoa 
+        // rutas nuevas de medicamentoa
         Route::resource('medicamentos', MedicamentoController::class);
-        Route::resource('medicamentos', MedicamentoController::class);
-        Route::resource('recetas', RecetaController::class);
-        Route::resource('receta-detalles', RecetaDetalleController::class);
         Route::resource('usuarios', UserController::class);
-        
+
         //Ruta para ver el total de las consultas finalizadas el día de hoy
         Route::get('total-consultas-finalizadas', [TriageController::class, 'totalFinalizadasHoy']);
-
 
         // IMPORTANTE: estas rutas deben ir ANTES de Route::resource('consultaIA', ...)
         // y deben coincidir EXACTAMENTE con la URL que llama el frontend
@@ -124,64 +125,37 @@ Route::middleware('auth')->group(function () {
         // Antes decía 'consulta-ia/archivo' (con guión), por eso el POST no
         // coincidía con esa ruta y caía en la ruta GET /consultaIA/{consultaIA}
         Route::post('consultaIA/archivo', [ConsultaIAController::class, 'subirArchivo'])->name('consultaIA.subirArchivo'); // IA: sube archivo de audio/documento a la consulta con IA
-        // Listado y descarga de archivos clínicos para ArchivosClinicos.vue.
-        // Mismo motivo que la de arriba: deben ir antes del resource para
-        // no caer en la ruta GET /consultaIA/{consultaIA} del resource.
-        Route::get('consultaIA/archivos/{consultaId}', [ConsultaIAController::class, 'listarArchivos'])->name('consultaIA.listarArchivos'); // IA: lista archivos asociados a una consulta con IA
-        Route::get('consultaIA/archivo/{id}/descargar', [ConsultaIAController::class, 'descargarArchivo'])->name('consultaIA.descargarArchivo'); // IA: descarga un archivo de la consulta con IA
-        // Guarda la nota PSOAPP (borrador o final) y genera el PDF de
-        // diagnóstico/receta. Igual que las de arriba, deben ir antes del
-        // resource para que no las intercepte la ruta GET /consultaIA/{consultaIA}.
-        Route::post('consultaIA/{consultaId}/psoapp', [ConsultaIAController::class, 'guardarPsoapp'])->name('consultaIA.guardarPsoapp'); // NUEVO // IA: guarda la nota PSOAPP generada/editada
-        Route::get('consultaIA/{consultaId}/pdf/{tipo}', [ConsultaIAController::class, 'generarPdf'])->name('consultaIA.generarPdf'); // NUEVO // IA: genera PDF de diagnóstico/receta de la consulta con IA
-        Route::get('consultaIA/{consultaId}/pdf/{tipo}/ver', [ConsultaIAController::class, 'verPdf'])->name('consultaIA.verPdf'); // IA: previsualiza el PDF (inline) en el modal de ExpedienteTabs.vue
-        Route::post('consultaIA/{consultaId}/receta', [ConsultaIAController::class, 'guardarReceta'])->name('consultaIA.guardarReceta'); // ← NUEVA: guarda la receta de RecetaInteligente.vu
-        Route::post('consultaIA/{consultaId}/evaluacion', [ConsultaIAController::class, 'guardarEvaluacion'])->name('consultaIA.guardarEvaluacion'); // IA: edita diagnóstico/recomendación de la evaluación IA desde el historial (ExpedienteTabs.vue)
-        Route::get('medicamentos/prediccion', [MedicamentoController::class, 'prediccion']);// chat de medicamento con IA 
+        Route::get('medicamentos/prediccion', [MedicamentoController::class, 'prediccion']);// chat de medicamento con IA
+        Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente'); // IA: genera derivación con apoyo de IA
         Route::post('consultaIA/{consultaId}/derivar', [ConsultaIAController::class, 'guardarDerivacion'])
         ->name('consultaIA.guardarDerivacion'); // IA: guarda la derivación generada en Derivacion.vue
-        // Historial clínico completo de un paciente (todas sus consultas +
-        // transcripciones), usado por HistorialClinico.vue. Debe ser una ruta
-        // top-level porque el frontend arma la URL como `route + '/historialClinico'`
-        // (sin el prefijo consultaIA), así que no importa el orden respecto al
-        // resource de abajo, pero se deja agrupada aquí por claridad.
-        Route::get('historialClinico', [ConsultaIAController::class, 'historialClinico'])->name('consultaIA.historialClinico'); // IA: historial clínico completo generado por el módulo de IA
-        Route::post('consultaIA/{consultaId}/finalizar', [ConsultaIAController::class, 'finalizarConsulta'])->name('consultaIA.finalizarConsulta'); // IA: cierra la consulta y bloquea más mensajes
-        Route::get('consultaIA/paciente/{pacienteId}/psoapp', [ConsultaIAController::class, 'notasPsoapp'])->name('consultaIA.notasPsoapp'); // IA: lista todas las notas PSOAPP de un paciente, para ExpedienteTabs.vue
-        Route::resource('consultaIA', ConsultaIAController::class); // IA: CRUD principal del módulo de Consulta Inteligente (IA)
-        Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente'])->name('recetaInteligente'); // IA: genera receta con apoyo de IA
-        Route::post('derivacionInteligente', [ConsultaIAController::class, 'derivacionInteligente'])->name('derivacionInteligente'); // IA: genera derivación con apoyo de IA
+
         Route::resource('medicos', MedicoController::class);
         Route::resource('ubicaciones', UbicacionController::class);// Agenda: CRUD de ubicaciones/sucursales
         Route::resource('movimientos',MovimientoInventarioController::class);
         Route::resource('triage', TriageController::class);
-        Route::resource('archivoclinico', ArchivosClinicosController::class);
-        //Route::resource('dashboard/citas', CitaController::class hola);
         // Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);//COMNTDAAAAA
         //Route::resource('dashboard/citas', CitaController::class);
         Route::get('dashboard/api/citas', [CitaController::class, 'getEventos']);// Agenda: eventos del calendario (usada por el calendario del dashboard, distinta de /api/citas)
         //Route::resource('consultas', ConsultaController::class)->except(['index']);
         Route::resource('citas', CitaController::class);// Agenda: CRUD de citas
         Route::post('/api/citas', [CitaController::class, 'store']);// Agenda: crear cita desde el calendario / lista de espera
-        
-        //Ruta para ver el historial de una consulta de una determinada fecha //
-        Route::get('VerHistorialConsultas', [ConsultaController::class, 'historial']);
+
         // Ruta para cambiar el estado de una consulta (ej. En proceso -> Finalizada)
         Route::patch('ActualizarEstadoConsulta/{id}', [ConsultaController::class, 'actualizarEstado']);
-
         Route::patch('/api/consultas/{id}/estado', [ConsultaController::class, 'actualizarEstado'])->name('consultas.estado.api');// Historial: cambiar estado de consulta tradicional
-        
+
         //Rutas para la lista de espera ///
         // Dentro del grupo protegido por auth (mismo patrón que ya usas para 'citas')
         Route::resource('lista-espera', ListaEsperaController::class)
              ->parameters(['lista-espera' => 'listaEspera']);
-            
+
         Route::patch('lista-espera/{listaEspera}/estado', [ListaEsperaController::class, 'actualizarEstado'])
             ->name('lista-espera.estado');
-        
+
         //Ruta para mostrar el resumen de las tarjetas
         Route::get('Resumen-listaEspera-consultaFinalizadas', [ListaEsperaController::class, 'resumen']);
-        
+
         //RUTAS PARA GENERAR EL TOKENS PARA LA VINCULACIÓN DE LOS DISPOSITIVOS //
          Route::get('dispositivos', [DispositivoController::class, 'index']);
         //Ruta para generar codigo de emparejamiento//
@@ -208,33 +182,24 @@ Route::middleware('auth')->group(function () {
        //Rutas para usar los servicios del AUTH de google o Microsoft
        // Verificar si ya hay una cuenta vinculada y el email
         Route::get('estatus-correo', [ConfiguracionCorreoController::class, 'estatus']);
-        
+
         // Redirigir al usuario al proveedor de OAuth (ej. Google)
         Route::get('/auth/google/redirect', [ConfiguracionCorreoController::class, 'redirectToGoogle']);
-        
+
         // Callback que responde Google tras la autorización exitosa
         Route::get('/auth/google/callback', [ConfiguracionCorreoController::class, 'handleGoogleCallback']);
-        
+
         // Desconectar / limpiar los datos de correo de la fila existente
         Route::post('desconectar-correo', [ConfiguracionCorreoController::class, 'desconectar']);
 
-        //Ruta para descargar o imprimir el pdf expediente del paciente//
-        Route::get('Descargar-Expediente-pdf/{paciente}', [PacienteController::class, 'descargarExpedientePdf'])
-                ->name('pacientes.descargarExpedientePdf');
-
         //Ruta para el consumo de las APIS ICD 11 International Classification of Diseasses 11th Revision//
         Route::get('/icd11/buscar', [Icd11Controller::class, 'buscar']);
-        Route::post('/consultaIA/{consultaId}/diagnostico', [ConsultaIAController::class, 'guardarDiagnostico']);
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         //Ruta para cuando el triage se guarda directamente de la lista de espera //
         Route::post('/triage/vincular-consulta', [TriageController::class, 'vincularConsulta']);
         ///////////////////////////////////////////////////////////////////////////////////////
-        
-        //Ruta para el uso del Expediente Clinico ó Historia Clinica //
-        Route::get('/expedienteClinico/{pacienteId}', [ExpedienteClinicoController::class, 'obtener']);
-        Route::post('/expedienteClinico/{pacienteId}', [ExpedienteClinicoController::class, 'guardar']);
-        
+
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de GET /api/citas. Antes existían DOS rutas
         // GET /api/citas apuntando a controladores distintos
@@ -256,7 +221,7 @@ Route::middleware('auth')->group(function () {
         //Código para hacer el filtro de un paciente mediante un input //
         Route::get('buscarPaciente',[PacienteController::class,'filtrar_paciente']);
         //Codigo para las vistas y que son usadas en el menú de adminlte"
-       
+
         // ─────────────────────────────────────────────────────────────
         // ÚNICA definición de PATCH .../citas/{cita}/estado. Antes había
         // dos rutas casi idénticas (con y sin prefijo /api) apuntando al
@@ -266,9 +231,6 @@ Route::middleware('auth')->group(function () {
         // ─────────────────────────────────────────────────────────────
         Route::patch('/api/citas/{cita}/estado', [CitaController::class, 'actualizarEstado'])->name('citas.estado.api');// Agenda: cambiar estado de cita (usada por ConsultaInteligente.vue)
 
-        //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
-        Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
-            ->name('ExpedienteDetalle');
         Route::get('/triage', [TriageController::class, 'index']);
         // ← NUEVA, debe ir ANTES de /{id}
         Route::get('/triage/{pacienteId}/analizar-ia', [TriageController::class, 'analizarIA']);
@@ -277,6 +239,75 @@ Route::middleware('auth')->group(function () {
         // Ruta explícita para manejar la petición POST desde panelatencion.vue
         Route::post('/triage/guardar/{id?}', [TriageController::class, 'guardarTriageRapido'])->name('triage.guardarRapido');
         Route::put('/pacientes/{id}', [PacienteController::class, 'update'])->name('pacientes.update');
+
+
+        // ═════════════════════════════════════════════════════════════
+        // BLOQUE 2: DATOS CLÍNICOS SENSIBLES (protegido)
+        // Expediente, historia clínica (NOM-004), notas PSOAPP, recetas,
+        // archivos clínicos, diagnósticos y consultas.
+        // Gate::acceso-medico-admin => solo 'medico' y 'admin'.
+        // El rol 'asistente' NUNCA debe tener acceso a este bloque, ni
+        // por vista ni por llamada directa a la API/URL.
+        //
+        // ANTES: estas rutas vivían sueltas dentro del grupo 'auth'
+        // general (BLOQUE 1), sin ningún Gate — cualquier usuario
+        // autenticado del tenant podía pedirlas directamente por
+        // URL/ID sin pasar por el menú, aunque su rol no tuviera el
+        // link visible. Esto se corrige agrupándolas aquí.
+        // ═════════════════════════════════════════════════════════════
+        Route::middleware(['can:acceso-medico-admin'])->group(function () {
+
+            // Detalle / expediente del paciente (antes era pacientes.show,
+            // parte del Route::resource('pacientes', ...) sin protección)
+            Route::get('pacientes/{paciente}', [PacienteController::class, 'show'])->name('pacientes.show');
+            //Ruta parametrizada para ver el detalle de un paciente en el expediente médico//
+            Route::get('ExpedienteDetalle/{id}', [PacienteController::class, 'show'])
+                ->name('ExpedienteDetalle');
+            //Ruta para descargar o imprimir el pdf expediente del paciente//
+            Route::get('Descargar-Expediente-pdf/{paciente}', [PacienteController::class, 'descargarExpedientePdf'])
+                    ->name('pacientes.descargarExpedientePdf');
+
+            //Ruta para el uso del Expediente Clinico ó Historia Clinica //
+            Route::get('/expedienteClinico/{pacienteId}', [ExpedienteClinicoController::class, 'obtener']);
+            Route::post('/expedienteClinico/{pacienteId}', [ExpedienteClinicoController::class, 'guardar']);
+
+            Route::resource('consultas', ConsultaController::class);
+            //Ruta para ver el historial de una consulta de una determinada fecha //
+            Route::get('VerHistorialConsultas', [ConsultaController::class, 'historial']);
+            Route::post('/consultaIA/{consultaId}/diagnostico', [ConsultaIAController::class, 'guardarDiagnostico']);
+
+            // Listado y descarga de archivos clínicos para ArchivosClinicos.vue.
+            // Deben ir antes del resource para no caer en la ruta GET
+            // /consultaIA/{consultaIA} del resource.
+            Route::get('consultaIA/archivos/{consultaId}', [ConsultaIAController::class, 'listarArchivos'])->name('consultaIA.listarArchivos'); // IA: lista archivos asociados a una consulta con IA
+            Route::get('consultaIA/archivo/{id}/descargar', [ConsultaIAController::class, 'descargarArchivo'])->name('consultaIA.descargarArchivo'); // IA: descarga un archivo de la consulta con IA
+            // Guarda la nota PSOAPP (borrador o final) y genera el PDF de
+            // diagnóstico/receta. Igual que las de arriba, deben ir antes del
+            // resource para que no las intercepte la ruta GET /consultaIA/{consultaIA}.
+            Route::post('consultaIA/{consultaId}/psoapp', [ConsultaIAController::class, 'guardarPsoapp'])->name('consultaIA.guardarPsoapp'); // NUEVO // IA: guarda la nota PSOAPP generada/editada
+            Route::get('consultaIA/{consultaId}/pdf/{tipo}', [ConsultaIAController::class, 'generarPdf'])->name('consultaIA.generarPdf'); // NUEVO // IA: genera PDF de diagnóstico/receta de la consulta con IA
+            Route::get('consultaIA/{consultaId}/pdf/{tipo}/ver', [ConsultaIAController::class, 'verPdf'])->name('consultaIA.verPdf'); // IA: previsualiza el PDF (inline) en el modal de ExpedienteTabs.vue
+            Route::post('consultaIA/{consultaId}/evaluacion', [ConsultaIAController::class, 'guardarEvaluacion'])->name('consultaIA.guardarEvaluacion'); // IA: edita diagnóstico/recomendación de la evaluación IA desde el historial (ExpedienteTabs.vue)
+            // Historial clínico completo de un paciente (todas sus consultas +
+            // transcripciones), usado por HistorialClinico.vue.
+            Route::get('historialClinico', [ConsultaIAController::class, 'historialClinico'])->name('consultaIA.historialClinico'); // IA: historial clínico completo generado por el módulo de IA
+            Route::post('consultaIA/{consultaId}/finalizar', [ConsultaIAController::class, 'finalizarConsulta'])->name('consultaIA.finalizarConsulta'); // IA: cierra la consulta y bloquea más mensajes
+            Route::get('consultaIA/paciente/{pacienteId}/psoapp', [ConsultaIAController::class, 'notasPsoapp'])->name('consultaIA.notasPsoapp'); // IA: lista todas las notas PSOAPP de un paciente, para ExpedienteTabs.vue
+            Route::resource('consultaIA', ConsultaIAController::class); // IA: CRUD principal del módulo de Consulta Inteligente (IA)
+
+            Route::post('recetaInteligente', [ConsultaIAController::class, 'recetaInteligente']); // IA: genera receta con apoyo de IA
+            Route::resource('recetas', RecetaController::class);
+            Route::resource('receta-detalles', RecetaDetalleController::class);
+            Route::post('consultaIA/{consultaId}/receta', [ConsultaIAController::class, 'guardarReceta']); // ← NUEVA: guarda la receta de RecetaInteligente.vu
+
+            //RUTA PARA ACTUALIZAR TIPO Y ESTADO DE ARCHIVO
+            Route::put('/archivos-clinicos/{id}', [ArchivosClinicosController::class, 'update']);
+            Route::resource('archivoclinico', ArchivosClinicosController::class);
+            //RUTA PARA REAUNUDAR LA CONSULTA CONSERVANDO LOS DIAGNOSTICOS DETECTADOS//
+            Route::get('consultaIA/{consultaId}/sesion', [ConsultaIAController::class, 'obtenerHistorialSesion'])
+             ->name('consultaIA.obtenerHistorialSesion');
+        });
+
 
         //**INICIA LAS RUTAS PARA LAS VISTAS DE ACUERDO AL ACESSO DE CADA USUARIO *//
 
@@ -288,8 +319,13 @@ Route::middleware('auth')->group(function () {
             Route::get('ListaPacientes', [PacienteController::class, 'lista'])->name('pacientes.index');
              Route::get('PacienteNuevo/{id?}', [PacienteController::class, 'create'])
            ->name('pacientes.create');
-            Route::get('ExpedientePacientes', function() { return view('pacientes.expediente'); })->name('pacientes.create');
-            
+            // NOTA DE SEGURIDAD: aquí existía una segunda ruta 'ExpedientePacientes'
+            // (->name('pacientes.create')) que duplicaba, con otro nombre, la
+            // ruta de vista de expediente definida abajo en el bloque
+            // acceso-medico-admin. Al estar dentro de acceso-general, le daba
+            // a 'asistente' acceso a la vista de expediente completo. Se
+            // eliminó de aquí; la única definición válida vive en el bloque
+            // médico-admin, más abajo.
         });
 
         ///SECCION DE ACCESO A LAS VISTAS PARA ADMINISTRADOR - MEDICO///
@@ -309,7 +345,7 @@ Route::middleware('auth')->group(function () {
             });
             Route::get('NuevaConsulta', [ConsultaController::class, 'create'])->name('consultas.create');
             //Route::get('NuevaConsulta', function () { return view('consultas.create'); })->name('consultas.create');
-            Route::get('ConsultaInteligenteNueva', function() { 
+            Route::get('ConsultaInteligenteNueva', function() {
                 return view('consultas.consulta_inteligente', ['paciente' => null]);
             })->name('consultas.consulta_inteligente.nueva'); // IA: vista de Consulta Inteligente sin paciente asociado (nueva)
             Route::get('MedicosAlta',function(){return view('medicos.altamedicos'); })->name('medicos.altamedicos');
@@ -323,10 +359,10 @@ Route::middleware('auth')->group(function () {
             Route::get('RegistroMedico', function (){ return view('medicos.medicocreate'); })->name('medicos.medicocreate');
             Route::get('perfil',function(){ return view('configuracion-sistema.perfil'); })->name('configuracion-sistema.perfil');
             Route::get('cambiar-contraseña', function () { return view('configuracion-sistema.cambiar-contraseña'); })->name('configuracion-sistema.cambiar-contraseña');
-            //NUEVAS RUTAS DE CONFIGURACION EMPRESA 
+            //NUEVAS RUTAS DE CONFIGURACION EMPRESA
             Route::get('/configuracion-empresa', [ConfiguracionEmpresaController::class, 'show']);
             Route::put('/configuracion-empresa/config-correo', [ConfiguracionEmpresaController::class, 'guardarConfigCorreo']);
-            
+
             //RUTAS PARA LAS SESSIONES DE WAHA //
             Route::prefix('waha')->group(function () {
                 Route::post('/iniciar', [WahaController::class, 'iniciarSesion']);
@@ -339,9 +375,9 @@ Route::middleware('auth')->group(function () {
             Route::get('AgendarCitas',function(){ $datos = (new CitaController())->create(); return view('Citas.create',$datos); });
             Route::get('ExpedientePacientes/{id}', function ($id) {
                 return view('pacientes.expediente');
-            })->name('pacientes.expediente');
+            })->name('pacientes.expediente.detalle');
            Route::get('consultaNormal/{id}', [ConsultaController::class, 'create']);
-            Route::get('ConsultaInteligente/{id}', function ($id) { 
+            Route::get('ConsultaInteligente/{id}', function ($id) {
                 $paciente = Paciente::findOrFail($id);
                 return view('consultas.consulta_inteligente', compact('paciente'));
             })->name('consultas.consulta_inteligente'); // IA: vista de Consulta Inteligente para un paciente específico
@@ -416,7 +452,7 @@ Route::prefix('api/kiosco')
         //RUTA TEMPORAL PARA VER COMO QUEDA EL DISEÑO DEL TICKET//
         Route::post('previsualizar-ticket', [ImpresionTicketController::class, 'previewTextoPlano']);
 
-       
+
     });
 
 //Ruta para la vista del Kiosco

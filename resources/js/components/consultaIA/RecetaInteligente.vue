@@ -388,6 +388,19 @@ export default {
             this.recomendacionesGeneralesIA = ''
         },
 
+        fusionarPorNombre(actuales, nuevos) {
+            const combinados = [...actuales]
+            const nombresExistentes = new Set(actuales.map(m => (m.nombre || '').trim().toLowerCase()))
+            nuevos.forEach(m => {
+                const clave = (m.nombre || '').trim().toLowerCase()
+                if (clave && !nombresExistentes.has(clave)) {
+                    nombresExistentes.add(clave)
+                    combinados.push(m)
+                }
+            })
+            return combinados
+        },
+
         async buscarSugerencias(sintomas) {
             this.cargandoSugerencias = true
             this.errorSugerencias = false
@@ -401,9 +414,22 @@ export default {
                 if (response.data.success) {
                     this.tipoRespuesta = response.data.tipo || null
                     this.triage = response.data.triage || null
-                    this.medicamentosSugeridos = response.data.medicamentos || []
-                    this.medicamentosSugeridosIA = response.data.medicamentos_sugeridos_ia || []
-                    this.recomendacionesGeneralesIA = response.data.recomendaciones_generales || ''
+
+                    const nuevosMeds = response.data.medicamentos || []
+                    const nuevosMedsIA = response.data.medicamentos_sugeridos_ia || []
+
+                    this.medicamentosSugeridos = this.fusionarPorNombre(this.medicamentosSugeridos, nuevosMeds)
+                    this.medicamentosSugeridosIA = this.fusionarPorNombre(this.medicamentosSugeridosIA, nuevosMedsIA)
+
+                    // Se acumula la recomendación general en vez de reemplazarla, para
+                    // no perder la indicación del cuadro anterior (ej. gástrico) al
+                    // llegar una nueva (ej. cefalea).
+                    const nuevaRecomendacion = response.data.recomendaciones_generales || ''
+                    if (nuevaRecomendacion && !this.recomendacionesGeneralesIA.includes(nuevaRecomendacion)) {
+                        this.recomendacionesGeneralesIA = this.recomendacionesGeneralesIA
+                            ? this.recomendacionesGeneralesIA + '\n\n' + nuevaRecomendacion
+                            : nuevaRecomendacion
+                    }
                 } else {
                     this.resetSugerencias()
                 }

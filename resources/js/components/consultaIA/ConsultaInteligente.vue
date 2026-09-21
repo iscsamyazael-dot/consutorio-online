@@ -598,24 +598,24 @@ export default {
         },
 
         actualizarIaData(iaData) {
-            // Guardamos los datos de IA.
-            // NotaPSOAPP.vue recibe "iaData.nota_psoapp" por la prop
-            // :nota-psoapp declarada en el template, y se reparte solo
-            // gracias al watch interno del componente — ya no hace falta
-            // llamar manualmente a actualizarDesdeIA() por cada campo aquí.
+            // NOTA: diagnosticos_probables y alertas ya vienen RECALCULADOS
+            // COMPLETOS por el backend en cada ronda (considerando los
+            // síntomas acumulados vía $sintomasAcumulados en
+            // IAClinicaService::consultarIA), no como fragmentos a sumar.
+            // Antes se fusionaban aquí por texto exacto, pero eso duplicaba
+            // diagnósticos/alertas cuando la IA repetía el mismo hallazgo con
+            // redacción o porcentaje distinto entre rondas (confirmado:
+            // "Gastritis aguda probable" vs "Gastritis aguda" se trataban
+            // como diagnósticos distintos, duplicando la lista en vez de
+            // reemplazarla). Se toma la respuesta más reciente tal cual.
             this.iaData = iaData;
             this.iaError = false;
             console.log('Datos recibidos de la IA:', iaData);
 
-            // NUEVO: progreso de Historia Clínica (NOM-004), para el badge
-            // del hero header. Se mantiene el valor anterior si esta
-            // respuesta puntual no trajera el campo (no debería pasar, pero
-            // así el badge nunca "retrocede" a null por un evento aislado).
             if (iaData && iaData.historia_clinica_progreso) {
                 this.progresoHistoriaClinica = iaData.historia_clinica_progreso;
             }
 
-            // --- IMPRESIÓN DE TOKENS EN LA CONSOLA DEL NAVEGADOR ---
             if (iaData && iaData.debug_usage) {
                 console.log(
                     '%c [IA] Consumo de Tokens:',
@@ -798,11 +798,15 @@ export default {
             })
         },
 
-        onDiagnosticoGuardado({ diagnosticos, recomendaciones }) {
+        onDiagnosticoGuardado({ diagnosticos, recomendaciones, analisisActualizado }) {
             this.diagnosticosConfirmados = diagnosticos
             if (this.$refs.notaPsoapp) {
-                const textoDiagnosticos = diagnosticos.map(d => d.diagnostico).join('; ')
-                this.$refs.notaPsoapp.sobrescribirSeccion('A', textoDiagnosticos)
+                // Si el backend regeneró el análisis, lo usamos; si no, dejamos
+                // el análisis actual intacto (no lo sobrescribimos con los
+                // nombres de los diagnósticos).
+                if (analisisActualizado) {
+                    this.$refs.notaPsoapp.sobrescribirSeccion('A', analisisActualizado)
+                }
                 if (recomendaciones) {
                     this.$refs.notaPsoapp.sobrescribirSeccion('P2', recomendaciones)
                 }

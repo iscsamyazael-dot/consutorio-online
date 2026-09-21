@@ -452,7 +452,13 @@ export default {
 
                 this.$emit('diagnostico-guardado', {
                     diagnosticos: this.diagnosticosConfirmadosLocal,   // <-- antes: diagnostico (string)
-                    recomendaciones: this.recomendacionesConfirmadas
+                    recomendaciones: this.recomendacionesConfirmadas,
+                    // NUEVO: el backend regenera el Análisis de la nota PSOAPP
+                    // conservando la redacción clínica y solo actualizando la
+                    // conclusión al diagnóstico confirmado. Si viene null (nota
+                    // inexistente o falla la regeneración), ConsultaInteligente.vue
+                    // no debe tocar la sección Análisis.
+                    analisisActualizado: response.data.analisis_actualizado || null
                 })
 
             } catch (error) {
