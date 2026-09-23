@@ -19,6 +19,11 @@ class IdentifyTenant
     public function handle(Request $request, Closure $next): Response
     {
       $dbName = null;
+        // true cuando el tenant se acaba de resolver en ESTA request
+        // (dispositivo o email), no cuando viene de sesión ya cacheada.
+        // Se usa para saber si toca refrescar tenant_modulos en sesión.
+        $tenantResueltoEnFresco = false;
+
         // 0. Dispositivo (kiosco / TV) autenticado por token Sanctum.
         //    Se resuelve ANTES que email/sesión porque el dispositivo
         //    nunca manda esos datos, y porque auth:sanctum (que corre
@@ -36,6 +41,7 @@ class IdentifyTenant
 
                 if ($mapeo) {
                     $dbName = $mapeo->tenant_db;
+                    $tenantResueltoEnFresco = true;
                 }
             }
         }
@@ -53,6 +59,7 @@ class IdentifyTenant
                     $dbName = $tenant->db_name;
                     // Guardamos el tenant dinámico en la sesión
                     session(['tenant_db' => $dbName]);
+                    $tenantResueltoEnFresco = true;
                 }
             }
         }
@@ -67,6 +74,28 @@ class IdentifyTenant
             Config::set('database.connections.mysql.database', $dbName);
             DB::purge('mysql');
             DB::reconnect('mysql');
+
+            // 4. Módulos activos del tenant (medicina_general, medicina_trabajo, etc.)
+            //    Se consultan en la central y se cachean en sesión. Solo se
+            //    refrescan cuando el tenant se acaba de resolver en esta
+            //    request (login / dispositivo) o si aún no hay nada en
+            //    sesión — así no pegamos a la central en cada request.
+            if ($tenantResueltoEnFresco || !session()->has('tenant_modulos')) {
+                $tenantRow = DB::connection('central')->table('tenants')
+                    ->where('db_name', $dbName)
+                    ->first();
+
+                if ($tenantRow) {
+                    $modulosActivos = DB::connection('central')->table('tenant_modulos')
+                        ->join('modulos_sistema', 'modulos_sistema.id', '=', 'tenant_modulos.modulo_id')
+                        ->where('tenant_modulos.tenant_id', $tenantRow->id)
+                        ->where('tenant_modulos.activo', 1)
+                        ->pluck('modulos_sistema.clave')
+                        ->toArray();
+
+                    session(['tenant_modulos' => $modulosActivos]);
+                }
+            }
 
             
            
@@ -83,6 +112,7 @@ class IdentifyTenant
             'dbName' => $dbName,
             'session_tenant_db' => session('tenant_db'),
             'config_mysql_db' => config('database.connections.mysql.database'),
+            'tenant_modulos' => session('tenant_modulos'),
         ]);
 
         return $next($request);

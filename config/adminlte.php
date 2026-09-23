@@ -444,6 +444,88 @@ return [
         ],
 
         // ==========================================
+        // 🦺 MEDICINA DEL TRABAJO
+        // ==========================================
+        [
+            'header' => 'MEDICINA DEL TRABAJO',
+            'can' => 'modulo-medicina-trabajo',
+        ],
+        [
+            'text' => 'Valoraciones ocupacionales',
+            'icon' => 'fas fa-fw fa-clipboard-check',
+            'can' => 'modulo-medicina-trabajo',
+            'submenu' => [
+                [
+                    'text' => 'Lista de valoraciones',
+                    'icon' => 'fas fa-fw fa-list',
+                    'url' => 'ValoracionesOcupacionales',
+                ],
+                [
+                    'text' => 'Valoración inteligente',
+                    'icon' => 'fas fa-fw fa-microphone-alt',
+                    'url' => 'ValoracionInteligenteNueva',
+                ],
+            ],
+        ],
+        [
+            'text' => 'Accidentes de trabajo',
+            'icon' => 'fas fa-fw fa-exclamation-triangle',
+            'can' => 'modulo-medicina-trabajo',
+            'submenu' => [
+                [
+                    'text' => 'Lista de accidentes',
+                    'icon' => 'fas fa-fw fa-list',
+                    'url' => 'AccidentesTrabajo',
+                ],
+                [
+                    'text' => 'Registrar accidente',
+                    'icon' => 'fas fa-fw fa-plus-circle',
+                    'url' => 'AccidenteTrabajoNuevo',
+                ],
+            ],
+        ],
+        [
+            'text' => 'Empresas clientes',
+            'icon' => 'fas fa-fw fa-building',
+            'can' => 'modulo-medicina-trabajo',
+            'submenu' => [
+                [
+                    'text' => 'Lista de empresas',
+                    'icon' => 'fas fa-fw fa-list',
+                    'url' => 'EmpresasClientes',
+                ],
+                [
+                    'text' => 'Registrar empresa',
+                    'icon' => 'fas fa-fw fa-plus-circle',
+                    'url' => 'EmpresaClienteNueva',
+                ],
+            ],
+        ],
+        [
+            'text' => 'Puestos de trabajo',
+            'icon' => 'fas fa-fw fa-hard-hat',
+            'can' => 'modulo-medicina-trabajo',
+            'submenu' => [
+                [
+                    'text' => 'Lista de puestos',
+                    'icon' => 'fas fa-fw fa-list',
+                    'url' => 'PuestosTrabajo',
+                ],
+                [
+                    'text' => 'Registrar puesto',
+                    'icon' => 'fas fa-fw fa-plus-circle',
+                    'url' => 'PuestoTrabajoNuevo',
+                ],
+            ],
+        ],
+        [
+            'text' => 'Normas oficiales',
+            'icon' => 'fas fa-fw fa-file-contract',
+            'url' => 'NormasOficiales',
+            'can' => 'modulo-medicina-trabajo',
+        ],
+
+        // ==========================================
         // 🩺 CONFIGURACIÓN EXCLUSIVA MÉDICA
         // ==========================================
         [   'header' => 'CONFIGURACIÓN MÉDICA',
