@@ -63,8 +63,8 @@
 
         <!-- EVALUACIÓN ACTIVA DEL TRABAJADOR -->
         <div v-else class="row">
-            <!-- Columna Izquierda: Formulario Estructurado -->
-            <div class="col-lg-7">
+            <!-- Columna Izquierda: Formulario Estructurado (Abajo) -->
+            <div class="col-12 order-2">
                 <div class="card card-primary card-outline card-tabs shadow-sm">
                     <div class="card-header p-0 pt-1 border-bottom-0">
                         <ul class="nav nav-tabs" id="ficha-tab" role="tablist">
@@ -266,8 +266,8 @@
                 </div>
             </div>
 
-            <!-- Columna Derecha: Asistencia por IA en Vivo -->
-            <div class="col-lg-5">
+            <!-- Columna Derecha: Asistencia por IA en Vivo (Arriba) -->
+            <div class="col-12 order-1 mb-4">
                 <div class="card card-primary card-outline shadow-sm">
                     <!-- HEADER -->
                     <div class="card-header">
@@ -489,6 +489,8 @@ export default {
             sintomasDetectados: [],
             ultimoValorIA: {},
             dictamenSugerido: '',
+            recognition: null,
+            bufferVoz: '',
             form: {
                 empresa: '',
                 departamento: '',
@@ -605,32 +607,83 @@ export default {
             this.conversacion = [];
             this.sintomasDetectados = [];
         },
-        toggleEscucha() {
-            this.escuchando = !this.escuchando;
-            if (this.escuchando) {
-                // Simulación de dictado por IA para la demo de Clínica de Trabajo
+        soportaReconocimiento() {
+            return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+        },
+
+        crearReconocedor() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const rec = new SpeechRecognition();
+
+            rec.lang = 'es-MX';
+            rec.continuous = false;
+            rec.interimResults = true;
+
+            rec.onresult = this.manejarResultadoVoz;
+            rec.onerror = this.manejarErrorVoz;
+
+            rec.onend = () => {
+                if (this.escuchando) {
+                    setTimeout(() => {
+                        if (this.escuchando) rec.start();
+                    }, 300);
+                }
+            };
+
+            return rec;
+        },
+
+        manejarResultadoVoz(event) {
+            let textoFinalNuevo = '';
+            let textoInterino = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    textoFinalNuevo += transcript + ' ';
+                } else {
+                    textoInterino += transcript;
+                }
+            }
+
+            if (textoFinalNuevo) {
+                this.bufferVoz += textoFinalNuevo;
+            }
+
+            this.nuevoMensaje = (this.bufferVoz + textoInterino).trim();
+        },
+
+        manejarErrorVoz(event) {
+            console.error('Error de reconocimiento de voz:', event.error);
+            if (event.error === 'no-speech') return;
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                alert('No se pudo acceder al micrófono. Verifica los permisos del navegador.');
+                this.detenerEscucha();
             }
         },
-        procesarAudioIA() {
-            this.procesandoIA = true;
-            setTimeout(() => {
-                this.conversacion.push({
-                    sender: 'system',
-                    text: 'He procesado tu dictado. He detectado: Área de Logística, Puesto Operador de Montacargas, Exposición a Ruido y Vibración, Antecedente de Lumbalgia Leve.'
-                });
-                if (!this.sintomasDetectados.includes('Ruido Elevado')) {
-                    this.sintomasDetectados.push('Ruido Elevado');
-                }
-                if (!this.sintomasDetectados.includes('Vibraciones')) {
-                    this.sintomasDetectados.push('Vibraciones');
-                }
-                if (!this.sintomasDetectados.includes('Antecedente Lumbalgia')) {
-                    this.sintomasDetectados.push('Antecedente Lumbalgia');
-                }
-                this.procesandoIA = false;
-                this.escuchando = false;
-                this.scrollBottom();
-            }, 2000);
+
+        toggleEscucha() {
+            this.escuchando ? this.detenerEscucha() : this.iniciarEscucha();
+        },
+
+        iniciarEscucha() {
+            if (!this.soportaReconocimiento()) {
+                alert('Este navegador no soporta reconocimiento de voz. Usa Chrome o Edge.');
+                return;
+            }
+
+            if (!this.recognition) this.recognition = this.crearReconocedor();
+
+            this.bufferVoz = '';
+            this.escuchando = true;
+            this.recognition.start();
+        },
+
+        detenerEscucha() {
+            if (!this.escuchando) return;
+
+            this.escuchando = false;
+            if (this.recognition) this.recognition.stop();
         },
         seleccionarArchivo(e) {
             const file = e.target.files[0];
