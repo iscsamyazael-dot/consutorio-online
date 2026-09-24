@@ -744,4 +744,61 @@ class IAClinicaTrabajoService
 
         return implode("\n", $reparado);
     }
+
+    // ======================================================================
+    // PEGAR DENTRO de la clase App\Services\IAClinicaTrabajoService
+    // (junto a analizarTranscripcionValoracion). Reutiliza
+    // consultarGeminiTrabajo() que ya existe en el archivo.
+    // ======================================================================
+
+    /**
+     * Analiza el dictado/chat completo de la Ficha Médica Ocupacional y
+     * devuelve los campos que necesita el formulario del frontend.
+     * La IA solo PROPONE; el médico revisa y confirma.
+     */
+    public function analizarFichaOcupacional(string $textoCompleto): ?array
+    {
+        set_time_limit(120);
+
+        $vocabulario = DiccionarioMedico::textoReferencia();
+
+        $prompt = <<<PROMPT
+            Eres un co-piloto experto en Medicina del Trabajo que apoya a un médico a llenar la Ficha Médica Ocupacional a partir del dictado/chat de la consulta.
+
+            Tu tarea tiene dos partes muy claras con reglas distintas:
+            1. **Clasificación Estricta**: Para los campos 'empresa', 'puesto_trabajo', 'descripcion_puesto', 'epp_requerido', 'antecedentes', 'examen_fisico' y 'examenes_complementarios'. Aquí solo debes estructurar y resumir lo que ya está mencionado en el texto. Si un dato no se menciona, responde estrictamente con "". NUNCA inventes ni asumas datos clínicos.
+            2. **Sugerencia Proactiva**: Para los campos 'departamento', 'antiguedad', 'dictamen', 'recomendaciones' y 'sintomas_detectados'. Aquí la IA DEBE proponer de manera inteligente y proactiva sugerencias automatizadas basadas en su conocimiento de medicina ocupacional y los riesgos del puesto descritos, para que el médico los valide o edite.
+
+            Vocabulario de referencia (coloquial -> término médico):
+            {$vocabulario}
+
+            TEXTO DE LA CONSULTA:
+            "{$textoCompleto}"
+
+            REGLAS GENERALES
+            - Devuelve EXCLUSIVAMENTE el JSON indicado, sin Markdown ni texto extra.
+            - Respeta las negaciones: "sin limitación", "niega alergias" o "sin dolor" describen AUSENCIA de hallazgos; no son restricciones ni antecedentes positivos.
+            - Copia el contenido clínico con fidelidad, pero SIN encabezados ni frases introductorias del dictado (quita cosas como "En el historial clínico:", "El EPP requerido incluye:", "Exámenes complementarios:").
+
+            CAMPOS
+            - empresa: razón social completa, incluyendo el sufijo (ej. "S.A. de C.V.").
+            - departamento: área o departamento. Si no se menciona explícitamente, infiere un área lógica según el puesto (ej. "Operaciones", "Construcción", "Mantenimiento", "Producción").
+            - puesto_trabajo: solo el nombre del puesto, sin la empresa.
+            - antiguedad: antigüedad en la empresa. Si el texto no menciona años/meses y es evaluación periódica, coloca "No especificada (evaluación periódica)". Si es de ingreso, "Nuevo ingreso".
+            - descripcion_puesto: actividades/tareas del puesto, en una o dos frases.
+            - riesgos: arreglo con las claves de los factores a los que el trabajador está expuesto POR SU PUESTO. Solo estas claves: "ruido", "quimicos", "polvos", "vibraciones", "ergonomicos", "psicosociales", "alturas".
+            - epp_requerido: lista de EPP separada por comas.
+            - antecedentes: antecedentes patológicos, quirúrgicos, alérgicos, hábitos y ocupacionales dictados.
+            - examen_fisico: SOLO hallazgos de la exploración física.
+            - examenes_complementarios: resultados de laboratorio/gabinete (espirometría, audiometría, antidoping, RX, etc.).
+            - dictamen: Sugiere de forma inteligente y razonable un dictamen de aptitud basándote en el análisis de la salud, exploración física, y exámenes complementarios del trabajador en relación con los riesgos de su puesto. Solo responde con "apto", "apto_con_restricciones" o "no_apto". (Ejemplo: si la exploración y exámenes complementarios son normales y sanos, debe sugerir "apto").
+            - restricciones: solo si el dictamen sugerido es "apto_con_restricciones" y se mencionan limitaciones; si no, "".
+            - recomendaciones: Genera y sugiere proactivamente de 2 a 4 recomendaciones preventivas, de seguridad, higiene o de vigilancia de la salud oportunas según los riesgos de este puesto (ej. uso continuo y obligatorio del EPP auditivo, visual o respiratorio; higiene postural; exámenes de espirometría y audiometría periódicos anuales; pausas activas; hidratación constante). ¡Debes proponerlas proactivamente de forma automatizada y completa, nunca las dejes vacías!
+            - sintomas_detectados: un arreglo JSON de textos cortos (de 2 a 5 palabras cada uno) que representen de forma exhaustiva TODOS los factores de riesgo de exposición descritos para el puesto de trabajo (ej. "Ruido Elevado", "Humos de soldadura", "Sustancias químicas", "Trabajo en alturas", "Vibraciones") y los hallazgos o resultados clínicos de relevancia (ej. "Espirometría normal", "Audiometría normal", "Antidoping negativo"). ¡Extrae de forma detallada cada factor del texto!
+
+            {"empresa":"","departamento":"","puesto_trabajo":"","antiguedad":"","descripcion_puesto":"","riesgos":[],"epp_requerido":"","antecedentes":"","examen_fisico":"","examenes_complementarios":"","dictamen":"","restricciones":"","recomendaciones":"","sintomas_detectados":[]}
+            PROMPT;
+
+                    return $this->consultarGeminiTrabajo($prompt, 'analizarFichaOcupacional');
+                }
 }

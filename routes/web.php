@@ -36,11 +36,20 @@ use App\Http\Controllers\ConfiguracionCorreoController;
 use App\Http\Controllers\WahaController;
 use App\Http\Controllers\Icd11Controller;
 use App\Http\Controllers\ExpedienteClinicoController;
+use App\Http\Controllers\ClinicaTrabajo\FichaOcupacionalController;
 
 
 Route::get('/', function () { return view('auth.login'); });
 
 Route::middleware('auth')->group(function () {
+
+        // ═════════════════════════════════════════════════════════════
+        // CLÍNICA DE TRABAJO
+        // ═════════════════════════════════════════════════════════════
+        Route::get('/ficha-ocupacional', [FichaOcupacionalController::class, 'vista'])->name('clinica-trabajo.ficha-ocupacional.index');
+        Route::get('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'index'])->name('api.clinica-trabajo.ficha-ocupacional.index');
+        Route::post('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'store'])->name('api.clinica-trabajo.ficha-ocupacional.store');
+        Route::post('/api/clinica-trabajo/ficha-ocupacional/analizar', [FichaOcupacionalController::class, 'analizar']);
 
         // ═════════════════════════════════════════════════════════════
         // BLOQUE 1: RUTAS GENERALES (sin datos clínicos sensibles)

@@ -463,7 +463,7 @@ return [
                 [
                     'text' => 'Valoración inteligente',
                     'icon' => 'fas fa-fw fa-microphone-alt',
-                    'url' => 'ValoracionInteligenteNueva',
+                    'url' => 'ficha-ocupacional',
                 ],
             ],
         ],

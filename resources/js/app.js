@@ -60,6 +60,7 @@ import ConfiguracionImpresora from './components/Kiosco/ConfiguracionImpresora.v
 import VinculacionCorreo from './components/configuracion-sistema/VincularCorreo.vue'
 import VinculacionWhatsapp from './components/configuracion-sistema/vincularWhatsapp.vue'
 import headerConsulta from './components/consultaIA/HeaderConsulta.vue'
+import MasterFichaOcupacional from './components/ClinicaTrabajo/FichaOcupacional/MasterFichaOcupacional.vue'
 // ------------------------------------------------------
 // Instancia única de la app
 // ------------------------------------------------------
@@ -104,6 +105,7 @@ app.component('configuracion-impresora', ConfiguracionImpresora);
 app.component('vincular-correo', VinculacionCorreo);
 app.component('vincular-whatsapp', VinculacionWhatsapp);
 app.component('vincular-consulta', headerConsulta);
+app.component('master-ficha-ocupacional', MasterFichaOcupacional);
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 
