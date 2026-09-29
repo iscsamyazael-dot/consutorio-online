@@ -197,6 +197,7 @@ export default {
 
     nombreProfesionalPorSubmódulo(valoracion) {
       const claves = {
+        medicina: 'medico',
         psicologia: 'psicologo',
         nutricion: 'nutriologo',
         audiologia: 'audiologo',
@@ -208,7 +209,7 @@ export default {
 
     async cargarEmpresas() {
       try {
-        const response = await ApiService.empresas.lista()
+        const response = await ApiService.clinicaTrabajo.empresas.lista()
         this.empresas = response.data || response
       } catch (error) {
         console.error('Error cargando empresas:', error)
