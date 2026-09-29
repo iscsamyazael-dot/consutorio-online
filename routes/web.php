@@ -49,6 +49,68 @@ Route::get('/', function () { return view('auth.login'); });
 
 Route::middleware('auth')->group(function () {
 
+        //VISTAS PARA EL MODULO MEDICINA-TRABAJO//
+         // ========== MEDICINA OCUPACIONAL ==========
+        Route::get('/clinica/medicina', function () {
+            return view('clinica-trabajo.medicina');
+        })->name('clinica.medicina.index');
+        
+        Route::get('/clinica/medicina/nueva', function () {
+            return view('clinica-trabajo.medicina');
+        })->name('clinica.medicina.create');
+        
+        // ========== PSICOLOGÍA OCUPACIONAL ==========
+        Route::get('/clinica/psicologia', function () {
+            return view('clinica-trabajo.psicologia');
+        })->name('clinica.psicologia.index');
+        
+        Route::get('/clinica/psicologia/nueva', function () {
+            return view('clinica-trabajo.psicologia');
+        })->name('clinica.psicologia.create');
+        
+        Route::get('/clinica/psicologia/{id}', function () {
+            return view('clinica-trabajo.psicologia');
+        })->name('clinica.psicologia.show');
+        
+        // ========== NUTRICIÓN OCUPACIONAL ==========
+        Route::get('/clinica/nutricion', function () {
+            return view('clinica-trabajo.nutricion');
+        })->name('clinica.nutricion.index');
+        
+        Route::get('/clinica/nutricion/nueva', function () {
+            return view('clinica-trabajo.nutricion');
+        })->name('clinica.nutricion.create');
+        
+        Route::get('/clinica/nutricion/{id}', function () {
+            return view('clinica-trabajo.nutricion');
+        })->name('clinica.nutricion.show');
+        
+        // ========== AUDIOLOGÍA OCUPACIONAL ==========
+        Route::get('/clinica/audiologia', function () {
+            return view('clinica-trabajo.audiologia');
+        })->name('clinica.audiologia.index');
+        
+        Route::get('/clinica/audiologia/nueva', function () {
+            return view('clinica-trabajo.audiologia');
+        })->name('clinica.audiologia.create');
+        
+        Route::get('/clinica/audiologia/{id}', function () {
+            return view('clinica-trabajo.audiologia');
+        })->name('clinica.audiologia.show');
+        
+        // ========== ERGONOMÍA OCUPACIONAL ==========
+        Route::get('/clinica/ergonomia', function () {
+            return view('clinica-trabajo.ergonomia');
+        })->name('clinica.ergonomia.index');
+        
+        Route::get('/clinica/ergonomia/nueva', function () {
+            return view('clinica-trabajo.ergonomia');
+        })->name('clinica.ergonomia.create');
+        
+        Route::get('/clinica/ergonomia/{id}', function () {
+            return view('clinica-trabajo.ergonomia');
+        })->name('clinica.ergonomia.show');
+
         // ═════════════════════════════════════════════════════════════
         // CLÍNICA DE TRABAJO
         // ═════════════════════════════════════════════════════════════

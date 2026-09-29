@@ -61,6 +61,14 @@ import VinculacionCorreo from './components/configuracion-sistema/VincularCorreo
 import VinculacionWhatsapp from './components/configuracion-sistema/vincularWhatsapp.vue'
 import headerConsulta from './components/consultaIA/HeaderConsulta.vue'
 import MasterFichaOcupacional from './components/ClinicaTrabajo/FichaOcupacional/MasterFichaOcupacional.vue'
+
+// Master components para submódulos Clínica Trabajo (están en secciones/)
+import MasterMedicina from './components/ClinicaTrabajo/secciones/medicina/Mastermedicina.vue'
+import MasterPsicologia from './components/ClinicaTrabajo/secciones/psicologia/Masterpsicologia.vue'
+import MasterNutricion from './components/ClinicaTrabajo/secciones/nutricion/Masternutricion.vue'
+import MasterAudiologia from './components/ClinicaTrabajo/secciones/audiologia/Masteraudiologia.vue'
+import MasterErgonomia from './components/ClinicaTrabajo/secciones/ergonomia/Masterergonomia.vue'
+ 
 // ------------------------------------------------------
 // Instancia única de la app
 // ------------------------------------------------------
@@ -106,6 +114,12 @@ app.component('vincular-correo', VinculacionCorreo);
 app.component('vincular-whatsapp', VinculacionWhatsapp);
 app.component('vincular-consulta', headerConsulta);
 app.component('master-ficha-ocupacional', MasterFichaOcupacional);
+
+app.component('master-medicina', MasterMedicina)
+app.component('master-psicologia', MasterPsicologia)
+app.component('master-nutricion', MasterNutricion)
+app.component('master-audiologia', MasterAudiologia)
+app.component('master-ergonomia', MasterErgonomia)
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 
