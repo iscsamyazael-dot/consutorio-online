@@ -37,6 +37,12 @@ use App\Http\Controllers\WahaController;
 use App\Http\Controllers\Icd11Controller;
 use App\Http\Controllers\ExpedienteClinicoController;
 use App\Http\Controllers\ClinicaTrabajo\FichaOcupacionalController;
+use App\Http\Controllers\ClinicaTrabajo\ValoracionPsicologicaController;
+use App\Http\Controllers\ClinicaTrabajo\ValoracionNutricionController;
+use App\Http\Controllers\ClinicaTrabajo\ValoracionAudiologiaController;
+use App\Http\Controllers\ClinicaTrabajo\ValoracionErgonomicaController;
+use App\Http\Controllers\ClinicaTrabajo\ValoracionMedicinaController;
+use App\Http\Controllers\ClinicaTrabajo\CatalogoController;
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -50,6 +56,63 @@ Route::middleware('auth')->group(function () {
         Route::get('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'index'])->name('api.clinica-trabajo.ficha-ocupacional.index');
         Route::post('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'store'])->name('api.clinica-trabajo.ficha-ocupacional.store');
         Route::post('/api/clinica-trabajo/ficha-ocupacional/analizar', [FichaOcupacionalController::class, 'analizar']);
+        
+        // PSICOLOGÍA
+        Route::prefix('clinica/psicologia')->name('psicologia.')->group(function () {
+            Route::get('/', [ValoracionPsicologicaController::class, 'index'])->name('index');
+            Route::get('{id}', [ValoracionPsicologicaController::class, 'show'])->name('show');
+            Route::post('/', [ValoracionPsicologicaController::class, 'store'])->name('store');
+            Route::put('{id}', [ValoracionPsicologicaController::class, 'update'])->name('update');
+            Route::delete('{id}', [ValoracionPsicologicaController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [ValoracionPsicologicaController::class, 'imprimir'])->name('imprimir');
+        });
+        
+        // NUTRICIÓN
+        Route::prefix('clinica/nutricion')->name('nutricion.')->group(function () {
+            Route::get('/', [ValoracionNutricionController::class, 'index'])->name('index');
+            Route::get('{id}', [ValoracionNutricionController::class, 'show'])->name('show');
+            Route::post('/', [ValoracionNutricionController::class, 'store'])->name('store');
+            Route::put('{id}', [ValoracionNutricionController::class, 'update'])->name('update');
+            Route::delete('{id}', [ValoracionNutricionController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [ValoracionNutricionController::class, 'imprimir'])->name('imprimir');
+        });
+        
+        // AUDIOLOGÍA
+        Route::prefix('clinica/audiologia')->name('audiologia.')->group(function () {
+            Route::get('/', [ValoracionAudiologiaController::class, 'index'])->name('index');
+            Route::get('{id}', [ValoracionAudiologiaController::class, 'show'])->name('show');
+            Route::post('/', [ValoracionAudiologiaController::class, 'store'])->name('store');
+            Route::put('{id}', [ValoracionAudiologiaController::class, 'update'])->name('update');
+            Route::delete('{id}', [ValoracionAudiologiaController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [ValoracionAudiologiaController::class, 'imprimir'])->name('imprimir');
+        });
+        
+        // ERGONOMÍA
+        Route::prefix('clinica/ergonomia')->name('ergonomia.')->group(function () {
+            Route::get('/', [ValoracionErgonomicaController::class, 'index'])->name('index');
+            Route::get('{id}', [ValoracionErgonomicaController::class, 'show'])->name('show');
+            Route::post('/', [ValoracionErgonomicaController::class, 'store'])->name('store');
+            Route::put('{id}', [ValoracionErgonomicaController::class, 'update'])->name('update');
+            Route::delete('{id}', [ValoracionErgonomicaController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [ValoracionErgonomicaController::class, 'imprimir'])->name('imprimir');
+        });
+
+        // MEDICINA / ENFERMERÍA (NUEVO)
+        Route::prefix('clinica/medicina')->name('medicina.')->group(function () {
+            Route::get('/', [ValoracionMedicinaController::class, 'index'])->name('index');
+            Route::get('{id}', [ValoracionMedicinaController::class, 'show'])->name('show');
+            Route::post('/', [ValoracionMedicinaController::class, 'store'])->name('store');
+            Route::put('{id}', [ValoracionMedicinaController::class, 'update'])->name('update');
+            Route::delete('{id}', [ValoracionMedicinaController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [ValoracionMedicinaController::class, 'imprimir'])->name('imprimir');
+        });
+
+        // CATÁLOGOS (dinámicos)
+        Route::prefix('catalogo')->name('catalogo.')->group(function () {
+            Route::get('factores-psicosociales', [CatalogoController::class, 'factoresPsicosociales'])->name('factores');
+            Route::get('alimentos', [CatalogoController::class, 'alimentos'])->name('alimentos');
+            Route::get('riesgos-ergonomicos', [CatalogoController::class, 'riesgosErgonomicos'])->name('riesgos');
+        });
 
         // ═════════════════════════════════════════════════════════════
         // BLOQUE 1: RUTAS GENERALES (sin datos clínicos sensibles)
