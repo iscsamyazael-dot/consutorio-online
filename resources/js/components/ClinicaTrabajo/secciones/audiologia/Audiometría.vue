@@ -25,11 +25,11 @@
               class="border rounded p-2 text-center font-medium text-sm"
               :class="[
                 'text-red-600 border-red-200',
-                form.au_${f}_der > 80 ? 'bg-red-100' : '',
-                form.au_${f}_der > 50 ? 'bg-yellow-100' : '',
+                form['au_' + f + '_der'] > 80 ? 'bg-red-100' : '',
+                form['au_' + f + '_der'] > 50 ? 'bg-yellow-100' : '',
               ]"
             >
-              {{ form.au_${f}_der || '—' }}
+              {{ form['au_' + f + '_der'] || '—' }}
             </div>
           </div>
 
@@ -68,11 +68,11 @@
               class="border rounded p-2 text-center font-medium text-sm"
               :class="[
                 'text-indigo-600 border-indigo-200',
-                form.au_${f}_izq > 80 ? 'bg-red-100' : '',
-                form.au_${f}_izq > 50 ? 'bg-yellow-100' : '',
+                form['au_' + f + '_izq'] > 80 ? 'bg-red-100' : '',
+                form['au_' + f + '_izq'] > 50 ? 'bg-yellow-100' : '',
               ]"
             >
-              {{ form.au_${f}_izq || '—' }}
+              {{ form['au_' + f + '_izq'] || '—' }}
             </div>
           </div>
 

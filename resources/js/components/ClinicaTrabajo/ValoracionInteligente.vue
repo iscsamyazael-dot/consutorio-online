@@ -155,7 +155,7 @@ import DatosBásicoErgonomia from './secciones/ergonomia/DatosBásico.vue'
 import SelectorInstrumentoErgonomia from './secciones/ergonomia/SelectorInstrumento.vue'
 import InstrumentoEspecíficoErgonomia from './secciones/ergonomia/InstrumentoEspecífico.vue'
 import HallazgosErgonomia from './secciones/ergonomia/Hallazgos.vue'
-import ExamenMédicoErgonomia from './secciones/ergonomia/ExamenMédico.vue'
+import ExamenMédicoErgonomia from './secciones/ergonomia/ExamenMedico.vue'
 import AptitudDictamenErgonomia from './secciones/ergonomia/AptitudDictamen.vue'
 
 // MEDICINA (NUEVO)

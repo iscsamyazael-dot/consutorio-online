@@ -17,8 +17,9 @@
           >
             <input
               type="radio"
+              name="aptitud"
               :value="opcion.value"
-              v-model="form.aptitud"
+              :checked="form.aptitud === opcion.value"
               @change="updateField('aptitud', opcion.value)"
               class="sr-only peer"
               required
@@ -45,7 +46,8 @@
         <div class="md:col-span-2">
           <label class="block text-sm font-semibold text-gray-700 mb-1">Restricciones / Limitaciones</label>
           <textarea
-            v-model="form.restricciones"
+            :value="form.restricciones"
+            @input="updateField('restricciones', $event.target.value)"
             rows="3"
             class="input-field w-full"
             placeholder="Restricciones dietéticas, limitaciones funcionales, adaptaciones en comedores, turnos, etc."
@@ -56,7 +58,8 @@
         <div class="md:col-span-2">
           <label class="block text-sm font-semibold text-gray-700 mb-1">Recomendaciones Nutricionales y Laborales</label>
           <textarea
-            v-model="form.recomendaciones"
+            :value="form.recomendaciones"
+            @input="updateField('recomendaciones', $event.target.value)"
             rows="4"
             class="input-field w-full"
             placeholder="Plan alimentario, suplementación, hidratación, horarios de comida, pausas activas, educación nutricional..."
@@ -76,9 +79,9 @@
             <label class="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                v-model="form.seguimiento_requerido"
-                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                :checked="!!form.seguimiento_requerido"
                 @change="updateField('seguimiento_requerido', $event.target.checked)"
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <span class="font-semibold text-gray-700">Requiere seguimiento nutricional</span>
             </label>
@@ -88,7 +91,8 @@
             <label class="block text-sm font-semibold text-gray-700 mb-1">Próximo Control *</label>
             <input
               type="date"
-              v-model="form.plazo_proximo_seguimiento"
+              :value="form.plazo_proximo_seguimiento"
+              @input="updateField('plazo_proximo_seguimiento', $event.target.value)"
               class="input-field w-full"
               :min="form.fecha_valoracion || fechaHoy"
               required
@@ -153,7 +157,12 @@
 </template>
 
 <script>
-import ApiService from '../../../services/ApiService.js'
+import ApiService from '../../../../services/ApiService'
+
+// AJUSTA AQUÍ la ruta según `php artisan route:list --path=alimentos`
+const RUTAS = {
+  catalogoAlimentos: '/catalogo/alimentos'
+}
 
 export default {
   name: 'AptitudDictamenNutricion',
@@ -222,16 +231,25 @@ export default {
       this.$emit('update:modelValue', { ...this.form, [key]: value })
     },
     formatearFecha(fecha) {
-      return new Date(fecha).toLocaleDateString('es-MX')
+      if (!fecha) return 'sin fecha'
+      // Agrega hora para evitar que la zona horaria corra la fecha un día
+      return new Date(`${fecha}T00:00:00`).toLocaleDateString('es-MX')
     },
     getAlimentoNombre(id) {
-      const alimento = this.catalogoAlimentos.find(a => a.id === id)
+      const alimento = this.catalogoAlimentos.find(a => String(a.id) === String(id))
       return alimento ? alimento.nombre : `ID: ${id}`
+    },
+    // Laravel puede devolver [], { data: [] }, { alimentos: [] } o paginado { data: { data: [] } }
+    extraerLista(res) {
+      const body = res?.data ?? res
+      if (Array.isArray(body)) return body
+      if (Array.isArray(body?.data)) return body.data
+      if (Array.isArray(body?.alimentos)) return body.alimentos
+      return []
     },
     async cargarCatalogoAlimentos() {
       try {
-        const response = await ApiService.catalogo.alimentos()
-        this.catalogoAlimentos = response.data || response
+        this.catalogoAlimentos = this.extraerLista(await ApiService.get(RUTAS.catalogoAlimentos))
       } catch (error) {
         console.error('Error cargando catálogo alimentos:', error)
       }

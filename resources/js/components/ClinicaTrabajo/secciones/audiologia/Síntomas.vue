@@ -8,7 +8,7 @@
 
       <p class="text-sm text-gray-600 mb-4">
         Identifique las molestias o alteraciones auditivas actuales o recientes del paciente.
-      </h3>
+      </p>
 
       <!-- Síntomas auditivos -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -46,7 +46,7 @@
               <option value="">Seleccionar...</option>
               <option value="true">Presente</option>
               <option value="false">No presente</option>
-            />
+            </select>
             <select v-model="form.prurito_der" class="input-field w-full">
               <option value="">Seleccionar...</option>
               <option value="true">Presente</option>
@@ -65,12 +65,12 @@
               <option value="">Seleccionar...</option>
               <option value="true">Presente</option>
               <option value="false">No presente</option>
-            />
+            </select>
             <select v-model="form.otorrea_izq" class="input-field w-full">
               <option value="">Seleccionar...</option>
               <option value="true">Presente</option>
               <option value="false">No presente</option>
-            />
+            </select>
             <select v-model="form.prurito_izq" class="input-field w-full">
               <option value="">Seleccionar...</option>
               <option value="true">Presente</option>
@@ -94,7 +94,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <label
-            v-for "cond in condicionesAsociadas"
+            v-for="cond in condicionesAsociadas"
             :key="cond.key"
             class="flex items-center gap-2 cursor-pointer"
           >

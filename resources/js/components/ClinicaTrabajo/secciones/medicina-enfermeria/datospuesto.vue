@@ -190,7 +190,7 @@
 </template>
 
 <script>
-import ApiService from '../../../services/ApiService.js'
+import ApiService from '../../../../services/ApiService'
 
 export default {
   name: 'DatosPuesto',

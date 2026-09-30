@@ -73,7 +73,7 @@
                   <div class="flex items-center gap-2 mt-2" v-if="isFactorSeleccionado(factor.id)">
                     <span class="text-xs font-semibold text-gray-600">Severidad:</span>
                     <select
-                      v-model="getSeveridad(factor.id)"
+                      :value="getSeveridad(factor.id)"
                       @change="updateSeveridad(factor.id, $event.target.value)"
                       class="input-field text-xs py-1 px-2 w-auto"
                     >

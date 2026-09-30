@@ -12,7 +12,7 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Folio *</label>
           <input
             type="text"
-            v-model="form.folio"
+            :value="form.folio"
             class="input-field w-full bg-gray-50"
             readonly
             placeholder="Auto-generado al guardar"
@@ -23,7 +23,12 @@
         <!-- Tipo de evaluación -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo de Evaluación *</label>
-          <select v-model="form.tipo_evaluacion" class="input-field w-full" required>
+          <select
+            :value="form.tipo_evaluacion"
+            @change="updateField('tipo_evaluacion', $event.target.value)"
+            class="input-field w-full"
+            required
+          >
             <option value="">Seleccionar...</option>
             <option value="ingreso">Ingreso</option>
             <option value="periodica">Periódica</option>
@@ -37,7 +42,8 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Fecha Valoración *</label>
           <input
             type="date"
-            v-model="form.fecha_valoracion"
+            :value="form.fecha_valoracion"
+            @input="updateField('fecha_valoracion', $event.target.value)"
             class="input-field w-full"
             :max="fechaHoy"
             required
@@ -49,7 +55,8 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Hora</label>
           <input
             type="time"
-            v-model="form.hora_valoracion"
+            :value="form.hora_valoracion"
+            @input="updateField('hora_valoracion', $event.target.value)"
             class="input-field w-full"
           />
         </div>
@@ -59,7 +66,7 @@
         <!-- Paciente -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Paciente *</label>
-          <select v-model="form.paciente_id" class="input-field w-full" required>
+          <select :value="form.paciente_id" @change="onPacienteChange($event.target.value)" class="input-field w-full" required>
             <option value="">Seleccionar paciente...</option>
             <option v-for="p in pacientes" :key="p.id" :value="p.id">
               {{ p.nombre }} {{ p.apellido_paterno }} {{ p.apellido_materno }}
@@ -70,7 +77,7 @@
         <!-- Empresa -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Empresa *</label>
-          <select v-model="form.empresa_cliente_id" class="input-field w-full" required @change="onEmpresaChange">
+          <select :value="form.empresa_cliente_id" @change="onEmpresaChange($event.target.value)" class="input-field w-full" required>
             <option value="">Seleccionar empresa...</option>
             <option v-for="e in empresas" :key="e.id" :value="e.id">
               {{ e.nombre || e.razon_social }}
@@ -81,7 +88,7 @@
         <!-- Puesto de trabajo -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Puesto de Trabajo</label>
-          <select v-model="form.puesto_trabajo_id" class="input-field w-full">
+          <select :value="form.puesto_trabajo_id" @change="onSelectId('puesto_trabajo_id', puestos, $event.target.value)" class="input-field w-full">
             <option value="">Seleccionar puesto...</option>
             <option v-for="p in puestos" :key="p.id" :value="p.id">
               {{ p.nombre }}
@@ -92,7 +99,7 @@
         <!-- Nutriólogo -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Nutriólogo *</label>
-          <select v-model="form.nutriologo_id" class="input-field w-full" required>
+          <select :value="form.nutriologo_id" @change="onSelectId('nutriologo_id', medicos, $event.target.value)" class="input-field w-full" required>
             <option value="">Seleccionar nutriólogo...</option>
             <option v-for="m in medicos" :key="m.id" :value="m.id">
               {{ m.nombre }} {{ m.apellido_paterno }}
@@ -123,10 +130,19 @@
 </template>
 
 <script>
-import ApiService from '../../../services/ApiService.js'
+import ApiService from '../../../../services/ApiService'
+
+// AJUSTA AQUÍ las rutas según `php artisan route:list`.
+// /empresas dio 404, así que probablemente cuelga de /clinica o /api.
+const RUTAS = {
+  pacientes: '/pacientes',
+  empresas: '/empresas',
+  medicos: '/medicos',
+  puestos: (empresaId) => `/empresas/${empresaId}/puestos`
+}
 
 export default {
-  name: 'DatosBásicoNutricion',
+  name: 'DatosBasicoNutricion',
   props: {
     modelValue: {
       type: Object,
@@ -156,49 +172,81 @@ export default {
     }
   },
   methods: {
-    updateField(key, value) {
-      this.$emit('update:modelValue', { ...this.form, [key]: value })
+    // Emite un solo cambio con uno o varios campos (evita perder cambios por objetos desactualizados)
+    updateFields(cambios) {
+      this.$emit('update:modelValue', { ...this.form, ...cambios })
     },
+    updateField(key, value) {
+      this.updateFields({ [key]: value })
+    },
+
+    // Laravel puede devolver [], { data: [] }, { lista: [] } o paginado { data: { data: [] } }
+    extraerLista(res) {
+      const body = res?.data ?? res
+      if (Array.isArray(body)) return body
+      if (Array.isArray(body?.data)) return body.data
+      if (Array.isArray(body?.lista)) return body.lista
+      return []
+    },
+
+    // Los <select> devuelven string; recupera el id original (número o texto) desde la lista
+    idDesdeLista(lista, value) {
+      if (value === '' || value == null) return null
+      const item = lista.find(x => String(x.id) === String(value))
+      return item ? item.id : null
+    },
+    onSelectId(key, lista, value) {
+      this.updateField(key, this.idDesdeLista(lista, value))
+    },
+
+    onPacienteChange(value) {
+      const id = this.idDesdeLista(this.pacientes, value)
+      const p = this.pacientes.find(x => x.id === id)
+      this.updateFields({
+        paciente_id: id,
+        // Bioquímica lee form.paciente.genero para los rangos por sexo
+        paciente: p ? { id: p.id, genero: p.genero } : null
+      })
+    },
+    onEmpresaChange(value) {
+      const id = this.idDesdeLista(this.empresas, value)
+      this.updateFields({ empresa_cliente_id: id, puesto_trabajo_id: null })
+      this.cargarPuestos(id)
+    },
+
     async cargarPacientes() {
       try {
-        const response = await ApiService.pacientes.lista()
-        this.pacientes = response.data || response
+        this.pacientes = this.extraerLista(await ApiService.get(RUTAS.pacientes))
       } catch (error) {
         console.error('Error cargando pacientes:', error)
       }
     },
     async cargarEmpresas() {
       try {
-        const response = await ApiService.empresas.lista()
-        this.empresas = response.data || response
+        this.empresas = this.extraerLista(await ApiService.get(RUTAS.empresas))
       } catch (error) {
         console.error('Error cargando empresas:', error)
       }
     },
-    async cargarPuestos() {
-      if (!this.form.empresa_cliente_id) {
+    async cargarPuestos(empresaId = this.form.empresa_cliente_id) {
+      if (!empresaId) {
         this.puestos = []
         return
       }
       try {
-        const response = await ApiService.puestos.lista(this.form.empresa_cliente_id)
-        this.puestos = response.data || response
+        this.puestos = this.extraerLista(await ApiService.get(RUTAS.puestos(empresaId)))
       } catch (error) {
         console.error('Error cargando puestos:', error)
       }
     },
     async cargarMedicos() {
       try {
-        const response = await ApiService.medicos.lista()
-        this.medicos = response.data || response
+        this.medicos = this.extraerLista(await ApiService.get(RUTAS.medicos))
       } catch (error) {
         console.error('Error cargando médicos:', error)
       }
     },
-    onEmpresaChange() {
-      this.updateField('puesto_trabajo_id', null)
-      this.cargarPuestos()
-    },
+
     calcularEdad(fechaNacimiento) {
       if (!fechaNacimiento) return 0
       const hoy = new Date()
@@ -213,10 +261,10 @@ export default {
     this.cargarPacientes()
     this.cargarEmpresas()
     this.cargarMedicos()
-    // Generar folio temporal si es nueva
+    if (this.form.empresa_cliente_id) this.cargarPuestos()
+    // Folio temporal si es una valoración nueva
     if (!this.form.folio) {
-      const año = new Date().getFullYear()
-      this.form.folio = `NUT-${año}-****`
+      this.updateField('folio', `NUT-${new Date().getFullYear()}-****`)
     }
   }
 }

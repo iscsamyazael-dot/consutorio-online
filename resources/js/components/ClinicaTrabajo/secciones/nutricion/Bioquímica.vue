@@ -16,7 +16,7 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Glucosa (mg/dL)</label>
           <input
             type="number"
-            v-model.number="form.glucosa_mg_dl"
+            :value="form.glucosa_mg_dl"
             @input="updateField('glucosa_mg_dl', $event.target.value)"
             step="1"
             min="0"
@@ -33,14 +33,14 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Triglicéridos (mg/dL)</label>
           <input
             type="number"
-            v-model.number="form.trigliceridos_mg_dl"
+            :value="form.trigliceridos_mg_dl"
             @input="updateField('trigliceridos_mg_dl', $event.target.value)"
             step="1"
             min="0"
             max="1000"
             class="input-field w-full"
           />
-          <div class="text-xs text-gray-500 mt-1">Referencia: < 150</div>
+          <div class="text-xs text-gray-500 mt-1">Referencia: &lt; 150</div>
           <div class="text-xs mt-1" v-if="form.trigliceridos_mg_dl">
             <span :class="trigliceridosStatusClass">{{ trigliceridosStatus }}</span>
           </div>
@@ -50,14 +50,14 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Colesterol Total (mg/dL)</label>
           <input
             type="number"
-            v-model.number="form.colesterol_total_mg_dl"
+            :value="form.colesterol_total_mg_dl"
             @input="updateField('colesterol_total_mg_dl', $event.target.value)"
             step="1"
             min="0"
             max="500"
             class="input-field w-full"
           />
-          <div class="text-xs text-gray-500 mt-1">Referencia: < 200</div>
+          <div class="text-xs text-gray-500 mt-1">Referencia: &lt; 200</div>
           <div class="text-xs mt-1" v-if="form.colesterol_total_mg_dl">
             <span :class="colesterolStatusClass">{{ colesterolStatus }}</span>
           </div>
@@ -67,14 +67,14 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">HDL (mg/dL)</label>
           <input
             type="number"
-            v-model.number="form.hdl_mg_dl"
+            :value="form.hdl_mg_dl"
             @input="updateField('hdl_mg_dl', $event.target.value)"
             step="1"
             min="0"
             max="200"
             class="input-field w-full"
           />
-          <div class="text-xs text-gray-500 mt-1">Referencia: H >40, M >50</div>
+          <div class="text-xs text-gray-500 mt-1">Referencia: H &gt;40, M &gt;50</div>
           <div class="text-xs mt-1" v-if="form.hdl_mg_dl">
             <span :class="hdlStatusClass">{{ hdlStatus }}</span>
           </div>
@@ -84,14 +84,14 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">LDL (mg/dL)</label>
           <input
             type="number"
-            v-model.number="form.ldl_mg_dl"
+            :value="form.ldl_mg_dl"
             @input="updateField('ldl_mg_dl', $event.target.value)"
             step="1"
             min="0"
             max="500"
             class="input-field w-full"
           />
-          <div class="text-xs text-gray-500 mt-1">Referencia: < 100 (óptimo)</div>
+          <div class="text-xs text-gray-500 mt-1">Referencia: &lt; 100 (óptimo)</div>
           <div class="text-xs mt-1" v-if="form.ldl_mg_dl">
             <span :class="ldlStatusClass">{{ ldlStatus }}</span>
           </div>
@@ -101,7 +101,7 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Ácido Úrico (mg/dL)</label>
           <input
             type="number"
-            v-model.number="form.acido_urico_mg_dl"
+            :value="form.acido_urico_mg_dl"
             @input="updateField('acido_urico_mg_dl', $event.target.value)"
             step="0.1"
             min="0"
@@ -118,7 +118,7 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">Hemoglobina (g/dL)</label>
           <input
             type="number"
-            v-model.number="form.hemoglobina_g_dl"
+            :value="form.hemoglobina_g_dl"
             @input="updateField('hemoglobina_g_dl', $event.target.value)"
             step="0.1"
             min="0"
@@ -140,7 +140,7 @@
           = {{ form.colesterol_total_mg_dl }} - {{ form.hdl_mg_dl }} - ({{ form.trigliceridos_mg_dl }}/5)
           = <strong>{{ ldlEstimado }} mg/dL</strong>
         </div>
-        <p class="text-xs text-purple-600 mt-1">Válido solo si Triglicéridos < 400 mg/dL</p>
+        <p class="text-xs text-purple-600 mt-1">Válido solo si Triglicéridos &lt; 400 mg/dL</p>
       </div>
 
       <!-- Perfil de riesgo cardiovascular -->
@@ -187,13 +187,13 @@
             </tr>
           </thead>
           <tbody>
-            <tr><td class="p-1 font-medium">Glucosa</td><td class="p-1">70-100</td><td class="p-1">70-100</td><td class="p-1 text-red-600">≥126 DM</td></tr>
-            <tr><td class="p-1 font-medium">Triglicéridos</td><td class="p-1"><150</td><td class="p-1"><150</td><td class="p-1 text-red-600">≥200</td></tr>
-            <tr><td class="p-1 font-medium">Col. Total</td><td class="p-1"><200</td><td class="p-1"><200</td><td class="p-1 text-red-600">≥240</td></tr>
-            <tr><td class="p-1 font-medium">HDL</td><td class="p-1">>40</td><td class="p-1">>50</td><td class="p-1 text-red-600"><40/<50</td></tr>
-            <tr><td class="p-1 font-medium">LDL</td><td class="p-1"><100</td><td class="p-1"><100</td><td class="p-1 text-red-600">≥160</td></tr>
-            <tr><td class="p-1 font-medium">Ác. Úrico</td><td class="p-1">3.4-7.0</td><td class="p-1">2.4-6.0</td><td class="p-1 text-red-600">>7.0/>6.0</td></tr>
-            <tr><td class="p-1 font-medium">Hb</td><td class="p-1">13.5-17.5</td><td class="p-1">12.0-15.5</td><td class="p-1 text-red-600"><13.5/<12.0</td></tr>
+            <tr><td class="p-1 font-medium">Glucosa</td><td class="p-1">70-100</td><td class="p-1">70-100</td><td class="p-1 text-red-600">&ge;126 DM</td></tr>
+            <tr><td class="p-1 font-medium">Triglicéridos</td><td class="p-1">&lt;150</td><td class="p-1">&lt;150</td><td class="p-1 text-red-600">&ge;200</td></tr>
+            <tr><td class="p-1 font-medium">Col. Total</td><td class="p-1">&lt;200</td><td class="p-1">&lt;200</td><td class="p-1 text-red-600">&ge;240</td></tr>
+            <tr><td class="p-1 font-medium">HDL</td><td class="p-1">&gt;40</td><td class="p-1">&gt;50</td><td class="p-1 text-red-600">&lt;40/&lt;50</td></tr>
+            <tr><td class="p-1 font-medium">LDL</td><td class="p-1">&lt;100</td><td class="p-1">&lt;100</td><td class="p-1 text-red-600">&ge;160</td></tr>
+            <tr><td class="p-1 font-medium">Ác. Úrico</td><td class="p-1">3.4-7.0</td><td class="p-1">2.4-6.0</td><td class="p-1 text-red-600">&gt;7.0/&gt;6.0</td></tr>
+            <tr><td class="p-1 font-medium">Hb</td><td class="p-1">13.5-17.5</td><td class="p-1">12.0-15.5</td><td class="p-1 text-red-600">&lt;13.5/&lt;12.0</td></tr>
           </tbody>
         </table>
       </div>
@@ -202,8 +202,17 @@
 </template>
 
 <script>
+// Clases completas (no construidas con .replace) para que Tailwind no las purgue
+const CARD_CLASSES = {
+  'text-green-600': 'border-green-200 bg-green-50',
+  'text-yellow-600': 'border-yellow-200 bg-yellow-50',
+  'text-orange-600': 'border-orange-200 bg-orange-50',
+  'text-red-600': 'border-red-200 bg-red-50',
+  'text-blue-600': 'border-blue-200 bg-blue-50'
+}
+
 export default {
-  name: 'BioquímicaNutricion',
+  name: 'BioquimicaNutricion',
   props: {
     modelValue: {
       type: Object,
@@ -216,6 +225,12 @@ export default {
       get() { return this.modelValue },
       set(val) { this.$emit('update:modelValue', val) }
     },
+
+    esMujer() {
+      const genero = this.form.paciente?.genero
+      return genero === 'F' || genero === 'Femenino'
+    },
+
     // Glucosa
     glucosaStatus() {
       if (!this.form.glucosa_mg_dl) return ''
@@ -234,7 +249,7 @@ export default {
       return 'text-red-600'
     },
     glucosaClass() {
-      return this.glucosaStatusClass().replace('text-', 'border-').replace('600', '200') + ' bg-' + this.glucosaStatusClass().replace('text-', '').replace('600', '50')
+      return this.cardClass(this.glucosaStatusClass)
     },
 
     // Triglicéridos
@@ -255,7 +270,7 @@ export default {
       return 'text-red-600'
     },
     trigliceridosClass() {
-      return this.trigliceridosStatusClass().replace('text-', 'border-').replace('600', '200') + ' bg-' + this.trigliceridosStatusClass().replace('text-', '').replace('600', '50')
+      return this.cardClass(this.trigliceridosStatusClass)
     },
 
     // Colesterol Total
@@ -274,15 +289,14 @@ export default {
       return 'text-red-600'
     },
     colesterolClass() {
-      return this.colesterolStatusClass().replace('text-', 'border-').replace('600', '200') + ' bg-' + this.colesterolStatusClass().replace('text-', '').replace('600', '50')
+      return this.cardClass(this.colesterolStatusClass)
     },
 
     // HDL
     hdlStatus() {
       if (!this.form.hdl_mg_dl) return ''
       const v = this.form.hdl_mg_dl
-      const genero = this.form.paciente?.genero || 'M'
-      const limite = (genero === 'F' || genero === 'Femenino') ? 50 : 40
+      const limite = this.esMujer ? 50 : 40
       if (v >= limite) return 'Óptimo/Protector'
       if (v >= 40) return 'Aceptable'
       return 'Bajo (Riesgo ↑)'
@@ -290,14 +304,13 @@ export default {
     hdlStatusClass() {
       if (!this.form.hdl_mg_dl) return ''
       const v = this.form.hdl_mg_dl
-      const genero = this.form.paciente?.genero || 'M'
-      const limite = (genero === 'F' || genero === 'Femenino') ? 50 : 40
+      const limite = this.esMujer ? 50 : 40
       if (v >= limite) return 'text-green-600'
       if (v >= 40) return 'text-yellow-600'
       return 'text-red-600'
     },
     hdlClass() {
-      return this.hdlStatusClass().replace('text-', 'border-').replace('600', '200') + ' bg-' + this.hdlStatusClass().replace('text-', '').replace('600', '50')
+      return this.cardClass(this.hdlStatusClass)
     },
 
     // LDL
@@ -320,36 +333,30 @@ export default {
       return 'text-red-600'
     },
     ldlClass() {
-      return this.ldlStatusClass().replace('text-', 'border-').replace('600', '200') + ' bg-' + this.ldlStatusClass().replace('text-', '').replace('600', '50')
+      return this.cardClass(this.ldlStatusClass)
     },
 
     // Ácido Úrico
     acidoUricoStatus() {
       if (!this.form.acido_urico_mg_dl) return ''
-      const v = this.form.acido_urico_mg_dl
-      const genero = this.form.paciente?.genero || 'M'
-      const max = (genero === 'F' || genero === 'Femenino') ? 6.0 : 7.0
-      if (v <= max) return 'Normal'
-      return 'Hiperuricemia'
+      const max = this.esMujer ? 6.0 : 7.0
+      return this.form.acido_urico_mg_dl <= max ? 'Normal' : 'Hiperuricemia'
     },
     acidoUricoStatusClass() {
       if (!this.form.acido_urico_mg_dl) return ''
-      const v = this.form.acido_urico_mg_dl
-      const genero = this.form.paciente?.genero || 'M'
-      const max = (genero === 'F' || genero === 'Femenino') ? 6.0 : 7.0
-      return v <= max ? 'text-green-600' : 'text-red-600'
+      const max = this.esMujer ? 6.0 : 7.0
+      return this.form.acido_urico_mg_dl <= max ? 'text-green-600' : 'text-red-600'
     },
     acidoUricoClass() {
-      return this.acidoUricoStatusClass().replace('text-', 'border-').replace('600', '200') + ' bg-' + this.acidoUricoStatusClass().replace('text-', '').replace('600', '50')
+      return this.cardClass(this.acidoUricoStatusClass)
     },
 
     // Hemoglobina
     hemoglobinaStatus() {
       if (!this.form.hemoglobina_g_dl) return ''
       const v = this.form.hemoglobina_g_dl
-      const genero = this.form.paciente?.genero || 'M'
-      const min = (genero === 'F' || genero === 'Femenino') ? 12.0 : 13.5
-      const max = (genero === 'F' || genero === 'Femenino') ? 15.5 : 17.5
+      const min = this.esMujer ? 12.0 : 13.5
+      const max = this.esMujer ? 15.5 : 17.5
       if (v < min) return 'Anemia'
       if (v <= max) return 'Normal'
       return 'Policitemia/Concentración'
@@ -357,34 +364,28 @@ export default {
     hemoglobinaStatusClass() {
       if (!this.form.hemoglobina_g_dl) return ''
       const v = this.form.hemoglobina_g_dl
-      const genero = this.form.paciente?.genero || 'M'
-      const min = (genero === 'F' || genero === 'Femenino') ? 12.0 : 13.5
-      const max = (genero === 'F' || genero === 'Femenino') ? 15.5 : 17.5
+      const min = this.esMujer ? 12.0 : 13.5
+      const max = this.esMujer ? 15.5 : 17.5
       if (v < min) return 'text-red-600'
       if (v <= max) return 'text-green-600'
       return 'text-blue-600'
     },
     hemoglobinaClass() {
-      return this.hemoglobinaStatusClass().replace('text-', 'border-').replace('600', '200') + ' bg-' + this.hemoglobinaStatusClass().replace('text-', '').replace('600', '50')
+      return this.cardClass(this.hemoglobinaStatusClass)
     },
 
     // LDL Estimado (Friedewald)
     ldlEstimado() {
-      if (this.form.colesterol_total_mg_dl && this.form.hdl_mg_dl && this.form.trigliceridos_mg_dl) {
-        if (this.form.trigliceridos_mg_dl < 400) {
-          return Math.round(
-            this.form.colesterol_total_mg_dl -
-            this.form.hdl_mg_dl -
-            (this.form.trigliceridos_mg_dl / 5)
-          )
-        }
+      const { colesterol_total_mg_dl: ct, hdl_mg_dl: hdl, trigliceridos_mg_dl: tg } = this.form
+      if (ct && hdl && tg && tg < 400) {
+        return Math.round(ct - hdl - tg / 5)
       }
       return null
     },
 
     // Índice Aterogénico
     indiceAterogenico() {
-      if (this.form.trigliceridos_mg_dl && this.form.hdl_mg_dl && this.form.hdl_mg_dl > 0) {
+      if (this.form.trigliceridos_mg_dl && this.form.hdl_mg_dl > 0) {
         return (this.form.trigliceridos_mg_dl / this.form.hdl_mg_dl).toFixed(2)
       }
       return null
@@ -406,7 +407,7 @@ export default {
 
     // Ratio Col/HDL
     ratioColHdl() {
-      if (this.form.colesterol_total_mg_dl && this.form.hdl_mg_dl && this.form.hdl_mg_dl > 0) {
+      if (this.form.colesterol_total_mg_dl && this.form.hdl_mg_dl > 0) {
         return (this.form.colesterol_total_mg_dl / this.form.hdl_mg_dl).toFixed(2)
       }
       return null
@@ -429,11 +430,10 @@ export default {
     // Síndrome Metabólico (criterios ATP III / IDF)
     sindromeMetabolico() {
       let criterios = 0
-      const genero = this.form.paciente?.genero || 'M'
 
       // Cintura
       if (this.form.circunferencia_cintura_cm) {
-        const limite = (genero === 'F' || genero === 'Femenino') ? 88 : 102
+        const limite = this.esMujer ? 88 : 102
         if (this.form.circunferencia_cintura_cm > limite) criterios++
       }
 
@@ -442,14 +442,14 @@ export default {
 
       // HDL
       if (this.form.hdl_mg_dl) {
-        const limite = (genero === 'F' || genero === 'Femenino') ? 50 : 40
+        const limite = this.esMujer ? 50 : 40
         if (this.form.hdl_mg_dl < limite) criterios++
       }
 
       // Glucosa
       if (this.form.glucosa_mg_dl >= 100) criterios++
 
-      // Presión arterial (no disponible aquí, asumir 0)
+      // Presión arterial: no disponible aquí, no se cuenta
 
       if (criterios >= 3) return `SÍ (${criterios}/5 criterios)`
       if (criterios > 0) return `Parcial (${criterios}/5 criterios)`
@@ -462,8 +462,15 @@ export default {
     }
   },
   methods: {
+    cardClass(statusClass) {
+      return CARD_CLASSES[statusClass] || ''
+    },
     updateField(key, value) {
-      this.$emit('update:modelValue', { ...this.form, [key]: value })
+      const num = value === '' ? null : parseFloat(value)
+      this.$emit('update:modelValue', {
+        ...this.form,
+        [key]: Number.isNaN(num) ? null : num
+      })
     }
   }
 }

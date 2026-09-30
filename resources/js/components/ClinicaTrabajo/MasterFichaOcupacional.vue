@@ -464,8 +464,8 @@
 </template>
 
 <script>
-import apiClient from '../../../services/ApiService';
-import SignosVitales from '../../consultaIA/SignosVitales.vue';
+import apiClient from '../../services/ApiService';
+import SignosVitales from '../consultaIA/SignosVitales.vue';
 
 export default {
     name: 'MasterFichaOcupacional',

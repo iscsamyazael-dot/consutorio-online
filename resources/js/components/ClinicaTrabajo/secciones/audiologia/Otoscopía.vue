@@ -8,7 +8,7 @@
 
       <p class="text-sm text-gray-600 mb-4">
         Examen visual del conducto auditivo externo y tímpano.
-      </h3>
+      </p>
 
       <!-- Hallazgos otoscopia derecho -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

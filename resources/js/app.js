@@ -60,14 +60,14 @@ import ConfiguracionImpresora from './components/Kiosco/ConfiguracionImpresora.v
 import VinculacionCorreo from './components/configuracion-sistema/VincularCorreo.vue'
 import VinculacionWhatsapp from './components/configuracion-sistema/vincularWhatsapp.vue'
 import headerConsulta from './components/consultaIA/HeaderConsulta.vue'
-import MasterFichaOcupacional from './components/ClinicaTrabajo/FichaOcupacional/MasterFichaOcupacional.vue'
+import MasterFichaOcupacional from './components/ClinicaTrabajo/MasterFichaOcupacional.vue'
 
 // Master components para submódulos Clínica Trabajo (están en secciones/)
-import MasterMedicina from './components/ClinicaTrabajo/secciones/medicina/Mastermedicina.vue'
-import MasterPsicologia from './components/ClinicaTrabajo/secciones/psicologia/Masterpsicologia.vue'
-import MasterNutricion from './components/ClinicaTrabajo/secciones/nutricion/Masternutricion.vue'
-import MasterAudiologia from './components/ClinicaTrabajo/secciones/audiologia/Masteraudiologia.vue'
-import MasterErgonomia from './components/ClinicaTrabajo/secciones/ergonomia/Masterergonomia.vue'
+import MasterMedicina from './components/ClinicaTrabajo/Mastermedicina.vue'
+import MasterPsicologia from './components/ClinicaTrabajo/Masterpsicologia.vue'
+import MasterNutricion from './components/ClinicaTrabajo/Masternutricion.vue'
+import MasterAudiologia from './components/ClinicaTrabajo/Masteraudiologia.vue'
+import MasterErgonomia from './components/ClinicaTrabajo/Masterergonomia.vue'
  
 // ------------------------------------------------------
 // Instancia única de la app

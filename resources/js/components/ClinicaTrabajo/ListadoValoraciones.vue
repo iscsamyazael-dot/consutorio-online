@@ -108,7 +108,7 @@
 </template>
 
 <script>
-import ApiService from '../../services/ApiService.js'
+  import ApiService, { clinicaTrabajo } from '../../services/ApiService.js'
 
 export default {
   name: 'ListadoValoraciones',
@@ -155,7 +155,7 @@ export default {
     async cargar() {
       this.cargando = true
       try {
-        const response = await ApiService.clinicaTrabajo[this.submódulo].lista()
+        const response = await clinicaTrabajo[this.submódulo].lista()
         this.valoraciones = response.data || response
       } catch (error) {
         console.error('Error cargando valoraciones:', error)
@@ -173,16 +173,14 @@ export default {
     },
 
     abrirNueva() {
-      this.$router.push({
-        name: `${this.submódulo}.create`
-      })
+        window.location.href = `/clinica/${this.submódulo}/nueva`
     },
 
     async eliminar(valoracion) {
       if (!confirm(`¿Eliminar valoración ${valoracion.folio}?`)) return
 
       try {
-        await ApiService.clinicaTrabajo[this.submódulo].eliminar(valoracion.id)
+        await clinicaTrabajo[this.submódulo].eliminar(valoracion.id)
         this.$toast?.success('Eliminada')
         await this.cargar()
       } catch (error) {
@@ -209,7 +207,7 @@ export default {
 
     async cargarEmpresas() {
       try {
-        const response = await ApiService.clinicaTrabajo.empresas.lista()
+        const response = await clinicaTrabajo.empresas.lista()
         this.empresas = response.data || response
       } catch (error) {
         console.error('Error cargando empresas:', error)

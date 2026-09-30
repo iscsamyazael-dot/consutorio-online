@@ -1,12 +1,12 @@
 <template>
   <div class="master-medicina">
-    <!-- Renderiza MasterFichaOcupacional directamente -->
+    <!-- Renderiza MasterFichaOcupacional (no ValoracionInteligente) -->
     <master-ficha-ocupacional></master-ficha-ocupacional>
   </div>
 </template>
 
 <script>
-import MasterFichaOcupacional from '../../FichaOcupacional/MasterFichaOcupacional.vue'
+import MasterFichaOcupacional from './MasterFichaOcupacional.vue'
 
 export default {
   name: 'MasterMedicina',
@@ -17,7 +17,7 @@ export default {
     return {}
   },
   mounted() {
-    // Lógica específica de medicina si es necesaria
+    // Medicina usa su propio Master con chat IA
   }
 }
 </script>

@@ -125,7 +125,7 @@
 </template>
 
 <script>
-import { clinicaTrabajo } from '../../../services/ApiService.js'
+import { clinicaTrabajo } from '../../../../services/ApiService'
 
 export default {
   name: 'DatosPuestoMedicina',
