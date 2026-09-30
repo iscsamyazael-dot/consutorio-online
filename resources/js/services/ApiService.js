@@ -80,6 +80,8 @@ export const clinicaTrabajo = {
     actualizar: (id, data) => apiClient.put(`/clinica/medicina/${id}`, data),
     eliminar: (id) => apiClient.delete(`/clinica/medicina/${id}`),
     imprimir: (id) => apiClient.get(`/clinica/medicina/${id}/imprimir`),
+    guardarFichaCompleta: (data) => apiClient.post('/clinica/medicina/ficha-completa', data),
+    consultarIA: (data) => apiClient.post('/clinica/medicina/consultar-ia', data),
   },
   catalogo: {
     factoresPsicosociales: () => apiClient.get('/catalogo/factores-psicosociales'),
@@ -89,6 +91,7 @@ export const clinicaTrabajo = {
   pacientes: {
     lista: () => apiClient.get('/pacientes'),
     obtener: (id) => apiClient.get(`/pacientes/${id}`),
+    buscar: (params) => apiClient.get('/pacientes/buscar', { params: { buscar: params.q || params.buscar } }),
   },
   empresas: {
     lista: () => apiClient.get('/empresas'),
@@ -101,4 +104,16 @@ export const clinicaTrabajo = {
   puestos: {
     lista: () => apiClient.get('/puestos-trabajo'),
   },
+  // MÉTODOS DE NIVEL RAÍZ para MasterFichaOcupacional
+  buscarPacientes: (params) => apiClient.get('/pacientes/buscar', { params: { buscar: params.q || params.buscar } }),
+  
+  consultarIA: (data) => apiClient.post('/api/clinica-trabajo/ficha-ocupacional/analizar', data),
+  
+  guardarFichaCompleta: (data) => apiClient.post('/api/clinica-trabajo/ficha-ocupacional', data),
+  
+  obtenerEvaluacion: (id) => apiClient.get(`/api/clinica-trabajo/ficha-ocupacional/${id}`),
+  
+  actualizarEvaluacion: (id, data) => apiClient.put(`/api/clinica-trabajo/ficha-ocupacional/${id}`, data),
+  
+  listarEvaluaciones: (params) => apiClient.get('/api/clinica-trabajo/ficha-ocupacional', { params }),
 }

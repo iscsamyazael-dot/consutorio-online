@@ -113,11 +113,13 @@ Route::middleware('auth')->group(function () {
 
         // ═════════════════════════════════════════════════════════════
         // CLÍNICA DE TRABAJO
-        // ═════════════════════════════════════════════════════════════
-        Route::get('/ficha-ocupacional', [FichaOcupacionalController::class, 'vista'])->name('clinica-trabajo.ficha-ocupacional.index');
-        Route::get('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'index'])->name('api.clinica-trabajo.ficha-ocupacional.index');
-        Route::post('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'store'])->name('api.clinica-trabajo.ficha-ocupacional.store');
-        Route::post('/api/clinica-trabajo/ficha-ocupacional/analizar', [FichaOcupacionalController::class, 'analizar']);
+        // ════════════════════════════════════════════════════════════
+        Route::get('/ficha-ocupacional', [ValoracionMedicinaController::class, 'vista'])->name('clinica-trabajo.Medicina');
+        // Rutas antiguas comentadas (usaban FichaOcupacionalController)
+        // Route::get('/ficha-ocupacional', [FichaOcupacionalController::class, 'vista'])->name('clinica-trabajo.Medicina');
+        // Route::get('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'index'])->name('api.clinica-trabajo.ficha-ocupacional.index');
+        // Route::post('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'store'])->name('api.clinica-trabajo.ficha-ocupacional.store');
+        // Route::post('/api/clinica-trabajo/ficha-ocupacional/analizar', [FichaOcupacionalController::class, 'analizar']);
         
         // PSICOLOGÍA
         Route::prefix('clinica/psicologia')->name('psicologia.')->group(function () {
@@ -160,13 +162,22 @@ Route::middleware('auth')->group(function () {
         });
 
         // MEDICINA / ENFERMERÍA (NUEVO)
-        Route::prefix('clinica/medicina')->name('medicina.')->group(function () {
+        // RUTA PARA VER LA VISTA BLADE (Medicina.blade.php)
+        Route::get('/clinica/medicina', [ValoracionMedicinaController::class, 'vista'])->name('clinica.medicina.index');
+
+        // API PARA GUARDAR/ACTUALIZAR DATOS (JSON)
+        Route::prefix('api/clinica/medicina')->name('medicina.')->group(function () {
             Route::get('/', [ValoracionMedicinaController::class, 'index'])->name('index');
             Route::get('{id}', [ValoracionMedicinaController::class, 'show'])->name('show');
             Route::post('/', [ValoracionMedicinaController::class, 'store'])->name('store');
             Route::put('{id}', [ValoracionMedicinaController::class, 'update'])->name('update');
             Route::delete('{id}', [ValoracionMedicinaController::class, 'destroy'])->name('destroy');
             Route::get('{id}/imprimir', [ValoracionMedicinaController::class, 'imprimir'])->name('imprimir');
+
+            // NUEVAS RUTAS PARA MASTER FICHA OCUPACIONAL
+            Route::get('pacientes/buscar', [ValoracionMedicinaController::class, 'buscarPacientes'])->name('buscar-pacientes');
+            Route::post('ficha-completa', [ValoracionMedicinaController::class, 'guardarFichaCompleta'])->name('ficha-completa');
+            Route::post('consultar-ia', [ValoracionMedicinaController::class, 'consultarIA'])->name('consultar-ia');
         });
 
         // CATÁLOGOS (dinámicos)

@@ -1,23 +1,25 @@
 @extends('adminlte::page')
 
-@section('title', 'Ficha Médica Ocupacional')
+@section('title', 'Ficha Médica Ocupacional - WORLDSTRIDE')
 
 @section('content_header')
     <h1>
         <i class="fas fa-stethoscope mr-2 text-primary"></i>
-        Ficha Médica Ocupacional
+        Evaluación Ocupacional Modular
     </h1>
 @stop
 
 @section('content')
     <div id="app">
-        <master-medicina></master-medicina>
+        <master-ficha-ocupacional></master-ficha-ocupacional>
     </div>
 @stop
 
 @push('css')
     <style>
-        /* Estilos específicos para medicina si es necesario */
+        #app {
+            padding: 0;
+        }
     </style>
 @endpush
 

@@ -1,232 +1,264 @@
 <template>
-  <div class="exposicion-riesgos-container">
+  <div class="datos-puesto-container">
     <!-- HEADER -->
     <div class="section-header">
-      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-      <h2>Exposición laboral y riesgos ocupacionales</h2>
+      <i class="fas fa-briefcase" aria-hidden="true"></i>
+      <h2>Datos de Identificación y Laboral (WORLDSTRIDE - HOJA 1)</h2>
     </div>
 
-    <!-- CARD: DESCRIPCIÓN DEL PUESTO -->
+    <!-- 1. IDENTIFICACIÓN DEL TRABAJADOR -->
     <div class="card-section">
       <div class="card-header">
-        <h3>Descripción de actividades y tareas</h3>
+        <h3>1. Identificación del Trabajador</h3>
       </div>
-
       <div class="card-body">
-        <div class="form-group">
-          <label for="descripcion">Actividades principales del puesto</label>
-          <textarea
-            id="descripcion"
-            v-model="form.descripcion_puesto"
-            placeholder="Descripción detallada de las actividades principales, tareas frecuentes y responsabilidades..."
-            class="textarea-field"
-            rows="4"
-          ></textarea>
-          <span class="helper-text">Describir de forma clara y detallada</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- CARD: RIESGOS LABORALES -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>Riesgos laborales identificados</h3>
-      </div>
-
-      <div class="card-body">
-        <div class="form-group">
-          <label>Selecciona los riesgos aplicables</label>
-          <div class="checkbox-grid">
-            <div v-for="riesgo in riesgosDisponibles" :key="riesgo.id" class="checkbox-item">
-              <input
-                :id="`riesgo-${riesgo.id}`"
-                type="checkbox"
-                :value="riesgo.id"
-                :checked="form.riesgos_seleccionados?.includes(riesgo.id)"
-                @change="toggleRiesgo(riesgo.id)"
-                class="checkbox-input"
-              />
-              <label :for="`riesgo-${riesgo.id}`" class="checkbox-label">
-                <span class="checkbox-mark"></span>
-                {{ riesgo.nombre }}
-              </label>
-            </div>
+        <div class="form-row">
+          <div class="form-group col-md-2">
+            <label>Folio *</label>
+            <input type="text" v-model="form.folio" class="form-control" readonly />
+            <small class="form-text text-muted">Auto-generado: MED-YYYYMMDD-NNNN</small>
+          </div>
+          <div class="form-group col-md-2">
+            <label>Tipo Evaluación *</label>
+            <select v-model="form.tipo_evaluacion" class="form-control" required>
+              <option value="">Seleccionar</option>
+              <option value="inicial">Evaluación Inicial</option>
+              <option value="periodica">Periódica</option>
+              <option value="cambio_puesto">Cambio de Puesto</option>
+              <option value="retorno_laboral">Retorno Laboral</option>
+              <option value="egreso">Egreso</option>
+            </select>
+          </div>
+          <div class="form-group col-md-2">
+            <label>Fecha Evaluación *</label>
+            <input type="date" v-model="form.fecha_evaluacion" class="form-control" required />
+          </div>
+          <div class="form-group col-md-2">
+            <label>Hora Evaluación</label>
+            <input type="time" v-model="form.hora_evaluacion" class="form-control" />
+          </div>
+          <div class="form-group col-md-4">
+            <label>Médico Evaluador *</label>
+            <input type="text" v-model="form.medico_evaluador" class="form-control" required />
           </div>
         </div>
 
-        <!-- RESUMEN DE RIESGOS SELECCIONADOS -->
-        <div v-if="form.riesgos_seleccionados?.length" class="badge-group">
-          <span v-for="riesgoId in form.riesgos_seleccionados" :key="riesgoId" class="badge">
-            {{ obtenerNombreRiesgo(riesgoId) }}
-            <i class="ti ti-x"></i>
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- CARD: EQUIPOS DE PROTECCIÓN PERSONAL -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>Equipos de protección personal (EPI)</h3>
-      </div>
-
-      <div class="card-body">
-        <div class="form-group">
-          <label>EPI disponible en el puesto</label>
-          <div class="checkbox-grid">
-            <div class="checkbox-item">
-              <input
-                id="epi-casco"
-                type="checkbox"
-                :checked="form.epi_casco"
-                @change="form.epi_casco = $event.target.checked"
-                class="checkbox-input"
-              />
-              <label for="epi-casco" class="checkbox-label">
-                <span class="checkbox-mark"></span>
-                Casco
-              </label>
-            </div>
-
-            <div class="checkbox-item">
-              <input
-                id="epi-guantes"
-                type="checkbox"
-                :checked="form.epi_guantes"
-                @change="form.epi_guantes = $event.target.checked"
-                class="checkbox-input"
-              />
-              <label for="epi-guantes" class="checkbox-label">
-                <span class="checkbox-mark"></span>
-                Guantes
-              </label>
-            </div>
-
-            <div class="checkbox-item">
-              <input
-                id="epi-mascarilla"
-                type="checkbox"
-                :checked="form.epi_mascarilla"
-                @change="form.epi_mascarilla = $event.target.checked"
-                class="checkbox-input"
-              />
-              <label for="epi-mascarilla" class="checkbox-label">
-                <span class="checkbox-mark"></span>
-                Mascarilla/Respirador
-              </label>
-            </div>
-
-            <div class="checkbox-item">
-              <input
-                id="epi-arnés"
-                type="checkbox"
-                :checked="form.epi_arnes"
-                @change="form.epi_arnes = $event.target.checked"
-                class="checkbox-input"
-              />
-              <label for="epi-arnés" class="checkbox-label">
-                <span class="checkbox-mark"></span>
-                Arnés/Cinturón seguridad
-              </label>
-            </div>
-
-            <div class="checkbox-item">
-              <input
-                id="epi-lentes"
-                type="checkbox"
-                :checked="form.epi_lentes"
-                @change="form.epi_lentes = $event.target.checked"
-                class="checkbox-input"
-              />
-              <label for="epi-lentes" class="checkbox-label">
-                <span class="checkbox-mark"></span>
-                Lentes de protección
-              </label>
-            </div>
-
-            <div class="checkbox-item">
-              <input
-                id="epi-botas"
-                type="checkbox"
-                :checked="form.epi_botas"
-                @change="form.epi_botas = $event.target.checked"
-                class="checkbox-input"
-              />
-              <label for="epi-botas" class="checkbox-label">
-                <span class="checkbox-mark"></span>
-                Botas de seguridad
-              </label>
-            </div>
+        <!-- DATOS PERSONALES -->
+        <h5 class="border-bottom pb-2 my-3">Datos Personales</h5>
+        <div class="form-row">
+          <div class="form-group col-md-3">
+            <label>Primer Apellido *</label>
+            <input type="text" v-model="form.apellido_paterno" class="form-control" required />
           </div>
+          <div class="form-group col-md-3">
+            <label>Segundo Apellido</label>
+            <input type="text" v-model="form.apellido_materno" class="form-control" />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Nombre(s) *</label>
+            <input type="text" v-model="form.nombre" class="form-control" required />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Edad *</label>
+            <input type="number" v-model="form.edad" class="form-control" min="18" max="80" required />
+          </div>
+        </div>
 
-          <div class="toggle-group">
-            <input
-              id="usa-epi"
-              type="checkbox"
-              :checked="form.usa_epi_regularmente"
-              @change="form.usa_epi_regularmente = $event.target.checked"
-              class="checkbox-input"
-            />
-            <label for="usa-epi" class="toggle-label">
-              El trabajador usa EPI regularmente
-            </label>
+        <div class="form-row">
+          <div class="form-group col-md-3">
+            <label>Cédula/Pasaporte *</label>
+            <input type="text" v-model="form.cedula" class="form-control" required />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Género *</label>
+            <select v-model="form.genero" class="form-control" required>
+              <option value="">Seleccionar</option>
+              <option value="M">Masculino</option>
+              <option value="F">Femenino</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label>Lugar de Nacimiento</label>
+            <input type="text" v-model="form.lugar_nacimiento" class="form-control" placeholder="Ciudad, país..." />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Tipo Sanguíneo</label>
+            <select v-model="form.tipo_sanguineo" class="form-control">
+              <option value="">Seleccionar</option>
+              <option value="O+">O+</option><option value="O-">O-</option>
+              <option value="A+">A+</option><option value="A-">A-</option>
+              <option value="B+">B+</option><option value="B-">B-</option>
+              <option value="AB+">AB+</option><option value="AB-">AB-</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- CONTACTO -->
+        <h5 class="border-bottom pb-2 my-3">Contacto</h5>
+        <div class="form-row">
+          <div class="form-group col-md-2">
+            <label>Teléfono</label>
+            <input type="tel" v-model="form.telefono" class="form-control" />
+          </div>
+          <div class="form-group col-md-2">
+            <label>Celular</label>
+            <input type="tel" v-model="form.celular" class="form-control" />
+          </div>
+          <div class="form-group col-md-4">
+            <label>Correo Electrónico</label>
+            <input type="email" v-model="form.email" class="form-control" />
+          </div>
+          <div class="form-group col-md-4">
+            <label>Dirección</label>
+            <input type="text" v-model="form.direccion" class="form-control" />
+          </div>
+        </div>
+
+        <!-- CONTACTO EMERGENCIA -->
+        <h5 class="border-bottom pb-2 my-3">Contacto en Caso de Emergencia</h5>
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label>Nombre Contacto</label>
+            <input type="text" v-model="form.emergencia_nombre" class="form-control" />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Teléfono Emergencia</label>
+            <input type="tel" v-model="form.emergencia_telefono" class="form-control" />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Relación</label>
+            <input type="text" v-model="form.emergencia_relacion" class="form-control" placeholder="Padre, cónyuge..." />
+          </div>
+        </div>
+
+        <!-- ÚLTIMA CONSULTA MÉDICA -->
+        <h5 class="border-bottom pb-2 my-3">Última Consulta Médica</h5>
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label>Fecha de Última Consulta</label>
+            <input type="date" v-model="form.ultima_consulta_fecha" class="form-control" />
+          </div>
+          <div class="form-group col-md-8">
+            <label>Motivo de la Consulta</label>
+            <input type="text" v-model="form.ultima_consulta_motivo" class="form-control" placeholder="Razón de la consulta médica..." />
           </div>
         </div>
       </div>
     </div>
 
-    <!-- CARD: EXPOSICIÓN PREVIA -->
+    <!-- 2. DATOS LABORALES ACTUALES -->
     <div class="card-section">
       <div class="card-header">
-        <h3>Historial de exposición previa</h3>
+        <h3>2. Información Laboral Actual</h3>
       </div>
-
       <div class="card-body">
-        <div class="form-group">
-          <label for="exposicion-previa">
-            Antecedentes ocupacionales a otros riesgos
-          </label>
-          <textarea
-            id="exposicion-previa"
-            v-model="form.historial_exposicion"
-            placeholder="Ej: Trabajó en construcción (asbesto), industria química (disolventes), etc..."
-            class="textarea-field"
-            rows="3"
-          ></textarea>
-          <span class="helper-text">Documentar puestos anteriores y riesgos asociados</span>
+        <div class="form-row">
+          <div class="form-group col-md-3">
+            <label>Número Empleado *</label>
+            <input type="text" v-model="form.numero_empleado" class="form-control" required />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Empresa *</label>
+            <input type="text" v-model="form.empresa" class="form-control" required />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Departamento *</label>
+            <input type="text" v-model="form.departamento" class="form-control" required />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Puesto/Cargo *</label>
+            <input type="text" v-model="form.puesto" class="form-control" required />
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="enfermedades-previas">Enfermedades ocupacionales previas</label>
-          <textarea
-            id="enfermedades-previas"
-            v-model="form.enfermedades_ocupacionales_previas"
-            placeholder="Ej: Dermatitis de contacto, hipoacusia, tendinitis, etc..."
-            class="textarea-field"
-            rows="2"
-          ></textarea>
+        <div class="form-row">
+          <div class="form-group col-md-3">
+            <label>Antigüedad en el Puesto</label>
+            <input type="text" v-model="form.antiguedad" class="form-control" placeholder="Ej: 2 años 3 meses" />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Antigüedad en la Empresa</label>
+            <input type="text" v-model="form.antiguedad_empresa" class="form-control" placeholder="Ej: 5 años" />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Tipo Contrato *</label>
+            <select v-model="form.tipo_contrato" class="form-control" required>
+              <option value="">Seleccionar</option>
+              <option value="indefinido">Indefinido</option>
+              <option value="temporal">Temporal/Fijo</option>
+              <option value="proyecto">Proyecto</option>
+              <option value="practicante">Practicante</option>
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label>Jornada Laboral *</label>
+            <select v-model="form.jornada" class="form-control" required>
+              <option value="">Seleccionar</option>
+              <option value="diurna">Diurna</option>
+              <option value="nocturna">Nocturna</option>
+              <option value="mixta">Mixta</option>
+              <option value="rotatoria">Rotatoria</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label>Descripción General del Puesto/Funciones *</label>
+            <textarea v-model="form.descripcion_puesto" class="form-control" rows="3" required></textarea>
+          </div>
+          <div class="form-group col-md-6">
+            <label>Riesgos Identificados en el Puesto</label>
+            <textarea v-model="form.riesgos_identificados" class="form-control" rows="3"></textarea>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- INFO BOX -->
-    <div class="info-box warning">
-      <i class="ti ti-info-circle" aria-hidden="true"></i>
-      <div>
-        <p class="info-label">Importante:</p>
-        <p class="info-text">
-          La documentación completa de riesgos y exposición es esencial para la aptitud médica ocupacional.
-        </p>
+    <!-- 3. SIGNOS VITALES (INTEGRADOS) -->
+    <div class="card-section">
+      <div class="card-header">
+        <h3>3. Signos Vitales</h3>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">Registre los signos vitales del trabajador en el momento de la evaluación.</p>
+        
+        <div class="form-row">
+          <div class="form-group col-md-2">
+            <label>FC (lat/min)</label>
+            <input type="number" v-model="form.signos_vitales.frecuencia_cardiaca" class="form-control" min="40" max="200" />
+          </div>
+          <div class="form-group col-md-2">
+            <label>FR (resp/min)</label>
+            <input type="number" v-model="form.signos_vitales.frecuencia_respiratoria" class="form-control" min="8" max="40" />
+          </div>
+          <div class="form-group col-md-2">
+            <label>TA (mmHg)</label>
+            <input type="text" v-model="form.signos_vitales.presion_arterial" class="form-control" placeholder="120/80" />
+          </div>
+          <div class="form-group col-md-2">
+            <label>Temp (°C)</label>
+            <input type="number" v-model="form.signos_vitales.temperatura" class="form-control" min="35" max="41" step="0.1" />
+          </div>
+          <div class="form-group col-md-2">
+            <label>SatO2 (%)</label>
+            <input type="number" v-model="form.signos_vitales.saturacion_oxigeno" class="form-control" min="70" max="100" />
+          </div>
+          <div class="form-group col-md-2">
+            <label>Glucosa (mg/dL)</label>
+            <input type="number" v-model="form.signos_vitales.glucosa" class="form-control" />
+          </div>
+        </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script>
-import ApiService from '../../../../services/ApiService'
-
 export default {
-  name: 'ExposiciónRiesgos',
+  name: 'DatosPuestoCompleto',
   props: {
     modelValue: {
       type: Object,
@@ -236,8 +268,58 @@ export default {
   emits: ['update:modelValue'],
   data() {
     return {
-      form: this.modelValue,
-      riesgosDisponibles: []
+      form: this.modelValue || {
+        folio: this.generarFolio(),
+        tipo_evaluacion: '',
+        fecha_evaluacion: new Date().toISOString().split('T')[0],
+        hora_evaluacion: '',
+        medico_evaluador: '',
+        apellido_paterno: '',
+        apellido_materno: '',
+        nombre: '',
+        edad: '',
+        cedula: '',
+        genero: '',
+        lugar_nacimiento: '',
+        tipo_sanguineo: '',
+        telefono: '',
+        celular: '',
+        email: '',
+        direccion: '',
+        emergencia_nombre: '',
+        emergencia_telefono: '',
+        emergencia_relacion: '',
+        ultima_consulta_fecha: '',
+        ultima_consulta_motivo: '',
+        numero_empleado: '',
+        empresa: '',
+        departamento: '',
+        puesto: '',
+        antiguedad: '',
+        antiguedad_empresa: '',
+        tipo_contrato: '',
+        jornada: '',
+        descripcion_puesto: '',
+        riesgos_identificados: '',
+        signos_vitales: {
+          frecuencia_cardiaca: '',
+          frecuencia_respiratoria: '',
+          presion_arterial: '',
+          temperatura: '',
+          saturacion_oxigeno: '',
+          glucosa: ''
+        }
+      }
+    }
+  },
+  methods: {
+    generarFolio() {
+      const fecha = new Date()
+      const ano = fecha.getFullYear()
+      const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+      const dia = String(fecha.getDate()).padStart(2, '0')
+      const numero = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+      return `MED-${ano}${mes}${dia}-${numero}`
     }
   },
   watch: {
@@ -250,51 +332,16 @@ export default {
       },
       deep: true
     }
-  },
-  methods: {
-    toggleRiesgo(riesgoId) {
-      if (!this.form.riesgos_seleccionados) {
-        this.form.riesgos_seleccionados = []
-      }
-      const index = this.form.riesgos_seleccionados.indexOf(riesgoId)
-      if (index > -1) {
-        this.form.riesgos_seleccionados.splice(index, 1)
-      } else {
-        this.form.riesgos_seleccionados.push(riesgoId)
-      }
-      this.$emit('update:modelValue', this.form)
-    },
-    obtenerNombreRiesgo(riesgoId) {
-      const riesgo = this.riesgosDisponibles.find(r => r.id === riesgoId)
-      return riesgo?.nombre || 'Riesgo'
-    },
-    async cargarRiesgos() {
-      try {
-        const response = await ApiService.catalogo.riesgosErgonomicos()
-        this.riesgosDisponibles = response.data || []
-      } catch (error) {
-        console.error('Error cargando riesgos:', error)
-      }
-    }
-  },
-  mounted() {
-    this.cargarRiesgos()
   }
 }
 </script>
 
 <style scoped>
-.exposicion-riesgos-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
 .section-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .section-header i {
@@ -313,14 +360,13 @@ export default {
   background: #FFFFFF;
   border: 0.5px solid #E5E7EB;
   border-radius: 6px;
-  border-left: 3px solid #5F6E7E;
+  margin-bottom: 2rem;
   overflow: hidden;
 }
 
 .card-header {
   background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%);
   padding: 12px 20px;
-  border-bottom: 1px solid #E5E7EB;
 }
 
 .card-header h3 {
@@ -334,185 +380,42 @@ export default {
   padding: 20px;
 }
 
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.form-group:last-child {
-  margin-bottom: 0;
 }
 
 .form-group label {
   font-size: 13px;
   font-weight: 500;
   color: #1F2937;
-  margin: 0;
+  margin-bottom: 0.5rem;
 }
 
-.textarea-field {
+.form-control {
   padding: 10px 12px;
   border: 0.5px solid #D1D5DB;
   border-radius: 6px;
   font-size: 14px;
-  font-family: inherit;
-  color: #1F2937;
-  background: #FFFFFF;
-  resize: vertical;
-  transition: all 200ms ease;
 }
 
-.textarea-field:focus {
-  outline: none;
-  border-color: #5F6E7E;
-  box-shadow: 0 0 0 2px rgba(95, 110, 126, 0.1);
+.form-control:focus {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.helper-text {
+.form-text {
   font-size: 12px;
-  color: #9CA3AF;
-  margin: 0;
 }
 
-.checkbox-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.checkbox-input {
-  display: none;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #1F2937;
-  margin: 0;
-  user-select: none;
-}
-
-.checkbox-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border: 1px solid #D1D5DB;
-  border-radius: 4px;
-  background: #FFFFFF;
-  transition: all 200ms ease;
-  flex-shrink: 0;
-}
-
-.checkbox-input:checked + .checkbox-label .checkbox-mark {
-  background: #0F6E9F;
-  border-color: #0F6E9F;
-  box-shadow: inset 0 0 0 2px #FFFFFF;
-}
-
-.checkbox-input:checked + .checkbox-label .checkbox-mark::after {
-  content: '✓';
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.checkbox-input:focus + .checkbox-label .checkbox-mark {
-  box-shadow: 0 0 0 2px rgba(15, 110, 159, 0.2);
-}
-
-.toggle-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 0.5px solid #E5E7EB;
-}
-
-.toggle-label {
+h5 {
   font-size: 13px;
-  color: #1F2937;
-  margin: 0;
-  cursor: pointer;
-}
-
-.badge-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 0.5px solid #E5E7EB;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #E0EEF7;
-  color: #0F6E9F;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-weight: 500;
-}
-
-.badge i {
-  font-size: 12px;
-  cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 200ms;
-}
-
-.badge i:hover {
-  opacity: 1;
-}
-
-.info-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  border-radius: 6px;
-  padding: 12px 16px;
-}
-
-.info-box.warning {
-  background: #FEF3C7;
-  border: 0.5px solid #FCD34D;
-}
-
-.info-box i {
-  font-size: 16px;
-  color: #D97706;
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-.info-label {
-  font-size: 12px;
-  color: #92400E;
-  margin: 0;
   font-weight: 600;
-}
-
-.info-text {
-  font-size: 13px;
-  color: #78350F;
-  margin: 4px 0 0 0;
+  color: #1F2937;
 }
 </style>

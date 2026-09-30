@@ -801,4 +801,53 @@ class IAClinicaTrabajoService
 
                     return $this->consultarGeminiTrabajo($prompt, 'analizarFichaOcupacional');
                 }
+
+    /**
+     * Consulta a la IA con contexto de la ficha médica ocupacional
+     * para responder preguntas del médico en tiempo real
+     */
+    public function consultarMedicinaOcupacional(
+        string $mensaje,
+        int $pacienteId,
+        array $contexto = []
+    ): ?array {
+        set_time_limit(60);
+
+        $vocabulario = DiccionarioMedico::textoReferencia();
+
+        $contextoTexto = '';
+        if (!empty($contexto)) {
+            $contextoTexto = "\nCONTEXTO ACTUAL DE LA FICHA:\n" . json_encode($contexto, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+        }
+
+        $prompt = "
+        Eres un asistente experto en Medicina del Trabajo que apoya al médico durante la consulta ocupacional en tiempo real.
+
+        {$contextoTexto}
+
+        Vocabulario de referencia (coloquial -> término médico):
+        {$vocabulario}
+
+        PREGUNTA DEL MÉDICO:
+        \"{$mensaje}\"
+
+        REGLAS:
+        - Responde de forma concisa, profesional y útil para el médico
+        - Si la pregunta es sobre llenar un campo específico, da la respuesta directa
+        - Si es una pregunta clínica, da orientación basada en medicina ocupacional
+        - Si pide cálculos (IMC, etc.), hazlos con los datos del contexto
+        - NO inventes datos que no estén en el contexto
+        - Si no tienes información suficiente, dilo claramente
+
+        Devuelve EXCLUSIVAMENTE el siguiente JSON:
+        {
+            \"respuesta\": \"tu respuesta aquí\",
+            \"campos_completados\": {}
+        }
+
+        En \"campos_completados\" solo incluye campos si el médico pidió explícitamente llenarlos y tú tienes la info del contexto. Formato: {\"campo\": \"valor\"}.
+        ";
+
+        return $this->consultarGeminiTrabajo($prompt, 'consultarMedicinaOcupacional');
+    }
 }

@@ -463,7 +463,7 @@ return [
                 [
                     'text' => 'Nueva valoración',
                     'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => '/clinica/medicina/nueva',
+                    'url' => '/ficha-ocupacional',
                 ],
             ],
         ],
