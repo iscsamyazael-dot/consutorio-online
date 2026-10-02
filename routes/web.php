@@ -615,6 +615,7 @@ Route::middleware('auth')->group(function () {
             //RUTA PARA LAS VISTAS DE CLINICA DEL TRABAJO//
             Route::get('FichaDelliAudiologia', function() { return view('clinica-trabajo.delli-index'); })->name('clinica-trabajo.delli-index');
             Route::get('FichaTrabajoAltoRiesgo', function() { return view('clinica-trabajo.tr-index'); })->name('clinica-trabajo.tr-index');
+            Route::get('ficha-ocupacional', function() { return view('clinica-trabajo.Medicina'); })->name('clinica-trabajo.Medicina');
         });
 
 });
