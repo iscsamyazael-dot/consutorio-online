@@ -1,38 +1,45 @@
 <template>
   <div class="seccion-diagnostico-nutricion">
-    <div class="bg-white border rounded-lg p-4 mb-4">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-        <i class="icon icon-stethoscope text-green-600"></i>
-        Diagnóstico Nutricional
-      </h3>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Diagnóstico / Problema nutricional -->
-        <div class="md:col-span-2">
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Diagnóstico / Problema Nutricional *</label>
+    <!-- SECTION: DIAGNÓSTICO NUTRICIONAL -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-stethoscope mr-2"></i> DIAGNÓSTICO NUTRICIONAL
+        </h5>
+      </div>
+      <div class="card-body">
+        <!-- DIAGNÓSTICO / PROBLEMA NUTRICIONAL -->
+        <div class="mb-4">
+          <label class="font-weight-bold">Diagnóstico / Problema Nutricional <span class="text-danger">*</span></label>
           <textarea
-            v-model="form.diagnostico_problema"
+            class="form-control"
             rows="4"
-            class="input-field w-full"
+            v-model="form.diagnostico_problema"
+            @input="updateField('diagnostico_problema', $event.target.value)"
             placeholder="Describa el diagnóstico nutricional (ej: Obesidad grado II, Desnutrición proteico-calórica, Dislipidemia mixta, Anemia ferropénica, etc.)"
             required
+            style="height: 128px;"
           ></textarea>
         </div>
 
-        <!-- Clasificación IMC (auto-calculada) -->
-        <div v-if="imcClasificacionAuto" class="bg-green-50 border border-green-200 rounded-lg p-3">
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Clasificación IMC (Auto-calculada)</label>
-          <div class="flex items-center gap-3">
-            <span class="text-2xl font-bold text-green-700">{{ imcCalculado }}</span>
-            <span class="badge badge-green text-lg px-3 py-1">{{ imcClasificacionAuto }}</span>
+        <!-- CLASIFICACIÓN IMC (AUTO-CALCULADA) -->
+        <div v-if="imcClasificacionAuto" class="mb-4 p-3 bg-light border border-left border-success">
+          <label class="font-weight-bold d-block mb-2">Clasificación IMC (Auto-calculada)</label>
+          <div class="d-flex align-items-center gap-3">
+            <span class="h1 font-weight-bold text-success">{{ imcCalculado }}</span>
+            <span class="badge badge-pill badge-success p-2" style="font-size: 1rem;">{{ imcClasificacionAuto }}</span>
           </div>
-          <p class="text-xs text-green-700 mt-1">Basado en estatura: {{ form.estatura_m }}m y peso: {{ form.peso_kg }}kg</p>
+          <p class="text-xs text-muted mt-1 mb-0">Basado en estatura: {{ form.estatura_m }}m y peso: {{ form.peso_kg }}kg</p>
         </div>
 
-        <!-- Clasificación IMC manual (editable) -->
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Clasificación IMC (Manual)</label>
-          <select v-model="form.imc_clasificacion" @change="updateField('imc_clasificacion', $event.target.value)" class="input-field w-full">
+        <!-- CLASIFICACIÓN IMC MANUAL (EDITABLE) -->
+        <div class="mb-4">
+          <label class="font-weight-bold">Clasificación IMC (Manual)</label>
+          <select class="form-control"
+                  v-model="form.imc_clasificacion"
+                  @change="updateField('imc_clasificacion', $event.target.value)"
+                  style="height: 38px;"
+          >
             <option value="">Seleccionar...</option>
             <option value="Bajo peso">Bajo peso</option>
             <option value="Normal">Normal</option>
@@ -42,41 +49,42 @@
             <option value="Obesidad III">Obesidad III</option>
           </select>
         </div>
-      </div>
 
-      <!-- Diagnósticos comunes rápidos -->
-      <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
-        <h4 class="font-semibold text-blue-800 mb-2 flex items-center gap-2">
-          <i class="icon icon-zap"></i>
-          Diagnósticos Nutricionales Comunes
-        </h4>
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            v-for="dx in diagnosticosComunes"
-            :key="dx"
-            @click="usarDiagnostico(dx)"
-            class="px-3 py-1 bg-white border border-blue-300 rounded text-sm text-blue-700 hover:bg-blue-50 transition"
-          >
-            {{ dx }}
-          </button>
+        <!-- DIAGNÓSTICOS COMUNES RÁPIDOS -->
+        <div class="mb-4 p-3 bg-light border border-left border-info">
+          <h5 class="font-weight-bold text-info mb-2 flex items-center gap-2">
+            <i class="fas fa-bolt mr-2"></i>
+            DIAGNÓSTICOS NUTRICIONALES COMUNES
+          </h5>
+          <div class="d-flex flex-wrap gap-2">
+            <button
+              type="button"
+              v-for="dx in diagnosticosComunes"
+              :key="dx"
+              @click="usarDiagnostico(dx)"
+              class="btn btn-outline-secondary btn-sm rounded-pill"
+              style="padding: 0.25rem 0.75rem; font-size: 0.875rem;"
+            >
+              {{ dx }}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- Resumen de hallazgos bioquímicos -->
-      <div v-if="hallazgosBioquimicos.length > 0" class="mt-4 p-3 bg-purple-50 border border-purple-200 rounded">
-        <h4 class="font-semibold text-purple-800 mb-2 flex items-center gap-2">
-          <i class="icon icon-flask"></i>
-          Hallazgos Bioquímicos Relevantes
-        </h4>
-        <div class="flex flex-wrap gap-2">
-          <span
-            v-for="h in hallazgosBioquimicos"
-            :key="h"
-            class="badge badge-purple text-xs"
-          >
-            {{ h }}
-          </span>
+        <!-- RESUMEN DE HALLAZGOS BIOQUÍMICOS -->
+        <div v-if="hallazgosBioquimicos.length > 0" class="mt-4 p-3 bg-light border border-left border-purple">
+          <h5 class="font-weight-bold text-purple mb-2 flex items-center gap-2">
+            <i class="fas fa-flask mr-2"></i>
+            HALLAZGOS BIOQUÍMICOS RELEVANTES
+          </h5>
+          <div class="d-flex flex-wrap gap-2">
+            <span
+              v-for="h in hallazgosBioquimicos"
+              :key="h"
+              class="badge badge-pill badge-purple p-2 text-xs"
+            >
+              {{ h }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -85,7 +93,7 @@
 
 <script>
 export default {
-  name: 'DiagnósticoNutricion',
+  name: 'DiagnosticoNutricion',
   props: {
     modelValue: {
       type: Object,
@@ -184,13 +192,92 @@ export default {
 </script>
 
 <style scoped>
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  font-weight: 600;
+.seccion-diagnostico-nutricion {
+  background: #f8f9fa;
 }
-.badge-green { background: #dcfce7; color: #166534; }
-.badge-purple { background: #f3e8ff; color: #7e22ce; }
+
+.card {
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.form-control {
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+.form-control:focus {
+  border-color: #5F6E7E;
+  box-shadow: 0 0 0 0.2rem rgba(95, 110, 126, 0.25);
+}
+
+.label {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+.btn-outline-secondary {
+  border-color: #ced4da;
+  color: #495057;
+  border-radius: 2rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.btn-outline-secondary:hover {
+  border-color: #adb5bd;
+  background-color: #e9ecef;
+}
+
+.badge {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+}
+
+.badge-primary {
+  background-color: #5F6E7E;
+  color: white;
+}
+
+.badge-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.badge-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.badge-purple {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.text-success { color: #28a745 !important; }
+.text-info { color: #17a2b8 !important; }
+.text-purple { color: #6f42c1 !important; }
+
+.border-left {
+  border-left: 4px solid !important;
+}
+
+.border-success { border-color: #28a745 !important; }
+.border-info { border-color: #17a2b8 !important; }
+.border-purple { border-color: #6f42c1 !important; }
+
+.border-left.border-success { border-left-color: #28a745 !important; }
+.border-left.border-info { border-left-color: #17a2b8 !important; }
+.border-left.border-purple { border-left-color: #6f42c1 !important; }
+
+.bg-light { background-color: #f8f9fa !important; }
 </style>

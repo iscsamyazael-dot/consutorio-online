@@ -146,13 +146,14 @@
             <div class="d-flex justify-content-between align-items-center">
               <h5 class="mb-0">
                 <i class="fas fa-file-alt mr-2 text-info"></i>
-                <strong>Hoja {{ hojaActual }} de 3:</strong> 
+                <strong>Hoja {{ hojaActual }} de 4:</strong> 
                 <span v-if="hojaActual === 1" class="text-success">Datos Laborales</span>
                 <span v-else-if="hojaActual === 2" class="text-warning">Antecedentes Médicos</span>
                 <span v-else-if="hojaActual === 3" class="text-info">Examen Físico</span>
+                <span v-else-if="hojaActual === 4" class="text-danger">Aptitud & Dictamen</span>
               </h5>
               <div class="progress" style="width: 150px; height: 5px;">
-                <div class="progress-bar" :style="{ width: (hojaActual / 3 * 100) + '%' }"></div>
+                <div class="progress-bar" :style="{ width: (hojaActual / 4 * 100) + '%' }"></div>
               </div>
             </div>
           </div>
@@ -161,19 +162,24 @@
             
             <!-- HOJA 1: DATOS LABORALES -->
             <div v-if="hojaActual === 1">
-              <DatosPuesto v-model="form.datos_puesto" />
+              <DatosPuesto :modelValue="form.datos_puesto" @update:modelValue="form.datos_puesto = $event" />
               <hr class="my-4">
-              <ExposiciónRiesgos v-model="form.exposicion_riesgos" />
+              <ExposiciónRiesgos :modelValue="form.exposicion_riesgos" @update:modelValue="form.exposicion_riesgos = $event" />
             </div>
 
             <!-- HOJA 2: ANTECEDENTES MÉDICOS -->
             <div v-if="hojaActual === 2">
-              <Antecedentes v-model="form.antecedentes" />
+              <Antecedentes :modelValue="form.antecedentes" @update:modelValue="form.antecedentes = $event" />
             </div>
 
             <!-- HOJA 3: EXAMEN FÍSICO -->
             <div v-if="hojaActual === 3">
-              <ClinícoExamen v-model="form.clinico_examen" />
+              <ClinícoExamen :modelValue="form.clinico_examen" @update:modelValue="form.clinico_examen = $event" />
+            </div>
+
+            <!-- HOJA 4: APTITUD & DICTAMEN -->
+            <div v-if="hojaActual === 4">
+              <AptitudDictamen :modelValue="form.aptitud" @update:modelValue="form.aptitud = $event" />
             </div>
 
           </div>
@@ -185,9 +191,9 @@
             </button>
             <div v-else></div>
             
-            <small class="text-muted">Progreso: {{ hojaActual }} de 3</small>
+            <small class="text-muted">Progreso: {{ hojaActual }} de 4</small>
             
-            <div v-if="hojaActual < 3">
+            <div v-if="hojaActual < 4">
               <button class="btn btn-primary" @click="hojaActual++">
                 Siguiente <i class="fas fa-arrow-right ml-1"></i>
               </button>
@@ -210,19 +216,21 @@
 </template>
 
 <script>
-import DatosPuesto from '../secciones/medicina-enfermeria/datospuesto.vue'
-import ExposiciónRiesgos from '../secciones/medicina-enfermeria/exposicionriesgos.vue'
-import ClinícoExamen from '../secciones/medicina-enfermeria/clinicoexamen.vue'
-import Antecedentes from '../secciones/medicina-enfermeria/antecedentes.vue'
-import { clinicaTrabajo } from '../../../../services/ApiService'
+import DatosPuesto from './secciones/medicina-enfermeria/datospuesto.vue'
+import ExposiciónRiesgos from './secciones/medicina-enfermeria/exposicionriesgos.vue'
+import Antecedentes from './secciones/medicina-enfermeria/antecedentes.vue'
+import ClinícoExamen from './secciones/medicina-enfermeria/clinicoexamen.vue'
+import AptitudDictamen from './secciones/medicina-enfermeria/aptituddictamen.vue'
+import { clinicaTrabajo } from '../../services/ApiService'
 
 export default {
   name: 'MasterFichaOcupacional',
   components: {
     DatosPuesto,
     ExposiciónRiesgos,
+    Antecedentes,
     ClinícoExamen,
-    Antecedentes
+    AptitudDictamen
   },
   data() {
     return {
@@ -238,15 +246,371 @@ export default {
       archivoSeleccionado: null,
 
       form: {
-        datos_puesto: {},
-        exposicion_riesgos: {},
-        antecedentes: {},
-        clinico_examen: {},
+        datos_puesto: {
+          folio: this.generarFolio(),
+          tipo_evaluacion: '',
+          fecha_evaluacion: new Date().toISOString().split('T')[0],
+          hora_evaluacion: '',
+          medico_evaluador: '',
+          apellido_paterno: '',
+          apellido_materno: '',
+          nombre: '',
+          edad: '',
+          fecha_nacimiento: '',
+          estado_civil: '',
+          escolaridad: '',
+          edad_inicio_vida_laboral: '',
+          cedula: '',
+          genero: '',
+          lugar_nacimiento: '',
+          tipo_sanguineo: '',
+          telefono: '',
+          celular: '',
+          email: '',
+          direccion: '',
+          emergencia_nombre: '',
+          emergencia_telefono: '',
+          emergencia_relacion: '',
+          ultima_consulta_fecha: '',
+          ultima_consulta_motivo: '',
+          numero_empleado: '',
+          empresa: '',
+          departamento: '',
+          puesto: '',
+          antiguedad: '',
+          antiguedad_laboral: '',
+          antiguedad_empresa: '',
+          tipo_contrato: '',
+          jornada: '',
+          modalidad_trabajo: '',
+          categoria_laboral: '',
+          descripcion_puesto: '',
+          riesgos_identificados: '',
+          signos_vitales: {
+            frecuencia_cardiaca: '',
+            frecuencia_respiratoria: '',
+            presion_arterial: '',
+            temperatura: '',
+            saturacion_oxigeno: '',
+            glucosa: ''
+          }
+        },
+
+        exposicion_riesgos: {
+          primer_apellido: '',
+          segundo_apellido: '',
+          nombres: '',
+          tipo_sanguineo: '',
+          lugar_nacimiento: '',
+          telefono: '',
+          celular: '',
+          emergencia_nombre: '',
+          emergencia_telefono: '',
+          emergencia_relacion: '',
+          empresas_anteriores: [
+            { nombre: '', puesto: '', antiguedad: '' },
+            { nombre: '', puesto: '', antiguedad: '' }
+          ],
+          agentes: {
+            polvo_mineral: false,
+            asbesto: false,
+            silice: false,
+            berilio: false,
+            cadmio: false,
+            plomo: false,
+            mercurio: false,
+            cromo: false,
+            arsenico: false,
+            niquel: false,
+            dioxinas: false,
+            vibraciones: false,
+            radiacion_ionizante: false,
+            radiacion_no_ionizante: false,
+            ruido: false,
+            temperatura_extrema: false,
+            estres_termico: false,
+            exposicion_solar: false,
+            otros: ''
+          },
+          condiciones_riesgo: {
+            trabajo_altura_2m: false,
+            espacio_confinado: false,
+            maquinaria_pesada: false,
+            cargas_25kg: false,
+            sustancias_quimicas: false,
+            agentes_biologicos: false,
+            radiaciones_ionizantes: false,
+            radiaciones_no_ionizantes: false,
+            turnos_rotativos_nocturnos: false,
+            estres_ocupacional: false,
+            trabajo_repetitivo: false,
+            posturas_forzadas: false,
+            vibraciones_2: false,
+            temperatura_extrema_2: false,
+            exposicion_solar_prolongada: false
+          },
+          otras_condiciones: {
+            realiza_generalmente: '',
+            carga_mental: false,
+            decisiones_criticas: false,
+            responsabilidad_personas: false,
+            comunicacion_constante: false,
+            precision_extrema: false,
+            ritmo_acelerado: false,
+            monotonia: false,
+            falta_autonomia: false,
+            conflictos: false,
+            acoso: false,
+            discriminacion: false
+          }
+        },
+
+        antecedentes: {
+          accidentes: [{ fecha: '', empresa: '', tipo: '', parte_cuerpo: '', dias_incapacidad: '', secuelas: '' }],
+          enfermedades_laborales: [
+            { diagnostico: '', fecha: '' },
+            { diagnostico: '', fecha: '' },
+            { diagnostico: '', fecha: '' }
+          ],
+          incapacidades_3m: {
+            tiene: false,
+            items: [{ motivo: '', dias: '' }, { motivo: '', dias: '' }]
+          },
+          vacunas: {
+            covid19: { presente: false, fecha: '' },
+            td: { presente: false, fecha: '' },
+            tdpa: { presente: false, fecha: '' },
+            influenza: { presente: false, fecha: '' },
+            hepatitis_ab: { presente: false, fecha: '' },
+            sr: { presente: false, fecha: '' }
+          },
+          cirugias_accidentes_no_laborales: [{ descripcion: '' }],
+          alergias: [{ sustancia: '', reaccion: '', hospitalizacion: false }],
+          transfusiones: [{ motivo: '', fecha: '' }],
+          heredo_familiares: {
+            cancer: { presente: false, parentesco: '' },
+            diabetes: { presente: false, parentesco: '' },
+            hipertension: { presente: false, parentesco: '' },
+            cardiopatias: { presente: false, parentesco: '' },
+            infarto: { presente: false, parentesco: '' },
+            acv: { presente: false, parentesco: '' },
+            pulmonar: { presente: false, parentesco: '' },
+            tuberculosis: { presente: false, parentesco: '' },
+            hepatica: { presente: false, parentesco: '' },
+            renal: { presente: false, parentesco: '' },
+            artritis: { presente: false, parentesco: '' },
+            osteoporosis: { presente: false, parentesco: '' },
+            mental: { presente: false, parentesco: '' },
+            adiccion: { presente: false, parentesco: '' },
+            otros: ''
+          },
+          no_patologicos: {
+            tabaquismo: '',
+            tabaquismo_detalles: '',
+            alcoholismo: '',
+            alcoholismo_detalles: '',
+            drogas_no: true,
+            drogas_si: false,
+            drogas_detalles: '',
+            actividad_fisica: '',
+            estres: '',
+            estres_detalles: ''
+          },
+          genero: '',
+          gineco: {
+            menarquia: '',
+            ciclo_dias: '',
+            duracion_dias: '',
+            desorden_menstrual: false,
+            dismenorrea: false,
+            gestaciones: '',
+            partos: '',
+            abortos: '',
+            anticonceptivos: false
+          },
+          urologo: {
+            disfuncion_erectil: false,
+            infertilidad: false,
+            problemas_prostaticos: false,
+            infecciones_urinarias: false,
+            otros: ''
+          },
+          patologicos: {
+            hipertension: { presente: false, observaciones: '' },
+            cardiopatia: { presente: false, observaciones: '' },
+            infarto: { presente: false, observaciones: '' },
+            arritmia: { presente: false, observaciones: '' },
+            asma: { presente: false, observaciones: '' },
+            epoc: { presente: false, observaciones: '' },
+            tuberculosis: { presente: false, observaciones: '' },
+            neumonia: { presente: false, observaciones: '' },
+            silicosis: { presente: false, observaciones: '' },
+            ulcera: { presente: false, observaciones: '' },
+            gastritis: { presente: false, observaciones: '' },
+            hepatitis: { presente: false, observaciones: '' },
+            cirrosis: { presente: false, observaciones: '' },
+            diabetes: { presente: false, observaciones: '' },
+            hipertiroidismo: { presente: false, observaciones: '' },
+            hipotiroidismo: { presente: false, observaciones: '' },
+            nefritis: { presente: false, observaciones: '' },
+            litiasis: { presente: false, observaciones: '' },
+            artrosis: { presente: false, observaciones: '' },
+            artritis: { presente: false, observaciones: '' },
+            osteoporosis: { presente: false, observaciones: '' },
+            hernia_discal: { presente: false, observaciones: '' },
+            sindrome_tunel_carpal: { presente: false, observaciones: '' },
+            epilepsia: { presente: false, observaciones: '' },
+            migraña: { presente: false, observaciones: '' },
+            depresion: { presente: false, observaciones: '' },
+            ansiedad: { presente: false, observaciones: '' },
+            otros: ''
+          }
+        },
+
+        clinico_examen: {
+          signos_vitales: {
+            fc: '',
+            fr: '',
+            ta: '',
+            temperatura: '',
+            saturacion: '',
+            glucosa: ''
+          },
+          antropometria: {
+            peso: '',
+            talla: '',
+            imc: '',
+            perimetro_cintura: '',
+            perimetro_cadera: '',
+            complexion_fisica: '',
+            estado_nutricional: ''
+          },
+          comorbilidades: {
+            diabetes: false,
+            hipertension: false,
+            asma: false,
+            cardiopatia: false,
+            artritis: false,
+            depresion: false,
+            ansiedad: false,
+            hiperlipidemia: false,
+            tiroidea: false,
+            otras_presente: false,
+            otras: ''
+          },
+          sistemas: {
+            cabeza: { interrogatorio: '', exploracion: '', notas: '' },
+            cuello: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              tiroides: '',
+              traquea: '',
+              adenopatias: '',
+              neoplasias: ''
+            },
+            ojos: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              agudeza_visual_od: '',
+              agudeza_visual_oi: '',
+              ishihara: '',
+              presion_intraocular: ''
+            },
+            oidos: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              acufenos: false,
+              mareos: false,
+              audiometria: ''
+            },
+            nariz: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              epistaxis: false,
+              obstruccion: false,
+              desviacion_septal: ''
+            },
+            cardiovascular: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              auscultacion: '',
+              pulsos_perifericos: '',
+              edemas: '',
+              varices: ''
+            },
+            pulmonar: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              auscultacion: '',
+              tos_esputo: '',
+              espirometria: ''
+            },
+            gastrointestinal: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              palpacion: '',
+              ruidos_intestinales: '',
+              tamano_higado: '',
+              bazo: ''
+            },
+            abdomen: { interrogatorio: '', exploracion: '', notas: '' },
+            miembros_superiores: { interrogatorio: '', exploracion: '', notas: '' },
+            miembros_inferiores: { interrogatorio: '', exploracion: '', notas: '' },
+            genitourinario: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              hallazgos_genitales: '',
+              puño_percision: ''
+            },
+            piel: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              dermatitis: false,
+              verrugas: false,
+              nevos: false,
+              nodulos: false,
+              acne: false
+            },
+            inmunologico: {
+              interrogatorio: '',
+              exploracion: '',
+              notas: '',
+              lupus: false,
+              vih: false,
+              artritis_reumatoide: false
+            }
+          },
+          medicamentos: '',
+          alergias: '',
+          pruebas_complementarias: [
+            { tipo: '', fecha: '', resultado: '' }
+          ]
+        },
+
         aptitud: ''
       }
     }
   },
+
   methods: {
+    generarFolio() {
+      const fecha = new Date()
+      const ano = fecha.getFullYear()
+      const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+      const dia = String(fecha.getDate()).padStart(2, '0')
+      const numero = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+      return `MED-${ano}${mes}${dia}-${numero}`
+    },
+
     async buscarPacientes() {
       if (this.busqueda.length < 2) {
         this.resultados = []
@@ -271,25 +635,25 @@ export default {
       this.resultados = []
       this.hojaActual = 1
       this.conversacion = []
-      this.form = {
-        datos_puesto: { paciente_id: trabajador.id },
-        exposicion_riesgos: {},
-        antecedentes: {},
-        clinico_examen: {},
-        aptitud: ''
-      }
+      
+      // Actualiza datos_puesto con info del trabajador
+      this.form.datos_puesto.nombre = trabajador.nombre || ''
+      this.form.datos_puesto.apellido_paterno = trabajador.apellido_paterno || ''
+      this.form.datos_puesto.apellido_materno = trabajador.apellido_materno || ''
+      this.form.datos_puesto.edad = trabajador.edad || ''
+      this.form.datos_puesto.cedula = trabajador.cedula || ''
     },
 
     deseleccionarTrabajador() {
       this.trabajadorSeleccionado = null
+      this.conversacion = []
       this.form = {
-        datos_puesto: {},
-        exposicion_riesgos: {},
-        antecedentes: {},
-        clinico_examen: {},
+        datos_puesto: { /* estructura completa */ },
+        exposicion_riesgos: { /* estructura completa */ },
+        antecedentes: { /* estructura completa */ },
+        clinico_examen: { /* estructura completa */ },
         aptitud: ''
       }
-      this.conversacion = []
     },
 
     async enviarMensaje() {
@@ -318,7 +682,7 @@ export default {
         })
 
         if (response.data.campos_completados) {
-          this.form = { ...this.form, ...response.data.campos_completados }
+          Object.assign(this.form, response.data.campos_completados)
         }
 
         this.$nextTick(() => {

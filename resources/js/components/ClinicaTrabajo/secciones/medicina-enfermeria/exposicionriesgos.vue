@@ -1,253 +1,212 @@
 <template>
-  <div class="datos-puesto-container">
-    <!-- HEADER -->
-    <div class="section-header">
-      <i class="fas fa-briefcase" aria-hidden="true"></i>
-      <h2>Datos de Identificación y Laboral (WORLDSTRIDE - HOJA 1)</h2>
-    </div>
+  <div class="exposicion-riesgos">
 
-    <!-- 1. IDENTIFICACIÓN DEL TRABAJADOR -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>1. Identificación del Trabajador</h3>
+    <!-- ===================== 1.1 FICHA DE IDENTIDAD ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-id-card mr-2"></i>1.1 Ficha de identidad</span>
+        <button
+          v-if="datosPuesto"
+          type="button"
+          class="btn btn-sm btn-header"
+          title="Llena estos campos con lo capturado en Datos del puesto"
+          @click="copiarDeDatosPuesto"
+        >
+          <i class="fas fa-copy mr-1"></i>Copiar de datos del puesto
+        </button>
       </div>
       <div class="card-body">
         <div class="form-row">
-          <div class="form-group col-md-2">
-            <label>Folio *</label>
-            <input type="text" v-model="form.folio" class="form-control" readonly />
-            <small class="form-text text-muted">Auto-generado: MED-YYYYMMDD-NNNN</small>
-          </div>
-          <div class="form-group col-md-2">
-            <label>Tipo Evaluación *</label>
-            <select v-model="form.tipo_evaluacion" class="form-control" required>
-              <option value="">Seleccionar</option>
-              <option value="inicial">Evaluación Inicial</option>
-              <option value="periodica">Periódica</option>
-              <option value="cambio_puesto">Cambio de Puesto</option>
-              <option value="retorno_laboral">Retorno Laboral</option>
-              <option value="egreso">Egreso</option>
-            </select>
-          </div>
-          <div class="form-group col-md-2">
-            <label>Fecha Evaluación *</label>
-            <input type="date" v-model="form.fecha_evaluacion" class="form-control" required />
-          </div>
-          <div class="form-group col-md-2">
-            <label>Hora Evaluación</label>
-            <input type="time" v-model="form.hora_evaluacion" class="form-control" />
+          <div class="form-group col-md-4">
+            <label>Primer apellido <span class="text-danger">*</span></label>
+            <input v-model.trim="local.primer_apellido" type="text" class="form-control">
           </div>
           <div class="form-group col-md-4">
-            <label>Médico Evaluador *</label>
-            <input type="text" v-model="form.medico_evaluador" class="form-control" required />
+            <label>Segundo apellido</label>
+            <input v-model.trim="local.segundo_apellido" type="text" class="form-control">
           </div>
-        </div>
-
-        <!-- DATOS PERSONALES -->
-        <h5 class="border-bottom pb-2 my-3">Datos Personales</h5>
-        <div class="form-row">
-          <div class="form-group col-md-3">
-            <label>Primer Apellido *</label>
-            <input type="text" v-model="form.apellido_paterno" class="form-control" required />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Segundo Apellido</label>
-            <input type="text" v-model="form.apellido_materno" class="form-control" />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Nombre(s) *</label>
-            <input type="text" v-model="form.nombre" class="form-control" required />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Edad *</label>
-            <input type="number" v-model="form.edad" class="form-control" min="18" max="80" required />
+          <div class="form-group col-md-4">
+            <label>Nombre(s) <span class="text-danger">*</span></label>
+            <input v-model.trim="local.nombres" type="text" class="form-control">
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group col-md-3">
-            <label>Cédula/Pasaporte *</label>
-            <input type="text" v-model="form.cedula" class="form-control" required />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Género *</label>
-            <select v-model="form.genero" class="form-control" required>
+            <label>Tipo de sangre</label>
+            <select v-model="local.tipo_sanguineo" class="form-control">
               <option value="">Seleccionar</option>
-              <option value="M">Masculino</option>
-              <option value="F">Femenino</option>
-              <option value="Otro">Otro</option>
+              <option v-for="t in tiposSangre" :key="t" :value="t">{{ t }}</option>
             </select>
           </div>
           <div class="form-group col-md-3">
-            <label>Lugar de Nacimiento</label>
-            <input type="text" v-model="form.lugar_nacimiento" class="form-control" placeholder="Ciudad, país..." />
+            <label>Lugar de nacimiento</label>
+            <input v-model.trim="local.lugar_nacimiento" type="text" class="form-control">
           </div>
           <div class="form-group col-md-3">
-            <label>Tipo Sanguíneo</label>
-            <select v-model="form.tipo_sanguineo" class="form-control">
-              <option value="">Seleccionar</option>
-              <option value="O+">O+</option><option value="O-">O-</option>
-              <option value="A+">A+</option><option value="A-">A-</option>
-              <option value="B+">B+</option><option value="B-">B-</option>
-              <option value="AB+">AB+</option><option value="AB-">AB-</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- CONTACTO -->
-        <h5 class="border-bottom pb-2 my-3">Contacto</h5>
-        <div class="form-row">
-          <div class="form-group col-md-2">
             <label>Teléfono</label>
-            <input type="tel" v-model="form.telefono" class="form-control" />
+            <input v-model.trim="local.telefono" type="tel" class="form-control" maxlength="15">
           </div>
-          <div class="form-group col-md-2">
+          <div class="form-group col-md-3">
             <label>Celular</label>
-            <input type="tel" v-model="form.celular" class="form-control" />
-          </div>
-          <div class="form-group col-md-4">
-            <label>Correo Electrónico</label>
-            <input type="email" v-model="form.email" class="form-control" />
-          </div>
-          <div class="form-group col-md-4">
-            <label>Dirección</label>
-            <input type="text" v-model="form.direccion" class="form-control" />
+            <input v-model.trim="local.celular" type="tel" class="form-control" maxlength="15">
           </div>
         </div>
 
-        <!-- CONTACTO EMERGENCIA -->
-        <h5 class="border-bottom pb-2 my-3">Contacto en Caso de Emergencia</h5>
-        <div class="form-row">
-          <div class="form-group col-md-4">
-            <label>Nombre Contacto</label>
-            <input type="text" v-model="form.emergencia_nombre" class="form-control" />
+        <div class="form-row mb-n3">
+          <div class="form-group col-md-6">
+            <label>Contacto de emergencia</label>
+            <input v-model.trim="local.emergencia_nombre" type="text" class="form-control" placeholder="Nombre completo">
           </div>
           <div class="form-group col-md-3">
-            <label>Teléfono Emergencia</label>
-            <input type="tel" v-model="form.emergencia_telefono" class="form-control" />
+            <label>Teléfono de emergencia</label>
+            <input v-model.trim="local.emergencia_telefono" type="tel" class="form-control" maxlength="15">
           </div>
           <div class="form-group col-md-3">
             <label>Relación</label>
-            <input type="text" v-model="form.emergencia_relacion" class="form-control" placeholder="Padre, cónyuge..." />
+            <input v-model.trim="local.emergencia_relacion" type="text" class="form-control" placeholder="Padre, hermano…">
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- ÚLTIMA CONSULTA MÉDICA -->
-        <h5 class="border-bottom pb-2 my-3">Última Consulta Médica</h5>
-        <div class="form-row">
+    <!-- ============ 1.2 EXPOSICIÓN OCUPACIONAL (EMPRESAS ANTERIORES) ============ -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-building mr-2"></i>1.2 Exposición ocupacional (compañías anteriores)</span>
+        <button
+          type="button"
+          class="btn btn-sm btn-header"
+          :disabled="local.empresas_anteriores.length >= maxEmpresas"
+          @click="agregarEmpresa"
+        >
+          <i class="fas fa-plus mr-1"></i>Agregar empresa
+        </button>
+      </div>
+      <div class="card-body">
+        <p v-if="!local.empresas_anteriores.length" class="estado-vacio">
+          Sin empresas anteriores registradas. Usa “Agregar empresa” si el trabajador tuvo empleos previos.
+        </p>
+
+        <div
+          v-for="(emp, i) in local.empresas_anteriores"
+          :key="i"
+          class="form-row empresa-row"
+        >
+          <div class="form-group col-md-5">
+            <label>Empresa {{ i + 1 }}</label>
+            <input v-model.trim="emp.nombre" type="text" class="form-control" placeholder="Nombre de la empresa">
+          </div>
           <div class="form-group col-md-4">
-            <label>Fecha de Última Consulta</label>
-            <input type="date" v-model="form.ultima_consulta_fecha" class="form-control" />
+            <label>Puesto</label>
+            <input v-model.trim="emp.puesto" type="text" class="form-control">
           </div>
-          <div class="form-group col-md-8">
-            <label>Motivo de la Consulta</label>
-            <input type="text" v-model="form.ultima_consulta_motivo" class="form-control" placeholder="Razón de la consulta médica..." />
+          <div class="form-group col-md-2">
+            <label>Antigüedad</label>
+            <input v-model.trim="emp.antiguedad" type="text" class="form-control" placeholder="Ej: 3 años">
+          </div>
+          <div class="form-group col-md-1 d-flex align-items-end">
+            <button
+              type="button"
+              class="btn btn-outline-danger btn-block btn-eliminar"
+              :title="`Quitar empresa ${i + 1}`"
+              @click="quitarEmpresa(i)"
+            >
+              <i class="fas fa-trash-alt"></i>
+            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 2. DATOS LABORALES ACTUALES -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>2. Información Laboral Actual</h3>
+    <!-- ===================== 1.3 AGENTES ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-flask mr-2"></i>1.3 Agentes a los que ha estado expuesto</span>
+        <span class="contador">{{ contar(local.agentes, agentesKeys) }} marcados</span>
       </div>
       <div class="card-body">
-        <div class="form-row">
-          <div class="form-group col-md-3">
-            <label>Número Empleado *</label>
-            <input type="text" v-model="form.numero_empleado" class="form-control" required />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Empresa *</label>
-            <input type="text" v-model="form.empresa" class="form-control" required />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Departamento *</label>
-            <input type="text" v-model="form.departamento" class="form-control" required />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Puesto/Cargo *</label>
-            <input type="text" v-model="form.puesto" class="form-control" required />
+        <div v-for="grupo in gruposAgentes" :key="grupo.titulo" class="grupo">
+          <h6 class="grupo-titulo">{{ grupo.titulo }}</h6>
+          <div class="opciones-grid">
+            <label
+              v-for="op in grupo.opciones"
+              :key="op.key"
+              class="opcion"
+              :class="{ activa: local.agentes[op.key] }"
+            >
+              <input v-model="local.agentes[op.key]" type="checkbox">
+              <span>{{ op.label }}</span>
+            </label>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group col-md-3">
-            <label>Antigüedad en el Puesto</label>
-            <input type="text" v-model="form.antiguedad" class="form-control" placeholder="Ej: 2 años 3 meses" />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Antigüedad en la Empresa</label>
-            <input type="text" v-model="form.antiguedad_empresa" class="form-control" placeholder="Ej: 5 años" />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Tipo Contrato *</label>
-            <select v-model="form.tipo_contrato" class="form-control" required>
-              <option value="">Seleccionar</option>
-              <option value="indefinido">Indefinido</option>
-              <option value="temporal">Temporal/Fijo</option>
-              <option value="proyecto">Proyecto</option>
-              <option value="practicante">Practicante</option>
-            </select>
-          </div>
-          <div class="form-group col-md-3">
-            <label>Jornada Laboral *</label>
-            <select v-model="form.jornada" class="form-control" required>
-              <option value="">Seleccionar</option>
-              <option value="diurna">Diurna</option>
-              <option value="nocturna">Nocturna</option>
-              <option value="mixta">Mixta</option>
-              <option value="rotatoria">Rotatoria</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group col-md-6">
-            <label>Descripción General del Puesto/Funciones *</label>
-            <textarea v-model="form.descripcion_puesto" class="form-control" rows="3" required></textarea>
-          </div>
-          <div class="form-group col-md-6">
-            <label>Riesgos Identificados en el Puesto</label>
-            <textarea v-model="form.riesgos_identificados" class="form-control" rows="3"></textarea>
-          </div>
+        <div class="form-group mt-3 mb-0">
+          <label>Otros agentes (especificar)</label>
+          <textarea v-model="local.agentes.otros" class="form-control" rows="2"></textarea>
         </div>
       </div>
     </div>
 
-    <!-- 3. SIGNOS VITALES (INTEGRADOS) -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>3. Signos Vitales</h3>
+    <!-- ============ 1.4 CONDICIONES DE ALTO RIESGO ============ -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-hard-hat mr-2"></i>1.4 Condiciones de alto riesgo que realiza en su trabajo</span>
+        <span class="contador">{{ contar(local.condiciones_riesgo, condicionesKeys) }} marcadas</span>
       </div>
       <div class="card-body">
-        <p class="text-muted small mb-3">Registre los signos vitales del trabajador en el momento de la evaluación.</p>
-        
-        <div class="form-row">
-          <div class="form-group col-md-2">
-            <label>FC (lat/min)</label>
-            <input type="number" v-model="form.signos_vitales.frecuencia_cardiaca" class="form-control" min="40" max="200" />
+        <div class="opciones-grid">
+          <label
+            v-for="op in condicionesRiesgo"
+            :key="op.key"
+            class="opcion"
+            :class="{ activa: local.condiciones_riesgo[op.key] }"
+          >
+            <input v-model="local.condiciones_riesgo[op.key]" type="checkbox">
+            <span>{{ op.label }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 1.5 OTRAS CONDICIONES DEL PROCESO ============ -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-brain mr-2"></i>1.5 Otras condiciones dentro del proceso de trabajo</span>
+      </div>
+      <div class="card-body">
+        <div class="grupo">
+          <h6 class="grupo-titulo">Realiza su trabajo generalmente</h6>
+          <div class="opciones-grid">
+            <label
+              v-for="op in posturas"
+              :key="op.value"
+              class="opcion"
+              :class="{ activa: local.otras_condiciones.realiza_generalmente === op.value }"
+            >
+              <input
+                v-model="local.otras_condiciones.realiza_generalmente"
+                type="radio"
+                name="realiza_generalmente"
+                :value="op.value"
+              >
+              <span>{{ op.label }}</span>
+            </label>
           </div>
-          <div class="form-group col-md-2">
-            <label>FR (resp/min)</label>
-            <input type="number" v-model="form.signos_vitales.frecuencia_respiratoria" class="form-control" min="8" max="40" />
-          </div>
-          <div class="form-group col-md-2">
-            <label>TA (mmHg)</label>
-            <input type="text" v-model="form.signos_vitales.presion_arterial" class="form-control" placeholder="120/80" />
-          </div>
-          <div class="form-group col-md-2">
-            <label>Temp (°C)</label>
-            <input type="number" v-model="form.signos_vitales.temperatura" class="form-control" min="35" max="41" step="0.1" />
-          </div>
-          <div class="form-group col-md-2">
-            <label>SatO2 (%)</label>
-            <input type="number" v-model="form.signos_vitales.saturacion_oxigeno" class="form-control" min="70" max="100" />
-          </div>
-          <div class="form-group col-md-2">
-            <label>Glucosa (mg/dL)</label>
-            <input type="number" v-model="form.signos_vitales.glucosa" class="form-control" />
+        </div>
+
+        <div class="grupo">
+          <h6 class="grupo-titulo">Su trabajo le exige o le genera</h6>
+          <div class="opciones-grid">
+            <label
+              v-for="op in exigencias"
+              :key="op.key"
+              class="opcion"
+              :class="{ activa: local.otras_condiciones[op.key] }"
+            >
+              <input v-model="local.otras_condiciones[op.key]" type="checkbox">
+              <span>{{ op.label }}</span>
+            </label>
           </div>
         </div>
       </div>
@@ -257,165 +216,369 @@
 </template>
 
 <script>
-export default {
-  name: 'DatosPuestoCompleto',
-  props: {
-    modelValue: {
-      type: Object,
-      required: true
-    }
+// ---------------------------------------------------------------------------
+// Catálogos. Si alguna clave no coincide con las que ya guarda tu BD,
+// cámbiala aquí y el resto del componente se ajusta solo.
+// ---------------------------------------------------------------------------
+const GRUPOS_AGENTES = [
+  {
+    titulo: 'Polvos y fibras',
+    opciones: [
+      { key: 'polvo_mineral', label: 'Polvo mineral' },
+      { key: 'asbesto', label: 'Asbesto' },
+      { key: 'silice', label: 'Sílice cristalina' },
+      { key: 'berilio', label: 'Berilio' },
+    ],
   },
+  {
+    titulo: 'Metales y químicos',
+    opciones: [
+      { key: 'cadmio', label: 'Cadmio' },
+      { key: 'plomo', label: 'Plomo' },
+      { key: 'mercurio', label: 'Mercurio' },
+      { key: 'cromo', label: 'Cromo' },
+      { key: 'arsenico', label: 'Arsénico' },
+      { key: 'niquel', label: 'Níquel' },
+      { key: 'dioxinas', label: 'Dioxinas' },
+    ],
+  },
+  {
+    titulo: 'Agentes físicos',
+    opciones: [
+      { key: 'vibraciones', label: 'Vibraciones (cuerpo/mano)' },
+      { key: 'ruido', label: 'Ruido' },
+      { key: 'radiacion_ionizante', label: 'Radiación ionizante' },
+      { key: 'radiacion_no_ionizante', label: 'Radiación no ionizante' },
+      { key: 'temperatura_extrema', label: 'Temperatura extrema' },
+      { key: 'estres_termico', label: 'Estrés térmico' },
+      { key: 'exposicion_solar', label: 'Exposición solar' },
+    ],
+  },
+]
+
+const CONDICIONES_RIESGO = [
+  { key: 'trabajo_altura_2m', label: 'Trabajo en altura (>2 m)' },
+  { key: 'espacio_confinado', label: 'Espacios confinados' },
+  { key: 'maquinaria_pesada', label: 'Maquinaria pesada' },
+  { key: 'cargas_25kg', label: 'Cargas >25 kg' },
+  { key: 'sustancias_quimicas', label: 'Sustancias químicas' },
+  { key: 'agentes_biologicos', label: 'Agentes biológicos' },
+  { key: 'radiaciones_ionizantes', label: 'Radiaciones ionizantes' },
+  { key: 'radiaciones_no_ionizantes', label: 'Radiaciones no ionizantes' },
+  { key: 'turnos_rotativos_nocturnos', label: 'Turnos rotativos/nocturnos' },
+  { key: 'estres_ocupacional', label: 'Estrés ocupacional alto' },
+  { key: 'trabajo_repetitivo', label: 'Trabajo repetitivo' },
+  { key: 'posturas_forzadas', label: 'Posturas forzadas/incómodas' },
+  { key: 'vibraciones_2', label: 'Vibraciones' },
+  { key: 'temperatura_extrema_2', label: 'Temperatura extrema' },
+  { key: 'exposicion_solar_prolongada', label: 'Exposición solar prolongada' },
+]
+
+const POSTURAS = [
+  { value: 'de_pie', label: 'De pie' },
+  { value: 'sentado', label: 'Sentado' },
+  { value: 'alternando', label: 'Alternando de pie y sentado' },
+  { value: 'movimiento_constante', label: 'En movimiento constante' },
+]
+
+const EXIGENCIAS = [
+  { key: 'carga_mental', label: 'Carga mental importante' },
+  { key: 'decisiones_criticas', label: 'Decisiones críticas/responsabilidad' },
+  { key: 'responsabilidad_personas', label: 'Responsabilidad de personas' },
+  { key: 'comunicacion_constante', label: 'Comunicación constante' },
+  { key: 'precision_extrema', label: 'Precisión extrema' },
+  { key: 'ritmo_acelerado', label: 'Ritmo acelerado/presión de tiempo' },
+  { key: 'monotonia', label: 'Monotonía/aburrimiento' },
+  { key: 'falta_autonomia', label: 'Falta de autonomía en decisiones' },
+  { key: 'conflictos', label: 'Conflictos laborales' },
+  { key: 'acoso', label: 'Acoso laboral' },
+  { key: 'discriminacion', label: 'Discriminación' },
+]
+
+const CAMPOS_IDENTIDAD = [
+  'primer_apellido', 'segundo_apellido', 'nombres', 'tipo_sanguineo', 'lugar_nacimiento',
+  'telefono', 'celular', 'emergencia_nombre', 'emergencia_telefono', 'emergencia_relacion',
+]
+
+const boolMap = (keys, origen = {}) =>
+  keys.reduce((acc, k) => ({ ...acc, [k]: Boolean(origen[k]) }), {})
+
+export default {
+  name: 'ExposicionRiesgos',
+
+  props: {
+    modelValue: { type: Object, default: () => ({}) },
+    // Opcional: pásale form.datos_puesto para habilitar "Copiar de datos del puesto"
+    datosPuesto: { type: Object, default: null },
+  },
+
   emits: ['update:modelValue'],
+
   data() {
     return {
-      form: this.modelValue || {
-        folio: this.generarFolio(),
-        tipo_evaluacion: '',
-        fecha_evaluacion: new Date().toISOString().split('T')[0],
-        hora_evaluacion: '',
-        medico_evaluador: '',
-        apellido_paterno: '',
-        apellido_materno: '',
-        nombre: '',
-        edad: '',
-        cedula: '',
-        genero: '',
-        lugar_nacimiento: '',
-        tipo_sanguineo: '',
-        telefono: '',
-        celular: '',
-        email: '',
-        direccion: '',
-        emergencia_nombre: '',
-        emergencia_telefono: '',
-        emergencia_relacion: '',
-        ultima_consulta_fecha: '',
-        ultima_consulta_motivo: '',
-        numero_empleado: '',
-        empresa: '',
-        departamento: '',
-        puesto: '',
-        antiguedad: '',
-        antiguedad_empresa: '',
-        tipo_contrato: '',
-        jornada: '',
-        descripcion_puesto: '',
-        riesgos_identificados: '',
-        signos_vitales: {
-          frecuencia_cardiaca: '',
-          frecuencia_respiratoria: '',
-          presion_arterial: '',
-          temperatura: '',
-          saturacion_oxigeno: '',
-          glucosa: ''
-        }
-      }
+      local: this.normalizar(this.modelValue),
+      tiposSangre: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+      maxEmpresas: 5,
+      gruposAgentes: GRUPOS_AGENTES,
+      condicionesRiesgo: CONDICIONES_RIESGO,
+      posturas: POSTURAS,
+      exigencias: EXIGENCIAS,
     }
   },
-  methods: {
-    generarFolio() {
-      const fecha = new Date()
-      const ano = fecha.getFullYear()
-      const mes = String(fecha.getMonth() + 1).padStart(2, '0')
-      const dia = String(fecha.getDate()).padStart(2, '0')
-      const numero = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
-      return `MED-${ano}${mes}${dia}-${numero}`
-    }
-  },
-  watch: {
-    modelValue(newVal) {
-      this.form = newVal
+
+  computed: {
+    agentesKeys() {
+      return GRUPOS_AGENTES.flatMap(g => g.opciones.map(o => o.key))
     },
-    form: {
-      handler(newVal) {
-        this.$emit('update:modelValue', newVal)
+    condicionesKeys() {
+      return CONDICIONES_RIESGO.map(o => o.key)
+    },
+  },
+
+  watch: {
+    // Padre → hijo (evita bucle comparando contenido)
+    modelValue: {
+      deep: true,
+      handler(nuevo) {
+        if (JSON.stringify(nuevo) === JSON.stringify(this.local)) return
+        this.local = this.normalizar(nuevo)
       },
-      deep: true
-    }
-  }
+    },
+    // Hijo → padre
+    local: {
+      deep: true,
+      handler(valor) {
+        this.$emit('update:modelValue', JSON.parse(JSON.stringify(valor)))
+      },
+    },
+  },
+
+  mounted() {
+    // Entrega al Master la estructura completa desde el inicio
+    this.$emit('update:modelValue', JSON.parse(JSON.stringify(this.local)))
+  },
+
+  methods: {
+    normalizar(v = {}) {
+      v = v || {}
+      const identidad = CAMPOS_IDENTIDAD.reduce((acc, k) => ({ ...acc, [k]: v[k] ?? '' }), {})
+      const agentesKeys = GRUPOS_AGENTES.flatMap(g => g.opciones.map(o => o.key))
+      const otras = v.otras_condiciones || {}
+
+      return {
+        ...identidad,
+        empresas_anteriores: Array.isArray(v.empresas_anteriores)
+          ? v.empresas_anteriores.map(e => ({
+              nombre: e?.nombre ?? '',
+              puesto: e?.puesto ?? '',
+              antiguedad: e?.antiguedad ?? '',
+            }))
+          : [],
+        agentes: {
+          ...boolMap(agentesKeys, v.agentes),
+          otros: v.agentes?.otros ?? '',
+        },
+        condiciones_riesgo: boolMap(CONDICIONES_RIESGO.map(o => o.key), v.condiciones_riesgo),
+        otras_condiciones: {
+          realiza_generalmente: otras.realiza_generalmente ?? '',
+          ...boolMap(EXIGENCIAS.map(o => o.key), otras),
+        },
+      }
+    },
+
+    agregarEmpresa() {
+      if (this.local.empresas_anteriores.length >= this.maxEmpresas) return
+      this.local.empresas_anteriores.push({ nombre: '', puesto: '', antiguedad: '' })
+    },
+
+    quitarEmpresa(i) {
+      const emp = this.local.empresas_anteriores[i]
+      const tieneDatos = emp.nombre || emp.puesto || emp.antiguedad
+      if (tieneDatos && !window.confirm(`¿Quitar la empresa ${i + 1}?`)) return
+      this.local.empresas_anteriores.splice(i, 1)
+    },
+
+    copiarDeDatosPuesto() {
+      const d = this.datosPuesto || {}
+      const mapa = {
+        primer_apellido: d.apellido_paterno,
+        segundo_apellido: d.apellido_materno,
+        nombres: d.nombre,
+        tipo_sanguineo: d.tipo_sanguineo,
+        lugar_nacimiento: d.lugar_nacimiento,
+        telefono: d.telefono,
+        celular: d.celular,
+        emergencia_nombre: d.emergencia_nombre,
+        emergencia_telefono: d.emergencia_telefono,
+        emergencia_relacion: d.emergencia_relacion,
+      }
+      // Solo copia lo que sí tiene valor, para no borrar lo ya capturado aquí
+      Object.entries(mapa).forEach(([campo, valor]) => {
+        if (valor !== undefined && valor !== null && String(valor).trim() !== '') {
+          this.local[campo] = valor
+        }
+      })
+    },
+
+    contar(obj, keys) {
+      return keys.filter(k => obj[k]).length
+    },
+  },
 }
 </script>
 
 <style scoped>
-.section-header {
+/* ---------- Tarjetas ---------- */
+.ficha-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  box-shadow: none;
+  margin-bottom: 1.25rem;
+}
+
+.ficha-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 1rem;
-}
-
-.section-header i {
-  font-size: 24px;
-  color: #5F6E7E;
-}
-
-.section-header h2 {
-  font-size: 18px;
-  font-weight: 500;
-  color: #1F2937;
-  margin: 0;
-}
-
-.card-section {
-  background: #FFFFFF;
-  border: 0.5px solid #E5E7EB;
-  border-radius: 6px;
-  margin-bottom: 2rem;
-  overflow: hidden;
-}
-
-.card-header {
-  background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%);
-  padding: 12px 20px;
-}
-
-.card-header h3 {
-  font-size: 14px;
-  font-weight: 500;
-  color: #FFFFFF;
-  margin: 0;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+  background: linear-gradient(90deg, #5F6E7E, #4A5568);
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 600;
+  padding: .7rem 1.25rem;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
 }
 
 .card-body {
-  padding: 20px;
+  padding: 1.25rem;
 }
 
-.form-row {
-  display: flex;
-  gap: 1rem;
+.btn-header {
+  background: rgba(255, 255, 255, .15);
+  border: 1px solid rgba(255, 255, 255, .35);
+  color: #fff;
+  font-size: .8rem;
+}
+.btn-header:hover:not(:disabled) {
+  background: rgba(255, 255, 255, .28);
+  color: #fff;
+}
+.btn-header:disabled {
+  opacity: .5;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
+.contador {
+  background: rgba(255, 255, 255, .18);
+  border-radius: 10px;
+  padding: .15rem .65rem;
+  font-size: .75rem;
+  font-weight: 600;
 }
 
+/* ---------- Campos ---------- */
 .form-group label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #1F2937;
-  margin-bottom: 0.5rem;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: .35rem;
 }
 
 .form-control {
+  height: 38px;
   padding: 10px 12px;
-  border: 0.5px solid #D1D5DB;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.form-control:focus {
-  border-color: #3B82F6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-text {
-  font-size: 12px;
-}
-
-h5 {
-  font-size: 13px;
-  font-weight: 600;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  font-size: .875rem;
   color: #1F2937;
+}
+select.form-control {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+textarea.form-control {
+  height: auto;
+  min-height: 70px;
+}
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 .15rem rgba(0, 123, 255, .2);
+}
+
+/* ---------- Empresas anteriores ---------- */
+.empresa-row + .empresa-row {
+  border-top: 1px dashed #E5E7EB;
+  padding-top: .75rem;
+}
+.empresa-row:last-child .form-group {
+  margin-bottom: 0;
+}
+.btn-eliminar {
+  height: 38px;
+}
+.estado-vacio {
+  margin: 0;
+  padding: .9rem 1rem;
+  border: 1px dashed #D1D5DB;
+  border-radius: 4px;
+  color: #6B7280;
+  font-size: .85rem;
+  text-align: center;
+}
+
+/* ---------- Grupos de opciones ---------- */
+.grupo + .grupo {
+  margin-top: 1.25rem;
+}
+.grupo-titulo {
+  font-size: .85rem;
+  font-weight: 600;
+  color: #4A5568;
+  margin-bottom: .6rem;
+}
+
+.opciones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: .5rem;
+}
+
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: 38px;
+  margin: 0;
+  padding: .45rem .75rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  background: #fff;
+  color: #1F2937;
+  font-size: .85rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+.opcion:hover {
+  border-color: #9CA3AF;
+  background: #F9FAFB;
+}
+.opcion.activa {
+  border-color: #007bff;
+  background: #EFF6FF;
+  color: #0056b3;
+}
+.opcion input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #007bff;
+  cursor: pointer;
+}
+.opcion:focus-within {
+  outline: 2px solid rgba(0, 123, 255, .4);
+  outline-offset: 1px;
 }
 </style>

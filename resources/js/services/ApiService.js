@@ -64,6 +64,30 @@ export const clinicaTrabajo = {
     actualizar: (id, data) => apiClient.put(`/clinica/audiologia/${id}`, data),
     eliminar: (id) => apiClient.delete(`/clinica/audiologia/${id}`),
     imprimir: (id) => apiClient.get(`/clinica/audiologia/${id}/imprimir`),
+    
+    // ============ NUEVOS MÉTODOS: AUDIOLOGÍA DELLI 2026 ============
+    // Rutas concentradas en web.php (SIN /api/)
+    generarFolioDelli: () => apiClient.get('/clinica/audiologia/delli/generar-folio'),
+    guardarFichaAudiologicaDelli: (data) => apiClient.post('/clinica/audiologia/delli/guardar', data),
+    obtenerFichaAudiologicaDelli: (id) => apiClient.get(`/clinica/audiologia/delli/${id}`),
+    actualizarFichaAudiologicaDelli: (id, data) => apiClient.put(`/clinica/audiologia/delli/${id}`, data),
+    eliminarFichaAudiologicaDelli: (id) => apiClient.delete(`/clinica/audiologia/delli/${id}`),
+    listarFichasAudiologicaDelli: (filtro = '') => apiClient.get('/clinica/audiologia/delli/', { params: { filtro } }),
+    exportarFichaDELLIaPDF: (id) => apiClient.get(`/clinica/audiologia/delli/${id}/pdf`),
+    
+    // ============ NUEVOS MÉTODOS: AUDIOLOGÍA EXAMEN_TR ============
+    // Rutas concentradas en web.php (SIN /api/)
+    guardarExamenTrabajoTr: (data) => apiClient.post('/clinica/audiologia/tr/guardar', data),
+    obtenerExamenTrabajoTr: (id) => apiClient.get(`/clinica/audiologia/tr/${id}`),
+    actualizarExamenTrabajoTr: (id, data) => apiClient.put(`/clinica/audiologia/tr/${id}`, data),
+    eliminarExamenTrabajoTr: (id) => apiClient.delete(`/clinica/audiologia/tr/${id}`),
+    listarExamenesTr: (filtro = '') => apiClient.get('/clinica/audiologia/tr/', { params: { filtro } }),
+    exportarExamenTRaPDF: (id) => apiClient.get(`/clinica/audiologia/tr/${id}/pdf`),
+    
+    // ============ UTILIDADES ============
+    buscarPacienteAudiologia: (parametro) => apiClient.post('/clinica/audiologia/buscar/paciente', { parametro }),
+    obtenerHistorialAudiologia: (cedula) => apiClient.get(`/clinica/audiologia/buscar/historial/${cedula}`),
+    compararAudiometrias: (fichaAntigua, fichaActual) => apiClient.post('/clinica/audiologia/buscar/comparar-audiometrias', { antigua: fichaAntigua, actual: fichaActual }),
   },
   ergonomia: {
     lista: () => apiClient.get('/clinica/ergonomia'),

@@ -6,19 +6,19 @@
       <h2>Datos de Identificación y Laboral (WORLDSTRIDE - HOJA 1)</h2>
     </div>
 
-    <!-- 1. IDENTIFICACIÓN DEL TRABAJADOR -->
+    <!-- 1. DATOS DE EVALUACIÓN -->
     <div class="card-section">
       <div class="card-header">
-        <h3>1. Identificación del Trabajador</h3>
+        <h3>1. Datos de la Evaluación</h3>
       </div>
       <div class="card-body">
         <div class="form-row">
-          <div class="form-group col-md-2">
+          <div class="form-group col-md-3">
             <label>Folio *</label>
             <input type="text" v-model="form.folio" class="form-control" readonly />
             <small class="form-text text-muted">Auto-generado: MED-YYYYMMDD-NNNN</small>
           </div>
-          <div class="form-group col-md-2">
+          <div class="form-group col-md-3">
             <label>Tipo Evaluación *</label>
             <select v-model="form.tipo_evaluacion" class="form-control" required>
               <option value="">Seleccionar</option>
@@ -29,22 +29,31 @@
               <option value="egreso">Egreso</option>
             </select>
           </div>
-          <div class="form-group col-md-2">
+          <div class="form-group col-md-3">
             <label>Fecha Evaluación *</label>
             <input type="date" v-model="form.fecha_evaluacion" class="form-control" required />
           </div>
-          <div class="form-group col-md-2">
+          <div class="form-group col-md-3">
             <label>Hora Evaluación</label>
             <input type="time" v-model="form.hora_evaluacion" class="form-control" />
           </div>
-          <div class="form-group col-md-4">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-12">
             <label>Médico Evaluador *</label>
             <input type="text" v-model="form.medico_evaluador" class="form-control" required />
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- DATOS PERSONALES -->
-        <h5 class="border-bottom pb-2 my-3">Datos Personales</h5>
+    <!-- 2. DATOS PERSONALES -->
+    <div class="card-section">
+      <div class="card-header">
+        <h3>2. Datos Personales</h3>
+      </div>
+      <div class="card-body">
         <div class="form-row">
           <div class="form-group col-md-3">
             <label>Primer Apellido *</label>
@@ -79,10 +88,6 @@
             </select>
           </div>
           <div class="form-group col-md-3">
-            <label>Lugar de Nacimiento</label>
-            <input type="text" v-model="form.lugar_nacimiento" class="form-control" placeholder="Ciudad, país..." />
-          </div>
-          <div class="form-group col-md-3">
             <label>Tipo Sanguíneo</label>
             <select v-model="form.tipo_sanguineo" class="form-control">
               <option value="">Seleccionar</option>
@@ -92,65 +97,105 @@
               <option value="AB+">AB+</option><option value="AB-">AB-</option>
             </select>
           </div>
-        </div>
-
-        <!-- CONTACTO -->
-        <h5 class="border-bottom pb-2 my-3">Contacto</h5>
-        <div class="form-row">
-          <div class="form-group col-md-2">
-            <label>Teléfono</label>
-            <input type="tel" v-model="form.telefono" class="form-control" />
-          </div>
-          <div class="form-group col-md-2">
-            <label>Celular</label>
-            <input type="tel" v-model="form.celular" class="form-control" />
-          </div>
-          <div class="form-group col-md-4">
-            <label>Correo Electrónico</label>
-            <input type="email" v-model="form.email" class="form-control" />
-          </div>
-          <div class="form-group col-md-4">
-            <label>Dirección</label>
-            <input type="text" v-model="form.direccion" class="form-control" />
+          <div class="form-group col-md-3">
+            <label>Lugar de Nacimiento</label>
+            <input type="text" v-model="form.lugar_nacimiento" class="form-control" placeholder="Ciudad, país..." />
           </div>
         </div>
 
-        <!-- CONTACTO EMERGENCIA -->
-        <h5 class="border-bottom pb-2 my-3">Contacto en Caso de Emergencia</h5>
         <div class="form-row">
-          <div class="form-group col-md-4">
-            <label>Nombre Contacto</label>
-            <input type="text" v-model="form.emergencia_nombre" class="form-control" />
+          <div class="form-group col-md-3">
+            <label>Fecha de nacimiento</label>
+            <input type="date" v-model="form.fecha_nacimiento" class="form-control" />
           </div>
           <div class="form-group col-md-3">
-            <label>Teléfono Emergencia</label>
-            <input type="tel" v-model="form.emergencia_telefono" class="form-control" />
+            <label>Estado civil</label>
+            <select v-model="form.estado_civil" class="form-control">
+              <option value="">Seleccionar</option>
+              <option value="soltero">Soltero(a)</option>
+              <option value="casado">Casado(a)</option>
+              <option value="divorciado">Divorciado(a)</option>
+              <option value="viudo">Viudo(a)</option>
+              <option value="union_libre">Unión libre</option>
+            </select>
           </div>
           <div class="form-group col-md-3">
-            <label>Relación</label>
-            <input type="text" v-model="form.emergencia_relacion" class="form-control" placeholder="Padre, cónyuge..." />
+            <label>Escolaridad</label>
+            <select v-model="form.escolaridad" class="form-control">
+              <option value="">Seleccionar</option>
+              <option value="ninguna">Ninguna</option>
+              <option value="primaria">Primaria</option>
+              <option value="secundaria">Secundaria</option>
+              <option value="tecnico">Técnico</option>
+              <option value="profesional">Profesional</option>
+              <option value="posgrado">Posgrado</option>
+            </select>
           </div>
-        </div>
-
-        <!-- ÚLTIMA CONSULTA MÉDICA -->
-        <h5 class="border-bottom pb-2 my-3">Última Consulta Médica</h5>
-        <div class="form-row">
-          <div class="form-group col-md-4">
-            <label>Fecha de Última Consulta</label>
-            <input type="date" v-model="form.ultima_consulta_fecha" class="form-control" />
-          </div>
-          <div class="form-group col-md-8">
-            <label>Motivo de la Consulta</label>
-            <input type="text" v-model="form.ultima_consulta_motivo" class="form-control" placeholder="Razón de la consulta médica..." />
+          <div class="form-group col-md-3">
+            <label>Edad inicio vida laboral</label>
+            <input type="number" v-model="form.edad_inicio_vida_laboral" class="form-control" min="0" max="80" placeholder="Edad" />
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 2. DATOS LABORALES ACTUALES -->
+    <!-- 3. INFORMACIÓN DE CONTACTO -->
     <div class="card-section">
       <div class="card-header">
-        <h3>2. Información Laboral Actual</h3>
+        <h3>3. Información de Contacto</h3>
+      </div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group col-md-3">
+            <label>Teléfono</label>
+            <input type="tel" v-model="form.telefono" class="form-control" />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Celular</label>
+            <input type="tel" v-model="form.celular" class="form-control" />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Correo Electrónico</label>
+            <input type="email" v-model="form.email" class="form-control" />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Dirección</label>
+            <input type="text" v-model="form.direccion" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label>Contacto Emergencia (Nombre)</label>
+            <input type="text" v-model="form.emergencia_nombre" class="form-control" />
+          </div>
+          <div class="form-group col-md-4">
+            <label>Teléfono Emergencia</label>
+            <input type="tel" v-model="form.emergencia_telefono" class="form-control" />
+          </div>
+          <div class="form-group col-md-4">
+            <label>Relación</label>
+            <input type="text" v-model="form.emergencia_relacion" class="form-control" placeholder="Padre, cónyuge..." />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label>Última Consulta Médica (Fecha)</label>
+            <input type="date" v-model="form.ultima_consulta_fecha" class="form-control" />
+          </div>
+          <div class="form-group col-md-6">
+            <label>Motivo de la Consulta</label>
+            <input type="text" v-model="form.ultima_consulta_motivo" class="form-control" placeholder="Razón de la consulta..." />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. INFORMACIÓN LABORAL ACTUAL -->
+    <div class="card-section">
+      <div class="card-header">
+        <h3>4. Información Laboral Actual</h3>
       </div>
       <div class="card-body">
         <div class="form-row">
@@ -178,6 +223,10 @@
             <input type="text" v-model="form.antiguedad" class="form-control" placeholder="Ej: 2 años 3 meses" />
           </div>
           <div class="form-group col-md-3">
+            <label>Antigüedad Laboral Total</label>
+            <input type="text" v-model="form.antiguedad_laboral" class="form-control" placeholder="Ej: 5 años" />
+          </div>
+          <div class="form-group col-md-3">
             <label>Antigüedad en la Empresa</label>
             <input type="text" v-model="form.antiguedad_empresa" class="form-control" placeholder="Ej: 5 años" />
           </div>
@@ -191,6 +240,9 @@
               <option value="practicante">Practicante</option>
             </select>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group col-md-3">
             <label>Jornada Laboral *</label>
             <select v-model="form.jornada" class="form-control" required>
@@ -200,6 +252,31 @@
               <option value="mixta">Mixta</option>
               <option value="rotatoria">Rotatoria</option>
             </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label>Modalidad de Trabajo *</label>
+            <select v-model="form.modalidad_trabajo" class="form-control" required>
+              <option value="">Seleccionar</option>
+              <option value="presencial">Presencial</option>
+              <option value="remoto">Remoto</option>
+              <option value="hibrido">Híbrido</option>
+              <option value="turnos">Por turnos</option>
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label>Categoría Laboral *</label>
+            <select v-model="form.categoria_laboral" class="form-control" required>
+              <option value="">Seleccionar</option>
+              <option value="operativo">Operativo</option>
+              <option value="tecnico">Técnico</option>
+              <option value="profesional">Profesional</option>
+              <option value="administrativo">Administrativo</option>
+              <option value="directivo">Directivo</option>
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label>Antigüedad en el Puesto (años)</label>
+            <input type="number" v-model.number="form.antiguedad" class="form-control" min="0" placeholder="Años" />
           </div>
         </div>
 
@@ -216,14 +293,12 @@
       </div>
     </div>
 
-    <!-- 3. SIGNOS VITALES (INTEGRADOS) -->
+    <!-- 5. SIGNOS VITALES -->
     <div class="card-section">
       <div class="card-header">
-        <h3>3. Signos Vitales</h3>
+        <h3>5. Signos Vitales (en el momento de la evaluación)</h3>
       </div>
       <div class="card-body">
-        <p class="text-muted small mb-3">Registre los signos vitales del trabajador en el momento de la evaluación.</p>
-
         <div class="form-row">
           <div class="form-group col-md-2">
             <label>FC (lat/min)</label>
@@ -277,6 +352,10 @@ export default {
         apellido_materno: '',
         nombre: '',
         edad: '',
+        fecha_nacimiento: '',
+        estado_civil: '',
+        escolaridad: '',
+        edad_inicio_vida_laboral: '',
         cedula: '',
         genero: '',
         lugar_nacimiento: '',
@@ -295,9 +374,12 @@ export default {
         departamento: '',
         puesto: '',
         antiguedad: '',
+        antiguedad_laboral: '',
         antiguedad_empresa: '',
         tipo_contrato: '',
         jornada: '',
+        modalidad_trabajo: '',
+        categoria_laboral: '',
         descripcion_puesto: '',
         riesgos_identificados: '',
         signos_vitales: {
@@ -340,7 +422,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .section-header i {
@@ -359,7 +441,7 @@ export default {
   background: #FFFFFF;
   border: 0.5px solid #E5E7EB;
   border-radius: 6px;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   overflow: hidden;
 }
 
@@ -382,11 +464,17 @@ export default {
 .form-row {
   display: flex;
   gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-row:last-child {
+  margin-bottom: 0;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
 .form-group label {
@@ -399,8 +487,10 @@ export default {
 .form-control {
   padding: 10px 12px;
   border: 0.5px solid #D1D5DB;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 14px;
+  height: 38px;
+  transition: border-color 0.2s;
 }
 
 .form-control:focus {
@@ -408,13 +498,35 @@ export default {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-text {
-  font-size: 12px;
+textarea.form-control {
+  height: auto;
+  resize: vertical;
 }
 
-h5 {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1F2937;
+.form-text {
+  font-size: 12px;
+  color: #6B7280;
+  margin-top: 0.25rem;
+}
+
+/* GRID UNIFORME */
+.col-md-2 {
+  flex: 0 0 calc(16.666% - 0.8rem) !important;
+}
+
+.col-md-3 {
+  flex: 0 0 calc(25% - 0.8rem) !important;
+}
+
+.col-md-4 {
+  flex: 0 0 calc(33.333% - 0.8rem) !important;
+}
+
+.col-md-6 {
+  flex: 0 0 calc(50% - 0.5rem) !important;
+}
+
+.col-md-12 {
+  flex: 0 0 100% !important;
 }
 </style>

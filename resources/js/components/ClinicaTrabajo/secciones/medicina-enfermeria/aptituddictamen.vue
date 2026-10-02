@@ -1,650 +1,320 @@
 <template>
-  <div class="aptitud-dictamen-container">
-    <!-- HEADER -->
-    <div class="section-header">
-      <i class="ti ti-certificate" aria-hidden="true"></i>
-      <h2>Diagnóstico y aptitud laboral</h2>
-    </div>
+  <div class="aptitud-dictamen">
 
-    <!-- CARD: DIAGNÓSTICO CLÍNICO -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>Diagnóstico clínico</h3>
+    <!-- ===================== 4.1 DIAGNÓSTICO ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-file-medical mr-2"></i>4.1 Diagnóstico clínico</span>
       </div>
-
       <div class="card-body">
-        <div class="form-group">
-          <label for="diagnostico">Diagnóstico principal</label>
-          <input
-            id="diagnostico"
-            v-model="form.diagnostico"
-            type="text"
-            placeholder="Ej: Sin hallazgos relevantes, Hipertensión controlada, etc..."
-            class="input-field"
-            required
-          />
+        <div class="form-row">
+          <div class="form-group col-md-8">
+            <label>Diagnóstico principal <span class="text-danger">*</span></label>
+            <input
+              v-model.trim="local.diagnostico"
+              type="text"
+              class="form-control"
+              placeholder="Ej: Sin hallazgos relevantes, hipertensión controlada…"
+            >
+          </div>
+          <div class="form-group col-md-4">
+            <label>Código CIE-11 (opcional)</label>
+            <input v-model.trim="local.cie11_codigo" type="text" class="form-control" placeholder="Ej: BA00.0">
+          </div>
         </div>
-
-        <div class="form-group">
-          <label for="cie11">Código CIE-11 (opcional)</label>
-          <input
-            id="cie11"
-            v-model="form.cie11_codigo"
-            type="text"
-            placeholder="Ej: BA80.0"
-            class="input-field"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="hallazgos-relevantes">
-            Hallazgos relevantes para la aptitud
-          </label>
+        <div class="form-group mb-0">
+          <label>Hallazgos relevantes para la aptitud</label>
           <textarea
-            id="hallazgos-relevantes"
-            v-model="form.hallazgos_relevantes_aptitud"
-            placeholder="Describir los hallazgos clínicos que impactan la aptitud laboral..."
-            class="textarea-field"
+            v-model="local.hallazgos_relevantes_aptitud"
+            class="form-control"
             rows="3"
+            placeholder="Hallazgos clínicos que impactan la aptitud laboral…"
           ></textarea>
         </div>
       </div>
     </div>
 
-    <!-- CARD: APTITUD LABORAL (PROMINENTE) -->
-    <div class="card-section aptitud-card">
-      <div class="card-header aptitud-header">
-        <i class="ti ti-award" aria-hidden="true"></i>
-        <h3>Aptitud laboral</h3>
-        <span class="required-badge">REQUERIDO</span>
+    <!-- ===================== 4.2 APTITUD LABORAL ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-user-check mr-2"></i>4.2 Aptitud laboral</span>
+        <span class="contador">Obligatorio</span>
       </div>
+      <div class="card-body">
+        <p class="instruccion">Seleccione una sola opción. Es obligatoria para guardar la ficha.</p>
 
-      <div class="card-body aptitud-body">
-        <p class="aptitud-instruction">
-          Selecciona el estado de aptitud laboral del trabajador
+        <div class="aptitud-grid" role="radiogroup" aria-label="Aptitud laboral">
+          <label
+            v-for="op in opcionesAptitud"
+            :key="op.value"
+            class="aptitud-opcion"
+            :class="[op.clase, { activa: local.aptitud === op.value }]"
+          >
+            <input v-model="local.aptitud" type="radio" name="aptitud" :value="op.value">
+            <i :class="op.icono" class="aptitud-icono" aria-hidden="true"></i>
+            <span class="aptitud-texto">
+              <strong>{{ op.titulo }}</strong>
+              <small>{{ op.descripcion }}</small>
+            </span>
+          </label>
+        </div>
+
+        <p v-if="!local.aptitud" class="aptitud-pendiente">
+          <i class="fas fa-info-circle mr-1"></i>Aún no se ha seleccionado la aptitud.
         </p>
 
-        <div class="aptitud-options">
-          <label
-            class="aptitud-radio"
-            :class="{ active: form.aptitud === 'apto' }"
-          >
-            <input
-              type="radio"
-              name="aptitud"
-              value="apto"
-              :checked="form.aptitud === 'apto'"
-              @change="form.aptitud = 'apto'"
-              class="radio-input"
-            />
-            <div class="radio-content">
-              <div class="radio-mark"></div>
-              <div class="radio-text">
-                <span class="radio-title">APTO</span>
-                <span class="radio-desc">Para el desempeño del puesto actual</span>
-              </div>
-              <i class="ti ti-check-circle radio-icon"></i>
-            </div>
-          </label>
-
-          <label
-            class="aptitud-radio"
-            :class="{ active: form.aptitud === 'apto_con_restricciones' }"
-          >
-            <input
-              type="radio"
-              name="aptitud"
-              value="apto_con_restricciones"
-              :checked="form.aptitud === 'apto_con_restricciones'"
-              @change="form.aptitud = 'apto_con_restricciones'"
-              class="radio-input"
-            />
-            <div class="radio-content">
-              <div class="radio-mark"></div>
-              <div class="radio-text">
-                <span class="radio-title">APTO CON RESTRICCIONES</span>
-                <span class="radio-desc">Requiere limitaciones específicas</span>
-              </div>
-              <i class="ti ti-alert-circle radio-icon"></i>
-            </div>
-          </label>
-
-          <label
-            class="aptitud-radio"
-            :class="{ active: form.aptitud === 'no_apto' }"
-          >
-            <input
-              type="radio"
-              name="aptitud"
-              value="no_apto"
-              :checked="form.aptitud === 'no_apto'"
-              @change="form.aptitud = 'no_apto'"
-              class="radio-input"
-            />
-            <div class="radio-content">
-              <div class="radio-mark"></div>
-              <div class="radio-text">
-                <span class="radio-title">NO APTO</span>
-                <span class="radio-desc">No puede desempeñar el puesto actual</span>
-              </div>
-              <i class="ti ti-circle-x radio-icon"></i>
-            </div>
-          </label>
-        </div>
-
-        <div v-if="!form.aptitud" class="error-message">
-          <i class="ti ti-alert-triangle"></i>
-          <span>Debe seleccionar la aptitud antes de guardar</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- CARD: RESTRICCIONES & SEGUIMIENTO (condicional) -->
-    <div v-if="form.aptitud === 'apto_con_restricciones'" class="card-section">
-      <div class="card-header warning-header">
-        <h3>Restricciones y limitaciones</h3>
-      </div>
-
-      <div class="card-body">
-        <div class="form-group">
-          <label for="restricciones">
-            Detallar restricciones y limitaciones
-            <span class="required-inline">*</span>
-          </label>
+        <!-- Restricciones: solo si es apto con restricciones -->
+        <div v-if="local.aptitud === 'apto_con_restricciones'" class="form-group mt-3 mb-0">
+          <label>Restricciones y limitaciones <span class="text-danger">*</span></label>
           <textarea
-            id="restricciones"
-            v-model="form.restricciones"
-            placeholder="Especificar de forma clara y concisa las limitaciones, prohibiciones y recomendaciones..."
-            class="textarea-field required-field"
+            v-model="local.restricciones"
+            class="form-control"
+            :class="{ 'campo-pendiente': !local.restricciones.trim() }"
             rows="3"
-            required
-          ></textarea>
-          <span class="helper-text">Requerido cuando hay restricciones</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- CARD: RECOMENDACIONES & SEGUIMIENTO -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>Recomendaciones y seguimiento</h3>
-      </div>
-
-      <div class="card-body">
-        <div class="form-group">
-          <label for="recomendaciones">Recomendaciones médicas</label>
-          <textarea
-            id="recomendaciones"
-            v-model="form.recomendaciones"
-            placeholder="Recomendaciones para el trabajador y/o empresa..."
-            class="textarea-field"
-            rows="2"
-          ></textarea>
-        </div>
-
-        <div class="form-group">
-          <label for="seguimiento">Próximo seguimiento</label>
-          <select v-model="form.proximo_seguimiento" id="seguimiento" class="input-field">
-            <option value="">Seleccionar intervalo</option>
-            <option value="3m">3 meses</option>
-            <option value="6m">6 meses</option>
-            <option value="12m">12 meses (Anual)</option>
-            <option value="extraordinaria">Extraordinaria (urgente)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="derivaciones">Derivaciones a especialistas</label>
-          <textarea
-            id="derivaciones"
-            v-model="form.derivaciones_especialista"
-            placeholder="Especialistas a los que se deriva el trabajador..."
-            class="textarea-field"
-            rows="2"
+            placeholder="Limitaciones, prohibiciones y condiciones para desempeñar el puesto…"
           ></textarea>
         </div>
       </div>
     </div>
 
-    <!-- CARD: DICTAMEN FINAL -->
-    <div class="card-section final-card">
-      <div class="card-header final-header">
-        <i class="ti ti-file-text" aria-hidden="true"></i>
-        <h3>Dictamen final</h3>
+    <!-- ===================== 4.3 RECOMENDACIONES Y SEGUIMIENTO ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-calendar-check mr-2"></i>4.3 Recomendaciones y seguimiento</span>
       </div>
-
       <div class="card-body">
-        <div class="form-group">
-          <label for="dictamen">
-            Conclusión médica
-            <span class="required-inline">*</span>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label>Recomendaciones médicas</label>
+            <textarea v-model="local.recomendaciones" class="form-control" rows="3" placeholder="Para el trabajador y/o la empresa…"></textarea>
+          </div>
+          <div class="form-group col-md-6">
+            <label>Derivaciones a especialistas</label>
+            <textarea v-model="local.derivaciones_especialista" class="form-control" rows="3" placeholder="Especialidad y motivo…"></textarea>
+          </div>
+        </div>
+
+        <h6 class="grupo-titulo">Próximo seguimiento</h6>
+        <div class="opciones-grid compacto">
+          <label
+            v-for="op in opcionesSeguimiento"
+            :key="op.value"
+            class="opcion"
+            :class="{ activa: local.proximo_seguimiento === op.value }"
+          >
+            <input v-model="local.proximo_seguimiento" type="radio" name="proximo_seguimiento" :value="op.value">
+            <span>{{ op.label }}</span>
           </label>
-          <textarea
-            id="dictamen"
-            v-model="form.dictamen_final"
-            placeholder="Conclusión formal para registro legal. Debe incluir: diagnóstico, aptitud, recomendaciones..."
-            class="textarea-field required-field"
-            rows="4"
-            required
-          ></textarea>
-          <span class="helper-text">Este texto formará parte del registro médico oficial</span>
         </div>
+      </div>
+    </div>
 
+    <!-- ===================== 4.4 DICTAMEN FINAL ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-file-signature mr-2"></i>4.4 Dictamen final</span>
+      </div>
+      <div class="card-body">
         <div class="form-group">
-          <label for="observaciones">Observaciones adicionales</label>
+          <label>Conclusión médica <span class="text-danger">*</span></label>
           <textarea
-            id="observaciones"
-            v-model="form.observaciones"
-            placeholder="Cualquier observación adicional no cubierta en los campos anteriores..."
-            class="textarea-field"
-            rows="2"
+            v-model="local.dictamen_final"
+            class="form-control"
+            rows="4"
+            placeholder="Conclusión formal: diagnóstico, aptitud y recomendaciones…"
           ></textarea>
+          <small class="text-muted">Este texto forma parte del registro médico oficial.</small>
+        </div>
+        <div class="form-group mb-0">
+          <label>Observaciones adicionales</label>
+          <textarea v-model="local.observaciones" class="form-control" rows="2"></textarea>
         </div>
       </div>
     </div>
 
-    <!-- SUMMARY BOX -->
-    <div v-if="form.aptitud" class="summary-box" :class="'status-' + form.aptitud">
-      <i :class="getIconoAptitud()" aria-hidden="true"></i>
+    <!-- RESUMEN -->
+    <div v-if="aptitudActual" class="resumen" :class="aptitudActual.clase">
+      <i :class="aptitudActual.icono" aria-hidden="true"></i>
       <div>
-        <p class="summary-title">Estado de aptitud registrado</p>
-        <p class="summary-text">{{ obtenerTextoAptitud() }}</p>
+        <strong>Aptitud registrada: {{ aptitudActual.titulo }}</strong>
+        <span class="d-block">{{ aptitudActual.resumen }}</span>
       </div>
     </div>
+
   </div>
 </template>
 
 <script>
+import modeloSincronizado from '../../mixins/modeloSincronizado'
+
+const OPCIONES_APTITUD = [
+  {
+    value: 'apto',
+    titulo: 'Apto',
+    descripcion: 'Para el desempeño del puesto actual',
+    resumen: 'El trabajador está apto para desempeñar el puesto.',
+    icono: 'fas fa-check-circle',
+    clase: 'estado-apto',
+  },
+  {
+    value: 'apto_con_restricciones',
+    titulo: 'Apto con restricciones',
+    descripcion: 'Requiere limitaciones específicas',
+    resumen: 'El trabajador está apto con restricciones. Revisar limitaciones.',
+    icono: 'fas fa-exclamation-circle',
+    clase: 'estado-restricciones',
+  },
+  {
+    value: 'no_apto',
+    titulo: 'No apto',
+    descripcion: 'No puede desempeñar el puesto actual',
+    resumen: 'El trabajador no está apto para desempeñar el puesto.',
+    icono: 'fas fa-times-circle',
+    clase: 'estado-no-apto',
+  },
+]
+
+const OPCIONES_SEGUIMIENTO = [
+  { value: '3m', label: '3 meses' },
+  { value: '6m', label: '6 meses' },
+  { value: '12m', label: '12 meses (anual)' },
+  { value: 'extraordinaria', label: 'Extraordinaria (urgente)' },
+]
+
+const crearVacio = () => ({
+  diagnostico: '',
+  cie11_codigo: '',
+  hallazgos_relevantes_aptitud: '',
+  aptitud: '',
+  restricciones: '',
+  recomendaciones: '',
+  proximo_seguimiento: '',
+  derivaciones_especialista: '',
+  dictamen_final: '',
+  observaciones: '',
+})
+
+// El Master hoy inicia form.aptitud como '' (texto). Lo convertimos a objeto.
+const adaptarEntrada = v => (typeof v === 'string' ? { aptitud: v } : v)
+
 export default {
   name: 'AptitudDictamen',
-  props: {
-    modelValue: {
-      type: Object,
-      required: true
-    }
-  },
-  emits: ['update:modelValue', 'error'],
+
+  mixins: [modeloSincronizado(crearVacio, adaptarEntrada)],
+
   data() {
     return {
-      form: this.modelValue
+      opcionesAptitud: OPCIONES_APTITUD,
+      opcionesSeguimiento: OPCIONES_SEGUIMIENTO,
     }
   },
-  watch: {
-    modelValue(newVal) {
-      this.form = newVal
+
+  computed: {
+    aptitudActual() {
+      return OPCIONES_APTITUD.find(o => o.value === this.local.aptitud) || null
     },
-    form: {
-      handler(newVal) {
-        this.$emit('update:modelValue', newVal)
-        // Validar aptitud
-        if (!newVal.aptitud) {
-          this.$emit('error', 'Aptitud es requerida')
-        } else {
-          this.$emit('error', null)
-        }
-      },
-      deep: true
-    }
   },
-  methods: {
-    obtenerTextoAptitud() {
-      const textos = {
-        apto: 'El trabajador está APTO para desempeñar el puesto',
-        apto_con_restricciones: 'El trabajador está APTO CON RESTRICCIONES — revisar limitaciones',
-        no_apto: 'El trabajador NO ESTÁ APTO para desempeñar el puesto'
-      }
-      return textos[this.form.aptitud] || 'Sin definir'
-    },
-    getIconoAptitud() {
-      const iconos = {
-        apto: 'ti ti-check-circle',
-        apto_con_restricciones: 'ti ti-alert-circle',
-        no_apto: 'ti ti-circle-x'
-      }
-      return iconos[this.form.aptitud] || 'ti ti-help-circle'
-    }
-  }
 }
 </script>
 
+<style scoped src="../../estilos/ficha-ocupacional.css"></style>
+
 <style scoped>
-.aptitud-dictamen-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+/* ---------- Opciones de aptitud ---------- */
+.aptitud-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: .75rem;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 0.5rem;
-}
-
-.section-header i {
-  font-size: 24px;
-  color: #0F6E9F;
-}
-
-.section-header h2 {
-  font-size: 18px;
-  font-weight: 500;
-  color: #1F2937;
-  margin: 0;
-}
-
-.card-section {
-  background: #FFFFFF;
-  border: 0.5px solid #E5E7EB;
-  border-radius: 6px;
-  border-left: 3px solid #0F6E9F;
-  overflow: hidden;
-}
-
-.card-section.aptitud-card {
-  border-left: 4px solid #2E8B57;
-}
-
-.card-section.final-card {
-  border-left-color: #5F6E7E;
-}
-
-.card-header {
-  background: linear-gradient(135deg, #0F6E9F 0%, #0A5A84 100%);
-  padding: 12px 20px;
-  border-bottom: 1px solid #E5E7EB;
+.aptitud-opcion {
+  --estado: #6B7280;
+  --estado-fondo: #F9FAFB;
   display: flex;
   align-items: center;
-  gap: 8px;
-  position: relative;
-}
-
-.card-section.aptitud-card .card-header.aptitud-header {
-  background: linear-gradient(135deg, #2E8B57 0%, #1E6B47 100%);
-}
-
-.card-section.final-card .card-header.final-header {
-  background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%);
-}
-
-.card-header i {
-  font-size: 16px;
-  color: #FFFFFF;
-}
-
-.card-header h3 {
-  font-size: 14px;
-  font-weight: 500;
-  color: #FFFFFF;
+  gap: .75rem;
   margin: 0;
-}
-
-.required-badge {
-  margin-left: auto;
-  background: rgba(255, 255, 255, 0.25);
-  color: #FFFFFF;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 3px;
-  text-transform: uppercase;
-}
-
-.card-body {
-  padding: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #1F2937;
-  margin: 0;
-}
-
-.required-inline {
-  color: #DC2626;
-  margin-left: 2px;
-}
-
-.input-field {
-  padding: 8px 12px;
-  border: 0.5px solid #D1D5DB;
+  padding: .9rem 1rem;
+  border: 1.5px solid #D1D5DB;
   border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  color: #1F2937;
-  background: #FFFFFF;
-  transition: all 200ms ease;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+.aptitud-opcion.estado-apto { --estado: #15803D; --estado-fondo: #F0FDF4; }
+.aptitud-opcion.estado-restricciones { --estado: #B45309; --estado-fondo: #FFFBEB; }
+.aptitud-opcion.estado-no-apto { --estado: #B91C1C; --estado-fondo: #FEF2F2; }
+
+.aptitud-opcion:hover {
+  border-color: var(--estado);
+}
+.aptitud-opcion.activa {
+  border-color: var(--estado);
+  background: var(--estado-fondo);
+  box-shadow: inset 4px 0 0 var(--estado);
+}
+.aptitud-opcion:focus-within {
+  outline: 2px solid rgba(0, 123, 255, .4);
+  outline-offset: 1px;
 }
 
-.input-field:focus {
-  outline: none;
-  border-color: #0F6E9F;
-  box-shadow: 0 0 0 2px rgba(15, 110, 159, 0.1);
-}
-
-.textarea-field {
-  padding: 10px 12px;
-  border: 0.5px solid #D1D5DB;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  color: #1F2937;
-  background: #FFFFFF;
-  resize: vertical;
-  transition: all 200ms ease;
-}
-
-.textarea-field:focus {
-  outline: none;
-  border-color: #0F6E9F;
-  box-shadow: 0 0 0 2px rgba(15, 110, 159, 0.1);
-}
-
-.textarea-field.required-field {
-  border-color: #FCD34D;
-  background: #FFFBEB;
-}
-
-.helper-text {
-  font-size: 12px;
-  color: #9CA3AF;
+.aptitud-opcion input {
+  width: 16px;
+  height: 16px;
   margin: 0;
-}
-
-/* APTITUD OPTIONS */
-.aptitud-body {
-  padding: 24px 20px;
-}
-
-.aptitud-instruction {
-  font-size: 13px;
-  color: #6B7280;
-  margin: 0 0 16px 0;
-  text-align: center;
-}
-
-.aptitud-options {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.aptitud-radio {
-  position: relative;
-  display: flex;
+  flex-shrink: 0;
+  accent-color: var(--estado);
   cursor: pointer;
 }
 
-.radio-input {
-  display: none;
-}
-
-.radio-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px 16px;
-  border: 1.5px solid #E5E7EB;
-  border-radius: 8px;
-  background: #F9FAFB;
-  transition: all 200ms ease;
-  position: relative;
-}
-
-.aptitud-radio.active .radio-content {
-  border-color: #2E8B57;
-  background: #E8F5E9;
-}
-
-.radio-mark {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #D1D5DB;
-  border-radius: 50%;
-  background: #FFFFFF;
-  transition: all 200ms ease;
+.aptitud-icono {
+  font-size: 1.4rem;
+  color: #D1D5DB;
   flex-shrink: 0;
 }
-
-.radio-input:checked + .radio-content .radio-mark {
-  border-color: #2E8B57;
-  background: #2E8B57;
+.aptitud-opcion.activa .aptitud-icono {
+  color: var(--estado);
 }
 
-.radio-input:checked + .radio-content .radio-mark::after {
-  content: '';
+.aptitud-texto strong {
   display: block;
-  width: 8px;
-  height: 4px;
-  border: 2px solid white;
-  border-top: none;
-  border-right: none;
-  transform: rotate(-45deg) translateY(-1px);
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  margin-left: -4px;
-  margin-top: -3px;
-}
-
-.radio-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-
-.radio-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: .9rem;
   color: #1F2937;
 }
+.aptitud-opcion.activa .aptitud-texto strong {
+  color: var(--estado);
+}
+.aptitud-texto small {
+  color: #6B7280;
+  font-size: .78rem;
+}
 
-.radio-desc {
-  font-size: 12px;
+.aptitud-pendiente {
+  margin: .75rem 0 0;
+  font-size: .8rem;
   color: #6B7280;
 }
 
-.radio-icon {
-  font-size: 20px;
-  color: #D1D5DB;
-  transition: all 200ms ease;
-  flex-shrink: 0;
+.campo-pendiente {
+  border-color: #F59E0B;
+  background: #FFFBEB;
 }
 
-.aptitud-radio.active .radio-icon {
-  color: #2E8B57;
-}
-
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #FEE2E2;
-  border: 0.5px solid #FCA5A5;
-  border-radius: 6px;
-  color: #DC2626;
-  font-size: 13px;
-  margin-top: 8px;
-}
-
-.error-message i {
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.warning-header {
-  background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
-}
-
-/* SUMMARY BOX */
-.summary-box {
+/* ---------- Resumen ---------- */
+.resumen {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  border-radius: 8px;
-  padding: 16px;
+  gap: .75rem;
+  padding: .9rem 1rem;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: .875rem;
 }
-
-.summary-box i {
-  font-size: 24px;
+.resumen i {
+  font-size: 1.3rem;
   margin-top: 2px;
-  flex-shrink: 0;
 }
-
-.summary-box.status-apto {
-  background: #E8F5E9;
-  border: 1px solid #81C784;
-}
-
-.summary-box.status-apto i {
-  color: #2E8B57;
-}
-
-.summary-box.status-apto_con_restricciones {
-  background: #FFF3E0;
-  border: 1px solid #FFB74D;
-}
-
-.summary-box.status-apto_con_restricciones i {
-  color: #D97706;
-}
-
-.summary-box.status-no_apto {
-  background: #FFEBEE;
-  border: 1px solid #EF5350;
-}
-
-.summary-box.status-no_apto i {
-  color: #DC2626;
-}
-
-.summary-title {
-  font-size: 12px;
-  font-weight: 600;
-  margin: 0 0 4px 0;
-  color: inherit;
-}
-
-.summary-text {
-  font-size: 14px;
-  margin: 0;
-  font-weight: 500;
-  color: inherit;
-}
+.resumen.estado-apto { background: #F0FDF4; border-color: #86EFAC; color: #15803D; }
+.resumen.estado-restricciones { background: #FFFBEB; border-color: #FCD34D; color: #B45309; }
+.resumen.estado-no-apto { background: #FEF2F2; border-color: #FCA5A5; color: #B91C1C; }
 </style>

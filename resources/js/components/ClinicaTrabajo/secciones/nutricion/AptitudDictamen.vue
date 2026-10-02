@@ -1,156 +1,158 @@
 <template>
   <div class="seccion-aptitud-dictamen-nutricion">
-    <div class="bg-white border rounded-lg p-4 mb-4">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-        <i class="icon icon-check text-emerald-600"></i>
-        Aptitud, Dictamen y Plan Alimentario
-      </h3>
-
-      <!-- Aptitud (REQUERIDO - sin default) -->
-      <div class="mb-4">
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Aptitud * <span class="text-red-500">(Requerida, sin default)</span></label>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <label
-            v-for="opcion in aptitudOpciones"
-            :key="opcion.value"
-            class="relative cursor-pointer"
-          >
-            <input
-              type="radio"
-              name="aptitud"
-              :value="opcion.value"
-              :checked="form.aptitud === opcion.value"
-              @change="updateField('aptitud', opcion.value)"
-              class="sr-only peer"
-              required
-            />
-            <div
-              class="p-4 border-2 rounded-lg text-center transition-all"
-              :class="[
-                'peer-checked:border-emerald-500 peer-checked:bg-emerald-50',
-                'peer-focus:ring-2 peer-focus:ring-emerald-500',
-                'hover:border-gray-400',
-                opcion.color
-              ]"
-            >
-              <div class="text-2xl mb-1">{{ opcion.icon }}</div>
-              <div class="font-semibold text-gray-800">{{ opcion.label }}</div>
-              <div class="text-xs text-gray-500 mt-1">{{ opcion.descripcion }}</div>
+    <!-- SECTION: APTITUD, DICTAMEN Y PLAN ALIMENTARIO -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-check-circle mr-2"></i> APTITUD, DICTAMEN Y PLAN ALIMENTARIO
+        </h5>
+      </div>
+      <div class="card-body">
+        <!-- APTITUD (REQUERIDO - sin default) -->
+        <div class="mb-4">
+          <label class="font-weight-bold">Aptitud * <span class="text-danger">(Requerida, sin default)</span></label>
+          <div class="row">
+            <div v-for="opcion in aptitudOpciones"
+                 :key="opcion.value"
+                 class="col-md-4 mb-3">
+              <div class="border rounded p-3 text-center hover:bg-light transition-all cursor-pointer"
+                   :class="[
+                     'border-' + (form.aptitud === opcion.value ? 'success' : 'secondary'),
+                     'bg-' + (form.aptitud === opcion.value ? 'success' : 'light'),
+                     'text-' + (form.aptitud === opcion.value ? 'white' : 'dark')
+                   ]">
+                <input
+                  type="radio"
+                  name="aptitud"
+                  :value="opcion.value"
+                  :checked="form.aptitud === opcion.value"
+                  @change="updateField('aptitud', opcion.value)"
+                  class="position-static"
+                  required
+                />
+                <div class="mt-2">
+                  <div class="h4 mb-1">{{ opcion.icon }}</div>
+                  <div class="font-weight-bold">{{ opcion.label }}</div>
+                  <div class="small text-muted">{{ opcion.descripcion }}</div>
+                </div>
+              </div>
             </div>
-          </label>
+          </div>
+          <small class="text-danger d-block mt-2">
+            Seleccione una opción antes de continuar.
+          </small>
         </div>
-      </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Restricciones -->
-        <div class="md:col-span-2">
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Restricciones / Limitaciones</label>
+        <!-- RESTRICTIONES -->
+        <div class="mb-4">
+          <label class="font-weight-bold">Restricciones / Limitaciones</label>
           <textarea
-            :value="form.restricciones"
-            @input="updateField('restricciones', $event.target.value)"
+            class="form-control"
             rows="3"
-            class="input-field w-full"
+            v-model="form.restricciones"
+            @input="updateField('restricciones', $event.target.value)"
             placeholder="Restricciones dietéticas, limitaciones funcionales, adaptaciones en comedores, turnos, etc."
+            style="height: 96px;" <!-- 32px * 3 -->
           ></textarea>
         </div>
 
-        <!-- Recomendaciones -->
-        <div class="md:col-span-2">
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Recomendaciones Nutricionales y Laborales</label>
+        <!-- RECOMENDACIONES -->
+        <div class="mb-4">
+          <label class="font-weight-bold">Recomendaciones Nutricionales y Laborales</label>
           <textarea
-            :value="form.recomendaciones"
-            @input="updateField('recomendaciones', $event.target.value)"
+            class="form-control"
             rows="4"
-            class="input-field w-full"
+            v-model="form.recomendaciones"
+            @input="updateField('recomendaciones', $event.target.value)"
             placeholder="Plan alimentario, suplementación, hidratación, horarios de comida, pausas activas, educación nutricional..."
+            style="height: 128px;" <!-- 32px * 4 -->
           ></textarea>
         </div>
-      </div>
 
-      <!-- Seguimiento -->
-      <div class="mt-4 pt-4 border-t border-gray-200">
-        <h4 class="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <i class="icon icon-calendar text-blue-600"></i>
-          Plan de Seguimiento Nutricional
-        </h4>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="flex items-center gap-2 cursor-pointer">
+        <!-- SEGUIMIENTO -->
+        <div class="row mb-4">
+          <!-- SEGUIMIENTO REQUERIDO -->
+          <div class="col-md-6 mb-3">
+            <div class="form-check">
               <input
+                class="form-check-input"
                 type="checkbox"
-                :checked="!!form.seguimiento_requerido"
+                v-model="form.seguimiento_requerido"
                 @change="updateField('seguimiento_requerido', $event.target.checked)"
-                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span class="font-semibold text-gray-700">Requiere seguimiento nutricional</span>
-            </label>
+              >
+              <label class="form-check-label font-weight-bold">Requiere seguimiento nutricional</label>
+            </div>
           </div>
 
-          <div v-if="form.seguimiento_requerido">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Próximo Control *</label>
+          <!-- PRÓXIMO CONTROL -->
+          <div v-if="form.seguimiento_requerido" class="col-md-6 mb-3">
+            <label class="font-weight-bold">Próximo Control *</label>
             <input
               type="date"
+              class="form-control"
               :value="form.plazo_proximo_seguimiento"
               @input="updateField('plazo_proximo_seguimiento', $event.target.value)"
-              class="input-field w-full"
               :min="form.fecha_valoracion || fechaHoy"
-              required
-            />
+              style="height: 38px;"
+            >
           </div>
         </div>
-      </div>
 
-      <!-- Alimentos frecuentes (desde catálogo) -->
-      <div v-if="form.alimentos_ids && form.alimentos_ids.length > 0" class="mt-4 pt-4 border-t border-gray-200">
-        <h4 class="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <i class="icon icon-apple text-orange-600"></i>
-          Alimentos de Consumo Frecuente ({{ form.alimentos_ids.length }})
-        </h4>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="bg-gray-100">
-                <th class="text-left p-2">Alimento</th>
-                <th class="text-left p-2">Frecuencia</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(alimentoId, index) in form.alimentos_ids" :key="index" class="border-b border-gray-200">
-                <td class="p-2">{{ getAlimentoNombre(alimentoId) }}</td>
-                <td class="p-2">{{ form.alimentos_frecuencias?.[index] || '—' }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- ALIMENTOS FRECUENTES -->
+        <div v-if="form.alimentos_ids && form.alimentos_ids.length > 0" class="mb-4">
+          <div class="card-header pb-0 pt-0">
+            <h5 class="mb-0">
+              <i class="fas fa-apple-alt mr-2"></i> ALIMENTOS DE CONSUMO FRECUENTE ({{ form.alimentos_ids.length }})
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="text-center">Alimento</th>
+                    <th class="text-center">Frecuencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(alimentoId, index) in form.alimentos_ids" :key="index" class="border-top">
+                    <td>{{ getAlimentoNombre(alimentoId) }}</td>
+                    <td>{{ form.alimentos_frecuencias?.[index] || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- Resumen del dictamen -->
-      <div v-if="form.aptitud" class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded">
-        <h4 class="font-semibold text-gray-700 mb-2">Resumen del Dictamen Nutricional</h4>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-          <div>
-            <span class="font-semibold text-gray-600">Aptitud: </span>
-            <span :class="aptitudBadgeClass">{{ aptitudLabel }}</span>
-          </div>
-          <div>
-            <span class="font-semibold text-gray-600">IMC: </span>
-            {{ imcCalculado || '—' }} ({{ form.imc_clasificacion || '—' }})
-          </div>
-          <div>
-            <span class="font-semibold text-gray-600">Seguimiento: </span>
-            {{ form.seguimiento_requerido ? 'Sí - ' + formatearFecha(form.plazo_proximo_seguimiento) : 'No requerido' }}
+        <!-- RESUMEN DEL DICTAMEN -->
+        <div v-if="form.aptitud" class="mt-4 p-3 bg-light border border-left border-success">
+          <h5 class="font-weight-bold text-success mb-3 flex items-center gap-2">
+            <i class="fas fa-file-alt mr-2"></i> RESUMEN DEL DICTAMEN NUTRICIONAL
+          </h5>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Aptitud:</span>
+                <span class="font-weight-bold" :class="getAptitudClass()">{{ aptitudLabel }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">IMC:</span>
+                <span class="font-weight-bold">{{ imcCalculado || '—' }}</span> ({{ form.imc_clasificacion || '—' }})
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Seguimiento:</span>
+                <span class="font-weight-bold">
+                  {{ form.seguimiento_requerido ? 'Sí - ' + formatearFecha(form.plazo_proximo_seguimiento) : 'No requerido' }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Advertencia si no hay aptitud -->
-      <div v-if="!form.aptitud" class="mt-4 p-3 bg-red-50 border border-red-200 rounded">
-        <div class="flex items-center gap-2 text-red-700">
-          <i class="icon icon-alert text-lg"></i>
-          <span class="font-semibold">La APTITUD es obligatoria para poder guardar la valoración.</span>
-        </div>
-        <p class="text-sm text-red-600 mt-1">Seleccione una opción arriba antes de continuar.</p>
       </div>
     </div>
   </div>
@@ -211,13 +213,13 @@ export default {
       const opcion = this.aptitudOpciones.find(o => o.value === this.form.aptitud)
       return opcion ? opcion.label : '—'
     },
-    aptitudBadgeClass() {
-      const clases = {
-        apto: 'badge badge-green',
-        apto_con_restricciones: 'badge badge-yellow',
-        no_apto: 'badge badge-red'
+    getAptitudClass() {
+      switch (this.form.aptitud) {
+        case 'apto': return 'text-success';
+        case 'apto_con_restricciones': return 'text-warning';
+        case 'no_apto': return 'text-danger';
+        default: return 'text-muted';
       }
-      return clases[this.form.aptitud] || 'badge badge-gray'
     },
     imcCalculado() {
       if (this.form.peso_kg && this.form.estatura_m && this.form.estatura_m > 0) {
@@ -262,15 +264,66 @@ export default {
 </script>
 
 <style scoped>
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  font-weight: 600;
+.seccion-aptitud-dictamen-nutricion {
+  background: #f8f9fa;
 }
-.badge-green { background: #dcfce7; color: #166534; }
-.badge-yellow { background: #fef3c7; color: #92400e; }
-.badge-red { background: #fee2e2; color: #991b1b; }
-.badge-gray { background: #f3f4f6; color: #374151; }
+
+.card {
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.form-control {
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+.form-control:focus {
+  border-color: #5F6E7E;
+  box-shadow: 0 0 0 0.2rem rgba(95, 110, 126, 0.25);
+}
+
+.form-check-input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.2rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* Estilos para las opciones de aptitud */
+.aptitud-option {
+  border: 2px solid #ced4da;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.aptitud-option:hover {
+  border-color: #adb5bd;
+  background-color: #e9ecef;
+}
+
+.aptitud-option.selected {
+  border-color: #28a745;
+  background-color: #d4edda;
+  color: #155724;
+}
+
+/* Estilo para tarjetas de resumen */
+.card-header {
+  background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%) !important;
+  color: white !important;
+}
 </style>

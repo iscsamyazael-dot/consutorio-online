@@ -1,572 +1,539 @@
 <template>
-  <div class="antecedentes-container">
-    <!-- HEADER -->
-    <div class="section-header">
-      <i class="fas fa-history" aria-hidden="true"></i>
-      <h2>Antecedentes Médicos (WORLDSTRIDE - HOJA 2)</h2>
-    </div>
+  <div class="antecedentes">
 
-    <!-- 2.1 ACCIDENTES DE TRABAJO -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>2.1 Accidentes de Trabajo</h3>
-      </div>
-      <div class="card-body">
-        <p class="text-muted small">Registre todos los accidentes laborales previos.</p>
-        
-        <div v-for="(acc, idx) in form.accidentes" :key="idx" class="form-row mb-3 pb-3 border-bottom">
-          <div class="form-group col-md-2">
-            <label>Fecha</label>
-            <input type="date" v-model="acc.fecha" class="form-control" />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Empresa</label>
-            <input type="text" v-model="acc.empresa" class="form-control" />
-          </div>
-          <div class="form-group col-md-2">
-            <label>Tipo Accidente</label>
-            <input type="text" v-model="acc.tipo" class="form-control" placeholder="Caída, golpe..." />
-          </div>
-          <div class="form-group col-md-2">
-            <label>Parte Cuerpo Afectada</label>
-            <input type="text" v-model="acc.parte_cuerpo" class="form-control" />
-          </div>
-          <div class="form-group col-md-1">
-            <label>Días Incapacidad</label>
-            <input type="number" v-model="acc.dias_incapacidad" class="form-control" />
-          </div>
-          <div class="form-group col-md-2">
-            <label>Secuelas</label>
-            <input type="text" v-model="acc.secuelas" class="form-control" placeholder="Ninguna, cicatriz..." />
-          </div>
-        </div>
-
-        <button @click="agregarAccidente" class="btn btn-sm btn-outline-primary mt-2">
-          <i class="fas fa-plus mr-1"></i> Agregar accidente
+    <!-- ===================== 2.1 ACCIDENTES DE TRABAJO ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-user-injured mr-2"></i>2.1 Accidentes de trabajo</span>
+        <button type="button" class="btn btn-sm btn-header" @click="agregarAccidente">
+          <i class="fas fa-plus mr-1"></i>Agregar accidente
         </button>
       </div>
-    </div>
-
-    <!-- 2.2 ANTECEDENTES HEREDO-FAMILIARES -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>2.2 Antecedentes Heredo-Familiares (Marque con X si aplica)</h3>
-      </div>
       <div class="card-body">
-        <p class="text-muted small">Indique si hay enfermedades en la familia y el parentesco.</p>
-        
-        <div class="form-row">
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label>Cáncer</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-cancer" v-model="form.heredo_familiares.cancer.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-cancer">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.cancer.presente" type="text" v-model="form.heredo_familiares.cancer.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
+        <p class="instruccion">Registre todos los accidentes laborales previos. Si no ha tenido ninguno, quite el registro vacío.</p>
 
-            <div class="mb-3">
-              <label>Diabetes</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-diabetes" v-model="form.heredo_familiares.diabetes.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-diabetes">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.diabetes.presente" type="text" v-model="form.heredo_familiares.diabetes.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
+        <p v-if="!local.accidentes.length" class="estado-vacio">
+          Sin accidentes registrados. Usa “Agregar accidente” si el trabajador tuvo alguno.
+        </p>
 
-            <div class="mb-3">
-              <label>Hipertensión arterial</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-hipertension" v-model="form.heredo_familiares.hipertension.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-hipertension">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.hipertension.presente" type="text" v-model="form.heredo_familiares.hipertension.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
+        <div v-for="(acc, i) in local.accidentes" :key="i" class="bloque-repetible">
+          <div class="bloque-titulo">
+            <span>Accidente {{ i + 1 }}</span>
+            <button type="button" class="btn-quitar" :title="`Quitar accidente ${i + 1}`" @click="quitarAccidente(i)">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-2">
+              <label>Fecha</label>
+              <input v-model="acc.fecha" type="date" class="form-control">
             </div>
-
-            <div class="mb-3">
-              <label>Cardiopatías</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-cardio" v-model="form.heredo_familiares.cardiopatias.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-cardio">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.cardiopatias.presente" type="text" v-model="form.heredo_familiares.cardiopatias.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
+            <div class="form-group col-md-4">
+              <label>Empresa</label>
+              <input v-model.trim="acc.empresa" type="text" class="form-control">
             </div>
-
-            <div class="mb-3">
-              <label>Infarto del miocardio</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-infarto" v-model="form.heredo_familiares.infarto.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-infarto">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.infarto.presente" type="text" v-model="form.heredo_familiares.infarto.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
+            <div class="form-group col-md-3">
+              <label>Tipo de accidente</label>
+              <input v-model.trim="acc.tipo" type="text" class="form-control" placeholder="Caída, golpe, corte…">
             </div>
-
-            <div class="mb-3">
-              <label>Accidente cerebrovascular</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-acv" v-model="form.heredo_familiares.acv.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-acv">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.acv.presente" type="text" v-model="form.heredo_familiares.acv.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
-
-            <div class="mb-3">
-              <label>Asma/EPOC/Problemas pulmonares</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-pulmonar" v-model="form.heredo_familiares.pulmonar.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-pulmonar">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.pulmonar.presente" type="text" v-model="form.heredo_familiares.pulmonar.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
-
-            <div class="mb-3">
-              <label>Tuberculosis</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-tb" v-model="form.heredo_familiares.tuberculosis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-tb">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.tuberculosis.presente" type="text" v-model="form.heredo_familiares.tuberculosis.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
+            <div class="form-group col-md-3">
+              <label>Parte del cuerpo afectada</label>
+              <input v-model.trim="acc.parte_cuerpo" type="text" class="form-control">
             </div>
           </div>
-
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label>Enfermedades hepáticas</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-hepatica" v-model="form.heredo_familiares.hepatica.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-hepatica">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.hepatica.presente" type="text" v-model="form.heredo_familiares.hepatica.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
+          <div class="form-row">
+            <div class="form-group col-md-2">
+              <label>Días de incapacidad</label>
+              <input v-model="acc.dias_incapacidad" type="number" min="0" class="form-control">
             </div>
-
-            <div class="mb-3">
-              <label>Enfermedades renales</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-renal" v-model="form.heredo_familiares.renal.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-renal">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.renal.presente" type="text" v-model="form.heredo_familiares.renal.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
-
-            <div class="mb-3">
-              <label>Artritis/Enfermedades reumáticas</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-artritis" v-model="form.heredo_familiares.artritis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-artritis">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.artritis.presente" type="text" v-model="form.heredo_familiares.artritis.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
-
-            <div class="mb-3">
-              <label>Osteoporosis</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-osteo" v-model="form.heredo_familiares.osteoporosis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-osteo">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.osteoporosis.presente" type="text" v-model="form.heredo_familiares.osteoporosis.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
-
-            <div class="mb-3">
-              <label>Depresión/Problemas mentales</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-mental" v-model="form.heredo_familiares.mental.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-mental">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.mental.presente" type="text" v-model="form.heredo_familiares.mental.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
-
-            <div class="mb-3">
-              <label>Alcoholismo/Adicciones</label>
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="hf-adiccion" v-model="form.heredo_familiares.adiccion.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="hf-adiccion">Sí</label>
-              </div>
-              <input v-if="form.heredo_familiares.adiccion.presente" type="text" v-model="form.heredo_familiares.adiccion.parentesco" class="form-control mt-1 form-control-sm" placeholder="Padre, hermano..." />
-            </div>
-
-            <div class="mb-3">
-              <label>Otros antecedentes</label>
-              <textarea v-model="form.heredo_familiares.otros" class="form-control" rows="2" placeholder="Especificar..."></textarea>
+            <div class="form-group col-md-10">
+              <label>Secuelas</label>
+              <input v-model.trim="acc.secuelas" type="text" class="form-control" placeholder="Ninguna, cicatriz, limitación de movimiento…">
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 2.3 PERSONALES NO PATOLÓGICOS -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>2.3 Antecedentes Personales No Patológicos</h3>
+    <!-- ===================== 2.2 ENFERMEDADES LABORALES ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-lungs-virus mr-2"></i>2.2 Enfermedades laborales</span>
       </div>
       <div class="card-body">
+        <p class="instruccion">Registre las enfermedades profesionales diagnosticadas.</p>
+
+        <div v-for="(enf, i) in local.enfermedades_laborales" :key="i" class="bloque-repetible">
+          <div class="bloque-titulo">
+            <span>Enfermedad {{ i + 1 }}</span>
+            <button type="button" class="btn-quitar" :title="`Quitar enfermedad ${i + 1}`" @click="quitarEnfermedadLaboral(i)">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Diagnóstico</label>
+              <input v-model.trim="enf.diagnostico" type="text" class="form-control" placeholder="Nombre de la enfermedad profesional">
+            </div>
+            <div class="form-group col-md-6">
+              <label>Fecha (mm/aa)</label>
+              <input v-model="enf.fecha" type="month" class="form-control">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 2.3 INCAPACIDADES ÚLTIMOS 3 MESES ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-calendar-times mr-2"></i>2.3 Incapacidades últimos 3 meses</span>
+      </div>
+      <div class="card-body">
+        <p class="instruccion">Registre incapacidades por motivos de salud en los últimos 3 meses.</p>
+
+        <div class="form-group mb-3">
+          <label class="opcion">
+            <input v-model="local.incapacidades_3m.tiene" type="checkbox">
+            <span>¿Ha tenido alguna incapacidad por salud en los últimos 3 meses?</span>
+          </label>
+        </div>
+
+        <template v-if="local.incapacidades_3m.tiene">
+          <div v-for="(inc, i) in local.incapacidades_3m.items" :key="i" class="bloque-repetible">
+            <div class="bloque-titulo">
+              <span>Incapacidad {{ i + 1 }}</span>
+              <button type="button" class="btn-quitar" :title="`Quitar incapacidad ${i + 1}`" @click="quitarIncapacidad3m(i)">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+            <div class="form-row">
+              <div class="form-group col-md-8">
+                <label>Motivo</label>
+                <input v-model.trim="inc.motivo" type="text" class="form-control" placeholder="Motivo de la incapacidad">
+              </div>
+              <div class="form-group col-md-4">
+                <label>Número de días</label>
+                <input v-model="inc.dias" type="number" min="0" class="form-control">
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary mt-2" @click="agregarIncapacidad3m">
+            <i class="fas fa-plus mr-1"></i>Agregar incapacidad
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <!-- ===================== 2.4 HEREDO-FAMILIARES ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-users mr-2"></i>2.2 Antecedentes heredo-familiares</span>
+        <span class="contador">{{ contarPresentes(local.heredo_familiares, heredoKeys) }} marcados</span>
+      </div>
+      <div class="card-body">
+        <p class="instruccion">Marque las enfermedades presentes en la familia e indique el parentesco.</p>
+
+        <div class="opciones-grid amplio">
+          <div
+            v-for="op in heredo"
+            :key="op.key"
+            class="opcion-detalle"
+            :class="{ activa: local.heredo_familiares[op.key].presente }"
+          >
+            <label class="opcion">
+              <input v-model="local.heredo_familiares[op.key].presente" type="checkbox">
+              <span>{{ op.label }}</span>
+            </label>
+            <div v-if="local.heredo_familiares[op.key].presente" class="detalle">
+              <input
+                v-model.trim="local.heredo_familiares[op.key].parentesco"
+                type="text"
+                class="form-control"
+                placeholder="Parentesco: padre, madre, abuelo…"
+                :aria-label="`Parentesco: ${op.label}`"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group mt-3 mb-0">
+          <label>Otros antecedentes familiares</label>
+          <textarea v-model="local.heredo_familiares.otros" class="form-control" rows="2" placeholder="Especificar enfermedad y parentesco…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 2.3 NO PATOLÓGICOS ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-walking mr-2"></i>2.3 Antecedentes personales no patológicos</span>
+      </div>
+      <div class="card-body">
+        <p class="instruccion">Seleccione la opción que corresponda. El campo de detalle aparece cuando aplica.</p>
+
         <div class="form-row">
           <div class="form-group col-md-3">
             <label>Tabaquismo</label>
-            <select v-model="form.no_patologicos.tabaquismo" class="form-control">
+            <select v-model="local.no_patologicos.tabaquismo" class="form-control">
               <option value="">Seleccionar</option>
               <option value="nunca">Nunca fumó</option>
-              <option value="exfumador">Ex-fumador</option>
+              <option value="exfumador">Exfumador</option>
               <option value="activo">Fumador activo</option>
             </select>
-            <input v-if="form.no_patologicos.tabaquismo" type="text" v-model="form.no_patologicos.tabaquismo_detalles" class="form-control mt-2 form-control-sm" placeholder="Cigarrillos/día, años..." />
+            <input
+              v-if="local.no_patologicos.tabaquismo && local.no_patologicos.tabaquismo !== 'nunca'"
+              v-model.trim="local.no_patologicos.tabaquismo_detalles"
+              type="text"
+              class="form-control mt-2"
+              placeholder="Cigarrillos/día, años…"
+            >
           </div>
-          
+
           <div class="form-group col-md-3">
             <label>Alcoholismo</label>
-            <select v-model="form.no_patologicos.alcoholismo" class="form-control">
+            <select v-model="local.no_patologicos.alcoholismo" class="form-control">
               <option value="">Seleccionar</option>
               <option value="no">No consume</option>
               <option value="ocasional">Ocasional</option>
               <option value="moderado">Moderado</option>
               <option value="frecuente">Frecuente</option>
             </select>
-            <input v-if="form.no_patologicos.alcoholismo" type="text" v-model="form.no_patologicos.alcoholismo_detalles" class="form-control mt-2 form-control-sm" placeholder="Tipo, frecuencia..." />
+            <input
+              v-if="local.no_patologicos.alcoholismo && local.no_patologicos.alcoholismo !== 'no'"
+              v-model.trim="local.no_patologicos.alcoholismo_detalles"
+              type="text"
+              class="form-control mt-2"
+              placeholder="Tipo, frecuencia…"
+            >
           </div>
 
           <div class="form-group col-md-3">
-            <label>Drogas</label>
-            <div class="custom-control custom-checkbox mb-2">
-              <input type="checkbox" id="drogas-no" v-model="form.no_patologicos.drogas_no" class="custom-control-input" />
-              <label class="custom-control-label" for="drogas-no">No consume</label>
-            </div>
-            <div class="custom-control custom-checkbox">
-              <input type="checkbox" id="drogas-si" v-model="form.no_patologicos.drogas_si" class="custom-control-input" />
-              <label class="custom-control-label" for="drogas-si">Consume (especificar)</label>
-            </div>
-            <input v-if="form.no_patologicos.drogas_si" type="text" v-model="form.no_patologicos.drogas_detalles" class="form-control mt-2 form-control-sm" placeholder="Tipo, frecuencia..." />
-          </div>
-
-          <div class="form-group col-md-3">
-            <label>Actividad Física</label>
-            <select v-model="form.no_patologicos.actividad_fisica" class="form-control">
+            <label>Actividad física</label>
+            <select v-model="local.no_patologicos.actividad_fisica" class="form-control">
               <option value="">Seleccionar</option>
               <option value="sedentario">Sedentario</option>
-              <option value="leve">Leve (1-2x/semana)</option>
-              <option value="moderada">Moderada (3-4x/semana)</option>
+              <option value="leve">Leve (1-2 veces/semana)</option>
+              <option value="moderada">Moderada (3-4 veces/semana)</option>
               <option value="intensa">Intensa (5+ veces/semana)</option>
+            </select>
+          </div>
+
+          <div class="form-group col-md-3">
+            <label>Estrés / problemas emocionales</label>
+            <select v-model="local.no_patologicos.estres" class="form-control">
+              <option value="">Seleccionar</option>
+              <option value="bajo">Bajo</option>
+              <option value="moderado">Moderado</option>
+              <option value="alto">Alto</option>
+              <option value="muy_alto">Muy alto</option>
             </select>
           </div>
         </div>
 
-        <div class="form-group mt-3">
-          <label>Estrés/Problemas Emocionales</label>
-          <select v-model="form.no_patologicos.estres" class="form-control">
-            <option value="">Seleccionar</option>
-            <option value="bajo">Bajo</option>
-            <option value="moderado">Moderado</option>
-            <option value="alto">Alto</option>
-            <option value="muy_alto">Muy alto</option>
-          </select>
-          <textarea v-if="form.no_patologicos.estres" v-model="form.no_patologicos.estres_detalles" class="form-control mt-2" rows="2" placeholder="Causas, síntomas..."></textarea>
+        <div v-if="local.no_patologicos.estres && local.no_patologicos.estres !== 'bajo'" class="form-group">
+          <label>Detalle de estrés</label>
+          <input v-model.trim="local.no_patologicos.estres_detalles" type="text" class="form-control" placeholder="Causas, síntomas…">
+        </div>
+
+        <div class="grupo mt-1">
+          <h6 class="grupo-titulo">Consumo de drogas</h6>
+          <div class="form-row">
+            <div class="col-md-4">
+              <div class="opciones-grid compacto">
+                <label class="opcion" :class="{ activa: consumoDrogas === 'no' }">
+                  <input v-model="consumoDrogas" type="radio" name="consumo_drogas" value="no">
+                  <span>No consume</span>
+                </label>
+                <label class="opcion" :class="{ activa: consumoDrogas === 'si' }">
+                  <input v-model="consumoDrogas" type="radio" name="consumo_drogas" value="si">
+                  <span>Sí consume</span>
+                </label>
+              </div>
+            </div>
+            <div v-if="consumoDrogas === 'si'" class="col-md-8">
+              <input
+                v-model.trim="local.no_patologicos.drogas_detalles"
+                type="text"
+                class="form-control"
+                placeholder="Sustancia, frecuencia, último consumo…"
+                aria-label="Detalle de consumo de drogas"
+              >
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 2.4 GINECO/UROLÓGICO (DINÁMICO POR GÉNERO) -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>2.4 Antecedentes Gineco/Urológico</h3>
+    <!-- ===================== E. VACUNACIÓN ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-syringe mr-2"></i>E. Vacunación</span>
       </div>
       <div class="card-body">
-        <div class="form-group mb-3">
-          <label>Género Biológico:</label>
-          <select v-model="form.genero" class="form-control">
-            <option value="">Seleccionar</option>
-            <option value="M">Masculino</option>
-            <option value="F">Femenino</option>
-            <option value="Otro">Prefiero no especificar</option>
-          </select>
+        <p class="instruccion">Verifique que el esquema de vacunación esté completo.</p>
+
+        <div class="opciones-grid amplio">
+          <div
+            v-for="vacuna in vacunas"
+            :key="vacuna.key"
+            class="opcion-detalle"
+          >
+            <label class="opcion">
+              <input
+                v-model="local.vacunas[vacuna.key].presente"
+                type="checkbox"
+              >
+              <span>{{ vacuna.label }}</span>
+            </label>
+            <div v-if="local.vacunas[vacuna.key].presente" class="detalle">
+              <input
+                v-model="local.vacunas[vacuna.key].fecha"
+                type="month"
+                class="form-control"
+                placeholder="mm/aa"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group mt-3 mb-0">
+          <label>Otros vacunación</label>
+          <textarea v-model="local.vacunas.otros" class="form-control" rows="2"
+            placeholder="Vacuna y fecha…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 2.4 GINECO / UROLÓGICO ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-venus-mars mr-2"></i>2.4 Antecedentes gineco-obstétricos / urológicos</span>
+      </div>
+      <div class="card-body">
+        <p class="instruccion">Seleccione el sexo biológico para mostrar los antecedentes que correspondan.</p>
+
+        <div class="form-row">
+          <div class="form-group col-md-3">
+            <label>Sexo biológico</label>
+            <select v-model="local.genero" class="form-control">
+              <option value="">Seleccionar</option>
+              <option value="F">Femenino</option>
+              <option value="M">Masculino</option>
+              <option value="Otro">Prefiero no especificar</option>
+            </select>
+          </div>
         </div>
 
         <!-- FEMENINO -->
-        <div v-if="form.genero === 'F'" class="row">
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label>Edad de menarquía (primera menstruación)</label>
-              <input type="number" v-model="form.gineco.menarquia" class="form-control" />
+        <template v-if="local.genero === 'F'">
+          <div class="form-row">
+            <div class="form-group col-md-2">
+              <label>Menarquía (edad)</label>
+              <input v-model="local.gineco.menarquia" type="number" min="0" class="form-control">
             </div>
-            <div class="mb-3">
-              <label>Ciclo menstrual (días)</label>
-              <input type="number" v-model="form.gineco.ciclo_dias" class="form-control" placeholder="Ej: 28" />
+            <div class="form-group col-md-2">
+              <label>Ciclo (días)</label>
+              <input v-model="local.gineco.ciclo_dias" type="number" min="0" class="form-control" placeholder="Ej: 28">
             </div>
-            <div class="mb-3">
-              <label>Duración menstruación (días)</label>
-              <input type="number" v-model="form.gineco.duracion_dias" class="form-control" placeholder="Ej: 5" />
+            <div class="form-group col-md-2">
+              <label>Duración (días)</label>
+              <input v-model="local.gineco.duracion_dias" type="number" min="0" class="form-control" placeholder="Ej: 5">
             </div>
-            <div class="mb-3">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="gineco-desorden" v-model="form.gineco.desorden_menstrual" class="custom-control-input" />
-                <label class="custom-control-label" for="gineco-desorden">Desorden menstrual</label>
-              </div>
+            <div class="form-group col-md-2">
+              <label>Gestaciones</label>
+              <input v-model="local.gineco.gestaciones" type="number" min="0" class="form-control">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Partos</label>
+              <input v-model="local.gineco.partos" type="number" min="0" class="form-control">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Abortos</label>
+              <input v-model="local.gineco.abortos" type="number" min="0" class="form-control">
             </div>
           </div>
-          <div class="col-md-6">
-            <div class="mb-3">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="gineco-dismenorrea" v-model="form.gineco.dismenorrea" class="custom-control-input" />
-                <label class="custom-control-label" for="gineco-dismenorrea">Dismenorrea (cólicos intensos)</label>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label>Gestaciones (embarazos)</label>
-              <input type="number" v-model="form.gineco.gestaciones" class="form-control" />
-            </div>
-            <div class="mb-3">
-              <label>Partos</label>
-              <input type="number" v-model="form.gineco.partos" class="form-control" />
-            </div>
-            <div class="mb-3">
-              <label>Abortos</label>
-              <input type="number" v-model="form.gineco.abortos" class="form-control" />
-            </div>
-            <div class="mb-3">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="gineco-anticoncept" v-model="form.gineco.anticonceptivos" class="custom-control-input" />
-                <label class="custom-control-label" for="gineco-anticoncept">Usa anticonceptivos</label>
+
+          <h6 class="grupo-titulo">Marque si presenta</h6>
+          <div class="opciones-grid">
+            <label
+              v-for="op in ginecoOpciones"
+              :key="op.key"
+              class="opcion"
+              :class="{ activa: local.gineco[op.key] }"
+            >
+              <input v-model="local.gineco[op.key]" type="checkbox">
+              <span>{{ op.label }}</span>
+            </label>
+          </div>
+        </template>
+
+        <!-- MASCULINO -->
+        <template v-if="local.genero === 'M'">
+          <h6 class="grupo-titulo">Marque si presenta</h6>
+          <div class="opciones-grid">
+            <label
+              v-for="op in uroOpciones"
+              :key="op.key"
+              class="opcion"
+              :class="{ activa: local.urologo[op.key] }"
+            >
+              <input v-model="local.urologo[op.key]" type="checkbox">
+              <span>{{ op.label }}</span>
+            </label>
+          </div>
+          <div class="form-group mt-3 mb-0">
+            <label>Otras alteraciones urológicas</label>
+            <textarea v-model="local.urologo.otros" class="form-control" rows="2" placeholder="Especificar…"></textarea>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ===================== 2.5 PATOLÓGICOS ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-notes-medical mr-2"></i>2.5 Antecedentes personales patológicos</span>
+        <span class="contador">{{ contarPresentes(local.patologicos, patologicosKeys) }} marcadas</span>
+      </div>
+      <div class="card-body">
+        <p class="instruccion">Marque las enfermedades que ha padecido e indique año de diagnóstico y estado actual.</p>
+
+        <div v-for="grupo in gruposPatologicos" :key="grupo.titulo" class="grupo">
+          <h6 class="grupo-titulo">{{ grupo.titulo }}</h6>
+          <div class="opciones-grid amplio">
+            <div
+              v-for="op in grupo.opciones"
+              :key="op.key"
+              class="opcion-detalle"
+              :class="{ activa: local.patologicos[op.key].presente }"
+            >
+              <label class="opcion">
+                <input v-model="local.patologicos[op.key].presente" type="checkbox">
+                <span>{{ op.label }}</span>
+              </label>
+              <div v-if="local.patologicos[op.key].presente" class="detalle">
+                <input
+                  v-model.trim="local.patologicos[op.key].observaciones"
+                  type="text"
+                  class="form-control"
+                  :placeholder="op.placeholder || 'Año, estado actual…'"
+                  :aria-label="`Observaciones: ${op.label}`"
+                >
               </div>
             </div>
           </div>
         </div>
 
-        <!-- MASCULINO -->
-        <div v-if="form.genero === 'M'" class="row">
-          <div class="col-md-6">
-            <div class="mb-3">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="uro-disfuncion" v-model="form.urologo.disfuncion_erectil" class="custom-control-input" />
-                <label class="custom-control-label" for="uro-disfuncion">Disfunción eréctil</label>
-              </div>
-            </div>
-            <div class="mb-3">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="uro-infertilidad" v-model="form.urologo.infertilidad" class="custom-control-input" />
-                <label class="custom-control-label" for="uro-infertilidad">Infertilidad</label>
-              </div>
-            </div>
-            <div class="mb-3">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="uro-prostata" v-model="form.urologo.problemas_prostaticos" class="custom-control-input" />
-                <label class="custom-control-label" for="uro-prostata">Problemas prostáticos</label>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="mb-3">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="uro-iti" v-model="form.urologo.infecciones_urinarias" class="custom-control-input" />
-                <label class="custom-control-label" for="uro-iti">Infecciones urinarias recurrentes</label>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label>Otras alteraciones urológicas</label>
-              <textarea v-model="form.urologo.otros" class="form-control" rows="2" placeholder="Especificar..."></textarea>
-            </div>
-          </div>
+        <div class="form-group mt-3 mb-0">
+          <label>Otras enfermedades o condiciones relevantes</label>
+          <textarea v-model="local.patologicos.otros" class="form-control" rows="2" placeholder="Diagnóstico, año, estado actual…"></textarea>
         </div>
       </div>
     </div>
 
-    <!-- 2.5 PERSONALES PATOLÓGICOS (40+ ENFERMEDADES) -->
-    <div class="card-section">
-      <div class="card-header">
-        <h3>2.5 Antecedentes Personales Patológicos (Marque las enfermedades que ha padecido)</h3>
+    <!-- ===================== 2.6 CIRUGÍAS/ACCIDENTES NO LABORALES ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-hospital-user mr-2"></i>2.6 Cirugías / Accidentes no laborales</span>
       </div>
       <div class="card-body">
-        <p class="text-muted small mb-3">Registre todas las enfermedades diagnosticadas, año aproximado y estado actual.</p>
+        <p class="instruccion">Registre cirugías o accidentes ocurridos fuera del trabajo.</p>
 
-        <div class="form-row">
-          <!-- COLUMNA 1: SISTEMA CARDIOVASCULAR -->
-          <div class="col-md-6">
-            <h5 class="border-bottom pb-2 mb-3">Sistema Cardiovascular</h5>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-hipertension" v-model="form.patologicos.hipertension.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-hipertension">Hipertensión arterial</label>
-              </div>
-              <input v-if="form.patologicos.hipertension.presente" type="text" v-model="form.patologicos.hipertension.observaciones" class="form-control mt-1 form-control-sm" placeholder="Año, estado actual..." />
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-cardiopatia" v-model="form.patologicos.cardiopatia.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-cardiopatia">Cardiopatía</label>
-              </div>
-              <input v-if="form.patologicos.cardiopatia.presente" type="text" v-model="form.patologicos.cardiopatia.observaciones" class="form-control mt-1 form-control-sm" placeholder="Año, tipo..." />
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-infarto" v-model="form.patologicos.infarto.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-infarto">Infarto del miocardio</label>
-              </div>
-              <input v-if="form.patologicos.infarto.presente" type="text" v-model="form.patologicos.infarto.observaciones" class="form-control mt-1 form-control-sm" placeholder="Año..." />
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-arritmia" v-model="form.patologicos.arritmia.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-arritmia">Arritmias cardíacas</label>
-              </div>
-            </div>
-
-            <h5 class="border-bottom pb-2 mb-3 mt-4">Sistema Respiratorio</h5>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-asma" v-model="form.patologicos.asma.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-asma">Asma</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-epoc" v-model="form.patologicos.epoc.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-epoc">EPOC/Enfisema</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-tuberculosis" v-model="form.patologicos.tuberculosis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-tuberculosis">Tuberculosis</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-neumonía" v-model="form.patologicos.neumonia.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-neumonía">Neumonía</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-silicosis" v-model="form.patologicos.silicosis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-silicosis">Silicosis/Neumoconiosis</label>
-              </div>
-            </div>
-
-            <h5 class="border-bottom pb-2 mb-3 mt-4">Sistema Digestivo</h5>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-ulcera" v-model="form.patologicos.ulcera.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-ulcera">Úlcera gástrica/duodenal</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-gastritis" v-model="form.patologicos.gastritis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-gastritis">Gastritis crónica</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-hepatitis" v-model="form.patologicos.hepatitis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-hepatitis">Hepatitis</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-cirrosis" v-model="form.patologicos.cirrosis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-cirrosis">Cirrosis hepática</label>
-              </div>
-            </div>
+        <div v-for="(item, i) in local.cirugias_accidentes_no_laborales" :key="i" class="bloque-repetible">
+          <div class="bloque-titulo">
+            <span>Cirugía/Accidente {{ i + 1 }}</span>
+            <button type="button" class="btn-quitar" :title="`Quitar registro ${i + 1}`" @click="quitarRegistroRepetible('cirugias_accidentes_no_laborales', i)">
+              <i class="fas fa-trash-alt"></i>
+            </button>
           </div>
-
-          <!-- COLUMNA 2: OTROS SISTEMAS -->
-          <div class="col-md-6">
-            <h5 class="border-bottom pb-2 mb-3">Sistema Endocrino</h5>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-diabetes" v-model="form.patologicos.diabetes.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-diabetes">Diabetes</label>
-              </div>
-              <input v-if="form.patologicos.diabetes.presente" type="text" v-model="form.patologicos.diabetes.observaciones" class="form-control mt-1 form-control-sm" placeholder="Tipo, año..." />
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-hipertiroidismo" v-model="form.patologicos.hipertiroidismo.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-hipertiroidismo">Hipertiroidismo</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-hipotiroidismo" v-model="form.patologicos.hipotiroidismo.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-hipotiroidismo">Hipotiroidismo</label>
-              </div>
-            </div>
-
-            <h5 class="border-bottom pb-2 mb-3 mt-4">Sistema Renal/Urológico</h5>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-nefritis" v-model="form.patologicos.nefritis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-nefritis">Nefritis/Problemas renales</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-litasis" v-model="form.patologicos.litiasis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-litasis">Litiasis renal (piedras)</label>
-              </div>
-            </div>
-
-            <h5 class="border-bottom pb-2 mb-3 mt-4">Sistema Osteomuscular</h5>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-artrosis" v-model="form.patologicos.artrosis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-artrosis">Artrosis</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-artritis" v-model="form.patologicos.artritis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-artritis">Artritis reumatoide</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-osteoporosis" v-model="form.patologicos.osteoporosis.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-osteoporosis">Osteoporosis</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-hernia" v-model="form.patologicos.hernia_discal.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-hernia">Hernia discal</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-sindrome-tunel" v-model="form.patologicos.sindrome_tunel_carpal.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-sindrome-tunel">Síndrome del túnel carpiano</label>
-              </div>
-            </div>
-
-            <h5 class="border-bottom pb-2 mb-3 mt-4">Sistema Nervioso</h5>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-epilepsia" v-model="form.patologicos.epilepsia.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-epilepsia">Epilepsia</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-migraña" v-model="form.patologicos.migraña.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-migraña">Migraña/Cefaleas crónicas</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-depresion" v-model="form.patologicos.depresion.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-depresion">Depresión</label>
-              </div>
-            </div>
-            <div class="mb-2">
-              <div class="custom-control custom-checkbox">
-                <input type="checkbox" id="pat-ansiedad" v-model="form.patologicos.ansiedad.presente" class="custom-control-input" />
-                <label class="custom-control-label" for="pat-ansiedad">Trastorno de ansiedad</label>
-              </div>
+          <div class="form-row">
+            <div class="form-group col-md-12">
+              <label>Descripción</label>
+              <textarea v-model.trim="item.descripcion" type="text" class="form-control" placeholder="Cirugía, accidente, motivo, parte del cuerpo, fecha…"></textarea>
             </div>
           </div>
         </div>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" @click="agregarRegistroRepetible('cirugias_accidentes_no_laborales')">
+          <i class="fas fa-plus mr-1"></i>Agregar registro
+        </button>
+      </div>
+    </div>
 
-        <div class="form-group mt-4">
-          <label>Otras enfermedades o condiciones relevantes</label>
-          <textarea v-model="form.patologicos.otros" class="form-control" rows="3" placeholder="Especificar diagnósticos, años, estado actual..."></textarea>
+    <!-- ===================== 2.7 ALERGIAS ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-star-of-life mr-2"></i>2.7 Alergias</span>
+      </div>
+      <div class="card-body">
+        <p class="instruccion">Registre alergias a medicamentos, alimentos o sustancias.</p>
+
+        <div v-for="(alergia, i) in local.alergias" :key="i" class="bloque-repetible">
+          <div class="bloque-titulo">
+            <span>Alergia {{ i + 1 }}</span>
+            <button type="button" class="btn-quitar" :title="`Quitar alergia ${i + 1}`" @click="quitarRegistroRepetible('alergias', i)">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Sustancia</label>
+              <input v-model.trim="alergia.sustancia" type="text" class="form-control" placeholder="Ej: Penicilina, mariscos…">
+            </div>
+            <div class="form-group col-md-4">
+              <label>Tipo de reacción</label>
+              <select v-model="alergia.tipo_reaccion" class="form-control">
+                <option value="">Seleccionar</option>
+                <option value="leve">Leve (sarpullido, picazón)</option>
+                <option value="moderada">Moderada (dificultad respiratoria)</option>
+                <option value="severa">Severa (anafilaxia)</option>
+              </select>
+            </div>
+            <div class="form-group col-md-2">
+              <label>Hospitalización</label>
+              <select v-model="alergia.hospitalizacion" class="form-control">
+                <option value="">Seleccionar</option>
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+              </select>
+            </div>
+          </div>
         </div>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" @click="agregarRegistroRepetible('alergias')">
+          <i class="fas fa-plus mr-1"></i>Agregar alergia
+        </button>
+      </div>
+    </div>
+
+    <!-- ===================== 2.8 TRANSUSIONES SANGUÍNEAS ===================== -->
+    <div class="card ficha-card">
+      <div class="card-header ficha-header">
+        <span><i class="fas fa-blood-type mr-2"></i>2.8 Transfusiones sanguíneas</span>
+      </div>
+      <div class="card-body">
+        <p class="instruccion">Registre transfusiones sanguíneas previas.</p>
+
+        <div v-for="(transf, i) in local.transfusiones" :key="i" class="bloque-repetible">
+          <div class="bloque-titulo">
+            <span>Transfusión {{ i + 1 }}</span>
+            <button type="button" class="btn-quitar" :title="`Quitar transfusión ${i + 1}`" @click="quitarRegistroRepetible('transfusiones', i)">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Motivo</label>
+              <input v-model.trim="transf.motivo" type="text" class="form-control" placeholder="Motivo de la transfusión">
+            </div>
+            <div class="form-group col-md-6">
+              <label>Fecha (mm/aa)</label>
+              <input v-model="transf.fecha" type="month" class="form-control">
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" @click="agregarRegistroRepetible('transfusiones')">
+          <i class="fas fa-plus mr-1"></i>Agregar transfusión
+        </button>
       </div>
     </div>
 
@@ -574,179 +541,304 @@
 </template>
 
 <script>
-export default {
-  name: 'AntecedentesCompletos',
-  props: {
-    modelValue: {
-      type: Object,
-      required: true
-    }
+import modeloSincronizado from '../../mixins/modeloSincronizado'
+
+// ---------------------------------------------------------------------------
+// Catálogos (las claves coinciden con form.antecedentes del Master)
+// ---------------------------------------------------------------------------
+const HEREDO = [
+  { key: 'cancer', label: 'Cáncer' },
+  { key: 'diabetes', label: 'Diabetes' },
+  { key: 'hipertension', label: 'Hipertensión arterial' },
+  { key: 'cardiopatias', label: 'Cardiopatías' },
+  { key: 'infarto', label: 'Infarto del miocardio' },
+  { key: 'acv', label: 'Accidente cerebrovascular' },
+  { key: 'pulmonar', label: 'Asma/EPOC/problemas pulmonares' },
+  { key: 'tuberculosis', label: 'Tuberculosis' },
+  { key: 'hepatica', label: 'Enfermedades hepáticas' },
+  { key: 'renal', label: 'Enfermedades renales' },
+  { key: 'artritis', label: 'Artritis/enfermedades reumáticas' },
+  { key: 'osteoporosis', label: 'Osteoporosis' },
+  { key: 'mental', label: 'Depresión/problemas mentales' },
+  { key: 'adiccion', label: 'Alcoholismo/adicciones' },
+]
+
+const GRUPOS_PATOLOGICOS = [
+  {
+    titulo: 'Cardiovascular',
+    opciones: [
+      { key: 'hipertension', label: 'Hipertensión arterial' },
+      { key: 'cardiopatia', label: 'Cardiopatía', placeholder: 'Año, tipo…' },
+      { key: 'infarto', label: 'Infarto del miocardio', placeholder: 'Año, secuelas…' },
+      { key: 'arritmia', label: 'Arritmias cardíacas' },
+    ],
   },
-  emits: ['update:modelValue'],
+  {
+    titulo: 'Respiratorio',
+    opciones: [
+      { key: 'asma', label: 'Asma' },
+      { key: 'epoc', label: 'EPOC/enfisema' },
+      { key: 'tuberculosis', label: 'Tuberculosis', placeholder: 'Año, tratamiento completo…' },
+      { key: 'neumonia', label: 'Neumonía' },
+      { key: 'silicosis', label: 'Silicosis/neumoconiosis' },
+    ],
+  },
+  {
+    titulo: 'Digestivo',
+    opciones: [
+      { key: 'ulcera', label: 'Úlcera gástrica/duodenal' },
+      { key: 'gastritis', label: 'Gastritis crónica' },
+      { key: 'hepatitis', label: 'Hepatitis', placeholder: 'Tipo (A, B, C), año…' },
+      { key: 'cirrosis', label: 'Cirrosis hepática' },
+    ],
+  },
+  {
+    titulo: 'Endocrino',
+    opciones: [
+      { key: 'diabetes', label: 'Diabetes', placeholder: 'Tipo, año, control…' },
+      { key: 'hipertiroidismo', label: 'Hipertiroidismo' },
+      { key: 'hipotiroidismo', label: 'Hipotiroidismo' },
+    ],
+  },
+  {
+    titulo: 'Renal / urológico',
+    opciones: [
+      { key: 'nefritis', label: 'Nefritis/problemas renales' },
+      { key: 'litiasis', label: 'Litiasis renal (piedras)' },
+    ],
+  },
+  {
+    titulo: 'Osteomuscular',
+    opciones: [
+      { key: 'artrosis', label: 'Artrosis' },
+      { key: 'artritis', label: 'Artritis reumatoide' },
+      { key: 'osteoporosis', label: 'Osteoporosis' },
+      { key: 'hernia_discal', label: 'Hernia discal', placeholder: 'Nivel, año, cirugía…' },
+      { key: 'sindrome_tunel_carpal', label: 'Síndrome del túnel carpiano', placeholder: 'Lado, año…' },
+    ],
+  },
+  {
+    titulo: 'Neurológico y salud mental',
+    opciones: [
+      { key: 'epilepsia', label: 'Epilepsia', placeholder: 'Última crisis, tratamiento…' },
+      { key: 'migraña', label: 'Migraña/cefaleas crónicas' },
+      { key: 'depresion', label: 'Depresión' },
+      { key: 'ansiedad', label: 'Trastorno de ansiedad' },
+    ],
+  },
+]
+
+const GINECO_OPCIONES = [
+  { key: 'desorden_menstrual', label: 'Desorden menstrual' },
+  { key: 'dismenorrea', label: 'Dismenorrea (cólicos intensos)' },
+  { key: 'anticonceptivos', label: 'Usa anticonceptivos' },
+]
+
+const URO_OPCIONES = [
+  { key: 'disfuncion_erectil', label: 'Disfunción eréctil' },
+  { key: 'infertilidad', label: 'Infertilidad' },
+  { key: 'problemas_prostaticos', label: 'Problemas prostáticos' },
+  { key: 'infecciones_urinarias', label: 'Infecciones urinarias recurrentes' },
+]
+
+const VACUNAS = [
+  { key: 'covid19', label: 'COVID-19' },
+  { key: 'td', label: 'Tétanos/Difteria (Td)' },
+  { key: 'tdpa', label: 'Tétanos/Difteria/Tos ferina (Tdpa)' },
+  { key: 'influenza', label: 'Influenza' },
+  { key: 'hepatitis_ab', label: 'Hepatitis A/B' },
+  { key: 'sr', label: 'Sarampión/Rubéola (SR)' },
+]
+
+const accidenteVacio = () => ({
+  fecha: '', empresa: '', tipo: '', parte_cuerpo: '', dias_incapacidad: '', secuelas: '',
+})
+
+const presenteVacio = (campo) => ({ presente: false, [campo]: '' })
+
+const crearVacio = () => ({
+  accidentes: [accidenteVacio()],
+  enfermedades_laborales: [
+    { diagnostico: '', fecha: '' },
+    { diagnostico: '', fecha: '' },
+    { diagnostico: '', fecha: '' }
+  ],
+  incapacidades_3m: {
+    tiene: false,
+    items: [{ motivo: '', dias: '' }, { motivo: '', dias: '' }]
+  },
+  vacunas: {
+    covid19: { presente: false, fecha: '' },
+    td: { presente: false, fecha: '' },
+    tdpa: { presente: false, fecha: '' },
+    influenza: { presente: false, fecha: '' },
+    hepatitis_ab: { presente: false, fecha: '' },
+    sr: { presente: false, fecha: '' },
+    otros: ''
+  },
+  cirugias_accidentes_no_laborales: [{ descripcion: '' }],
+  alergias: [{ sustancia: '', reaccion: '', hospitalizacion: false }],
+  transfusiones: [{ motivo: '', fecha: '' }],
+  heredo_familiares: {
+    ...Object.fromEntries(HEREDO.map(h => [h.key, presenteVacio('parentesco')])),
+    otros: '',
+  },
+  no_patologicos: {
+    tabaquismo: '',
+    tabaquismo_detalles: '',
+    alcoholismo: '',
+    alcoholismo_detalles: '',
+    drogas_no: true,
+    drogas_si: false,
+    drogas_detalles: '',
+    actividad_fisica: '',
+    estres: '',
+    estres_detalles: '',
+  },
+  genero: '',
+  gineco: {
+    menarquia: '',
+    ciclo_dias: '',
+    duracion_dias: '',
+    desorden_menstrual: false,
+    dismenorrea: false,
+    gestaciones: '',
+    partos: '',
+    abortos: '',
+    anticonceptivos: false,
+  },
+  urologo: {
+    disfuncion_erectil: false,
+    infertilidad: false,
+    problemas_prostaticos: false,
+    infecciones_urinarias: false,
+    otros: '',
+  },
+  patologicos: {
+    ...Object.fromEntries(
+      GRUPOS_PATOLOGICOS.flatMap(g => g.opciones).map(o => [o.key, presenteVacio('observaciones')])
+    ),
+    otros: '',
+  },
+})
+
+// Convierte el género de Datos del puesto (M/F/Masculino/Mujer…) al formato de esta hoja
+const mapearGenero = (valor) => {
+  const g = String(valor || '').trim().toUpperCase()
+  if (['M', 'MASCULINO', 'HOMBRE', 'H'].includes(g)) return 'M'
+  if (['F', 'FEMENINO', 'MUJER'].includes(g)) return 'F'
+  return ''
+}
+
+export default {
+  name: 'Antecedentes',
+
+  mixins: [modeloSincronizado(crearVacio)],
+
+  props: {
+    // Opcional: pásale form.datos_puesto para precargar el sexo biológico
+    datosPuesto: { type: Object, default: null },
+  },
+
   data() {
     return {
-      form: this.modelValue || {
-        accidentes: [{ fecha: '', empresa: '', tipo: '', parte_cuerpo: '', dias_incapacidad: '', secuelas: '' }],
-        heredo_familiares: {
-          cancer: { presente: false, parentesco: '' },
-          diabetes: { presente: false, parentesco: '' },
-          hipertension: { presente: false, parentesco: '' },
-          cardiopatias: { presente: false, parentesco: '' },
-          infarto: { presente: false, parentesco: '' },
-          acv: { presente: false, parentesco: '' },
-          pulmonar: { presente: false, parentesco: '' },
-          tuberculosis: { presente: false, parentesco: '' },
-          hepatica: { presente: false, parentesco: '' },
-          renal: { presente: false, parentesco: '' },
-          artritis: { presente: false, parentesco: '' },
-          osteoporosis: { presente: false, parentesco: '' },
-          mental: { presente: false, parentesco: '' },
-          adiccion: { presente: false, parentesco: '' },
-          otros: ''
-        },
-        no_patologicos: {
-          tabaquismo: '',
-          tabaquismo_detalles: '',
-          alcoholismo: '',
-          alcoholismo_detalles: '',
-          drogas_no: true,
-          drogas_si: false,
-          drogas_detalles: '',
-          actividad_fisica: '',
-          estres: '',
-          estres_detalles: ''
-        },
-        genero: '',
-        gineco: {
-          menarquia: '',
-          ciclo_dias: '',
-          duracion_dias: '',
-          desorden_menstrual: false,
-          dismenorrea: false,
-          gestaciones: '',
-          partos: '',
-          abortos: '',
-          anticonceptivos: false
-        },
-        urologo: {
-          disfuncion_erectil: false,
-          infertilidad: false,
-          problemas_prostaticos: false,
-          infecciones_urinarias: false,
-          otros: ''
-        },
-        patologicos: {
-          hipertension: { presente: false, observaciones: '' },
-          cardiopatia: { presente: false, observaciones: '' },
-          infarto: { presente: false, observaciones: '' },
-          arritmia: { presente: false, observaciones: '' },
-          asma: { presente: false, observaciones: '' },
-          epoc: { presente: false, observaciones: '' },
-          tuberculosis: { presente: false, observaciones: '' },
-          neumonia: { presente: false, observaciones: '' },
-          silicosis: { presente: false, observaciones: '' },
-          ulcera: { presente: false, observaciones: '' },
-          gastritis: { presente: false, observaciones: '' },
-          hepatitis: { presente: false, observaciones: '' },
-          cirrosis: { presente: false, observaciones: '' },
-          diabetes: { presente: false, observaciones: '' },
-          hipertiroidismo: { presente: false, observaciones: '' },
-          hipotiroidismo: { presente: false, observaciones: '' },
-          nefritis: { presente: false, observaciones: '' },
-          litiasis: { presente: false, observaciones: '' },
-          artrosis: { presente: false, observaciones: '' },
-          artritis: { presente: false, observaciones: '' },
-          osteoporosis: { presente: false, observaciones: '' },
-          hernia_discal: { presente: false, observaciones: '' },
-          sindrome_tunel_carpal: { presente: false, observaciones: '' },
-          epilepsia: { presente: false, observaciones: '' },
-          migraña: { presente: false, observaciones: '' },
-          depresion: { presente: false, observaciones: '' },
-          ansiedad: { presente: false, observaciones: '' },
-          otros: ''
-        }
-      }
+      heredo: HEREDO,
+      gruposPatologicos: GRUPOS_PATOLOGICOS,
+      ginecoOpciones: GINECO_OPCIONES,
+      uroOpciones: URO_OPCIONES,
+      vacunas: VACUNAS,
     }
   },
+
+  computed: {
+    heredoKeys() {
+      return HEREDO.map(h => h.key)
+    },
+    patologicosKeys() {
+      return GRUPOS_PATOLOGICOS.flatMap(g => g.opciones.map(o => o.key))
+    },
+    // Un solo control para los dos booleanos que ya guarda el Master
+    consumoDrogas: {
+      get() {
+        const np = this.local.no_patologicos
+        if (np.drogas_si) return 'si'
+        if (np.drogas_no) return 'no'
+        return ''
+      },
+      set(valor) {
+        this.local.no_patologicos.drogas_si = valor === 'si'
+        this.local.no_patologicos.drogas_no = valor === 'no'
+        if (valor !== 'si') this.local.no_patologicos.drogas_detalles = ''
+      },
+    },
+  },
+
+  mounted() {
+    if (!this.local.genero && this.datosPuesto?.genero) {
+      const genero = mapearGenero(this.datosPuesto.genero)
+      if (genero) this.local.genero = genero
+    }
+  },
+
   methods: {
     agregarAccidente() {
-      this.form.accidentes.push({
-        fecha: '',
-        empresa: '',
-        tipo: '',
-        parte_cuerpo: '',
-        dias_incapacidad: '',
-        secuelas: ''
-      })
-    }
-  },
-  watch: {
-    modelValue(newVal) {
-      this.form = newVal
+      this.local.accidentes.push(accidenteVacio())
     },
-    form: {
-      handler(newVal) {
-        this.$emit('update:modelValue', newVal)
-      },
-      deep: true
-    }
-  }
+
+    quitarAccidente(i) {
+      const acc = this.local.accidentes[i]
+      const tieneDatos = Object.values(acc).some(v => String(v ?? '').trim() !== '')
+      if (tieneDatos && !window.confirm(`¿Quitar el accidente ${i + 1}?`)) return
+      this.local.accidentes.splice(i, 1)
+    },
+
+    agregarRegistroRepetible(campo) {
+      const max = { cirugias_accidentes_no_laborales: 10, alergias: 10, transfusiones: 10 }
+      if (this.local[campo].length >= max[campo]) return
+      const vacios = {
+        cirugias_accidentes_no_laborales: { descripcion: '' },
+        alergias: { sustancia: '', tipo_reaccion: '', hospitalizacion: false },
+        transfusiones: { motivo: '', fecha: '' }
+      }
+      this.local[campo].push(vacios[campo] || {})
+    },
+
+    quitarRegistroRepetible(campo, i) {
+      const item = this.local[campo][i]
+      const tieneDatos = Object.values(item).some(v => String(v ?? '').trim() !== '')
+      if (tieneDatos && !window.confirm(`¿Quitar el registro ${i + 1}?`)) return
+      this.local[campo].splice(i, 1)
+    },
+
+    agregarIncapacidad3m() {
+      if (this.local.incapacidades_3m.items.length >= 2) return
+      this.local.incapacidades_3m.items.push({ motivo: '', dias: '' })
+    },
+
+    quitarIncapacidad3m(i) {
+      const item = this.local.incapacidades_3m.items[i]
+      const tieneDatos = Object.values(item).some(v => String(v ?? '').trim() !== '')
+      if (tieneDatos && !window.confirm(`¿Quitar la incapacidad ${i + 1}?`)) return
+      this.local.incapacidades_3m.items.splice(i, 1)
+    },
+
+    agregarEnfermedadLaboral() {
+      if (this.local.enfermedades_laborales.length >= 3) return
+      this.local.enfermedades_laborales.push({ diagnostico: '', fecha: '' })
+    },
+
+    quitarEnfermedadLaboral(i) {
+      const item = this.local.enfermedades_laborales[i]
+      const tieneDatos = Object.values(item).some(v => String(v ?? '').trim() !== '')
+      if (tieneDatos && !window.confirm(`¿Quitar la enfermedad ${i + 1}?`)) return
+      this.local.enfermedades_laborales.splice(i, 1)
+    },
+
+    contarPresentes(obj, keys) {
+      return keys.filter(k => obj[k]?.presente).length
+    },
+  },
 }
 </script>
 
-<style scoped>
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 1rem;
-}
-
-.section-header i {
-  font-size: 24px;
-  color: #5F6E7E;
-}
-
-.section-header h2 {
-  font-size: 18px;
-  font-weight: 500;
-  color: #1F2937;
-  margin: 0;
-}
-
-.card-section {
-  background: #FFFFFF;
-  border: 0.5px solid #E5E7EB;
-  border-radius: 6px;
-  margin-bottom: 2rem;
-}
-
-.card-header {
-  background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%);
-  padding: 12px 20px;
-}
-
-.card-header h3 {
-  font-size: 14px;
-  font-weight: 500;
-  color: #FFFFFF;
-  margin: 0;
-}
-
-.card-body {
-  padding: 20px;
-}
-
-.form-control {
-  padding: 10px 12px;
-  border: 0.5px solid #D1D5DB;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-h5 {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1F2937;
-}
-</style>
+<style scoped src="../../estilos/ficha-ocupacional.css"></style>

@@ -43,6 +43,8 @@ use App\Http\Controllers\ClinicaTrabajo\ValoracionAudiologiaController;
 use App\Http\Controllers\ClinicaTrabajo\ValoracionErgonomicaController;
 use App\Http\Controllers\ClinicaTrabajo\ValoracionMedicinaController;
 use App\Http\Controllers\ClinicaTrabajo\CatalogoController;
+use App\Http\Controllers\ClinicaTrabajo\AudiologiaDELLIController;
+use App\Http\Controllers\ClinicaTrabajo\AudiologiaTRController;
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -51,9 +53,9 @@ Route::middleware('auth')->group(function () {
 
         //VISTAS PARA EL MODULO MEDICINA-TRABAJO//
          // ========== MEDICINA OCUPACIONAL ==========
-        Route::get('/clinica/medicina', function () {
-            return view('clinica-trabajo.Medicina');
-        })->name('clinica.medicina.index');
+        // Route::get('/clinica/medicina', function () {
+        //     return view('clinica-trabajo.Medicina');
+        // })->name('clinica.medicina.index');
         
         Route::get('/clinica/medicina/nueva', function () {
             return view('clinica-trabajo.Medicina');
@@ -71,7 +73,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/clinica/psicologia/{id}', function () {
             return view('clinica-trabajo.Psicologia');
         })->name('clinica.psicologia.show');
-        
+
+        // API PARA PSICOLOGÍA (JSON)
+        Route::prefix('api/clinica/psicologia')->name('api.psicologia.')->group(function () {
+            Route::get('/', [ValoracionPsicologicaController::class, 'index'])->name('index');
+            Route::get('{id}', [ValoracionPsicologicaController::class, 'show'])->name('show');
+            Route::post('/', [ValoracionPsicologicaController::class, 'store'])->name('store');
+            Route::put('{id}', [ValoracionPsicologicaController::class, 'update'])->name('update');
+            Route::delete('{id}', [ValoracionPsicologicaController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [ValoracionPsicologicaController::class, 'imprimir'])->name('imprimir');
+        });
+
         // ========== NUTRICIÓN OCUPACIONAL ==========
         Route::get('/clinica/nutricion', function () {
             return view('clinica-trabajo.Nutricion');
@@ -84,19 +96,29 @@ Route::middleware('auth')->group(function () {
         Route::get('/clinica/nutricion/{id}', function () {
             return view('clinica-trabajo.Nutricion');
         })->name('clinica.nutricion.show');
+
+        // API PARA NUTRICIÓN (JSON)
+        Route::prefix('api/clinica/nutricion')->name('api.nutricion.')->group(function () {
+            Route::get('/', [ValoracionNutricionController::class, 'index'])->name('index');
+            Route::get('{id}', [ValoracionNutricionController::class, 'show'])->name('show');
+            Route::post('/', [ValoracionNutricionController::class, 'store'])->name('store');
+            Route::put('{id}', [ValoracionNutricionController::class, 'update'])->name('update');
+            Route::delete('{id}', [ValoracionNutricionController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [ValoracionNutricionController::class, 'imprimir'])->name('imprimir');
+        });
+
+        // // ========== AUDIOLOGÍA OCUPACIONAL ==========
+        // Route::get('/clinica/audiologia', function () {
+        //     return view('clinica-trabajo.Audiologia');
+        // })->name('clinica.audiologia.index');
         
-        // ========== AUDIOLOGÍA OCUPACIONAL ==========
-        Route::get('/clinica/audiologia', function () {
-            return view('clinica-trabajo.Audiologia');
-        })->name('clinica.audiologia.index');
+        // Route::get('/clinica/audiologia/nueva', function () {
+        //     return view('clinica-trabajo.Audiologia');
+        // })->name('clinica.audiologia.create');
         
-        Route::get('/clinica/audiologia/nueva', function () {
-            return view('clinica-trabajo.Audiologia');
-        })->name('clinica.audiologia.create');
-        
-        Route::get('/clinica/audiologia/{id}', function () {
-            return view('clinica-trabajo.Audiologia');
-        })->name('clinica.audiologia.show');
+        // Route::get('/clinica/audiologia/{id}', function () {
+        //     return view('clinica-trabajo.Audiologia');
+        // })->name('clinica.audiologia.show');
         
         // ========== ERGONOMÍA OCUPACIONAL ==========
         Route::get('/clinica/ergonomia', function () {
@@ -111,10 +133,20 @@ Route::middleware('auth')->group(function () {
             return view('clinica-trabajo.Ergonomia');
         })->name('clinica.ergonomia.show');
 
+        // API PARA ERGONOMÍA (JSON)
+        Route::prefix('api/clinica/ergonomia')->name('api.ergonomia.')->group(function () {
+            Route::get('/', [ValoracionErgonomicaController::class, 'index'])->name('index');
+            Route::get('{id}', [ValoracionErgonomicaController::class, 'show'])->name('show');
+            Route::post('/', [ValoracionErgonomicaController::class, 'store'])->name('store');
+            Route::put('{id}', [ValoracionErgonomicaController::class, 'update'])->name('update');
+            Route::delete('{id}', [ValoracionErgonomicaController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [ValoracionErgonomicaController::class, 'imprimir'])->name('imprimir');
+        });
+
         // ═════════════════════════════════════════════════════════════
         // CLÍNICA DE TRABAJO
         // ════════════════════════════════════════════════════════════
-        Route::get('/ficha-ocupacional', [ValoracionMedicinaController::class, 'vista'])->name('clinica-trabajo.Medicina');
+        //Route::get('/ficha-ocupacional', [ValoracionMedicinaController::class, 'vista'])->name('clinica-trabajo.Medicina');
         // Rutas antiguas comentadas (usaban FichaOcupacionalController)
         // Route::get('/ficha-ocupacional', [FichaOcupacionalController::class, 'vista'])->name('clinica-trabajo.Medicina');
         // Route::get('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'index'])->name('api.clinica-trabajo.ficha-ocupacional.index');
@@ -141,17 +173,61 @@ Route::middleware('auth')->group(function () {
             Route::get('{id}/imprimir', [ValoracionNutricionController::class, 'imprimir'])->name('imprimir');
         });
         
-        // AUDIOLOGÍA
-        Route::prefix('clinica/audiologia')->name('audiologia.')->group(function () {
-            Route::get('/', [ValoracionAudiologiaController::class, 'index'])->name('index');
-            Route::get('{id}', [ValoracionAudiologiaController::class, 'show'])->name('show');
-            Route::post('/', [ValoracionAudiologiaController::class, 'store'])->name('store');
-            Route::put('{id}', [ValoracionAudiologiaController::class, 'update'])->name('update');
-            Route::delete('{id}', [ValoracionAudiologiaController::class, 'destroy'])->name('destroy');
-            Route::get('{id}/imprimir', [ValoracionAudiologiaController::class, 'imprimir'])->name('imprimir');
-        });
+
+        // ========== AUDIOLOGÍA - VISTAS WEB (Blade) ==========
+         
         
-        // ERGONOMÍA
+
+        Route::prefix('clinica/audiologia')->name('clinica.audiologia.')->group(function () {
+
+            // ===== DELLI 2026 =====
+            Route::prefix('delli')->name('delli.')->group(function () {
+                Route::get('crear', [AudiologiaDELLIController::class, 'crear'])->name('crear');
+                Route::get('{id}/editar', [AudiologiaDELLIController::class, 'editar'])->name('editar');
+                Route::get('{id}', [AudiologiaDELLIController::class, 'mostrar'])->name('mostrar');
+                Route::get('', [AudiologiaDELLIController::class, 'listado'])->name('listado');
+            });
+
+            // ===== EXAMEN_TR =====
+            Route::prefix('tr')->name('tr.')->group(function () {
+                Route::get('crear', [AudiologiaTRController::class, 'crear'])->name('crear');
+                Route::get('{id}/editar', [AudiologiaTRController::class, 'editar'])->name('editar');
+                Route::get('{id}', [AudiologiaTRController::class, 'mostrar'])->name('mostrar');
+                Route::get('', [AudiologiaTRController::class, 'listado'])->name('listado');
+            });
+        });
+
+        // ========== AUDIOLOGÍA - API ENDPOINTS (AJAX/JSON) ==========
+        Route::prefix('api/clinica/audiologia')->name('api.audiologia.')->group(function () {
+
+            // ===== DELLI 2026 =====
+            Route::prefix('delli')->name('delli.')->group(function () {
+                Route::get('/', [AudiologiaDELLIController::class, 'listar'])->name('listar');
+                Route::post('guardar', [AudiologiaDELLIController::class, 'guardar'])->name('guardar');
+                Route::get('{id}', [AudiologiaDELLIController::class, 'obtener'])->name('obtener');
+                Route::put('{id}', [AudiologiaDELLIController::class, 'actualizar'])->name('actualizar');
+                Route::delete('{id}', [AudiologiaDELLIController::class, 'eliminar'])->name('eliminar');
+                Route::get('generar-folio', [AudiologiaDELLIController::class, 'generarFolio'])->name('generarfolio');
+                Route::get('{id}/pdf', [AudiologiaDELLIController::class, 'exportarPDF'])->name('pdf');
+            });
+
+            // ===== EXAMEN_TR =====
+            Route::prefix('tr')->name('tr.')->group(function () {
+                Route::get('/', [AudiologiaTRController::class, 'listar'])->name('listar');
+                Route::post('guardar', [AudiologiaTRController::class, 'guardar'])->name('guardar');
+                Route::get('{id}', [AudiologiaTRController::class, 'obtener'])->name('obtener');
+                Route::put('{id}', [AudiologiaTRController::class, 'actualizar'])->name('actualizar');
+                Route::delete('{id}', [AudiologiaTRController::class, 'eliminar'])->name('eliminar');
+                Route::get('{id}/pdf', [AudiologiaTRController::class, 'exportarPDF'])->name('pdf');
+            });
+
+            // ===== BÚSQUEDAS COMPARTIDAS =====
+            Route::prefix('buscar')->name('buscar.')->group(function () {
+                Route::post('paciente', [AudiologiaDELLIController::class, 'buscarPaciente'])->name('paciente');
+                Route::get('historial/{cedula}', [AudiologiaDELLIController::class, 'historialPaciente'])->name('historial');
+                Route::post('comparar-audiometrias', [AudiologiaDELLIController::class, 'compararAudiometrias'])->name('comparar');
+            });
+        });
         Route::prefix('clinica/ergonomia')->name('ergonomia.')->group(function () {
             Route::get('/', [ValoracionErgonomicaController::class, 'index'])->name('index');
             Route::get('{id}', [ValoracionErgonomicaController::class, 'show'])->name('show');
@@ -451,6 +527,8 @@ Route::middleware('auth')->group(function () {
             //RUTA PARA REAUNUDAR LA CONSULTA CONSERVANDO LOS DIAGNOSTICOS DETECTADOS//
             Route::get('consultaIA/{consultaId}/sesion', [ConsultaIAController::class, 'obtenerHistorialSesion'])
              ->name('consultaIA.obtenerHistorialSesion');
+
+             
         });
 
 
@@ -533,6 +611,10 @@ Route::middleware('auth')->group(function () {
             //Vista para vincular correo electronico como parte de la configuracion Omboarding//
             Route::get('vincular-correo', function () { return view('configuracion-sistema.vincularCorreo');})->name('vincular-correo');
             Route::get('vinculacion-whatsapp', function () { return view('configuracion-sistema.VincularWhatsaap');})->name('vinculacion-whatsapp');
+            
+            //RUTA PARA LAS VISTAS DE CLINICA DEL TRABAJO//
+            Route::get('FichaDelliAudiologia', function() { return view('clinica-trabajo.delli-index'); })->name('clinica-trabajo.delli-index');
+            Route::get('FichaTrabajoAltoRiesgo', function() { return view('clinica-trabajo.tr-index'); })->name('clinica-trabajo.tr-index');
         });
 
 });

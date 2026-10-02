@@ -137,7 +137,7 @@ import AptitudDictamenPsicologia from './secciones/psicologia/AptitudDictamen.vu
 
 import DatosBásicoNutricion from './secciones/nutricion/DatosBásico.vue'
 import FactoresLaboralesNutricion from './secciones/nutricion/FactoresLaborales.vue'
-import HábitosConsumoNutricion from './secciones/nutricion/HábitosConsumo.vue'
+import HábitosConsumoNutricion from './secciones/nutricion/HabitosConsumoNutricion.vue'
 import AntropometríaNutricion from './secciones/nutricion/Antropometría.vue'
 import BioquímicaNutricion from './secciones/nutricion/Bioquímica.vue'
 import DiagnósticoNutricion from './secciones/nutricion/Diagnóstico.vue'

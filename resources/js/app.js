@@ -68,6 +68,11 @@ import MasterPsicologia from './components/ClinicaTrabajo/Masterpsicologia.vue'
 import MasterNutricion from './components/ClinicaTrabajo/Masternutricion.vue'
 import MasterAudiologia from './components/ClinicaTrabajo/Masteraudiologia.vue'
 import MasterErgonomia from './components/ClinicaTrabajo/Masterergonomia.vue'
+
+import MasterFichaAudiologicaDelli from './components/ClinicaTrabajo/MasterFichaAudiologica-DELLI.vue'
+import MasterExamenTrabajoTr from './components/ClinicaTrabajo/MasterExamenTrabajo-TR.vue'
+
+
  
 // ------------------------------------------------------
 // Instancia única de la app
@@ -120,6 +125,9 @@ app.component('master-psicologia', MasterPsicologia)
 app.component('master-nutricion', MasterNutricion)
 app.component('master-audiologia', MasterAudiologia)
 app.component('master-ergonomia', MasterErgonomia)
+
+app.component('master-ficha-audiologica-delli', MasterFichaAudiologicaDelli)
+app.component('master-examen-trabajo-tr', MasterExamenTrabajoTr)
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 

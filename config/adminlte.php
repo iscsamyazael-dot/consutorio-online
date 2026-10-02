@@ -533,9 +533,14 @@ return [
                     'url' => '/clinica/audiologia',
                 ],
                 [
-                    'text' => 'Nueva valoración',
+                    'text' => 'Ficha Historia Clinica ',
                     'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => '/clinica/audiologia/nueva',
+                    'url' => 'FichaDelliAudiologia',
+                ],
+                [
+                    'text' => 'Ficha Trabajo Alto Riesgo ',
+                    'icon' => 'fas fa-fw fa-plus-circle',
+                    'url' => 'FichaTrabajoAltoRiesgo',
                 ],
             ],
         ],

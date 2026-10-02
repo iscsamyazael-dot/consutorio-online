@@ -1,0 +1,228 @@
+/* =========================================================================
+   Estilos compartidos de la Ficha Ocupacional (todas las hojas)
+   Uso en cada componente:  <style scoped src="../../estilos/ficha-ocupacional.css"></style>
+   ========================================================================= */
+
+/* ---------- Tarjetas ---------- */
+.ficha-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  box-shadow: none;
+  margin-bottom: 1.25rem;
+}
+
+.ficha-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+  background: linear-gradient(90deg, #5F6E7E, #4A5568);
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 600;
+  padding: .7rem 1.25rem;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+}
+
+.ficha-card > .card-body {
+  padding: 1.25rem;
+}
+
+.btn-header {
+  background: rgba(255, 255, 255, .15);
+  border: 1px solid rgba(255, 255, 255, .35);
+  color: #fff;
+  font-size: .8rem;
+}
+.btn-header:hover:not(:disabled) {
+  background: rgba(255, 255, 255, .28);
+  color: #fff;
+}
+.btn-header:disabled {
+  opacity: .5;
+}
+
+.contador {
+  background: rgba(255, 255, 255, .18);
+  border-radius: 10px;
+  padding: .15rem .65rem;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+/* Instrucción de cada sección */
+.instruccion {
+  font-size: .82rem;
+  color: #6B7280;
+  margin: 0 0 1rem;
+}
+
+/* ---------- Campos ---------- */
+.form-group label {
+  font-size: .8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: .35rem;
+}
+
+.form-control {
+  height: 38px;
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  font-size: .875rem;
+  color: #1F2937;
+}
+select.form-control {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+textarea.form-control {
+  height: auto;
+  min-height: 70px;
+}
+.form-control[readonly] {
+  background: #F3F4F6;
+}
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 .15rem rgba(0, 123, 255, .2);
+}
+
+/* ---------- Grupos de opciones ---------- */
+.grupo + .grupo {
+  margin-top: 1.25rem;
+}
+.grupo-titulo {
+  font-size: .85rem;
+  font-weight: 600;
+  color: #4A5568;
+  margin-bottom: .6rem;
+}
+
+.opciones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: .5rem;
+  align-items: start;
+}
+.opciones-grid.amplio {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.opciones-grid.compacto {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+/* Opción simple (checkbox o radio en recuadro) */
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: 38px;
+  margin: 0;
+  padding: .45rem .75rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  background: #fff;
+  color: #1F2937;
+  font-size: .85rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+.opcion:hover {
+  border-color: #9CA3AF;
+  background: #F9FAFB;
+}
+.opcion.activa {
+  border-color: #007bff;
+  background: #EFF6FF;
+  color: #0056b3;
+}
+.opcion input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #007bff;
+  cursor: pointer;
+}
+.opcion:focus-within {
+  outline: 2px solid rgba(0, 123, 255, .4);
+  outline-offset: 1px;
+}
+
+/* Opción con detalle: el campo aparece debajo al marcarla */
+.opcion-detalle {
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  background: #fff;
+}
+.opcion-detalle:hover {
+  border-color: #9CA3AF;
+}
+.opcion-detalle.activa {
+  border-color: #007bff;
+  background: #EFF6FF;
+}
+.opcion-detalle .opcion {
+  border: 0;
+  background: transparent;
+}
+.opcion-detalle.activa .opcion {
+  color: #0056b3;
+}
+.opcion-detalle .detalle {
+  padding: 0 .75rem .6rem 2.35rem;
+}
+.opcion-detalle .detalle .form-control {
+  height: 32px;
+  padding: 5px 10px;
+  font-size: .8rem;
+  background: #fff;
+}
+
+/* ---------- Bloques repetibles (accidentes, pruebas...) ---------- */
+.bloque-repetible {
+  border: 1px solid #E5E7EB;
+  border-radius: 4px;
+  padding: .75rem 1rem .25rem;
+  background: #FAFBFC;
+}
+.bloque-repetible + .bloque-repetible {
+  margin-top: .75rem;
+}
+.bloque-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #4A5568;
+  margin-bottom: .5rem;
+}
+.btn-quitar {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #9CA3AF;
+  border-radius: 4px;
+  padding: .2rem .45rem;
+  line-height: 1;
+}
+.btn-quitar:hover {
+  color: #DC3545;
+  border-color: #F5C2C7;
+  background: #FFF5F5;
+}
+
+.estado-vacio {
+  margin: 0;
+  padding: .9rem 1rem;
+  border: 1px dashed #D1D5DB;
+  border-radius: 4px;
+  color: #6B7280;
+  font-size: .85rem;
+  text-align: center;
+}
