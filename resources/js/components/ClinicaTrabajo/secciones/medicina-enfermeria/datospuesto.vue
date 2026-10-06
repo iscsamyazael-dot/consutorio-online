@@ -56,28 +56,25 @@
       <div class="card-body">
         <div class="form-row">
           <div class="form-group col-md-3">
-            <label>Primer Apellido *</label>
-            <input type="text" v-model="form.apellido_paterno" class="form-control" required />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Segundo Apellido</label>
-            <input type="text" v-model="form.apellido_materno" class="form-control" />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Nombre(s) *</label>
+            <label>Nombre(s) completo *</label>
             <input type="text" v-model="form.nombre" class="form-control" required />
+          </div>
+          <div class="form-group col-md-3">
+            <label>Fecha de nacimiento</label>
+            <input type="date" v-model="form.fecha_nacimiento" class="form-control" />
           </div>
           <div class="form-group col-md-3">
             <label>Edad *</label>
             <input type="number" v-model="form.edad" class="form-control" min="18" max="80" required />
           </div>
-        </div>
-
-        <div class="form-row">
           <div class="form-group col-md-3">
             <label>Cédula/Pasaporte *</label>
             <input type="text" v-model="form.cedula" class="form-control" required />
           </div>
+        </div>
+
+        <div class="form-row">
+         
           <div class="form-group col-md-3">
             <label>Género *</label>
             <select v-model="form.genero" class="form-control" required>
@@ -98,17 +95,6 @@
             </select>
           </div>
           <div class="form-group col-md-3">
-            <label>Lugar de Nacimiento</label>
-            <input type="text" v-model="form.lugar_nacimiento" class="form-control" placeholder="Ciudad, país..." />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group col-md-3">
-            <label>Fecha de nacimiento</label>
-            <input type="date" v-model="form.fecha_nacimiento" class="form-control" />
-          </div>
-          <div class="form-group col-md-3">
             <label>Estado civil</label>
             <select v-model="form.estado_civil" class="form-control">
               <option value="">Seleccionar</option>
@@ -119,6 +105,15 @@
               <option value="union_libre">Unión libre</option>
             </select>
           </div>
+          <div class="form-group col-md-3">
+            <label>Lugar de Nacimiento</label>
+            <input type="text" v-model="form.lugar_nacimiento" class="form-control" placeholder="Ciudad, país..." />
+          </div>
+        </div>
+
+        <div class="form-row">
+          
+          
           <div class="form-group col-md-3">
             <label>Escolaridad</label>
             <select v-model="form.escolaridad" class="form-control">

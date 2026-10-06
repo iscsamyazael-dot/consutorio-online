@@ -263,6 +263,31 @@ Route::middleware('auth')->group(function () {
             Route::get('riesgos-ergonomicos', [CatalogoController::class, 'riesgosErgonomicos'])->name('riesgos');
         });
 
+        // EMPRESAS CLIENTE (para select en formularios)
+        Route::prefix('empresas-cliente')->name('empresas-cliente.')->group(function () {
+            Route::get('/', [CatalogoController::class, 'empresasCliente'])->name('index');
+        });
+
+        // ESPIROMETRÍA API
+        Route::prefix('api/clinica/espirometria')->name('api.espirometria.')->group(function () {
+            Route::get('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'index'])->name('index');
+            Route::get('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'show'])->name('show');
+            Route::post('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'store'])->name('store');
+            Route::put('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'update'])->name('update');
+            Route::delete('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'imprimir'])->name('imprimir');
+        });
+
+        // Rutas sin /api/ para compatibilidad con ApiService (igual que psicologia, nutricion, ergonomia)
+        Route::prefix('clinica/espirometria')->name('espirometria.')->group(function () {
+            Route::get('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'index'])->name('index');
+            Route::get('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'show'])->name('show');
+            Route::post('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'store'])->name('store');
+            Route::put('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'update'])->name('update');
+            Route::delete('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/imprimir', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'imprimir'])->name('imprimir');
+        });
+
         // ═════════════════════════════════════════════════════════════
         // BLOQUE 1: RUTAS GENERALES (sin datos clínicos sensibles)
         // Accesibles por cualquier usuario autenticado del tenant.
@@ -616,6 +641,9 @@ Route::middleware('auth')->group(function () {
             Route::get('FichaDelliAudiologia', function() { return view('clinica-trabajo.delli-index'); })->name('clinica-trabajo.delli-index');
             Route::get('FichaTrabajoAltoRiesgo', function() { return view('clinica-trabajo.tr-index'); })->name('clinica-trabajo.tr-index');
             Route::get('ficha-ocupacional', function() { return view('clinica-trabajo.Medicina'); })->name('clinica-trabajo.Medicina');
+            Route::get('ficha-espirometria', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria');
+            Route::get('ficha-espirometria/nueva', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria.create');
+            Route::get('ficha-espirometria/{id}', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria.show');
         });
 
 });

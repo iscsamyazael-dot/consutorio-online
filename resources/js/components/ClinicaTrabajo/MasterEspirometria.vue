@@ -1,22 +1,22 @@
 <template>
-  <div class="master-psicologia">
+  <div class="master-espirometria">
     <!-- LISTADO (Si no es nueva ni edición) -->
-    <listado-valoraciones
-      v-if="!esNuevo && !esEdicion"
-      submodulo="psicologia"
+    <listado-valoraciones 
+      v-if="!esNuevo && !esEdicion" 
+      submodulo="espirometria"
     ></listado-valoraciones>
 
     <!-- FORMULARIO DE EVALUACIÓN (Si es nueva o edición) -->
     <div v-else class="container-fluid p-0">
-
-      <!-- 1. CHAT IA / TRANSCRIPCIÓN EN VIVO (Igual que espirometria) -->
+      
+      <!-- 1. CHAT IA / TRANSCRIPCIÓN EN VIVO -->
       <div class="row mb-4">
         <div class="col-12">
           <div class="card card-primary card-outline shadow-sm">
             <div class="card-header bg-info text-white">
               <h3 class="card-title">
                 <i class="fas fa-microphone-alt mr-2"></i>
-                Asistente IA y Transcripción (Psicología)
+                Asistente IA y Transcripción (Espirometría)
               </h3>
               <div class="card-tools">
                 <span v-if="escuchando" class="badge badge-light text-danger mr-2 animate-pulse">
@@ -26,24 +26,24 @@
             </div>
 
             <div class="card-body p-0">
-              <div
-                ref="chatContainer"
-                class="direct-chat-messages p-3 bg-light"
+              <div 
+                ref="chatContainer" 
+                class="direct-chat-messages p-3 bg-light" 
                 style="height: 200px; overflow-y: auto;"
               >
                 <div class="direct-chat-msg mb-3" v-if="conversacion.length === 0">
                   <div class="direct-chat-infos clearfix">
-                    <span class="direct-chat-name float-left text-info">🤖 Asistente de Psicología IA</span>
+                    <span class="direct-chat-name float-left text-info">🤖 Asistente de Neumología IA</span>
                   </div>
                   <div class="direct-chat-text bg-white border">
-                    ¡Hola! Puedes dictarme los eventos traumáticos (ej: "Presenció accidente laboral con lesión grave"), describir factores psicosociales, o indicar síntomas como ansiedad, depresión, burnout.
+                    ¡Hola! Puedes dictarme los valores de la espirometría (ej: "FEV1 de 4.12 litros, FVC de 4.75"), subir el PDF del equipo ndd, o indicar antecedentes como asma o tabaquismo.
                   </div>
                 </div>
 
                 <div v-for="(msg, index) in conversacion" :key="index" class="mb-3">
                   <div v-if="msg.sender === 'user'" class="direct-chat-msg">
                     <div class="direct-chat-infos clearfix">
-                      <span class="direct-chat-name float-left">👨‍⚕️ Psicólogo</span>
+                      <span class="direct-chat-name float-left">👨‍⚕️ Médico</span>
                     </div>
                     <div class="direct-chat-text bg-info text-white">
                       {{ msg.text }}
@@ -69,11 +69,11 @@
                     <i class="fas fa-paperclip"></i>
                   </button>
                   <input ref="inputArchivo" type="file" hidden @change="seleccionarArchivo" accept=".pdf,.xlsx,.csv,.jpg,.png" />
-
-                  <button
-                    class="btn"
-                    :class="escuchando ? 'btn-danger' : 'btn-outline-secondary'"
-                    type="button"
+                  
+                  <button 
+                    class="btn" 
+                    :class="escuchando ? 'btn-danger' : 'btn-outline-secondary'" 
+                    type="button" 
                     @click="alternarEscucha"
                     title="Iniciar/Detener transcripción por voz"
                   >
@@ -84,7 +84,7 @@
                 <input
                   type="text"
                   class="form-control"
-                  placeholder="Dicta eventos, factores psicosociales, síntomas o escribe..."
+                  placeholder="Dicta valores, sube el PDF del equipo ndd o escribe..."
                   v-model="mensajeActual"
                   @keyup.enter="enviarMensaje"
                 />
@@ -96,7 +96,7 @@
                 </div>
               </div>
               <div v-if="archivoSeleccionado" class="mt-2 text-sm text-gray-600">
-                📎 Archivo: {{ archivoSeleccionado.name }}
+                📎 Archivo: {{ archivoSeleccionado.name }} 
                 <button class="btn btn-sm btn-link text-danger p-0 ml-2" @click="quitarArchivo">Quitar</button>
               </div>
             </div>
@@ -108,8 +108,8 @@
       <div class="card mb-3 shadow-sm">
         <div class="card-header bg-primary text-white">
           <h4 class="mb-0">
-            <i class="fas fa-brain mr-2"></i> Valoración Psicológica - CONSULTORIO ONLINE
-            <span class="badge badge-light text-primary ml-2">{{ folioPsicologia }}</span>
+            <i class="fas fa-lungs mr-2"></i> Reporte de Espirometría - MASSVITAL
+            <span class="badge badge-light text-primary ml-2">{{ folioEspirometria }}</span>
           </h4>
         </div>
         <div class="card-body p-0">
@@ -121,22 +121,12 @@
             </li>
             <li class="nav-item">
               <a class="nav-link" data-toggle="tab" href="#hoja2" role="tab">
-                <i class="fas fa-exclamation-triangle mr-1"></i> 2. Guía I: Evento Traumático
+                <i class="fas fa-table mr-1"></i> 2. Parámetros FVL
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" data-toggle="tab" href="#hoja3" role="tab">
-                <i class="fas fa-chart-bar mr-1"></i> 3. Guía III: Factores Psicosociales
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" data-toggle="tab" href="#hoja4" role="tab">
-                <i class="fas fa-stethoscope mr-1"></i> 4. Diagnóstico Clínico
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" data-toggle="tab" href="#hoja5" role="tab">
-                <i class="fas fa-check-circle mr-1"></i> 5. Aptitud y Dictamen
+                <i class="fas fa-clipboard-check mr-1"></i> 3. Interpretación y Dictamen
               </a>
             </li>
           </ul>
@@ -145,49 +135,31 @@
 
       <!-- 3. TABS CONTENT -->
       <div class="tab-content bg-white p-4 rounded-bottom shadow-sm mb-4">
-
+        
         <!-- HOJA 1: Datos Generales -->
         <div id="hoja1" class="tab-pane fade show active" role="tabpanel">
-          <datos-basico-psicologia
-            :modelValue="form.datosBasicos"
-            @update:modelValue="form.datosBasicos = $event"
-          ></datos-basico-psicologia>
+          <datos-generales-espirometria 
+            :modelValue="form.datosGenerales" 
+            @update:modelValue="form.datosGenerales = $event"
+          ></datos-generales-espirometria>
         </div>
 
-        <!-- HOJA 2: Guía I Evento Traumático -->
+        <!-- HOJA 2: Parámetros FVL -->
         <div id="hoja2" class="tab-pane fade" role="tabpanel">
-          <guia-i-evento-psicologia
-            :modelValue="form.guiaIEvento"
-            @update:modelValue="form.guiaIEvento = $event"
-          ></guia-i-evento-psicologia>
+          <parametros-fvl-espirometria 
+            :modelValue="form.parametrosFVL" 
+            @update:modelValue="form.parametrosFVL = $event"
+          ></parametros-fvl-espirometria>
         </div>
 
-        <!-- HOJA 3: Guía III Factores Psicosociales -->
+        <!-- HOJA 3: Interpretación -->
         <div id="hoja3" class="tab-pane fade" role="tabpanel">
-          <GuiaIIIFactoresPsicologia
-            :modelValue="form.guiaIIIFactores"
-            :factores="factoresDisponibles"
-            @update:modelValue="form.guiaIIIFactores = $event"
-          ></GuiaIIIFactoresPsicologia>
+          <interpretacion-espirometria 
+            :modelValue="form.interpretacion" 
+            @update:modelValue="form.interpretacion = $event"
+          ></interpretacion-espirometria>
         </div>
 
-        
-
-        <!-- HOJA 4: Diagnóstico -->
-        <div id="hoja4" class="tab-pane fade" role="tabpanel">
-          <diagnostico-psicologia
-            :modelValue="form.diagnostico"
-            @update:modelValue="form.diagnostico = $event"
-          ></diagnostico-psicologia>
-        </div>
-
-        <!-- HOJA 5: Aptitud -->
-        <div id="hoja5" class="tab-pane fade" role="tabpanel">
-          <aptitud-dictamen-psicologia
-            :modelValue="form.aptitudDictamen"
-            @update:modelValue="form.aptitudDictamen = $event"
-          ></aptitud-dictamen-psicologia>
-        </div>
       </div>
 
       <!-- 4. BOTONES DE ACCIÓN -->
@@ -204,6 +176,7 @@
           </button>
         </div>
       </div>
+
     </div>
   </div>
 </template>
@@ -212,25 +185,21 @@
 // 1. Componente de Listado (misma carpeta)
 import ListadoValoraciones from './ListadoValoraciones.vue'
 
-// 2. Componentes de Sección (carpeta secciones/psicologia)
-import DatosBasicoPsicologia from './secciones/psicologia/DatosBasico.vue'
-import GuiaIEventoPsicologia from './secciones/psicologia/GuiaIEvento.vue'
-import GuiaIIIFactoresPsicologia from './secciones/psicologia/FactoresPsicosociales.vue'
-import DiagnosticoPsicologia from './secciones/psicologia/Diagnostico.vue'
-import AptitudDictamenPsicologia from './secciones/psicologia/AptitudDictamen.vue'
+// 2. Componentes de Sección (carpeta secciones/espirometria)
+import DatosGeneralesEspirometria from './secciones/espirometria/DatosGeneralesEspirometria.vue'
+import ParametrosFvlEspirometria from './secciones/espirometria/ParametrosFvlEspirometria.vue'
+import InterpretacionEspirometria from './secciones/espirometria/InterpretacionEspirometria.vue'
 
 // 3. Servicio API (ajusta la ruta si tu ApiService está en otro lugar, ej: '@/services/ApiService')
 import { clinicaTrabajo } from '../../services/ApiService'
 
 export default {
-  name: 'MasterPsicologia',
+  name: 'MasterEspirometria',
   components: {
     ListadoValoraciones,
-    DatosBasicoPsicologia,
-    GuiaIEventoPsicologia,
-    GuiaIIIFactoresPsicologia, 
-    DiagnosticoPsicologia,
-    AptitudDictamenPsicologia
+    DatosGeneralesEspirometria,
+    ParametrosFvlEspirometria,
+    InterpretacionEspirometria
   },
   data() {
     return {
@@ -241,77 +210,80 @@ export default {
       mensajeActual: '',
       archivoSeleccionado: null,
       conversacion: [],
-      factoresDisponibles: [],
-
+      
       // Estado centralizado del formulario dividido por secciones lógicas
       form: {
-        datosBasicos: {
+        datosGenerales: {
           folio: '',
           fecha_valoracion: new Date().toISOString().split('T')[0],
           hora_valoracion: '',
-          paciente_id: null,
-          empresa_cliente_id: null,
-          puesto_trabajo_id: null,
-          psicologo_id: null
+          nombre: '',
+          id_empleado: '',
+          edad: 0,
+          sexo: '',
+          altura_cm: null,
+          peso_kg: null,
+          imc: 0,
+          origen_etnico: 'Hispano',
+          empresa: '',
+          remitido_por: '',
+          prescrito_por: '',
+          fumador: false,
+          cigarrillos_dia: 0,
+          anos_fumador: 0,
+          antecedente_covid: false,
+          asma: false,
+          epoc: false,
+          comentarios: ''
         },
-        guiaIEvento: {
-          guia_ref_i_aplicada: false,
-          ha_presenciado_evento_traumatico: false,
-          descripcion_evento_traumatico: '',
-          fecha_evento_traumatico: '',
-          requiere_canalizacion_imss: false
+        parametrosFVL: {
+          referencia: 'NHANES III',
+          interpretacion_predicha: 'GOLD(2008)/Hardie',
+          fvc_l: null, fev1_l: null, fev1_fvc_ratio: null, fef25_75: null, pef_l_s: null,
+          fet_s: null, fivc_l: null, pif_l_s: null, eotv_l: null, bev_l: null,
+          fev1_var_l: null, fvc_var_l: null,
+          fev1_porcentaje_predicho: 0, fvc_porcentaje_predicho: 0
         },
-        guiaIIIFactores: {
-          guia_ref_iii_aplicada: false,
-          ambiente_laboral_descripcion: '',
-          puntuacion_riesgo_texto: '',
-          factores_ids: [],
-          factores_severidad: []
-        },
-        diagnostico: {
-          diagnostico_clinico: '',
-          codigo_cie11: '',
-          relacionado_con_trabajo: false
-        },
-        aptitudDictamen: {
+        interpretacion: {
+          edad_pulmonar: 0,
+          calidad_sesion: '', 
+          interpretacion_sistema: 'Espirometría Normal',
+          diagnostico_medico: '',
           aptitud: '',
-          restricciones: '',
-          recomendaciones: '',
-          requiere_seguimiento: false,
-          plazo_proximo_seguimiento: null,
-          canalizado_a: '',
-          lugar_canalizacion: ''
+          recomendaciones: ''
         }
       }
     }
   },
+
   computed: {
-    folioPsicologia() {
-      if (!this.form.datosBasicos.folio || this.form.datosBasicos.folio.includes('****')) {
+    folioEspirometria() {
+      if (!this.form.datosGenerales.folio || this.form.datosGenerales.folio.includes('****')) {
         const ano = new Date().getFullYear()
         const random = String(Math.floor(Math.random() * 9000) + 1000)
-        return `PSI-${ano}-${random}`
+        return `ESP-${ano}-${random}`
       }
-      return this.form.datosBasicos.folio
+      return this.form.datosGenerales.folio
     }
   },
+
   methods: {
     detectarRuta() {
         const pathname = window.location.pathname
-
-        // Detecta /psicologia/nueva o /psicologia (sin ID)
-        if (pathname.includes('/psicologia/nueva') ||
-            pathname === '/psicologia' ||
-            pathname.endsWith('/psicologia')) {
+        
+        // Detecta /ficha-espirometria/nueva o /ficha-espirometria (sin ID)
+        if (pathname.includes('/ficha-espirometria/nueva') || 
+            pathname === '/ficha-espirometria' ||
+            pathname.endsWith('/ficha-espirometria')) {
         this.esNuevo = true
         this.esEdicion = false
-        }
-        // Detecta /psicologia/{id} para edición
-        else if (/\/psicologia\/\d+/.test(pathname)) {
+        } 
+        // Detecta /ficha-espirometria/{id} para edición
+        else if (/\/ficha-espirometria\/\d+/.test(pathname)) {
         this.esNuevo = false
         this.esEdicion = true
         this.cargarDatosExistentes()
-        }
+        } 
         // Cualquier otra ruta muestra el listado
         else {
         this.esNuevo = false
@@ -322,7 +294,7 @@ export default {
     alternarEscucha() {
       this.escuchando = !this.escuchando
       if (this.escuchando) {
-        this.conversacion.push({ sender: 'ia', text: '🎙️ Escuchando datos psicológicos... (Prueba dictando: "Presenció robo a mano armada en el trabajo")' })
+        this.conversacion.push({ sender: 'ia', text: '🎙️ Escuchando valores espirométricos... (Prueba dictando: "FEV1 4.12, FVC 4.75")' })
       } else {
         this.conversacion.push({ sender: 'ia', text: '⏹️ Transcripción detenida.' })
       }
@@ -343,7 +315,7 @@ export default {
 
       try {
         // Llamada al backend para procesar el mensaje o el archivo con IA
-        const response = await clinicaTrabajo.consultarIAPsicologia({
+        const response = await clinicaTrabajo.consultarIAEspirometria({
           mensaje: textoEnviar,
           archivo: this.archivoSeleccionado,
           contexto_actual: this.form
@@ -398,30 +370,26 @@ export default {
     },
 
     async guardar() {
-      // Validar campos requeridos
-      if (!this.form.datosBasicos.paciente_id) {
-        return alert('⚠️ Por favor selecciona un paciente en la Hoja 1.')
+      if (!this.form.datosGenerales.nombre) {
+        return alert('⚠️ Por favor ingresa el nombre del paciente en la Hoja 1.')
       }
-      if (!this.form.datosBasicos.empresa_cliente_id) {
-        return alert('⚠️ Por favor selecciona una empresa en la Hoja 1.')
-      }
-      if (!this.form.aptitudDictamen.aptitud) {
-        return alert('⚠️ Es obligatorio seleccionar la APTITUD en la Hoja 5 para poder guardar.')
+      if (!this.form.interpretacion.aptitud) {
+        return alert('⚠️ Es obligatorio seleccionar la APTITUD en la Hoja 3 para poder guardar.')
       }
 
       this.guardando = true
       try {
         const payload = {
           ...this.form,
-          folio: this.folioPsicologia,
-          tipo_evaluacion: 'psicologia'
+          folio: this.folioEspirometria,
+          tipo_evaluacion: 'espirometria'
         }
 
-        const response = await clinicaTrabajo.guardarPsicologia(payload)
+        const response = await clinicaTrabajo.espirometria.crear(payload)
 
         if (response.data.success) {
-          alert('✅ Valoración Psicológica guardada correctamente.')
-          window.location.href = `/clinica/psicologia/${response.data.id}`
+          alert('✅ Reporte de Espirometría guardado correctamente.')
+          window.location.href = `/clinica/espirometria/${response.data.id}`
         }
       } catch (error) {
         console.error('Error guardando:', error)
@@ -433,7 +401,7 @@ export default {
 
     cancelar() {
       if (confirm('¿Está seguro de que desea cancelar? Se perderán los datos no guardados.')) {
-        window.location.href = '/clinica/psicologia'
+        window.location.href = '/clinica/espirometria'
       }
     },
 
@@ -445,40 +413,24 @@ export default {
     async cargarDatosExistentes() {
       // TODO: Lógica para cargar los datos si `esEdicion` es true
       // const id = window.location.pathname.split('/').pop()
-      // const response = await clinicaTrabajo.obtenerPsicologia(id)
+      // const response = await clinicaTrabajo.obtenerEspirometria(id)
       // this.form = response.data
-    },
-
-    async cargarFactores() {
-      try {
-        const response = await clinicaTrabajo.catalogo.factoresPsicosociales()
-        this.factoresDisponibles = response.data || response
-      } catch (error) {
-        console.error('Error cargando factores psicosociales:', error)
-        // Usa datos mock si hay error
-        this.factoresDisponibles = [
-          { id: 1, nombre: 'Carga mental', descripcion: 'Demanda cognitiva' },
-          { id: 2, nombre: 'Control', descripcion: 'Falta de autonomía' },
-          { id: 3, nombre: 'Apoyo social', descripcion: 'Falta de apoyo' }
-        ]
-      }
     }
   },
 
   mounted() {
     this.detectarRuta()
-    this.cargarFactores()
-
+    
     // Inicializar folio si es nuevo
-    if (this.esNuevo && !this.form.datosBasicos.folio) {
-      this.form.datosBasicos.folio = this.folioPsicologia
+    if (this.esNuevo && !this.form.datosGenerales.folio) {
+      this.form.datosGenerales.folio = this.folioEspirometria
     }
   }
 }
 </script>
 
 <style scoped>
-.master-psicologia {
+.master-espirometria {
   background: #f4f6f9;
   min-height: 100vh;
   padding: 15px;

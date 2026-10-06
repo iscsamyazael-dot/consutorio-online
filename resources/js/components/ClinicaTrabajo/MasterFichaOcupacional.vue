@@ -141,70 +141,98 @@
       <!-- CONTENIDO DE HOJAS -->
       <div class="col-12 order-2">
         <div class="card card-primary card-outline card-tabs shadow-sm">
-          
-          <div class="card-header p-3 bg-light border-bottom">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">
-                <i class="fas fa-file-alt mr-2 text-info"></i>
-                <strong>Hoja {{ hojaActual }} de 4:</strong> 
-                <span v-if="hojaActual === 1" class="text-success">Datos Laborales</span>
-                <span v-else-if="hojaActual === 2" class="text-warning">Antecedentes Médicos</span>
-                <span v-else-if="hojaActual === 3" class="text-info">Examen Físico</span>
-                <span v-else-if="hojaActual === 4" class="text-danger">Aptitud & Dictamen</span>
-              </h5>
-              <div class="progress" style="width: 150px; height: 5px;">
-                <div class="progress-bar" :style="{ width: (hojaActual / 4 * 100) + '%' }"></div>
-              </div>
+
+          <!-- PESTAÑAS DE NAVEGACIÓN -->
+          <div class="card-header p-0 bg-light border-bottom">
+            <ul class="nav nav-tabs card-header-tabs w-100" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  :class="{ 'active': hojaActual === 1 }"
+                  @click="hojaActual = 1"
+                  role="tab"
+                  aria-selected="true"
+                >
+                  <i class="fas fa-briefcase mr-1"></i> Hoja 1: Datos Laborales
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  :class="{ 'active': hojaActual === 2 }"
+                  @click="hojaActual = 2"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  <i class="fas fa-notes-medical mr-1"></i> Hoja 2: Antecedentes Médicos
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  :class="{ 'active': hojaActual === 3 }"
+                  @click="hojaActual = 3"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  <i class="fas fa-stethoscope mr-1"></i> Hoja 3: Examen Físico
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  :class="{ 'active': hojaActual === 4 }"
+                  @click="hojaActual = 4"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  <i class="fas fa-clipboard-check mr-1"></i> Hoja 4: Aptitud & Dictamen
+                </button>
+              </li>
+            </ul>
+            <!-- Barra de progreso -->
+            <div class="progress m-3" style="height: 4px;">
+              <div class="progress-bar bg-success" :style="{ width: (hojaActual / 4 * 100) + '%' }" role="progressbar"></div>
             </div>
           </div>
 
           <div class="card-body">
-            
+
             <!-- HOJA 1: DATOS LABORALES -->
-            <div v-if="hojaActual === 1">
+            <div v-show="hojaActual === 1">
               <DatosPuesto :modelValue="form.datos_puesto" @update:modelValue="form.datos_puesto = $event" />
               <hr class="my-4">
-              <ExposiciónRiesgos :modelValue="form.exposicion_riesgos" @update:modelValue="form.exposicion_riesgos = $event" />
+              <ExposicionRiesgos :modelValue="form.exposicion_riesgos" @update:modelValue="form.exposicion_riesgos = $event" />
             </div>
 
             <!-- HOJA 2: ANTECEDENTES MÉDICOS -->
-            <div v-if="hojaActual === 2">
+            <div v-show="hojaActual === 2">
               <Antecedentes :modelValue="form.antecedentes" @update:modelValue="form.antecedentes = $event" />
             </div>
 
             <!-- HOJA 3: EXAMEN FÍSICO -->
-            <div v-if="hojaActual === 3">
-              <ClinícoExamen :modelValue="form.clinico_examen" @update:modelValue="form.clinico_examen = $event" />
+            <div v-show="hojaActual === 3">
+              <ClinicoExamen :modelValue="form.clinico_examen" @update:modelValue="form.clinico_examen = $event" />
             </div>
 
             <!-- HOJA 4: APTITUD & DICTAMEN -->
-            <div v-if="hojaActual === 4">
+            <div v-show="hojaActual === 4">
               <AptitudDictamen :modelValue="form.aptitud" @update:modelValue="form.aptitud = $event" />
             </div>
 
           </div>
 
-          <!-- BOTONES NAVEGACIÓN -->
+          <!-- BOTÓN GUARDAR FIJA EN EL FOOTER -->
           <div class="card-footer bg-light d-flex justify-content-between align-items-center">
-            <button v-if="hojaActual > 1" class="btn btn-secondary" @click="hojaActual--">
-              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            <div>
+              <small class="text-muted">Hoja {{ hojaActual }} de 4 completada</small>
+            </div>
+
+            <button class="btn btn-success" @click="guardarFichaCompleta" :disabled="guardando">
+              <i v-if="!guardando" class="fas fa-save mr-1"></i>
+              <i v-if="guardando" class="fas fa-spinner fa-spin mr-1"></i>
+              {{ guardando ? 'Guardando...' : 'Guardar Ficha Completa' }}
             </button>
-            <div v-else></div>
-            
-            <small class="text-muted">Progreso: {{ hojaActual }} de 4</small>
-            
-            <div v-if="hojaActual < 4">
-              <button class="btn btn-primary" @click="hojaActual++">
-                Siguiente <i class="fas fa-arrow-right ml-1"></i>
-              </button>
-            </div>
-            <div v-else>
-              <button class="btn btn-success" @click="guardarFichaCompleta" :disabled="guardando">
-                <i v-if="!guardando" class="fas fa-save mr-1"></i>
-                <i v-if="guardando" class="fas fa-spinner fa-spin mr-1"></i>
-                {{ guardando ? 'Guardando...' : 'Guardar Ficha Completa' }}
-              </button>
-            </div>
           </div>
 
         </div>
@@ -217,9 +245,9 @@
 
 <script>
 import DatosPuesto from './secciones/medicina-enfermeria/datospuesto.vue'
-import ExposiciónRiesgos from './secciones/medicina-enfermeria/exposicionriesgos.vue'
+import ExposicionRiesgos from './secciones/medicina-enfermeria/exposicionriesgos.vue'
 import Antecedentes from './secciones/medicina-enfermeria/antecedentes.vue'
-import ClinícoExamen from './secciones/medicina-enfermeria/clinicoexamen.vue'
+import ClinicoExamen from './secciones/medicina-enfermeria/clinicoexamen.vue'
 import AptitudDictamen from './secciones/medicina-enfermeria/aptituddictamen.vue'
 import { clinicaTrabajo } from '../../services/ApiService'
 
@@ -227,9 +255,9 @@ export default {
   name: 'MasterFichaOcupacional',
   components: {
     DatosPuesto,
-    ExposiciónRiesgos,
+    ExposicionRiesgos,
     Antecedentes,
-    ClinícoExamen,
+    ClinicoExamen,
     AptitudDictamen
   },
   data() {
@@ -736,11 +764,7 @@ export default {
     }
   },
 
-  watch: {
-    hojaActual() {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }
+  watch: {}
 }
 </script>
 

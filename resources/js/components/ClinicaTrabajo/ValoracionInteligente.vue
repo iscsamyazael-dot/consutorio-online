@@ -41,48 +41,48 @@
         <div v-if="submódulo === 'medicina'">
           <DatosPuestoMedicina v-show="tabActiva === 0" v-model="form" />
           <ExposiciónRiesgosMedicina v-show="tabActiva === 1" v-model="form" />
-          <ClinicóExamenMedicina v-show="tabActiva === 2" v-model="form" />
+          <ClinicoExamenMedicina v-show="tabActiva === 2" v-model="form" />
           <AptitudDictamenMedicina v-show="tabActiva === 3" v-model="form" />
         </div>
 
         <!-- PSICOLOGÍA -->
         <div v-if="submódulo === 'psicologia'">
-          <DatosBásicoPsicologia v-show="tabActiva === 0" v-model="form" />
-          <GuíaIEvento v-show="tabActiva === 1" v-model="form" />
-          <GuíaIIIFactores v-show="tabActiva === 2" v-model="form" :factores="factoresDisponibles" />
-          <DiagnósticoPsicologia v-show="tabActiva === 3" v-model="form" />
+          <DatosBasicoPsicologia v-show="tabActiva === 0" v-model="form" />
+          <GuiaIEventoPsicologia v-show="tabActiva === 1" v-model="form" />
+          <GuiaIIIFactoresPsicologia v-show="tabActiva === 2" v-model="form" :factores="factoresDisponibles" />
+          <DiagnosticoPsicologia v-show="tabActiva === 3" v-model="form" />
           <AptitudDictamenPsicologia v-show="tabActiva === 4" v-model="form" />
         </div>
 
         <!-- NUTRICIÓN -->
         <div v-if="submódulo === 'nutricion'">
-          <DatosBásicoNutricion v-show="tabActiva === 0" v-model="form" />
+          <DatosBasicoNutricion v-show="tabActiva === 0" v-model="form" />
           <FactoresLaboralesNutricion v-show="tabActiva === 1" v-model="form" />
-          <HábitosConsumoNutricion v-show="tabActiva === 2" v-model="form" />
-          <AntropometríaNutricion v-show="tabActiva === 3" v-model="form" />
-          <BioquímicaNutricion v-show="tabActiva === 4" v-model="form" />
-          <DiagnósticoNutricion v-show="tabActiva === 5" v-model="form" />
+          <HabitosConsumoNutricion v-show="tabActiva === 2" v-model="form" />
+          <AntropometriaNutricion v-show="tabActiva === 3" v-model="form" />
+          <BioquimicaNutricion v-show="tabActiva === 4" v-model="form" />
+          <DiagnosticoNutricion v-show="tabActiva === 5" v-model="form" />
           <AptitudDictamenNutricion v-show="tabActiva === 6" v-model="form" />
         </div>
 
         <!-- AUDIOLOGÍA -->
         <div v-if="submódulo === 'audiologia'">
-          <DatosBásicoAudiologia v-show="tabActiva === 0" v-model="form" />
+          <DatosBasicoAudiologia v-show="tabActiva === 0" v-model="form" />
           <AntecedentesLaboralesAudiologia v-show="tabActiva === 1" v-model="form" />
-          <OtotóxicosAudiologia v-show="tabActiva === 2" v-model="form" />
-          <SíntomasAudiologia v-show="tabActiva === 3" v-model="form" />
-          <OtoscopíaAudiologia v-show="tabActiva === 4" v-model="form" />
-          <AudiometríaAudiologia v-show="tabActiva === 5" v-model="form" />
+          <OtotoxicosAudiologia v-show="tabActiva === 2" v-model="form" />
+          <SintomasAudiologia v-show="tabActiva === 3" v-model="form" />
+          <OtoscopiaAudiologia v-show="tabActiva === 4" v-model="form" />
+          <AudiometriaAudiologia v-show="tabActiva === 5" v-model="form" />
           <AptitudDictamenAudiologia v-show="tabActiva === 6" v-model="form" />
         </div>
 
         <!-- ERGONOMÍA -->
         <div v-if="submódulo === 'ergonomia'">
-          <DatosBásicoErgonomia v-show="tabActiva === 0" v-model="form" />
+          <DatosBasicoErgonomia v-show="tabActiva === 0" v-model="form" />
           <SelectorInstrumentoErgonomia v-show="tabActiva === 1" v-model="form" />
-          <InstrumentoEspecíficoErgonomia v-show="tabActiva === 2" v-model="form" :instrumento="form.instrumento_utilizado" />
+          <InstrumentoEspecificoErgonomia v-show="tabActiva === 2" v-model="form" :instrumento="form.instrumento_utilizado" />
           <HallazgosErgonomia v-show="tabActiva === 3" v-model="form" :riesgos="riesgosDisponibles" />
-          <ExamenMédicoErgonomia v-show="tabActiva === 4" v-model="form" />
+          <ExamenMedicoErgonomia v-show="tabActiva === 4" v-model="form" />
           <AptitudDictamenErgonomia v-show="tabActiva === 5" v-model="form" />
         </div>
       </div>
@@ -129,49 +129,49 @@
 import { clinicaTrabajo } from '../../services/ApiService.js'
 
 // Componentes por sección (importar según sea necesario)
-import DatosBásicoPsicologia from './secciones/psicologia/DatosBásico.vue'
-import GuíaIEvento from './secciones/psicologia/GuíaIEvento.vue'
-import GuíaIIIFactores from './secciones/psicologia/GuíaIIIFactores.vue'
-import DiagnósticoPsicologia from './secciones/psicologia/Diagnóstico.vue'
+import DatosBasicoPsicologia from './secciones/psicologia/DatosBasico.vue'
+import GuiaIEventoPsicologia from './secciones/psicologia/GuiaIEvento.vue'
+import GuiaIIIFactoresPsicologia from './secciones/psicologia/FactoresPsicosociales.vue'
+import DiagnosticoPsicologia from './secciones/psicologia/Diagnostico.vue'
 import AptitudDictamenPsicologia from './secciones/psicologia/AptitudDictamen.vue'
 
-import DatosBásicoNutricion from './secciones/nutricion/DatosBásico.vue'
+import DatosBasicoNutricion from './secciones/nutricion/DatosBasico.vue'
 import FactoresLaboralesNutricion from './secciones/nutricion/FactoresLaborales.vue'
-import HábitosConsumoNutricion from './secciones/nutricion/HabitosConsumoNutricion.vue'
-import AntropometríaNutricion from './secciones/nutricion/Antropometría.vue'
-import BioquímicaNutricion from './secciones/nutricion/Bioquímica.vue'
-import DiagnósticoNutricion from './secciones/nutricion/Diagnóstico.vue'
+import HabitosConsumoNutricion from './secciones/nutricion/HabitosConsumoNutricion.vue'
+import AntropometriaNutricion from './secciones/nutricion/Antropometria.vue'
+import BioquimicaNutricion from './secciones/nutricion/Bioquimica.vue'
+import DiagnosticoNutricion from './secciones/nutricion/Diagnostico.vue'
 import AptitudDictamenNutricion from './secciones/nutricion/AptitudDictamen.vue'
 
-import DatosBásicoAudiologia from './secciones/audiologia/DatosBásico.vue'
+import DatosBasicoAudiologia from './secciones/audiologia/DatosBasico.vue'
 import AntecedentesLaboralesAudiologia from './secciones/audiologia/AntecedentesLaborales.vue'
-import OtotóxicosAudiologia from './secciones/audiologia/Ototóxicos.vue'
-import SíntomasAudiologia from './secciones/audiologia/Síntomas.vue'
-import OtoscopíaAudiologia from './secciones/audiologia/Otoscopía.vue'
-import AudiometríaAudiologia from './secciones/audiologia/Audiometría.vue'
+import OtotoxicosAudiologia from './secciones/audiologia/Ototoxicos.vue'
+import SintomasAudiologia from './secciones/audiologia/Sintomas.vue'
+import OtoscopiaAudiologia from './secciones/audiologia/Otoscopia.vue'
+import AudiometriaAudiologia from './secciones/audiologia/Audiometria.vue'
 import AptitudDictamenAudiologia from './secciones/audiologia/AptitudDictamen.vue'
 
-import DatosBásicoErgonomia from './secciones/ergonomia/DatosBásico.vue'
+import DatosBasicoErgonomia from './secciones/ergonomia/DatosBasico.vue'
 import SelectorInstrumentoErgonomia from './secciones/ergonomia/SelectorInstrumento.vue'
-import InstrumentoEspecíficoErgonomia from './secciones/ergonomia/InstrumentoEspecífico.vue'
+import InstrumentoEspecificoErgonomia from './secciones/ergonomia/InstrumentoEspecifico.vue'
 import HallazgosErgonomia from './secciones/ergonomia/Hallazgos.vue'
-import ExamenMédicoErgonomia from './secciones/ergonomia/ExamenMedico.vue'
+import ExamenMedicoErgonomia from './secciones/ergonomia/ExamenMedico.vue'
 import AptitudDictamenErgonomia from './secciones/ergonomia/AptitudDictamen.vue'
 
 // MEDICINA (NUEVO)
 import DatosPuestoMedicina from './secciones/medicina/DatosPuesto.vue'
-import ExposiciónRiesgosMedicina from './secciones/medicina/ExposiciónRiesgos.vue'
-import ClinicóExamenMedicina from './secciones/medicina/ClinicóExamen.vue'
+import ExposicionRiesgosMedicina from './secciones/medicina/ExposicionRiesgos.vue'
+import ClinicoExamenMedicina from './secciones/medicina/ClinicoExamen.vue'
 import AptitudDictamenMedicina from './secciones/medicina/AptitudDictamen.vue'
 
 export default {
   name: 'ValoracionInteligente',
   components: {
-    DatosBásicoPsicologia, GuíaIEvento, GuíaIIIFactores, DiagnósticoPsicologia, AptitudDictamenPsicologia,
-    DatosBásicoNutricion, FactoresLaboralesNutricion, HábitosConsumoNutricion, AntropometríaNutricion, BioquímicaNutricion, DiagnósticoNutricion, AptitudDictamenNutricion,
-    DatosBásicoAudiologia, AntecedentesLaboralesAudiologia, OtotóxicosAudiologia, SíntomasAudiologia, OtoscopíaAudiologia, AudiometríaAudiologia, AptitudDictamenAudiologia,
-    DatosBásicoErgonomia, SelectorInstrumentoErgonomia, InstrumentoEspecíficoErgonomia, HallazgosErgonomia, ExamenMédicoErgonomia, AptitudDictamenErgonomia,
-    DatosPuestoMedicina, ExposiciónRiesgosMedicina, ClinicóExamenMedicina, AptitudDictamenMedicina,
+    DatosBasicoPsicologia, GuiaIEventoPsicologia, GuiaIIIFactoresPsicologia, DiagnosticoPsicologia, AptitudDictamenPsicologia,
+    DatosBasicoNutricion, FactoresLaboralesNutricion, HabitosConsumoNutricion, AntropometriaNutricion, BioquimicaNutricion, DiagnosticoNutricion, AptitudDictamenNutricion,
+    DatosBasicoAudiologia, AntecedentesLaboralesAudiologia, OtotoxicosAudiologia, SintomasAudiologia, OtoscopiaAudiologia, AudiometriaAudiologia, AptitudDictamenAudiologia,
+    DatosBasicoErgonomia, SelectorInstrumentoErgonomia, InstrumentoEspecificoErgonomia, HallazgosErgonomia, ExamenMedicoErgonomia, AptitudDictamenErgonomia,
+    DatosPuestoMedicina, ExposicionRiesgosMedicina, ClinicoExamenMedicina, AptitudDictamenMedicina,
   },
   props: {
     submódulo: {
@@ -197,8 +197,8 @@ export default {
       tabsDefinicion: {
         medicina: [
           { label: 'Datos & Puesto', icon: 'user' },
-          { label: 'Exposición & Riesgos', icon: 'alert' },
-          { label: 'Clínico & Examen', icon: 'stethoscope' },
+          { label: 'Exposicion & Riesgos', icon: 'alert' },
+          { label: 'Clinico & Examen', icon: 'stethoscope' },
           { label: 'Aptitud & Dictamen', icon: 'check' },
         ],
         psicologia: [
@@ -211,19 +211,19 @@ export default {
         nutricion: [
           { label: 'Datos & Empresa', icon: 'user' },
           { label: 'Factores Laborales', icon: 'briefcase' },
-          { label: 'Hábitos & Consumo', icon: 'apple' },
-          { label: 'Antropometría', icon: 'ruler' },
-          { label: 'Bioquímica', icon: 'flask' },
-          { label: 'Diagnóstico', icon: 'stethoscope' },
+          { label: 'Habitos & Consumo', icon: 'apple' },
+          { label: 'Antropometria', icon: 'ruler' },
+          { label: 'Bioquimica', icon: 'flask' },
+          { label: 'Diagnostico', icon: 'stethoscope' },
           { label: 'Aptitud & Dictamen', icon: 'check' },
         ],
         audiologia: [
-          { label: 'Datos & Puesto', icon: 'user' },
+          { label: 'Datos & Pueto', icon: 'user' },
           { label: 'Antecedentes Laborales', icon: 'briefcase' },
-          { label: 'Ototóxicos & Pasatiempos', icon: 'activity' },
-          { label: 'Síntomas', icon: 'alert' },
-          { label: 'Otoscopía', icon: 'eye' },
-          { label: 'Audiometría', icon: 'sound' },
+          { label: 'Ototoxicos & Pasatiempos', icon: 'activity' },
+          { label: 'Sintomas', icon: 'alert' },
+          { label: 'Otoscopia', icon: 'eye' },
+          { label: 'Audiometria', icon: 'sound' },
           { label: 'Aptitud & Dictamen', icon: 'check' },
         ],
         ergonomia: [
@@ -231,7 +231,7 @@ export default {
           { label: 'Seleccionar Instrumento', icon: 'tool' },
           { label: 'RULA / REBA / NIOSH', icon: 'chart' },
           { label: 'Hallazgos', icon: 'list' },
-          { label: 'Examen Médico', icon: 'stethoscope' },
+          { label: 'Examen Medico', icon: 'stethoscope' },
           { label: 'Aptitud & Dictamen', icon: 'check' },
         ],
       }

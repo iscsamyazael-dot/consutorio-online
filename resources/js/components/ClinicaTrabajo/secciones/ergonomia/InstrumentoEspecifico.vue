@@ -10,7 +10,7 @@
       <NIOSHForm :modelValue="form" @update:modelValue="updateForm" />
     </template>
     <template v-if="instrumento === 'OTRO'">
-      < OtroForm :modelValue="form" @update:modelValue="updateForm" />
+      <OtroForm :modelValue="form" @update:modelValue="updateForm" />
     </template>
     <p class="text-center text-gray-500 py-8" v-if="!instrumento">Seleccione un instrumento arriba</p>
   </div>
@@ -24,6 +24,12 @@ import OtroForm from './InstrumentoEspecifico/OTRO.vue'
 
 export default {
   name: 'InstrumentoEspecíficoErgonomia',
+  components: {
+    RULAForm,
+    REBAForm,
+    NIOSHForm,
+    OtroForm
+  },
   props: {
     modelValue: {
       type: Object,
@@ -41,15 +47,22 @@ export default {
     }
   },
   methods: {
+    /**
+     * Emite la actualización completa del form
+     * @param {Object} nuevoForm - El nuevo estado del formulario
+     */
+    updateForm(nuevoForm) {
+      this.$emit('update:modelValue', nuevoForm)
+    },
+
+    /**
+     * Actualiza un campo específico del form
+     * @param {String} key - La clave del campo a actualizar
+     * @param {*} value - El nuevo valor
+     */
     updateField(key, value) {
       this.$emit('update:modelValue', { ...this.form, [key]: value })
     }
-  },
-  components: {
-    RULAForm,
-    REBAForm,
-    NIOSHForm,
-    OtroForm
   }
 }
 </script>

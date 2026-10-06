@@ -242,15 +242,15 @@ import ListadoValoraciones from './ListadoValoraciones.vue'
 
 // Importar componentes de las Secciones de Nutrición
 // AJUSTA las rutas según tu estructura de carpetas real
-import DatosBasicoNutricion from './secciones/nutricion/DatosBásico.vue'
+import DatosBasicoNutricion from './secciones/nutricion/DatosBasico.vue'
 import AntecedentesHeredofamiliares from './secciones/nutricion/AntecedentesHeredofamiliares.vue'
 import AntecedentesMedicos from './secciones/nutricion/AntecedentesMedicos.vue'
 import CirugiasMedicamentos from './secciones/nutricion/CirugiasMedicamentos.vue'
 import HabitosConsumoNutricion from './secciones/nutricion/HabitosConsumoNutricion.vue'
 import FactoresLaboralesNutricion from './secciones/nutricion/FactoresLaborales.vue'
-import AntropometriaNutricion from './secciones/nutricion/Antropometría.vue'
-import BioquimicaNutricion from './secciones/nutricion/Bioquímica.vue'
-import DiagnosticoNutricion from './secciones/nutricion/Diagnóstico.vue'
+import AntropometriaNutricion from './secciones/nutricion/Antropometria.vue'
+import BioquimicaNutricion from './secciones/nutricion/Bioquimica.vue'
+import DiagnosticoNutricion from './secciones/nutricion/Diagnostico.vue'
 import AptitudDictamenNutricion from './secciones/nutricion/AptitudDictamen.vue'
 
 // Servicio API (Ajusta el nombre según tu proyecto)

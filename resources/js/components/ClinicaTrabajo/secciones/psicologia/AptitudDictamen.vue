@@ -1,168 +1,127 @@
 <template>
   <div class="seccion-aptitud-dictamen-psicologia">
-    <div class="bg-white border rounded-lg p-4 mb-4">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-        <i class="icon icon-check text-emerald-600"></i>
-        Aptitud y Dictamen Final
-      </h3>
-
-      <!-- Aptitud (REQUERIDO - sin default) -->
-      <div class="mb-4">
-        <label class="block text-sm font-semibold text-gray-700 mb-2">Aptitud * <span class="text-red-500">(Requerida, sin default)</span></label>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <label
-            v-for="opcion in aptitudOpciones"
-            :key="opcion.value"
-            class="relative cursor-pointer"
-          >
-            <input
-              type="radio"
-              :value="opcion.value"
-              v-model="form.aptitud"
-              @change="updateField('aptitud', opcion.value)"
-              class="sr-only peer"
-              required
-            />
-            <div
-              class="p-4 border-2 rounded-lg text-center transition-all"
-              :class="[
-                'peer-checked:border-emerald-500 peer-checked:bg-emerald-50',
-                'peer-focus:ring-2 peer-focus:ring-emerald-500',
-                'hover:border-gray-400',
-                opcion.color
-              ]"
-            >
-              <div class="text-2xl mb-1">{{ opcion.icon }}</div>
-              <div class="font-semibold text-gray-800">{{ opcion.label }}</div>
-              <div class="text-xs text-gray-500 mt-1">{{ opcion.descripcion }}</div>
+    <!-- SECTION: APTITUD Y DICTAMEN FINAL -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #20c997 0%, #1a9b7f 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-check-circle mr-2"></i> APTITUD Y DICTAMEN FINAL
+        </h5>
+      </div>
+      <div class="card-body">
+        <!-- APTITUD (REQUERIDO - sin default) -->
+        <div class="mb-4">
+          <label class="font-weight-bold">Aptitud * <span class="text-danger">(Requerida, sin default)</span></label>
+          <div class="row">
+            <div v-for="opcion in aptitudOpciones" :key="opcion.value" class="col-md-4 mb-3">
+              <div class="border rounded p-3 text-center hover:bg-light transition-all cursor-pointer"
+                :class="[
+                  'border-' + (form.aptitud === opcion.value ? 'success' : 'secondary'),
+                  'bg-' + (form.aptitud === opcion.value ? 'success' : 'light'),
+                  'text-' + (form.aptitud === opcion.value ? 'white' : 'dark')
+                ]">
+                <input
+                  type="radio"
+                  name="aptitud"
+                  :value="opcion.value"
+                  :checked="form.aptitud === opcion.value"
+                  @change="updateField('aptitud', opcion.value)"
+                  class="position-static"
+                  required
+                />
+                <div class="mt-2">
+                  <div class="h4 mb-1">{{ opcion.icon }}</div>
+                  <div class="font-weight-bold">{{ opcion.label }}</div>
+                  <div class="small text-muted">{{ opcion.descripcion }}</div>
+                </div>
+              </div>
             </div>
-          </label>
+          </div>
+          <small class="text-danger d-block mt-2">
+            Seleccione una opción antes de continuar.
+          </small>
         </div>
-      </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Restricciones -->
-        <div class="md:col-span-2">
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Restricciones / Limitaciones</label>
+        <!-- RESTRICTIONES -->
+        <div class="mb-4">
+          <label class="font-weight-bold">Restricciones / Limitaciones</label>
           <textarea
+            class="form-control"
+            rows="3"
             v-model="form.restricciones"
-            rows="3"
-            class="input-field w-full"
-            placeholder="Describa restricciones laborales, limitaciones funcionales, adaptaciones necesarias..."
+            @input="updateField('restricciones', $event.target.value)"
+            placeholder="Describa restricciones laborales, limitaciones funcionales, adaptaciones necesarias, horarios flexibles, teletrabajo parcial, etc."
+            style="height: 96px;"
           ></textarea>
         </div>
 
-        <!-- Recomendaciones -->
-        <div class="md:col-span-2">
-          <label class="block text-sm font-semibold text-gray-700 mb-1">Recomendaciones</label>
+        <!-- RECOMENDACIONES -->
+        <div class="mb-4">
+          <label class="font-weight-bold">Recomendaciones</label>
           <textarea
+            class="form-control"
+            rows="4"
             v-model="form.recomendaciones"
-            rows="3"
-            class="input-field w-full"
-            placeholder="Recomendaciones para el trabajador, la empresa, seguimiento, tratamiento..."
+            @input="updateField('recomendaciones', $event.target.value)"
+            placeholder="Recomendaciones para el trabajador, la empresa, seguimiento, tratamiento, derivaciones, capacitación..."
+            style="height: 128px;"
           ></textarea>
         </div>
-      </div>
 
-      <!-- Seguimiento -->
-      <div class="mt-4 pt-4 border-t border-gray-200">
-        <h4 class="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <i class="icon icon-calendar text-blue-600"></i>
-          Plan de Seguimiento
-        </h4>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="flex items-center gap-2 cursor-pointer">
+        <!-- SEGUIMIENTO -->
+        <div class="row mb-4">
+          <!-- SEGUIMIENTO REQUERIDO -->
+          <div class="col-md-6 mb-3">
+            <div class="form-check">
               <input
+                class="form-check-input"
                 type="checkbox"
                 v-model="form.requiere_seguimiento"
-                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 @change="updateField('requiere_seguimiento', $event.target.checked)"
-              />
-              <span class="font-semibold text-gray-700">Requiere seguimiento</span>
-            </label>
+              >
+              <label class="form-check-label font-weight-bold">Requiere seguimiento</label>
+            </div>
           </div>
 
-          <div v-if="form.requiere_seguimiento">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Próximo Seguimiento *</label>
+          <!-- PRÓXIMO SEGUIMIENTO -->
+          <div v-if="form.requiere_seguimiento" class="col-md-6 mb-3">
+            <label class="font-weight-bold">Próximo Seguimiento *</label>
             <input
               type="date"
-              v-model="form.plazo_proximo_seguimiento"
-              class="input-field w-full"
+              class="form-control"
+              :value="form.plazo_proximo_seguimiento"
+              @input="updateField('plazo_proximo_seguimiento', $event.target.value)"
               :min="form.fecha_valoracion || fechaHoy"
-              required
-            />
-          </div>
-
-          <div v-if="form.requiere_seguimiento" class="md:col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Canalizado a</label>
-            <select v-model="form.canalizado_a" class="input-field w-full">
-              <option value="">Seleccionar...</option>
-              <option value="psicologia_externa">Psicología Externa</option>
-              <option value="imss">IMSS</option>
-              <option value="otro">Otro</option>
-              <option value="ninguno">Ninguno</option>
-            </select>
-          </div>
-
-          <div v-if="form.requiere_seguimiento && form.canalizado_a === 'otro'" class="md:col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Lugar de Canalización</label>
-            <input
-              type="text"
-              v-model="form.lugar_canalizacion"
-              class="input-field w-full"
-              placeholder="Especifique institución o servicio"
-            />
-          </div>
-
-          <div v-if="form.requiere_seguimiento" class="md:col-span-2">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Notas de Seguimiento</label>
-            <textarea
-              v-model="form.notas_seguimiento"
-              rows="2"
-              class="input-field w-full"
-              placeholder="Observaciones adicionales para el seguimiento..."
-            ></textarea>
+              style="height: 38px;"
+            >
           </div>
         </div>
-      </div>
 
-      <!-- Resumen del dictamen -->
-      <div v-if="form.aptitud" class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded">
-        <h4 class="font-semibold text-gray-700 mb-2">Resumen del Dictamen</h4>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-          <div>
-            <span class="font-semibold text-gray-600">Aptitud: </span>
-            <span :class="aptitudBadgeClass">{{ aptitudLabel }}</span>
-          </div>
-          <div>
-            <span class="font-semibold text-gray-600">Relacionado con trabajo: </span>
-            {{ form.relacionado_con_trabajo ? 'Sí' : 'No' }}
-          </div>
-          <div>
-            <span class="font-semibold text-gray-600">Requiere seguimiento: </span>
-            {{ form.requiere_seguimiento ? 'Sí' : 'No' }}
-          </div>
-          <div class="md:col-span-3" v-if="form.requiere_seguimiento && form.plazo_proximo_seguimiento">
-            <span class="font-semibold text-gray-600">Próxima cita: </span>
-            {{ formatearFecha(form.plazo_proximo_seguimiento) }}
-          </div>
-          <div class="md:col-span-3" v-if="form.canalizado_a && form.canalizado_a !== 'ninguno'">
-            <span class="font-semibold text-gray-600">Canalizado a: </span>
-            {{ canalizadoLabel }}
-            <span v-if="form.lugar_canalizacion"> - {{ form.lugar_canalizacion }}</span>
+        <!-- RESUMEN DEL DICTAMEN -->
+        <div v-if="form.aptitud" class="mt-4 p-3 bg-light border border-left border-success">
+          <h5 class="font-weight-bold text-success mb-3 flex items-center gap-2">
+            <i class="fas fa-file-alt mr-2"></i> RESUMEN DEL DICTAMEN PSICOLÓGICO
+          </h5>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Aptitud:</span>
+                <span class="font-weight-bold" :class="getAptitudClass()">{{ aptitudLabel }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Relacionado con trabajo:</span>
+                <span class="font-weight-bold">{{ form.relacionado_con_trabajo ? 'Sí' : 'No' }}</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">Seguimiento:</span>
+                <span class="font-weight-bold">{{ form.requiere_seguimiento ? 'Sí - ' + formatearFecha(form.plazo_proximo_seguimiento) : 'No requerido' }}</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Advertencia si no hay aptitud -->
-      <div v-if="!form.aptitud" class="mt-4 p-3 bg-red-50 border border-red-200 rounded">
-        <div class="flex items-center gap-2 text-red-700">
-          <i class="icon icon-alert text-lg"></i>
-          <span class="font-semibold">La APTITUD es obligatoria para poder guardar la valoración.</span>
-        </div>
-        <p class="text-sm text-red-600 mt-1">Seleccione una opción arriba antes de continuar.</p>
       </div>
     </div>
   </div>
@@ -215,22 +174,13 @@ export default {
       const opcion = this.aptitudOpciones.find(o => o.value === this.form.aptitud)
       return opcion ? opcion.label : '—'
     },
-    aptitudBadgeClass() {
-      const clases = {
-        apto: 'badge badge-green',
-        apto_con_restricciones: 'badge badge-yellow',
-        no_apto: 'badge badge-red'
+    getAptitudClass() {
+      switch (this.form.aptitud) {
+        case 'apto': return 'text-success';
+        case 'apto_con_restricciones': return 'text-warning';
+        case 'no_apto': return 'text-danger';
+        default: return 'text-muted';
       }
-      return clases[this.form.aptitud] || 'badge badge-gray'
-    },
-    canalizadoLabel() {
-      const labels = {
-        psicologia_externa: 'Psicología Externa',
-        imss: 'IMSS',
-        otro: 'Otro',
-        ninguno: 'Ninguno'
-      }
-      return labels[this.form.canalizado_a] || this.form.canalizado_a
     }
   },
   methods: {
@@ -238,22 +188,108 @@ export default {
       this.$emit('update:modelValue', { ...this.form, [key]: value })
     },
     formatearFecha(fecha) {
-      return new Date(fecha).toLocaleDateString('es-MX')
+      if (!fecha) return 'sin fecha'
+      return new Date(`${fecha}T00:00:00`).toLocaleDateString('es-MX')
     }
   }
 }
 </script>
 
 <style scoped>
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  font-weight: 600;
+.seccion-aptitud-dictamen-psicologia {
+  background: #f8f9fa;
 }
-.badge-green { background: #dcfce7; color: #166534; }
-.badge-yellow { background: #fef3c7; color: #92400e; }
-.badge-red { background: #fee2e2; color: #991b1b; }
-.badge-gray { background: #f3f4f6; color: #374151; }
+
+.card {
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.card-header {
+  background: linear-gradient(135deg, #20c997 0%, #1a9b7f 100%) !important;
+  color: white !important;
+}
+
+.form-control {
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+.form-control:focus {
+  border-color: #20c997;
+  box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25);
+}
+
+.form-check-input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+}
+
+.form-check-label {
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 2rem;
+}
+
+.badge-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.badge-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.badge-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.text-success { color: #28a745 !important; }
+.text-warning { color: #ffc107 !important; }
+.text-danger { color: #dc3545 !important; }
+.text-muted { color: #6c757d !important; }
+.font-weight-bold { font-weight: 600 !important; }
+.bg-light { background-color: #f8f9fa !important; }
+.bg-success { background-color: #28a745 !important; }
+.bg-white { background-color: #fff !important; }
+
+.border { border: 1px solid #dee2e6 !important; }
+.border-top { border-top: 1px solid #dee2e6 !important; }
+.border-left { border-left: 4px solid !important; }
+.border-success { border-color: #28a745 !important; }
+
+.rounded { border-radius: 0.25rem !important; }
+.p-2 { padding: 0.5rem !important; }
+.p-3 { padding: 1rem !important; }
+.p-4 { padding: 1.5rem !important; }
+.mt-1 { margin-top: 0.25rem !important; }
+.mt-2 { margin-top: 0.5rem !important; }
+.mt-3 { margin-top: 1rem !important; }
+.mt-4 { margin-top: 1.5rem !important; }
+.mb-2 { margin-bottom: 0.5rem !important; }
+.mb-3 { margin-bottom: 1rem !important; }
+.mb-4 { margin-bottom: 1.5rem !important; }
+
+.d-flex { display: flex !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.justify-content-between { justify-content: space-between !important; }
+.align-items-center { align-items: center !important; }
+.text-center { text-align: center !important; }
+.w-100 { width: 100% !important; }
+
+.text-sm { font-size: 0.875rem !important; }
+.small { font-size: 0.875rem !important; }
+
+.position-static { position: static !important; }
+.cursor-pointer { cursor: pointer !important; }
 </style>

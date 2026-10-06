@@ -320,312 +320,366 @@ return [
         
         
         // ==========================================
-        // 📋 MOVIMIENTOS GENERALES (COMPARTIDOS)
+        // 📋 EXPEDIENTE CLÍNICO (MENÚ DESPLEGABLE PRINCIPAL)
         // ==========================================
         [
-            'header' => 'MOVIMIENTOS DEL SISTEMA', //original
-            'can' => 'rol-asistente-medico',
+            'text'    => 'EXPEDIENTE CLÍNICO',
+            'icon'    => 'fas fa-fw fa-file-medical', // Icono representativo para el menú principal
+            'can'     => 'rol-asistente-medico',
+            'submenu' => [
+                // ------------------------------------------
+                // 👤 PACIENTES
+                // ------------------------------------------
+                [
+                    'text'    => 'Pacientes',
+                    'icon'    => 'fas fa-fw fa-user',
+                    'can'     => 'acceso-general',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de pacientes',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => 'ListaPacientes',
+                        ],
+                        [
+                            'text' => 'Registrar paciente',
+                            'icon' => 'fas fa-fw fa-user-plus',
+                            'url'  => 'PacienteNuevo',
+                        ],
+                    ],
+                ],
+                
+                // ------------------------------------------
+                // 🩺 CONSULTAS
+                // ------------------------------------------
+                [
+                    'text'    => 'Consultas',
+                    'icon'    => 'fas fa-fw fa-stethoscope',
+                    'can'     => 'acceso-general',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de consulta', 
+                            'url'  => 'ListaConsultas',
+                            'icon' => 'fas fa-fw fa-notes-medical',
+                        ],
+                        [
+                            'text' => 'Nueva consulta',
+                            'url'  => 'NuevaConsulta',
+                            'icon' => 'fas fa-plus-circle', 
+                            'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
+                        ],
+                        [
+                            'text' => 'Consulta Inteligente',
+                            'icon' => 'fas fa-network-wired',
+                            'url'  => 'ConsultaInteligenteNueva',
+                            'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
+                        ],
+                        [
+                            'text' => 'Historial de consulta',
+                            'url'  => 'HistorialConsultas',
+                            'icon' => 'fas fa-fw fa-history',
+                            'can'  => 'acceso-general',
+                        ],
+                    ],
+                ],
+                
+                // ------------------------------------------
+                // 🏥 ATENCIÓN MÉDICA
+                // ------------------------------------------
+                [
+                    'text'    => 'Atención Médica',
+                    'icon'    => 'fas fa-fw fa-hospital',
+                    'can'     => 'acceso-medico-admin', // 🔒 Oculto para asistente
+                    'submenu' => [
+                        [
+                            'text' => 'Triage',
+                            'icon' => 'fas fa-fw fa-exclamation',
+                            'url'  => 'TRIAGES',
+                        ],
+                        [
+                            'text' => 'Evaluación IA',
+                            'icon' => 'fas fa-fw fa-robot',
+                            'url'  => 'EvaluacionIa',
+                        ],
+                        [
+                            'text' => 'Archivos Clínicos',
+                            'icon' => 'fas fa-fw fa-folder-open',
+                            'url'  => 'ArchivosClinicos',
+                        ],
+                        [
+                            'text' => 'Derivaciones',
+                            'icon' => 'fas fa-fw fa-eye',
+                            'url'  => 'Derivaciones',
+                        ],
+                    ],
+                ],
+                
+                // ------------------------------------------
+                // 📅 AGENDA
+                // ------------------------------------------
+                [
+                    'text'    => 'Agenda',
+                    'icon'    => 'fas fa-fw fa-calendar',
+                    'can'     => 'acceso-medico-admin', 
+                    'submenu' => [
+                        [
+                            'text' => 'Citas',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => 'Agenda',
+                        ],
+                        [
+                            'text' => 'Programar cita',
+                            'icon' => 'fas fa-fw fa-user-clock',
+                            'url'  => 'AgendarCitas',
+                        ],
+                    ],
+                ],
+                
+                // ------------------------------------------
+                // 💊 RECETAS
+                // ------------------------------------------
+                [
+                    'text'    => 'Recetas',
+                    'icon'    => 'fas fa-fw fa-prescription',
+                    'can'     => 'acceso-medico-admin', // 🔒 Oculto para asistente
+                    'submenu' => [
+                        [
+                            'text' => 'Historial de recetas',
+                            'icon' => 'fas fa-fw fa-book-medical',
+                            'url'  => 'HistorialRecetas',
+                        ],
+                    ],
+                ],
+                
+                // ------------------------------------------
+                // 💊 MEDICAMENTOS
+                // ------------------------------------------
+                [
+                    'text'    => 'Medicamentos',
+                    'icon'    => 'fas fa-fw fa-capsules',
+                    'can'     => 'acceso-medico-admin', // 🔒 Oculto para asistente
+                    'submenu' => [
+                        [
+                            'text' => 'Inventario',
+                            'icon' => 'fas fa-fw fa-pump-medical',
+                            'url'  => 'Medicamentos',
+                        ],
+                    ],
+                ],
+            ],
         ],
-        
+        // ==========================================
+        // 🦺 MEDICINA DEL TRABAJO (MENÚ DESPLEGABLE PRINCIPAL)
+        // ==========================================
         [
-            'text' => 'Pacientes',
-            'icon' => 'fas fa-fw fa-user',
-            'can' => 'acceso-general',
+            'text'    => 'MEDICINA LABORAL', // También podrías usar 'SALUD OCUPACIONAL'
+            'icon'    => 'fas fa-fw fa-briefcase-medical', // Icono representativo para el menú principal
+            'can'     => 'modulo-medicina-trabajo',
             'submenu' => [
+                // ------------------------------------------
+                // 🩺 VALORACIONES OCUPACIONALES
+                // ------------------------------------------
                 [
-                    'text' => 'Lista de pacientes',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => 'ListaPacientes', // Apunta al grupo del rol
+                    'text'    => 'Valoraciones ocupacionales',
+                    'icon'    => 'fas fa-fw fa-stethoscope',
+                    'can'     => 'modulo-medicina-trabajo',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de valoraciones',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => '/clinica/medicina',
+                        ],
+                        [
+                            'text' => 'Nueva valoración',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => '/ficha-ocupacional',
+                        ],
+                    ],
                 ],
-                [
-                    'text' => 'Registrar paciente',
-                    'icon' => 'fas fa-fw fa-user-plus',
-                    'url' => 'PacienteNuevo',
-                ],
-            ],
-        ],
-        [
-            'text' => 'Consultas',
-            'icon' => 'fas fa-fw fa-stethoscope',
-            'can' => 'acceso-general',
-            'submenu' => [
-                [
-                    'text' => 'Lista de consulta', 
-                    'url'  => 'ListaConsultas', // Visible para Asistente y Médico
-                    'icon' => 'fas fa-fw fa-notes-medical',
-                ],
-                [
-                    'text' => 'Nueva consulta',
-                    'url'  => 'NuevaConsulta',
-                    'icon' => 'fas fa-plus-circle', 
-                    'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
-                ],
-                [
-                    'text' => 'Consulta Inteligente',
-                    'icon' => 'fas fa-network-wired',
-                    'url'  => 'ConsultaInteligenteNueva',
-                    'can'  => 'acceso-medico-admin', // 🔒 Oculto para asistente
-                ],
-                 [
-                    'text' => 'Historial de consulta',
-                    'url'  => 'HistorialConsultas',
-                    'icon' => 'fas fa-fw fa-history', // 🕘 Icono de historial
-                        'can'  => 'acceso-general', // Visible para Asistente y Médico
-                ],
-            ],
-        ],
-        [
-            'text' => 'Atención Médica',
-            'icon' => 'fas fa-fw fa-hospital',
-            'can' => 'acceso-medico-admin', // 🔒 Oculto para asistente
-            'submenu' => [
-                [
-                    'text' => 'Triage',
-                    'icon' => 'fas fa-fw fa-exclamation',
-                    'url' => 'TRIAGES',
-                ],
-                [
-                    'text' => 'Evaluación IA',
-                    'icon' => 'fas fa-fw fa-robot',
-                    'url' => 'EvaluacionIa',
-                ],
-                [
-                    'text' => 'Archivos Clínicos',
-                    'icon' => 'fas fa-fw fa-folder-open',
-                    'url' => 'ArchivosClinicos',
-                ],
-                [
-                    'text' => 'Derivaciones',
-                    'icon' => 'fas fa-fw fa-eye',
-                    'url' => 'Derivaciones',
-                ],
-            ],
-        ],
-       [
-            'text'    => 'Agenda',
-            'icon'    => 'fas fa-fw fa-calendar',
-            'can'     => 'acceso-medico-admin', 
-            'submenu' => [
-                [
-                    'text' => 'Citas',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url'  => 'Agenda', // 👈 Usaremos una URL base neutral
-                ],
-                [
-                    'text' => 'Programar cita',
-                    'icon' => 'fas fa-fw fa-user-clock',
-                    'url'  => 'AgendarCitas', // 👈 Usaremos una URL base neutral
-                ],
-            ],
-        ],
-        [
-            'text' => 'Recetas',
-            'icon' => 'fas fa-fw fa-prescription',
-            'can' => 'acceso-medico-admin', // 🔒 Oculto para asistente
-            'submenu' => [
-                [
-                    'text' => 'Historial de recetas',
-                    'icon' => 'fas fa-fw fa-book-medical', //original
-                    'url' => 'HistorialRecetas',
-                ],
-            ],
-        ],
-        [
-            'text' => 'Medicamentos',
-            'icon' => 'fas fa-fw fa-capsules',
-            'can' => 'acceso-medico-admin', // 🔒 Oculto para asistente
-            'submenu' => [
-                [
-                    'text' => 'Inventario',
-                    'icon' => 'fas fa-fw fa-pump-medical',
-                    'url' => 'Medicamentos',
-                ],
-            ],
-        ],
 
-        // ==========================================
-        // 🦺 MEDICINA DEL TRABAJO
-        // ==========================================
-        [
-            'header' => 'MEDICINA DEL TRABAJO',
-            'can' => 'modulo-medicina-trabajo',
-        ],
-        [
-            'text' => 'Valoraciones ocupacionales',
-            'icon' => 'fas fa-fw fa-stethoscope',
-            'can' => 'modulo-medicina-trabajo',
-            'submenu' => [
+                // ------------------------------------------
+                // 🧠 PSICOLOGÍA OCUPACIONAL
+                // ------------------------------------------
                 [
-                    'text' => 'Lista de valoraciones',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => '/clinica/medicina',
+                    'text'    => 'Valoraciones psicológicas',
+                    'icon'    => 'fas fa-fw fa-brain',
+                    'can'     => 'modulo-medicina-trabajo',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de valoraciones',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => '/clinica/psicologia',
+                        ],
+                        [
+                            'text' => 'Nueva valoración',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => '/clinica/psicologia/nueva',
+                        ],
+                    ],
                 ],
-                [
-                    'text' => 'Nueva valoración',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => '/ficha-ocupacional',
-                ],
-            ],
-        ],
-         // ==========================================
-        // 🧠 PSICOLOGÍA OCUPACIONAL
-        // ==========================================
-        [
-            'header' => 'PSICOLOGÍA OCUPACIONAL',
-            'can' => 'modulo-medicina-trabajo',
-        ],
-        [
-            'text' => 'Valoraciones psicológicas',
-            'icon' => 'fas fa-fw fa-brain',
-            'can' => 'modulo-medicina-trabajo',
-            'submenu' => [
-                [
-                    'text' => 'Lista de valoraciones',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => '/clinica/psicologia',
-                ],
-                [
-                    'text' => 'Nueva valoración',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => '/clinica/psicologia/nueva',
-                ],
-            ],
-        ],
-        // ==========================================
-        // 🥗 NUTRICIÓN OCUPACIONAL
-        // ==========================================
-        [
-            'header' => 'NUTRICIÓN OCUPACIONAL',
-            'can' => 'modulo-medicina-trabajo',
-        ],
-        [
-            'text' => 'Valoraciones nutricionales',
-            'icon' => 'fas fa-fw fa-apple-alt',
-            'can' => 'modulo-medicina-trabajo',
-            'submenu' => [
-                [
-                    'text' => 'Lista de valoraciones',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => '/clinica/nutricion',
-                ],
-                [
-                    'text' => 'Nueva valoración',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => '/clinica/nutricion/nueva',
-                ],
-            ],
-        ],
-         // ==========================================
-        // 👂 AUDIOLOGÍA OCUPACIONAL
-        // ==========================================
-        [
-            'header' => 'AUDIOLOGÍA OCUPACIONAL',
-            'can' => 'modulo-medicina-trabajo',
-        ],
-        [
-            'text' => 'Valoraciones audiológicas',
-            'icon' => 'fas fa-fw fa-deaf',
-            'can' => 'modulo-medicina-trabajo',
-            'submenu' => [
-                [
-                    'text' => 'Lista de valoraciones',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => '/clinica/audiologia',
-                ],
-                [
-                    'text' => 'Ficha Historia Clinica ',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => 'FichaDelliAudiologia',
-                ],
-                [
-                    'text' => 'Ficha Trabajo Alto Riesgo ',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => 'FichaTrabajoAltoRiesgo',
-                ],
-            ],
-        ],
-        // ==========================================
-        // 🪑 ERGONOMÍA OCUPACIONAL
-        // ==========================================
-        [
-            'header' => 'ERGONOMÍA OCUPACIONAL',
-            'can' => 'modulo-medicina-trabajo',
-        ],
-        [
-            'text' => 'Valoraciones ergonómicas',
-            'icon' => 'fas fa-fw fa-chair',
-            'can' => 'modulo-medicina-trabajo',
-            'submenu' => [
-                [
-                    'text' => 'Lista de valoraciones',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => '/clinica/ergonomia',
-                ],
-                [
-                    'text' => 'Nueva valoración',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => '/clinica/ergonomia/nueva',
-                ],
-            ],
-        ],
-        [
-            'text' => 'Accidentes de trabajo',
-            'icon' => 'fas fa-fw fa-exclamation-triangle',
-            'can' => 'modulo-medicina-trabajo',
-            'submenu' => [
-                [
-                    'text' => 'Lista de accidentes',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => 'AccidentesTrabajo',
-                ],
-                [
-                    'text' => 'Registrar accidente',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => 'AccidenteTrabajoNuevo',
-                ],
-            ],
-        ],
-        [
-            'text' => 'Empresas clientes',
-            'icon' => 'fas fa-fw fa-building',
-            'can' => 'modulo-medicina-trabajo',
-            'submenu' => [
-                [
-                    'text' => 'Lista de empresas',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => 'EmpresasClientes',
-                ],
-                [
-                    'text' => 'Registrar empresa',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => 'EmpresaClienteNueva',
-                ],
-            ],
-        ],
-        [
-            'text' => 'Puestos de trabajo',
-            'icon' => 'fas fa-fw fa-hard-hat',
-            'can' => 'modulo-medicina-trabajo',
-            'submenu' => [
-                [
-                    'text' => 'Lista de puestos',
-                    'icon' => 'fas fa-fw fa-list',
-                    'url' => 'PuestosTrabajo',
-                ],
-                [
-                    'text' => 'Registrar puesto',
-                    'icon' => 'fas fa-fw fa-plus-circle',
-                    'url' => 'PuestoTrabajoNuevo',
-                ],
-            ],
-        ],
-        [
-            'text' => 'Normas oficiales',
-            'icon' => 'fas fa-fw fa-file-contract',
-            'url' => 'NormasOficiales',
-            'can' => 'modulo-medicina-trabajo',
-        ],
 
+                // ------------------------------------------
+                // 🥗 NUTRICIÓN OCUPACIONAL
+                // ------------------------------------------
+                [
+                    'text'    => 'Valoraciones nutricionales',
+                    'icon'    => 'fas fa-fw fa-apple-alt',
+                    'can'     => 'modulo-medicina-trabajo',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de valoraciones',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => '/clinica/nutricion',
+                        ],
+                        [
+                            'text' => 'Nueva valoración',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => '/clinica/nutricion/nueva',
+                        ],
+                    ],
+                ],
+
+                // ------------------------------------------
+                // 👂 AUDIOLOGÍA OCUPACIONAL
+                // ------------------------------------------
+                [
+                    'text'    => 'Valoraciones audiológicas',
+                    'icon'    => 'fas fa-fw fa-deaf',
+                    'can'     => 'modulo-medicina-trabajo',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de valoraciones',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => '/clinica/audiologia',
+                        ],
+                        [
+                            'text' => 'Ficha Historia Clínica',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => 'FichaDelliAudiologia',
+                        ],
+                        [
+                            'text' => 'Ficha Trabajo Alto Riesgo',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => 'FichaTrabajoAltoRiesgo',
+                        ],
+                    ],
+                ],
+
+                // ------------------------------------------
+                // 🪑 ERGONOMÍA OCUPACIONAL
+                // ------------------------------------------
+                [
+                    'text'    => 'Valoraciones ergonómicas',
+                    'icon'    => 'fas fa-fw fa-chair',
+                    'can'     => 'modulo-medicina-trabajo',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de valoraciones',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => '/clinica/ergonomia',
+                        ],
+                        [
+                            'text' => 'Nueva valoración',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => '/clinica/ergonomia/nueva',
+                        ],
+                    ],
+                ],
+
+                // ------------------------------------------
+                // 🫁 ESPIROMETRÍA
+                // ------------------------------------------
+                [
+                    'text'    => 'Valoraciones espirometría',
+                    'icon'    => 'fas fa-fw fa-lungs',
+                    'can'     => 'modulo-medicina-trabajo', // Ajusta este permiso si tienes uno específico como 'modulo-espirometria'
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de espirometrías',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => '/clinica/espirometria',
+                        ],
+                        [
+                            'text' => 'Nueva espirometría',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => 'ficha-espirometria',
+                        ],
+                    ],
+                ],
+
+                // ------------------------------------------
+                // ⚠️ ACCIDENTES DE TRABAJO
+                // ------------------------------------------
+                [
+                    'text'    => 'Accidentes de trabajo',
+                    'icon'    => 'fas fa-fw fa-exclamation-triangle',
+                    'can'     => 'modulo-medicina-trabajo',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de accidentes',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => 'AccidentesTrabajo',
+                        ],
+                        [
+                            'text' => 'Registrar accidente',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => 'AccidenteTrabajoNuevo',
+                        ],
+                    ],
+                ],
+
+                // ------------------------------------------
+                // 🏢 EMPRESAS CLIENTES
+                // ------------------------------------------
+                [
+                    'text'    => 'Empresas clientes',
+                    'icon'    => 'fas fa-fw fa-building',
+                    'can'     => 'modulo-medicina-trabajo',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de empresas',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => 'EmpresasClientes',
+                        ],
+                        [
+                            'text' => 'Registrar empresa',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => 'EmpresaClienteNueva',
+                        ],
+                    ],
+                ],
+
+                // ------------------------------------------
+                // 👷 PUESTOS DE TRABAJO
+                // ------------------------------------------
+                [
+                    'text'    => 'Puestos de trabajo',
+                    'icon'    => 'fas fa-fw fa-hard-hat',
+                    'can'     => 'modulo-medicina-trabajo',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de puestos',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => 'PuestosTrabajo',
+                        ],
+                        [
+                            'text' => 'Registrar puesto',
+                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'url'  => 'PuestoTrabajoNuevo',
+                        ],
+                    ],
+                ],
+
+                // ------------------------------------------
+                // 📜 NORMAS OFICIALES
+                // ------------------------------------------
+                [
+                    'text' => 'Normas oficiales',
+                    'icon' => 'fas fa-fw fa-file-contract',
+                    'url'  => 'NormasOficiales',
+                    'can'  => 'modulo-medicina-trabajo',
+                ],
+            ],
+        ],
         // ==========================================
         // 🩺 CONFIGURACIÓN EXCLUSIVA MÉDICA
         // ==========================================

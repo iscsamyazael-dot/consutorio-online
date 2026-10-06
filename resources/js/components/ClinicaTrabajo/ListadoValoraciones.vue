@@ -2,7 +2,7 @@
   <div class="listado-valoraciones">
     <!-- HEADER -->
     <div class="header-section">
-      <h2>Listado de Valoraciones {{ tituloPorSubmódulo }}</h2>
+      <h2>Listado de Valoraciones {{ tituloPorSubmodulo }}</h2>
       <button @click="abrirNueva" class="btn-primary">
         + Nueva Valoración
       </button>
@@ -113,10 +113,10 @@
 export default {
   name: 'ListadoValoraciones',
   props: {
-    submódulo: {
+    submodulo: {
       type: String,
       required: true,
-      validator: v => ['medicina', 'psicologia', 'nutricion', 'audiologia', 'ergonomia'].includes(v)
+      validator: v => ['medicina', 'psicologia', 'nutricion', 'audiologia', 'ergonomia', 'espirometria'].includes(v)
     }
   },
   data() {
@@ -131,15 +131,16 @@ export default {
     }
   },
   computed: {
-    tituloPorSubmódulo() {
+    tituloPorSubmodulo() {
       const titulos = {
         medicina: 'Médicas/Ocupacionales',
         psicologia: 'Psicológicas',
         nutricion: 'Nutricionales',
         audiologia: 'Audiológicas',
         ergonomia: 'Ergonómicas',
+        espirometria: 'Espirométricas',
       }
-      return titulos[this.submódulo] || ''
+      return titulos[this.submodulo] || ''
     },
     valoracionesFiltradas() {
       return this.valoraciones.filter(v => {
@@ -155,7 +156,7 @@ export default {
     async cargar() {
       this.cargando = true
       try {
-        const response = await clinicaTrabajo[this.submódulo].lista()
+        const response = await clinicaTrabajo[this.submodulo].lista()
         this.valoraciones = response.data || response
       } catch (error) {
         console.error('Error cargando valoraciones:', error)
@@ -167,20 +168,20 @@ export default {
 
     abrir(valoracion) {
       this.$router.push({
-        name: `${this.submódulo}.show`,
+        name: `${this.submodulo}.show`,
         params: { id: valoracion.id }
       })
     },
 
     abrirNueva() {
-        window.location.href = `/clinica/${this.submódulo}/nueva`
+        window.location.href = `/clinica/${this.submodulo}/nueva`
     },
 
     async eliminar(valoracion) {
       if (!confirm(`¿Eliminar valoración ${valoracion.folio}?`)) return
 
       try {
-        await clinicaTrabajo[this.submódulo].eliminar(valoracion.id)
+        await clinicaTrabajo[this.submodulo].eliminar(valoracion.id)
         this.$toast?.success('Eliminada')
         await this.cargar()
       } catch (error) {
@@ -193,15 +194,16 @@ export default {
       return new Date(fecha).toLocaleDateString('es-MX')
     },
 
-    nombreProfesionalPorSubmódulo(valoracion) {
+    nombreProfesionalPorSubmodulo(valoracion) {
       const claves = {
         medicina: 'medico',
         psicologia: 'psicologo',
         nutricion: 'nutriologo',
         audiologia: 'audiologo',
         ergonomia: 'ergonomo',
+        espirometria: 'medico',
       }
-      const clave = claves[this.submódulo]
+      const clave = claves[this.submodulo]
       return valoracion[clave]?.nombre || '—'
     },
 

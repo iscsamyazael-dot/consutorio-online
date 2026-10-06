@@ -64,14 +64,14 @@ import MasterFichaOcupacional from './components/ClinicaTrabajo/MasterFichaOcupa
 
 // Master components para submódulos Clínica Trabajo (están en secciones/)
 import MasterMedicina from './components/ClinicaTrabajo/Mastermedicina.vue'
-import MasterPsicologia from './components/ClinicaTrabajo/Masterpsicologia.vue'
+import MasterPsicologia from './components/ClinicaTrabajo/MasterPsicologia.vue'
 import MasterNutricion from './components/ClinicaTrabajo/Masternutricion.vue'
 import MasterAudiologia from './components/ClinicaTrabajo/Masteraudiologia.vue'
 import MasterErgonomia from './components/ClinicaTrabajo/Masterergonomia.vue'
 
 import MasterFichaAudiologicaDelli from './components/ClinicaTrabajo/MasterFichaAudiologica-DELLI.vue'
 import MasterExamenTrabajoTr from './components/ClinicaTrabajo/MasterExamenTrabajo-TR.vue'
-
+import MasterEspirometria from './components/ClinicaTrabajo/MasterEspirometria.vue'
 
  
 // ------------------------------------------------------
@@ -128,6 +128,7 @@ app.component('master-ergonomia', MasterErgonomia)
 
 app.component('master-ficha-audiologica-delli', MasterFichaAudiologicaDelli)
 app.component('master-examen-trabajo-tr', MasterExamenTrabajoTr)
+app.component('master-espirometria', MasterEspirometria)
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 

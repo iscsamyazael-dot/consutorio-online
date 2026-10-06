@@ -2,7 +2,7 @@
   <div class="exposicion-riesgos">
 
     <!-- ===================== 1.1 FICHA DE IDENTIDAD ===================== -->
-    <div class="card ficha-card">
+    <!-- <div class="card ficha-card">
       <div class="card-header ficha-header">
         <span><i class="fas fa-id-card mr-2"></i>1.1 Ficha de identidad</span>
         <button
@@ -68,12 +68,12 @@
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- ============ 1.2 EXPOSICIÓN OCUPACIONAL (EMPRESAS ANTERIORES) ============ -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-building mr-2"></i>1.2 Exposición ocupacional (compañías anteriores)</span>
+        <span><i class="fas fa-building mr-2"></i>1.1 Exposición ocupacional (compañías anteriores)</span>
         <button
           type="button"
           class="btn btn-sm btn-header"
@@ -122,7 +122,7 @@
     <!-- ===================== 1.3 AGENTES ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-flask mr-2"></i>1.3 Agentes a los que ha estado expuesto</span>
+        <span><i class="fas fa-flask mr-2"></i>1.2 Agentes a los que ha estado expuesto</span>
         <span class="contador">{{ contar(local.agentes, agentesKeys) }} marcados</span>
       </div>
       <div class="card-body">
@@ -151,7 +151,7 @@
     <!-- ============ 1.4 CONDICIONES DE ALTO RIESGO ============ -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-hard-hat mr-2"></i>1.4 Condiciones de alto riesgo que realiza en su trabajo</span>
+        <span><i class="fas fa-hard-hat mr-2"></i>1.3 Condiciones de alto riesgo que realiza en su trabajo</span>
         <span class="contador">{{ contar(local.condiciones_riesgo, condicionesKeys) }} marcadas</span>
       </div>
       <div class="card-body">
@@ -172,7 +172,7 @@
     <!-- ============ 1.5 OTRAS CONDICIONES DEL PROCESO ============ -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-brain mr-2"></i>1.5 Otras condiciones dentro del proceso de trabajo</span>
+        <span><i class="fas fa-brain mr-2"></i>1.4 Otras condiciones dentro del proceso de trabajo</span>
       </div>
       <div class="card-body">
         <div class="grupo">

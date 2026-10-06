@@ -148,7 +148,7 @@
 
 <script>
 export default {
-  name: 'ClinicóExamenMedicina',
+  name: 'ClinicoExamenMedicina',
   props: {
     modelValue: {
       type: Object,

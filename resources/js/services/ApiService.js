@@ -97,6 +97,14 @@ export const clinicaTrabajo = {
     eliminar: (id) => apiClient.delete(`/clinica/ergonomia/${id}`),
     imprimir: (id) => apiClient.get(`/clinica/ergonomia/${id}/imprimir`),
   },
+  espirometria: {
+    lista: () => apiClient.get('/clinica/espirometria'),
+    obtener: (id) => apiClient.get(`/clinica/espirometria/${id}`),
+    crear: (data) => apiClient.post('/clinica/espirometria', data),
+    actualizar: (id, data) => apiClient.put(`/clinica/espirometria/${id}`, data),
+    eliminar: (id) => apiClient.delete(`/clinica/espirometria/${id}`),
+    imprimir: (id) => apiClient.get(`/clinica/espirometria/${id}/imprimir`),
+  },
   medicina: {
     lista: () => apiClient.get('/clinica/medicina'),
     obtener: (id) => apiClient.get(`/clinica/medicina/${id}`),
@@ -118,8 +126,8 @@ export const clinicaTrabajo = {
     buscar: (params) => apiClient.get('/pacientes/buscar', { params: { buscar: params.q || params.buscar } }),
   },
   empresas: {
-    lista: () => apiClient.get('/empresas'),
-    obtener: (id) => apiClient.get(`/empresas/${id}`),
+    lista: () => apiClient.get('/empresas-cliente'),
+    obtener: (id) => apiClient.get(`/empresas-cliente/${id}`),
   },
   medicos: {
     lista: () => apiClient.get('/medicos'),

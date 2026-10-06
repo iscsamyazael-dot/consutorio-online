@@ -48,4 +48,17 @@ class CatalogoController extends Controller
 
         return response()->json($riesgos);
     }
+
+    /**
+     * GET /empresas-cliente
+     * Lista empresas cliente para selects
+     */
+    public function empresasCliente(): JsonResponse
+    {
+        $empresas = \App\Models\ClinicaTrabajo\EmpresaCliente::where('activo', true)
+            ->orderBy('razon_social')
+            ->get(['id', 'razon_social', 'giro_actividad']);
+
+        return response()->json($empresas);
+    }
 }
