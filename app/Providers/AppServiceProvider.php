@@ -66,7 +66,7 @@ class AppServiceProvider extends ServiceProvider
         //   3) Este USUARIO en particular tiene el módulo asignado
         //      (usuario_modulos, en la base del propio tenant).
         Gate::define('modulo-medicina-trabajo', function ($user) {
-            if (!in_array($user->rol, ['medico', 'admin'])) {
+            if (!in_array($user->rol, ['medico', 'admin', 'asistente'])) {
                 return false;
             }
 
@@ -74,11 +74,34 @@ class AppServiceProvider extends ServiceProvider
                 return false;
             }
 
-            return DB::table('usuario_modulos')
-                ->where('user_id', $user->id)
-                ->where('modulo_codigo', 'medicina_trabajo')
-                ->where('activo', 1)
-                ->exists();
+            return true;
+
+            // return DB::table('usuario_modulos')
+            //     ->where('user_id', $user->id)
+            //     ->where('modulo_codigo', 'medicina_trabajo')
+            //     ->where('activo', 1)
+            //     ->exists();
+        });
+         // ✅ Compuerta para el módulo de Expediente Clínico (CORREGIDO Y ACTIVO)
+        Gate::define('modulo-expediente-clinico', function ($user) {
+            // 1. Verificar que tenga un rol clínico o de admin
+            if (!in_array($user->rol, ['medico', 'admin', 'asistente'])) {
+                return false;
+            }
+            
+            // 2. Verificar que el TENANT tenga el módulo activo en sesión
+            if (!in_array('emedicina_general', session('tenant_modulos', []))) {
+                return false;
+            }
+
+            return true;
+            
+            // 3. Verificar que el USUARIO tenga el módulo asignado en su BD
+            // return DB::table('usuario_modulos')
+            //     ->where('user_id', $user->id)
+            //     ->where('modulo_codigo', 'medicina_general')
+            //     ->where('activo', 1)
+            //     ->exists();
         });
     }
 

@@ -20,6 +20,9 @@ Route::prefix('super-admin')->name('superadmin.')->group(function () {
         Route::get('TotalInquilinos', [TenantController::Class,'totalClientes']);
         Route::get('InquilinosActivos', [TenantController::Class,'totalActivos']);
         Route::get('InquilinosSuspendidos', [TenantController::Class,'totalSuspendidos']);
+
+        // ➕ NUEVA RUTA: Obtener lista de módulos disponibles
+        Route::get('modulos', [TenantController::class, 'getModulos'])->name('modulos.index');
         
         // Aquí agregaremos las rutas de gestión de tenants en el siguiente paso
         // Route::get('/tenants', [TenantController::class, 'index'])->name('tenants.index');

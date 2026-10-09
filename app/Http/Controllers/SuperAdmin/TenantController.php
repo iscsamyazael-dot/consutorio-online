@@ -1,23 +1,22 @@
 <?php
-
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Models\Modulo;
+use App\Models\TenantModulo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class TenantController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        return Tenant::all();
+        return Tenant::with('modulos')->get();
     }
-    
+
     public function totalClientes()
     {
         return Tenant::query()->count('nombre_consultorio');
@@ -37,78 +36,85 @@ class TenantController extends Controller
             ->count('nombre_consultorio');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
-    {   
-        // 1. Generar el folio dinámico (Ej: CONSULTORIO-2026-001)
+    {
+        // 1. Generar folio
         $year = date('Y');
         $ultimoTenant = Tenant::latest('id')->first();
         $siguienteId = $ultimoTenant ? $ultimoTenant->id + 1 : 1;
         $folio = 'CONSULTORIO-' . $year . '-' . str_pad($siguienteId, 3, '0', STR_PAD_LEFT);
 
-        // 2. Validar o asegurar que tenemos el nombre de la base de datos
         $dbName = $request->db_name;
-
-        $cliente=Tenant::create([
-            'folio'=> $folio,
-            'nombre_consultorio'=> $request->nombre_consultorio,
-            'db_name'=> $dbName,
-            'dominio_correo'=> $request->dominio_correo,
-            'estatus'=> $request->estatus,
-        ]);
         
+        // 2. Crear Tenant
+        $cliente = Tenant::create([
+            'folio' => $folio,
+            'nombre_consultorio' => $request->nombre_consultorio,
+            'db_name' => $dbName,
+            'dominio_correo' => $request->dominio_correo,
+            'estatus' => $request->estatus,
+        ]);
+
+        // 3. Asignar Módulos en la base central
+        $modulosIds = $request->input('modulos', []);
+        $adminId = Auth::guard('super_admin')->id();
+
+        foreach ($modulosIds as $moduloId) {
+            TenantModulo::create([
+                'tenant_id' => $cliente->id,
+                'modulo_id' => $moduloId,
+                'activo' => 1,
+                'activado_por' => $adminId,
+                'fecha_activacion' => now(),
+            ]);
+        }
+
         try {
-            // Log para saber qué nombre estamos intentando crear
+            // 4. Crear base de datos física
             \Log::info("Intentando crear BD: " . $dbName);
-            // 3. CREACIÓN DE LA BASE DE DATOS FÍSICA (Multi-tenant limpio)
-            // Nota: Asegúrate de escapar o validar que el nombre de la BD sea seguro contra SQL Injection
             DB::statement("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
             
-            // 4. Nombre de tu base de datos de prueba que sirve como plantilla maestra
-            // (Asegúrate de cambiar 'consultorio_online' por el nombre real de tu BD de pruebas si es diferente)
             $dbTemplate = 'consultorio_online';
-            
-            // Obtenemos todas las tablas de la base de datos de prueba
             $tablas = DB::select("SHOW TABLES FROM `$dbTemplate`");
             $propertyKey = "Tables_in_" . $dbTemplate;
-
-            // Desactivamos temporalmente las llaves foráneas para evitar conflictos al replicar la estructura
+            
             DB::statement("SET FOREIGN_KEY_CHECKS = 0;");
-
             foreach ($tablas as $tablaObj) {
                 $tabla = $tablaObj->$propertyKey;
-                
-                // Replicamos puramente la estructura limpia de cada tabla (CREATE TABLE ... LIKE ...)
                 DB::statement("CREATE TABLE `$dbName`.`$tabla` LIKE `$dbTemplate`.`$tabla`;");
             }
-
-            // Reactivamos las llaves foráneas
             DB::statement("SET FOREIGN_KEY_CHECKS = 1;");
-           
-            // ==========================================
-            // INSERTAR USUARIO ADMINISTRADOR POR DEFECTO
-            // ==========================================
-            $dominioCorreo = $request->dominio_correo; 
-            $emailAdmin = "admin@" . $dominioCorreo; 
 
-            DB::table($dbName . '.users')->insert([
+            // 5. Crear usuario administrador por defecto
+            $dominioCorreo = $request->dominio_correo;
+            $emailAdmin = "admin@" . $dominioCorreo;
+            
+            $adminUserId = DB::table($dbName . '.users')->insertGetId([
                 'name' => 'Administrador ' . $request->nombre_consultorio,
                 'email' => $emailAdmin,
-                'password' => bcrypt('password123'), // Contraseña temporal inicial
-                'rol'=> 'admin',
+                'password' => bcrypt('password123'),
+                'rol' => 'admin',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-            // ==========================================
+
+            // 6. Asignar módulos al admin en usuario_modulos (BD del tenant)
+            $modulos = Modulo::whereIn('id', $modulosIds)->get();
+            
+            foreach ($modulos as $modulo) {
+                DB::table($dbName . '.usuario_modulos')->insert([
+                    'user_id' => $adminUserId,
+                    'modulo_codigo' => $modulo->clave,
+                    'activo' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
         } catch (\Exception $e) {
-            // Si ocurre un error, puedes hacer un rollback eliminando el tenant creado
-             $cliente->delete();
-            // Si falla la creación de la BD física, puedes decidir borrar el registro o reportarlo
-            // $cliente->delete();
-            // ESTO ES LO QUE NOS VA A DECIR LA VERDAD
+            // Rollback si falla
+            $cliente->modulos()->detach();
+            $cliente->delete();
             \Log::error("ERROR CRÍTICO AL CREAR BD: " . $e->getMessage());
             return response()->json([
                 'success' => false,
@@ -117,48 +123,102 @@ class TenantController extends Controller
         }
 
         return response()->json([
-        'success' => true,
-        'message' => 'Cliente y base de datos creados correctamente',
-        'data' => [
-            'cliente' => $cliente
-            ]
+            'success' => true,
+            'message' => 'Cliente y base de datos creados correctamente',
+            'data' => ['cliente' => $cliente->load('modulos')]
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
-        // Buscamos explícitamente por el id (o puedes cambiar 'id' por el campo que uses)
-        $tenant = Tenant::find($id);
-        // Si no lo encuentra, puedes retornar un 404 limpio
+        $tenant = Tenant::with('modulos')->find($id);
+        
         if (!$tenant) {
             return response()->json(['message' => 'Inquilino no encontrado'], 404);
         }
+        
         return response()->json($tenant);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
         $tenant = Tenant::findOrFail($id);
-        $tenant -> update([
+        
+        $tenant->update([
             'nombre_consultorio' => $request->nombre_consultorio,
             'estatus' => $request->estatus,
         ]);
+
+        // 1. Actualizar módulos en la base central
+        $modulosIds = $request->input('modulos', []);
+        $adminId = Auth::guard('super_admin')->id();
+
+        // Desactivar todos los módulos actuales
+        TenantModulo::where('tenant_id', $tenant->id)->update(['activo' => 0]);
+
+        // Activar/Crear los seleccionados
+        foreach ($modulosIds as $moduloId) {
+            TenantModulo::updateOrCreate(
+                ['tenant_id' => $tenant->id, 'modulo_id' => $moduloId],
+                [
+                    'activo' => 1,
+                    'activado_por' => $adminId,
+                    'fecha_activacion' => now(),
+                ]
+            );
+        }
+
+        // 2. Actualizar usuario_modulos en la BD del tenant para todos los admins
+        try {
+            $dbName = $tenant->db_name;
+            $modulos = Modulo::whereIn('id', $modulosIds)->get();
+            
+            // Desactivar todos los módulos para todos los usuarios admin
+            DB::table($dbName . '.usuario_modulos')
+                ->whereIn('user_id', function($query) use ($dbName) {
+                    $query->select('id')
+                          ->from($dbName . '.users')
+                          ->where('rol', 'admin');
+                })
+                ->update(['activo' => 0]);
+
+            // Activar los módulos seleccionados para todos los admins
+            $adminIds = DB::table($dbName . '.users')
+                ->where('rol', 'admin')
+                ->pluck('id');
+
+            foreach ($adminIds as $adminUserId) {
+                foreach ($modulos as $modulo) {
+                    DB::table($dbName . '.usuario_modulos')->updateOrCreate(
+                        [
+                            'user_id' => $adminUserId,
+                            'modulo_codigo' => $modulo->clave,
+                        ],
+                        [
+                            'activo' => 1,
+                            'updated_at' => now(),
+                        ]
+                    );
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error("Error al actualizar usuario_modulos: " . $e->getMessage());
+            // No fallamos la actualización del tenant si esto falla
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Tenant actualizado correctamente',
-            'data'    => $tenant->fresh()
+            'data' => $tenant->fresh()->load('modulos')
         ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+    public function getModulos()
+    {
+        $modulos = Modulo::orderBy('nombre')->get(['id', 'clave', 'nombre', 'descripcion']);
+        return response()->json($modulos);
+    }
+
     public function destroy(Tenant $tenant)
     {
         //

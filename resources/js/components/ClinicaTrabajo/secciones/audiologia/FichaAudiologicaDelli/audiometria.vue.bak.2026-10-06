@@ -1,0 +1,657 @@
+<template>
+  <div class="hoja4-audiometria-delli">
+    <!-- ALERT INFO -->
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle mr-2"></i>
+      <strong>Instrucciones:</strong> Ingrese los umbrales de audición en dB HL para cada frecuencia. El sistema calculará automáticamente PTA, clasificación y gráficas.
+    </div>
+
+    <!-- SECTION: EXPOSICIÓN RECIENTE -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-bell mr-2"></i> CONDICIONES DE EVALUACIÓN
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6 class="font-weight-bold">¿ÚLTIMAS 14 HORAS EXPUESTO A RUIDO ≥80dB?</h6>
+            <label class="custom-control custom-radio">
+              <input type="radio" class="custom-control-input" name="exposicion_14h" value="true" v-model="localData.exposicion_14horas" @change="emitChange">
+              <span class="custom-control-label">SÍ</span>
+            </label>
+            <label class="custom-control custom-radio">
+              <input type="radio" class="custom-control-input" name="exposicion_14h" value="false" v-model="localData.exposicion_14horas" @change="emitChange">
+              <span class="custom-control-label">NO</span>
+            </label>
+            <small class="text-muted d-block mt-2">Si SÍ, la audiometría puede no ser válida. Reprogramar.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION: AUDIOMETRÍA TONAL PURA -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-wave-square mr-2"></i> AUDIOMETRÍA TONAL PURA (dB HL)
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead style="background: #ecf0f1; text-align: center;">
+              <tr>
+                <th colspan="10">FRECUENCIAS (Hz)</th>
+              </tr>
+              <tr>
+                <th style="width: 15%;">OÍDO</th>
+                <th>125</th>
+                <th>250</th>
+                <th>500</th>
+                <th>1000</th>
+                <th>2000</th>
+                <th>3000</th>
+                <th>4000</th>
+                <th>6000</th>
+                <th>8000</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- OÍDO DERECHO -->
+              <tr style="background: #e8f4f8;">
+                <td class="font-weight-bold">DERECHO</td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_125_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_250_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_500_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_1000_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_2000_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_3000_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_4000_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_6000_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_8000_der" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+              </tr>
+
+              <!-- OÍDO IZQUIERDO -->
+              <tr style="background: #fff3e0;">
+                <td class="font-weight-bold">IZQUIERDO</td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_125_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_250_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_500_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_1000_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_2000_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_3000_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_4000_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="audiometria_6000_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+                <td><input type="number" class="form-control form-control-sm" v-model.number="localData.audiometria_8000_izq" @change="onAudiometriaChange" min="-10" max="120" style="text-align: center;"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <small class="text-muted d-block mt-2">Ingrese valores entre -10 y 120 dB HL. Los valores vacíos no se consideran en el cálculo.</small>
+      </div>
+    </div>
+
+    <!-- SECTION: GRÁFICAS AUDIOMÉTRICAS -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-chart-line mr-2"></i> GRÁFICAS AUDIOMÉTRICAS
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6 class="font-weight-bold text-center mb-3" style="color: #0066cc;">OÍDO DERECHO</h6>
+            <canvas id="audiometriaChartDerecho" style="max-height: 350px;"></canvas>
+          </div>
+          <div class="col-md-6">
+            <h6 class="font-weight-bold text-center mb-3" style="color: #ff6600;">OÍDO IZQUIERDO</h6>
+            <canvas id="audiometriaChartIzquierdo" style="max-height: 350px;"></canvas>
+          </div>
+        </div>
+        <div class="alert alert-light mt-3 mb-0">
+          <small class="text-muted d-block mb-2"><strong>Clasificación por PTA:</strong></small>
+          <small class="text-muted d-block">• Normal: ≤ 20 dB | • Leve: 21-40 dB | • Moderada: 41-60 dB | • Severa: 61-90 dB | • Profunda: > 90 dB</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION: CÁLCULOS AUTOMÁTICOS -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-calculator mr-2"></i> CÁLCULOS AUTOMÁTICOS
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- PTA DERECHO -->
+          <div class="col-md-3 text-center">
+            <div class="alert alert-primary">
+              <small class="d-block text-muted">PTA DERECHO</small>
+              <h4 class="mb-0">{{ localData.pta_der }} dB</h4>
+              <small class="text-muted">Promedio 500,1k,2k,3k Hz</small>
+            </div>
+          </div>
+
+          <!-- PTA IZQUIERDO -->
+          <div class="col-md-3 text-center">
+            <div class="alert alert-warning">
+              <small class="d-block text-muted">PTA IZQUIERDO</small>
+              <h4 class="mb-0">{{ localData.pta_izq }} dB</h4>
+              <small class="text-muted">Promedio 500,1k,2k,3k Hz</small>
+            </div>
+          </div>
+
+          <!-- PTA PROMEDIO -->
+          <div class="col-md-3 text-center">
+            <div class="alert alert-info">
+              <small class="d-block text-muted">PTA PROMEDIO</small>
+              <h4 class="mb-0">{{ localData.pta_promedio }} dB</h4>
+              <small class="text-muted">(Der + Izq) / 2</small>
+            </div>
+          </div>
+
+          <!-- CLASIFICACIÓN -->
+          <div class="col-md-3 text-center">
+            <div :class="'alert ' + getAlertClass(localData.pta_promedio)">
+              <small class="d-block text-muted">CLASIFICACIÓN</small>
+              <h4 class="mb-0" style="font-size: 16px;">{{ localData.clasificacion }}</h4>
+              <small class="text-muted">Según PTA Promedio</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION: VALORACIÓN -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-comments mr-2"></i> VALORACIÓN
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-12 mb-3">
+            <label class="font-weight-bold">VALORACIÓN</label>
+            <textarea
+              class="form-control"
+              v-model="localData.valoracion"
+              @change="emitChange"
+              placeholder="Describa su valoración clínica y conclusiones"
+              rows="3"
+              style="border-radius: 4px; padding: 10px 12px;"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION: INTERPRETACIÓN Y DIAGNÓSTICO -->
+    <div class="card mb-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-clipboard-list mr-2"></i> INTERPRETACIÓN AUDIOLÓGICA
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-12 mb-3">
+            <label class="font-weight-bold">INTERPRETACIÓN (Notas del Audiólogo)</label>
+            <textarea
+              class="form-control"
+              v-model="localData.interpretacion"
+              @change="emitChange"
+              placeholder="Describa hallazgos, patrones audiométricos, simetría, etc."
+              rows="3"
+              style="border-radius: 4px; padding: 10px 12px;"
+            ></textarea>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="font-weight-bold">TIPO DE HIPOACUSIA <span class="text-danger">*</span></label>
+            <select class="form-control" v-model="localData.tipo_hipoacusia" @change="emitChange" style="height: 38px;">
+              <option value="">-- Seleccionar --</option>
+              <option value="Normal">Normal</option>
+              <option value="Leve">Leve</option>
+              <option value="Moderada">Moderada</option>
+              <option value="Severa">Severa</option>
+              <option value="Profunda">Profunda</option>
+            </select>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="font-weight-bold">RESTRICCIONES LABORALES</label>
+            <textarea
+              class="form-control"
+              v-model="localData.restricciones"
+              @change="emitChange"
+              placeholder="Si aplica (ej: evitar exposición a ruido >80dB)"
+              rows="2"
+              style="border-radius: 4px; padding: 10px 12px;"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION: APTITUD Y RECOMENDACIONES -->
+    <div class="card">
+      <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-check-square mr-2"></i> APTITUD Y RECOMENDACIONES
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label class="font-weight-bold">APTITUD <span class="text-danger">* OBLIGATORIA</span></label>
+            <select class="form-control" v-model="localData.aptitud" @change="emitChange" style="height: 38px; border: 2px solid #dc3545;">
+              <option value="">-- DEBE SELECCIONAR --</option>
+              <option value="Apto">✓ APTO</option>
+              <option value="Apto con restricciones">⚠️ APTO CON RESTRICCIONES</option>
+              <option value="No apto">✗ NO APTO</option>
+            </select>
+            <small class="text-danger d-block mt-1">Este campo es REQUERIDO para guardar.</small>
+          </div>
+
+          <div class="col-md-8">
+            <label class="font-weight-bold">RECOMENDACIONES FIJAS</label>
+            <div class="alert alert-success">
+              <ul class="mb-0 pl-3">
+                <li>✓ Usar protección auditiva personal cuando exposición ≥85 dB(A)</li>
+                <li>✓ Realizar audiometría de control anualmente (mínimo)</li>
+                <li>✓ Revisar medidas técnicas y organizacionales de control</li>
+                <li>✓ Informar al trabajador de resultados y recomendaciones</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- RESUMEN FINAL -->
+        <div class="alert alert-secondary mt-3">
+          <h6 class="font-weight-bold mb-2">📋 RESUMEN DE EVALUACIÓN</h6>
+          <small>
+            <strong>PTA Promedio:</strong> {{ localData.pta_promedio }} dB |
+            <strong>Clasificación:</strong> {{ localData.clasificacion }} |
+            <strong>Aptitud:</strong> <span class="font-weight-bold">{{ localData.aptitud || 'NO SELECCIONADA' }}</span>
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import Chart from 'chart.js/auto'
+
+export default {
+  name: 'Hoja4AudiometriaDelli',
+  props: {
+    modelValue: {
+      type: Object,
+      default: () => ({})
+    }
+  },
+  data() {
+    return {
+      localData: {
+        exposicion_14horas: 'false',
+        audiometria_125_der: null,
+        audiometria_250_der: null,
+        audiometria_500_der: null,
+        audiometria_1000_der: null,
+        audiometria_2000_der: null,
+        audiometria_3000_der: null,
+        audiometria_4000_der: null,
+        audiometria_6000_der: null,
+        audiometria_8000_der: null,
+        audiometria_125_izq: null,
+        audiometria_250_izq: null,
+        audiometria_500_izq: null,
+        audiometria_1000_izq: null,
+        audiometria_2000_izq: null,
+        audiometria_3000_izq: null,
+        audiometria_4000_izq: null,
+        audiometria_6000_izq: null,
+        audiometria_8000_izq: null,
+        pta_der: 0,
+        pta_izq: 0,
+        pta_promedio: 0,
+        clasificacion: '',
+        interpretacion: '',
+        tipo_hipoacusia: '',
+        restricciones: '',
+        aptitud: '',
+        valoracion: ''
+      },
+      chartDerechoInstance: null,
+      chartIzquierdoInstance: null,
+      frecuencias: [125, 250, 500, 1000, 2000, 3000, 4000, 6000, 8000]
+    }
+  },
+  watch: {
+    modelValue: {
+      handler(newVal) {
+        if (newVal && Object.keys(newVal).length > 0) {
+          this.localData = { ...newVal }
+          this.$nextTick(() => {
+            this.actualizarGrafica()
+          })
+        }
+      },
+      deep: true
+    }
+  },
+  methods: {
+    onAudiometriaChange() {
+      this.calcularPTA()
+      this.actualizarGrafica()
+      this.emitChange()
+    },
+    calcularPTA() {
+      // PTA Derecho = promedio de 500, 1000, 2000, 3000
+      const valores_der = [
+        this.localData.audiometria_500_der,
+        this.localData.audiometria_1000_der,
+        this.localData.audiometria_2000_der,
+        this.localData.audiometria_3000_der
+      ].filter(v => v !== null && v !== undefined && v !== '')
+
+      if (valores_der.length > 0) {
+        this.localData.pta_der = Math.round(valores_der.reduce((a, b) => a + b, 0) / valores_der.length)
+      } else {
+        this.localData.pta_der = 0
+      }
+
+      // PTA Izquierdo = promedio de 500, 1000, 2000, 3000
+      const valores_izq = [
+        this.localData.audiometria_500_izq,
+        this.localData.audiometria_1000_izq,
+        this.localData.audiometria_2000_izq,
+        this.localData.audiometria_3000_izq
+      ].filter(v => v !== null && v !== undefined && v !== '')
+
+      if (valores_izq.length > 0) {
+        this.localData.pta_izq = Math.round(valores_izq.reduce((a, b) => a + b, 0) / valores_izq.length)
+      } else {
+        this.localData.pta_izq = 0
+      }
+
+      // PTA Promedio = (Der + Izq) / 2
+      if (this.localData.pta_der > 0 && this.localData.pta_izq > 0) {
+        this.localData.pta_promedio = Math.round((this.localData.pta_der + this.localData.pta_izq) / 2)
+      } else {
+        this.localData.pta_promedio = 0
+      }
+
+      // Clasificación automática
+      this.clasificarHipoacusia()
+    },
+    clasificarHipoacusia() {
+      const pta = this.localData.pta_promedio
+
+      if (pta <= 20) {
+        this.localData.clasificacion = 'NORMAL'
+      } else if (pta >= 21 && pta <= 40) {
+        this.localData.clasificacion = 'HIPOACUSIA LEVE'
+      } else if (pta >= 41 && pta <= 60) {
+        this.localData.clasificacion = 'HIPOACUSIA MODERADA'
+      } else if (pta >= 61 && pta <= 90) {
+        this.localData.clasificacion = 'HIPOACUSIA SEVERA'
+      } else if (pta > 90) {
+        this.localData.clasificacion = 'HIPOACUSIA PROFUNDA'
+      } else {
+        this.localData.clasificacion = ''
+      }
+    },
+    getAlertClass(pta) {
+      if (pta <= 20) return 'alert-success'
+      if (pta <= 40) return 'alert-warning'
+      if (pta <= 60) return 'alert-warning'
+      if (pta <= 90) return 'alert-danger'
+      return 'alert-dark'
+    },
+    obtenerDatosOido(oido) {
+      if (oido === 'derecho') {
+        return [
+          this.localData.audiometria_125_der,
+          this.localData.audiometria_250_der,
+          this.localData.audiometria_500_der,
+          this.localData.audiometria_1000_der,
+          this.localData.audiometria_2000_der,
+          this.localData.audiometria_3000_der,
+          this.localData.audiometria_4000_der,
+          this.localData.audiometria_6000_der,
+          this.localData.audiometria_8000_der
+        ]
+      } else {
+        return [
+          this.localData.audiometria_125_izq,
+          this.localData.audiometria_250_izq,
+          this.localData.audiometria_500_izq,
+          this.localData.audiometria_1000_izq,
+          this.localData.audiometria_2000_izq,
+          this.localData.audiometria_3000_izq,
+          this.localData.audiometria_4000_izq,
+          this.localData.audiometria_6000_izq,
+          this.localData.audiometria_8000_izq
+        ]
+      }
+    },
+    actualizarGrafica() {
+      const datosDerechos = this.obtenerDatosOido('derecho')
+      const datosIzquierdos = this.obtenerDatosOido('izquierdo')
+
+      this.crearGraficaOido('audiometriaChartDerecho', datosDerechos, '#0066cc', 'chartDerechoInstance')
+      this.crearGraficaOido('audiometriaChartIzquierdo', datosIzquierdos, '#ff6600', 'chartIzquierdoInstance')
+    },
+    crearGraficaOido(elementId, datos, color, instanceProperty) {
+      const ctx = document.getElementById(elementId)
+      if (!ctx) return
+
+      // Destruir gráfica anterior si existe
+      if (this[instanceProperty]) {
+        this[instanceProperty].destroy()
+      }
+
+      this[instanceProperty] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: this.frecuencias.map(f => f + ' Hz'),
+          datasets: [
+            {
+              data: datos,
+              borderColor: color,
+              backgroundColor: this.hexToRgba(color, 0.08),
+              borderWidth: 2.5,
+              pointRadius: 5,
+              pointBackgroundColor: color,
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              tension: 0.3,
+              fill: true,
+              spanGaps: true,
+              pointHoverRadius: 7
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.85)',
+              titleFont: { size: 11, weight: 'bold' },
+              bodyFont: { size: 10 },
+              padding: 8,
+              displayColors: false,
+              callbacks: {
+                title: () => '',
+                label: function(context) {
+                  if (context.raw === null || context.raw === undefined) {
+                    return 'Sin dato'
+                  }
+                  return context.raw + ' dB HL'
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              min: -10,
+              max: 120,
+              reverse: true,
+              title: {
+                display: true,
+                text: 'dB HL',
+                font: { size: 11, weight: 'bold' }
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.08)',
+                drawBorder: true
+              },
+              ticks: {
+                stepSize: 10,
+                font: { size: 9 }
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              },
+              ticks: {
+                font: { size: 9 }
+              }
+            }
+          }
+        }
+      })
+    },
+    hexToRgba(hex, alpha) {
+      const r = parseInt(hex.slice(1, 3), 16)
+      const g = parseInt(hex.slice(3, 5), 16)
+      const b = parseInt(hex.slice(5, 7), 16)
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`
+    },
+    emitChange() {
+      this.$emit('update:modelValue', { ...this.localData })
+    }
+  },
+  mounted() {
+    if (this.modelValue && Object.keys(this.modelValue).length > 0) {
+      this.localData = { ...this.modelValue }
+      this.calcularPTA()
+    }
+    this.$nextTick(() => {
+      this.actualizarGrafica()
+    })
+  }
+}
+</script>
+
+<style scoped>
+.hoja4-audiometria-delli {
+  background: #f8f9fa;
+}
+
+.card {
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.form-control {
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+.form-control:focus {
+  border-color: #5F6E7E;
+  box-shadow: 0 0 0 0.2rem rgba(95, 110, 126, 0.25);
+}
+
+.form-control-sm {
+  font-size: 13px;
+  padding: 6px 8px;
+  height: 32px !important;
+}
+
+.table {
+  margin-bottom: 0;
+  font-size: 12px;
+}
+
+.table thead th {
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #dee2e6;
+  padding: 8px 4px;
+}
+
+.table td {
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.alert {
+  margin-bottom: 15px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.alert h4 {
+  margin-top: 5px;
+  font-weight: bold;
+}
+
+label {
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #2c3e50;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-success ul li {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.legend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+canvas {
+  max-width: 100%;
+}
+</style>

@@ -325,7 +325,7 @@ return [
         [
             'text'    => 'EXPEDIENTE CLÍNICO',
             'icon'    => 'fas fa-fw fa-file-medical', // Icono representativo para el menú principal
-            'can'     => 'rol-asistente-medico',
+            'can'     => 'modulo-expediente-clinico',
             'submenu' => [
                 // ------------------------------------------
                 // 👤 PACIENTES

@@ -27,6 +27,7 @@
         "@popperjs/core": "^2.11.8",
         "admin-lte": "^4.0.0-rc6",
         "bootstrap": "^5.3.8",
+        "chart.js": "^4.5.1",
         "jquery": "^4.0.0",
         "jspdf": "^4.2.1",
         "mitt": "^3.0.1",

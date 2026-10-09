@@ -220,7 +220,7 @@ import DiagnosticoPsicologia from './secciones/psicologia/Diagnostico.vue'
 import AptitudDictamenPsicologia from './secciones/psicologia/AptitudDictamen.vue'
 
 // 3. Servicio API (ajusta la ruta si tu ApiService está en otro lugar, ej: '@/services/ApiService')
-import { clinicaTrabajo } from '../../services/ApiService'
+import { clinicaTrabajo } from '../../services/ApiService.js'
 
 export default {
   name: 'MasterPsicologia',
