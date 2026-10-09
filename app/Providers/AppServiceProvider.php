@@ -90,7 +90,7 @@ class AppServiceProvider extends ServiceProvider
             }
             
             // 2. Verificar que el TENANT tenga el módulo activo en sesión
-            if (!in_array('emedicina_general', session('tenant_modulos', []))) {
+            if (!in_array('medicina_general', session('tenant_modulos', []))) {
                 return false;
             }
 
