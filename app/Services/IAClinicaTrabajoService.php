@@ -8,29 +8,16 @@ use Illuminate\Support\Facades\Log;
 use Smalot\PdfParser\Parser as PdfParser;
 use PhpOffice\PhpWord\IOFactory as WordIOFactory;
 
+
 /**
  * Servicio de IA para el módulo de Medicina del Trabajo (Valoraciones
- * ocupacionales y Accidentes de trabajo).
+ * ocupacionales, Accidentes de trabajo y Espirometría).
  *
- * DECISIÓN DE ARQUITECTURA (ver conversación de diseño): este servicio
- * duplica intencionalmente los métodos genéricos de infraestructura de
- * IAClinicaService.php (llamada HTTP a Gemini con reintentos, parseo/
- * reparación de JSON, extracción de texto de archivos, preparación de
- * imágenes para Gemini Vision) EN VEZ de extraerlos a un trait compartido.
- *
- * Motivo: IAClinicaService.php ya está en producción con la consulta
- * médica de los 4 tenants. Tocarlo -aunque sea solo para mover métodos a
- * un trait sin cambiar su lógica- implica riesgo de romper ese flujo y
- * obligaría a reprobar todo el módulo de consulta médica sin ganar
- * funcionalidad nueva a cambio. Duplicar esta infraestructura (unas
- * ~250 líneas) aísla el radio de impacto de este módulo nuevo: si algo
- * sale mal aquí, no toca la consulta médica.
- *
- * Esta duplicación es deuda técnica aceptada a propósito. Cuando este
- * servicio lleve tiempo funcionando en producción sin sobresaltos, es el
- * momento correcto para extraer un trait compartido (ManejaLlamadasGemini
- * o similar) con dos usos reales ya confirmados para validar que el
- * trait quedó bien -en vez de hacerlo ahora a ciegas con uno solo.
+ * DECISIÓN DE ARQUITECTURA: este servicio duplica intencionalmente la
+ * infraestructura genérica de IAClinicaService.php en vez de extraerla a un
+ * trait compartido, para aislar el radio de impacto de este módulo nuevo.
+ * Es deuda técnica aceptada; extraer un trait queda pendiente para cuando
+ * este servicio lleve tiempo estable en producción.
  */
 class IAClinicaTrabajoService
 {
@@ -42,32 +29,20 @@ class IAClinicaTrabajoService
     // =========================================================
 
     /**
-     * Analiza la narrativa libre de un accidente de trabajo (texto escrito
-     * o transcripción de dictado) y sugiere el llenado de los campos
-     * estructurados del formulario de `accidentes_trabajo`.
+     * Analiza la narrativa libre de un accidente de trabajo y sugiere el
+     * llenado de los campos estructurados de `accidentes_trabajo`.
      *
-     * El formulario sigue siendo TRADICIONAL: este método solo PRELLENA
-     * campos para que el médico los revise/edite antes de guardar. La IA
-     * nunca decide el registro final, y campos administrativos que no se
-     * pueden inferir de forma confiable de una narrativa (fecha exacta,
-     * lugar, folio, notificación IMSS, secuela, fecha de alta) NO se
-     * incluyen aquí a propósito — esos los llena el médico directo en el
-     * formulario.
+     * La IA solo PRELLENA; el médico revisa antes de guardar. Campos
+     * administrativos (fecha exacta, lugar, folio, notificación IMSS,
+     * secuela, fecha de alta) no se incluyen a propósito.
      *
-     * @param string $narrativa Texto/dictado de qué pasó, en palabras del
-     *   médico o del trabajador.
-     * @param array $normasCandidatas Normas ya asociadas al puesto del
-     *   trabajador (de `puesto_norma_aplicable` JOIN `normas_oficiales`),
-     *   cada una como ['id' => ..., 'codigo' => ..., 'titulo' => ...].
-     *   La IA SOLO puede sugerir normas de esta lista — nunca inventa
-     *   códigos de norma nuevos, para evitar alucinaciones de NOMs que no
-     *   existen o no aplican al puesto.
-     * @param string|null $instruccionAdicional Indicación extra opcional
-     *   del médico (mismo patrón usado en IAClinicaService).
+     * @param string $narrativa Texto/dictado de lo ocurrido.
+     * @param array $normasCandidatas Normas asociadas al puesto:
+     *   ['id' => ..., 'codigo' => ..., 'titulo' => ...]. La IA solo puede
+     *   sugerir normas de esta lista.
+     * @param string|null $instruccionAdicional Indicación extra del médico.
      *
-     * @return array|null Arreglo decodificado del JSON de la IA, o null
-     *   si la llamada/parseo falló (el controlador debe manejar este caso
-     *   dejando el formulario vacío para llenado 100% manual).
+     * @return array|null JSON decodificado o null si falló la llamada/parseo.
      */
     public function analizarNarrativaAccidente(
         string $narrativa,
@@ -162,26 +137,16 @@ class IAClinicaTrabajoService
     }
 
     /**
-     * Analiza la transcripción (dictado en vivo, una o varias rondas) de
-     * una valoración ocupacional y sugiere el llenado de
-     * `valoraciones_ocupacionales` + sus tablas hijas
-     * `valoracion_norma_aplicada` y `valoracion_seguimiento`.
+     * Analiza la transcripción de una ronda de dictado de una valoración
+     * ocupacional. Acumula rondas sin perder lo ya capturado.
      *
-     * Sigue el mismo patrón que analizarTranscripcion() de la consulta
-     * médica general: acumula rondas de dictado sin perder lo ya
-     * capturado. El IMC y su clasificación NO se piden a la IA -se
-     * calculan en el backend a partir de peso/estatura, es aritmética
-     * simple y no debe depender de que el modelo no se equivoque-.
+     * El IMC NO se pide a la IA: se calcula en el backend.
      *
-     * @param string $textoRonda Texto de la ronda de dictado actual.
-     * @param array $historial Texto de rondas anteriores de esta misma
-     *   valoración (mismo patrón que $historial en IAClinicaService).
-     * @param array|null $datosPuesto Info del puesto para poder
-     *   correlacionar hallazgos vs. riesgos, ej. ['nombre' => ...,
-     *   'descripcion_actividades' => ..., 'riesgos_activos' => ['riesgo_ergonomico', 'riesgo_ruido', ...]]
-     *   (los flags de riesgo de `puestos_trabajo` que están en 1).
-     * @param array $normasCandidatas Igual que en analizarNarrativaAccidente
-     *   -normas ya asociadas al puesto vía `puesto_norma_aplicable`-.
+     * @param string $textoRonda Texto de la ronda actual.
+     * @param array $historial Texto de rondas anteriores de esta valoración.
+     * @param array|null $datosPuesto ['nombre' => ..., 'descripcion_actividades' => ...,
+     *   'riesgos_activos' => [...]]
+     * @param array $normasCandidatas Normas asociadas al puesto (ver arriba).
      *
      * @return array|null
      */
@@ -306,18 +271,252 @@ class IAClinicaTrabajoService
         return $this->consultarGeminiTrabajo($prompt, 'analizarTranscripcionValoracion');
     }
 
+    /**
+     * Analiza el dictado/chat completo de la Ficha Médica Ocupacional.
+     * La IA solo PROPONE; el médico revisa y confirma.
+     */
+    public function analizarFichaOcupacional(string $textoCompleto): ?array
+    {
+        set_time_limit(120);
+
+        $vocabulario = DiccionarioMedico::textoReferencia();
+
+        $prompt = <<<PROMPT
+            Eres un co-piloto experto en Medicina del Trabajo que apoya a un médico a llenar la Ficha Médica Ocupacional a partir del dictado/chat de la consulta.
+
+            Tu tarea tiene dos partes muy claras con reglas distintas:
+            1. **Clasificación Estricta**: Para los campos 'empresa', 'puesto_trabajo', 'descripcion_puesto', 'epp_requerido', 'antecedentes', 'examen_fisico' y 'examenes_complementarios'. Aquí solo debes estructurar y resumir lo que ya está mencionado en el texto. Si un dato no se menciona, responde estrictamente con "". NUNCA inventes ni asumas datos clínicos.
+            2. **Sugerencia Proactiva**: Para los campos 'departamento', 'antiguedad', 'dictamen', 'recomendaciones' y 'sintomas_detectados'. Aquí la IA DEBE proponer de manera inteligente y proactiva sugerencias automatizadas basadas en su conocimiento de medicina ocupacional y los riesgos del puesto descritos, para que el médico los valide o edite.
+
+            Vocabulario de referencia (coloquial -> término médico):
+            {$vocabulario}
+
+            TEXTO DE LA CONSULTA:
+            "{$textoCompleto}"
+
+            REGLAS GENERALES
+            - Devuelve EXCLUSIVAMENTE el JSON indicado, sin Markdown ni texto extra.
+            - Respeta las negaciones: "sin limitación", "niega alergias" o "sin dolor" describen AUSENCIA de hallazgos; no son restricciones ni antecedentes positivos.
+            - Copia el contenido clínico con fidelidad, pero SIN encabezados ni frases introductorias del dictado (quita cosas como "En el historial clínico:", "El EPP requerido incluye:", "Exámenes complementarios:").
+
+            CAMPOS
+            - empresa: razón social completa, incluyendo el sufijo (ej. "S.A. de C.V.").
+            - departamento: área o departamento. Si no se menciona explícitamente, infiere un área lógica según el puesto (ej. "Operaciones", "Construcción", "Mantenimiento", "Producción").
+            - puesto_trabajo: solo el nombre del puesto, sin la empresa.
+            - antiguedad: antigüedad en la empresa. Si el texto no menciona años/meses y es evaluación periódica, coloca "No especificada (evaluación periódica)". Si es de ingreso, "Nuevo ingreso".
+            - descripcion_puesto: actividades/tareas del puesto, en una o dos frases.
+            - riesgos: arreglo con las claves de los factores a los que el trabajador está expuesto POR SU PUESTO. Solo estas claves: "ruido", "quimicos", "polvos", "vibraciones", "ergonomicos", "psicosociales", "alturas".
+            - epp_requerido: lista de EPP separada por comas.
+            - antecedentes: antecedentes patológicos, quirúrgicos, alérgicos, hábitos y ocupacionales dictados.
+            - examen_fisico: SOLO hallazgos de la exploración física.
+            - examenes_complementarios: resultados de laboratorio/gabinete (espirometría, audiometría, antidoping, RX, etc.).
+            - dictamen: Sugiere de forma inteligente y razonable un dictamen de aptitud basándote en el análisis de la salud, exploración física, y exámenes complementarios del trabajador en relación con los riesgos de su puesto. Solo responde con "apto", "apto_con_restricciones" o "no_apto". (Ejemplo: si la exploración y exámenes complementarios son normales y sanos, debe sugerir "apto").
+            - restricciones: solo si el dictamen sugerido es "apto_con_restricciones" y se mencionan limitaciones; si no, "".
+            - recomendaciones: Genera y sugiere proactivamente de 2 a 4 recomendaciones preventivas, de seguridad, higiene o de vigilancia de la salud oportunas según los riesgos de este puesto (ej. uso continuo y obligatorio del EPP auditivo, visual o respiratorio; higiene postural; exámenes de espirometría y audiometría periódicos anuales; pausas activas; hidratación constante). ¡Debes proponerlas proactivamente de forma automatizada y completa, nunca las dejes vacías!
+            - sintomas_detectados: un arreglo JSON de textos cortos (de 2 a 5 palabras cada uno) que representen de forma exhaustiva TODOS los factores de riesgo de exposición descritos para el puesto de trabajo (ej. "Ruido Elevado", "Humos de soldadura", "Sustancias químicas", "Trabajo en alturas", "Vibraciones") y los hallazgos o resultados clínicos de relevancia (ej. "Espirometría normal", "Audiometría normal", "Antidoping negativo"). ¡Extrae de forma detallada cada factor del texto!
+
+            {"empresa":"","departamento":"","puesto_trabajo":"","antiguedad":"","descripcion_puesto":"","riesgos":[],"epp_requerido":"","antecedentes":"","examen_fisico":"","examenes_complementarios":"","dictamen":"","restricciones":"","recomendaciones":"","sintomas_detectados":[]}
+            PROMPT;
+
+        return $this->consultarGeminiTrabajo($prompt, 'analizarFichaOcupacional');
+    }
+
+    /**
+     * Consulta a la IA con contexto de la ficha médica ocupacional
+     * para responder preguntas del médico en tiempo real.
+     */
+    public function consultarMedicinaOcupacional(
+        string $mensaje,
+        int $pacienteId,
+        array $contexto = []
+    ): ?array {
+        set_time_limit(60);
+
+        $vocabulario = DiccionarioMedico::textoReferencia();
+
+        $contextoTexto = '';
+        if (!empty($contexto)) {
+            $contextoTexto = "\nCONTEXTO ACTUAL DE LA FICHA:\n" . json_encode($contexto, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+        }
+
+        $prompt = "
+        Eres un asistente experto en Medicina del Trabajo que apoya al médico durante la consulta ocupacional en tiempo real.
+
+        {$contextoTexto}
+
+        Vocabulario de referencia (coloquial -> término médico):
+        {$vocabulario}
+
+        PREGUNTA DEL MÉDICO:
+        \"{$mensaje}\"
+
+        REGLAS:
+        - Responde de forma concisa, profesional y útil para el médico
+        - Si la pregunta es sobre llenar un campo específico, da la respuesta directa
+        - Si es una pregunta clínica, da orientación basada en medicina ocupacional
+        - Si pide cálculos (IMC, etc.), hazlos con los datos del contexto
+        - NO inventes datos que no estén en el contexto
+        - Si no tienes información suficiente, dilo claramente
+
+        Devuelve EXCLUSIVAMENTE el siguiente JSON:
+        {
+            \"respuesta\": \"tu respuesta aquí\",
+            \"campos_completados\": {}
+        }
+
+        En \"campos_completados\" solo incluye campos si el médico pidió explícitamente llenarlos y tú tienes la info del contexto. Formato: {\"campo\": \"valor\"}.
+        ";
+
+        return $this->consultarGeminiTrabajo($prompt, 'consultarMedicinaOcupacional');
+    }
+
+    /**
+     * Analiza un informe de espirometría en PDF con texto nativo y devuelve
+     * las maniobras, valores predichos y calidad de sesión.
+     *
+     * Solo procesa PDFs con texto digital. Imágenes y PDFs escaneados
+     * devuelven null (el controlador responde 422).
+     *
+     * @param string $rutaCompleta Ruta absoluta al archivo.
+     * @param string $mime Tipo MIME del archivo.
+     * @return array|null Estructura lista para el frontend, o null si falla.
+     */
+    public function analizarEspirometria(string $rutaCompleta, string $mime): ?array
+    {
+        set_time_limit(300);
+
+
+        $promptEspirometria = <<<PROMPT
+Eres un extractor de datos clínicos especializado en informes de espirometría ndd Medical Technologies.
+
+Tu tarea es devolver CADA valor asociado a su columna por NOMBRE, nunca por posición. Usa la tabla del informe (y la imagen de la página si se adjunta) como fuente principal.
+
+ORDEN DE LAS COLUMNAS EN EL TEXTO EXTRAÍDO (de izquierda a derecha en el texto, que es el inverso del orden visual del informe):
+%Pred | Prueba 3 | Prueba 4 | Prueba 6 | Mejor | LLN | Pred | Parámetro
+
+Esta es solo la referencia del orden en el texto. Para asignar cada valor, identifica el encabezado de su columna y úsalo.
+
+REGLAS POR FILA:
+- Filas con 7 valores numéricos (FVC, FEV1, FEV1/FVC, FEF25-75%, PEF, FIVC): asigna por columna: %Pred, Prueba 3, Prueba 4, Prueba 6, Mejor, LLN, Pred.
+- Filas con guiones '--' o '---' pegados al nombre (BEV, PIF, EOTV, FET u otras sin Pred/LLN): 'pred', 'lln' y 'mejor' son null SOLO si el informe no muestra valor en esas columnas. Si hay un valor en la columna Mejor, debe extraerse.
+- Si una fila tiene 4 valores (Mejor + 3 pruebas), asigna en orden: Mejor, Prueba 6, Prueba 4, Prueba 3. Nunca desplaces valores entre filas.
+- Si una columna está vacía en el informe, usa null. NUNCA desplaces valores para rellenar huecos.
+
+REGLAS DE EXTRACCIÓN:
+1. ASTERISCOS (*): "3.85*" → 3.85. Ignora el asterisco; nunca omitas el valor.
+2. SIGNOS: conserva el signo tal como aparece en el informe. "0.10" es positivo; "-0.10" es negativo. No cambies signos.
+3. NUNCA inventes datos ni corrijas valores atípicos (un valor bajo como 0.58 es válido si aparece).
+4. CALIDAD DE SESIÓN: de "A(FEV1 Var=0.08L(1.9%); FVC Var=0.05L(0.9%))" extrae calidad_sesion="A", fev1_var=0.08, fvc_var=0.05.
+5. INTERPRETACIÓN: busca "Espirometría Normal" o un texto equivalente y devuélvelo tal cual.
+6. Los valores de FET, PIF, EOTV y BEV pueden ser decimales pequeños o negativos; respétalos.
+
+Responde EXCLUSIVAMENTE con este JSON, sin texto adicional ni Markdown. Cada maniobra y cada fila va identificada por nombre:
+{
+  "filas": {
+    "fvc":       {"unidad": "L",    "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "fev1":      {"unidad": "L",    "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "fev1_fvc":  {"unidad": "",     "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "fef25_75":  {"unidad": "L/s",  "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "pef":       {"unidad": "L/s",  "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "fet":       {"unidad": "s",    "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "fivc":      {"unidad": "L",    "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "pif":       {"unidad": "L/s",  "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "eotv":      {"unidad": "L",    "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null},
+    "bev":       {"unidad": "L",    "pred": null, "lln": null, "mejor": null, "prueba6": null, "prueba4": null, "prueba3": null, "pct_pred": null}
+  },
+  "calidad_sesion": null,
+  "fev1_var": null,
+  "fvc_var": null,
+  "interpretacion": null
+}
+
+REGLAS FINALES:
+- Reemplaza cada null con el valor REAL del informe. Si no existe, déjalo en null.
+- Las claves "prueba6", "prueba4" y "prueba3" corresponden a los encabezados del informe; no las reordenes.
+- NUNCA inventes datos.
+PROMPT;
+
+            try {
+                if ($mime !== 'application/pdf') {
+                    Log::warning('analizarEspirometria: tipo de archivo no soportado', ['mime' => $mime]);
+                    return null;
+                }
+
+                $textoNativo = '';
+                try {
+                    $parser = new PdfParser();
+                    $pdf = $parser->parseFile($rutaCompleta);
+                    $textoNativo = trim($pdf->getText());
+                } catch (\Throwable $e) {
+                    Log::warning('No se pudo extraer texto nativo del PDF.', ['error' => $e->getMessage()]);
+                }
+
+                if (mb_strlen($textoNativo) <= 40) {
+                    Log::warning('PDF sin texto nativo suficiente para espirometría.');
+                    return null;
+                }
+
+                Log::info('Texto extraído del PDF (espirometría)', ['texto' => mb_substr($textoNativo, 0, 3000)]);
+
+                $partes = [[
+                    'text' => $promptEspirometria . "\n\nTEXTO COMPLETO DEL PDF:\n" . $textoNativo,
+                ]];
+
+                $paginaImagen = $this->renderizarPaginaPdfComoImagen($rutaCompleta);
+                if ($paginaImagen !== null) {
+                    $partes[] = [
+                        'inline_data' => [
+                            'mime_type' => 'image/jpeg',
+                            'data' => base64_encode($paginaImagen),
+                        ],
+                    ];
+                }
+
+                $data = $this->consultarGeminiTrabajoConPartes($partes, 'analizarEspirometria');
+
+                if ($data === null) {
+                    return null;
+                }
+
+                $tabla = $this->extraerTablaDesdeTexto($textoNativo);
+                if ($tabla === null) {
+                    Log::warning('La tabla no se leyó del texto del PDF; se usan los valores de Gemini');
+                }
+                if ($tabla !== null) {
+                    $data['filas'] = array_merge($data['filas'] ?? [], $tabla['filas']);
+                }
+
+                $resultado = $this->normalizarEspirometria($data);
+
+                // Si el texto del PDF trae la tabla, sus maniobras reemplazan a las de Gemini
+                if ($tabla !== null && !empty($tabla['maniobras'])) {
+                    $resultado['maniobras'] = $tabla['maniobras'];
+                }
+
+                return $resultado;
+            } catch (\Throwable $e) {
+                Log::error('Error al analizar espirometría', ['error' => $e->getMessage()]);
+                return null;
+            }
+    }
+
     // =========================================================
-    // NÚCLEO COMPARTIDO DE LOS 2 MÉTODOS DE ARRIBA
+    // NÚCLEO DE LLAMADA A GEMINI
     // =========================================================
 
     /**
-     * Envía un prompt ya armado a Gemini y decodifica su respuesta JSON.
-     * Mismo patrón que consultarIA() en IAClinicaService: URL con
-     * GEMINI_API_KEY + modelo, llamada con reintentos, extracción de
-     * candidates.0.content.parts.0.text, reintento único adicional si el
-     * primer parseo de JSON falla.
+     * Envía un prompt de texto a Gemini y decodifica la respuesta JSON.
      */
     private function consultarGeminiTrabajo(string $prompt, string $origen): ?array
+    {
+        return $this->consultarGeminiTrabajoConPartes([['text' => $prompt]], $origen);
+    }
+
+    /**
+     * Envía un arreglo de "parts" (texto y/o imágenes) a Gemini y decodifica
+     * la respuesta JSON. Reintenta una vez si el JSON no se puede parsear.
+     */
+    private function consultarGeminiTrabajoConPartes(array $partes, string $origen): ?array
     {
         try {
             $apiKey = env('GEMINI_API_KEY');
@@ -328,7 +527,7 @@ class IAClinicaTrabajoService
 
             $response = $this->llamarGeminiConReintentos(
                 $urlGemini,
-                [['text' => $prompt]],
+                $partes,
                 3,
                 ['responseMimeType' => 'application/json']
             );
@@ -350,12 +549,14 @@ class IAClinicaTrabajoService
 
             if ($data === null) {
                 Log::warning("JSON inválido en {$origen} tras reparación, reintentando...");
+
                 $response = $this->llamarGeminiConReintentos(
                     $urlGemini,
-                    [['text' => $prompt]],
+                    $partes,
                     1,
                     ['responseMimeType' => 'application/json']
                 );
+
                 if ($response->successful()) {
                     $contenido = $response->json('candidates.0.content.parts.0.text');
                     $data = $this->decodificarJsonDesdeTexto($contenido, "{$origen} (reintento)", $response->json() ?? []);
@@ -364,26 +565,20 @@ class IAClinicaTrabajoService
 
             return $data;
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Excepción al consultar IA de Medicina del Trabajo ({$origen}): " . $e->getMessage());
             return null;
         }
     }
 
-    // =========================================================
-    // INFRAESTRUCTURA GENÉRICA — DUPLICADA A PROPÓSITO de
-    // IAClinicaService.php (ver nota de arquitectura al inicio del
-    // archivo). Sin cambios de lógica respecto al original.
-    // =========================================================
-
     /**
      * Llama a Gemini con reintentos automáticos (backoff exponencial) ante
-     * errores transitorios (429 rate limit, 500/503 servidor sobrecargado).
+     * errores transitorios (429, 500, 503).
      */
     private function llamarGeminiConReintentos(string $url, array $parts, int $maxIntentos = 3, array $generationConfigExtra = [])
     {
         $intento = 0;
-        $espera = 2; // segundos, se duplica en cada reintento (2s, 4s, 8s)
+        $espera = 2; // segundos, se duplica en cada reintento
         $response = null;
 
         $generationConfig = array_merge(
@@ -411,10 +606,41 @@ class IAClinicaTrabajoService
                 continue;
             }
 
-            return $response; // se agotaron los intentos o es un error no reintentable
+            return $response;
         }
 
         return $response;
+    }
+
+    // =========================================================
+    // PROCESAMIENTO DE ARCHIVOS E IMÁGENES
+    // =========================================================
+
+    /**
+     * Renderiza la primera página de un PDF como JPEG usando Imagick.
+     * Devuelve null si Imagick no está instalado o si falla el render;
+     * en ese caso el análisis sigue funcionando solo con texto.
+     */
+    private function renderizarPaginaPdfComoImagen(string $ruta): ?string
+    {
+        if (!extension_loaded('imagick')) {
+            return null;
+        }
+
+        try {
+            $img = new \Imagick();
+            $img->setResolution(150, 150);
+            $img->readImage($ruta . '[0]');
+            $img->setImageFormat('jpeg');
+            $img->setImageCompressionQuality(80);
+            $blob = $img->getImageBlob();
+            $img->clear();
+
+            return $blob;
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo renderizar la página del PDF', ['error' => $e->getMessage()]);
+            return null;
+        }
     }
 
     /**
@@ -435,7 +661,7 @@ class IAClinicaTrabajoService
                 $textoPdf = trim($pdf->getText());
 
                 if (mb_strlen($textoPdf) > 20) {
-                    return trim($pdf->getText());
+                    return $textoPdf;
                 }
 
                 return '[DOCUMENTO_ESCANEADO_O_IMAGEN]';
@@ -475,15 +701,14 @@ class IAClinicaTrabajoService
             Log::error('Error extrayendo texto de archivo', [
                 'error' => $e->getMessage(),
                 'ruta' => $rutaCompleta,
-                'mime' => $mime
+                'mime' => $mime,
             ]);
             return '';
         }
     }
 
     /**
-     * Comprime y arma los "parts" de imagen en el formato que espera la
-     * API de Gemini (inline_data + mime_type/data).
+     * Comprime imágenes y las arma como "parts" inline_data para Gemini Vision.
      */
     private function prepararPartesImagenesGemini(
         array $rutas,
@@ -543,12 +768,10 @@ class IAClinicaTrabajoService
             imagedestroy($imagenOriginal);
             imagedestroy($imagenModificada);
 
-            $base64File = base64_encode($binarioComprimido);
-
             $contenidoMensaje[] = [
                 'inline_data' => [
                     'mime_type' => 'image/jpeg',
-                    'data' => $base64File,
+                    'data' => base64_encode($binarioComprimido),
                 ],
             ];
         }
@@ -557,9 +780,7 @@ class IAClinicaTrabajoService
     }
 
     /**
-     * Extrae imágenes embebidas de un PDF (útil para PDFs "escaneados" que
-     * en realidad son fotos pegadas, ej. estudios de laboratorio
-     * fotografiados con el celular y guardados como PDF).
+     * Extrae imágenes embebidas de un PDF (PDFs "escaneados" con fotos pegadas).
      */
     private function extraerImagenesDePdf(string $rutaCompleta, string $prefijo = 'pdf'): array
     {
@@ -596,23 +817,13 @@ class IAClinicaTrabajoService
         return $imagenes;
     }
 
-    /**
-     * Decodifica el JSON de la respuesta HTTP completa (usada si en el
-     * futuro se agrega un proveedor con formato 'choices.0.message.content'
-     * tipo DeepSeek, como ya hace IAClinicaService para triage rápido).
-     */
-    private function decodificarJsonRespuesta($response, string $origen)
-    {
-        $contenido = $response->json('choices.0.message.content');
-        return $this->decodificarJsonDesdeTexto($contenido, $origen, $response->json() ?? []);
-    }
+    // =========================================================
+    // PARSEO DE JSON
+    // =========================================================
 
     /**
-     * Decodificador robusto de JSON con reparación automática. Mismo
-     * comportamiento que en IAClinicaService: limpia razonamiento
-     * envuelto en <think>, intenta json_decode directo, si falla intenta
-     * balancear llaves, si sigue fallando intenta reparar valores de
-     * arreglo sin comillas.
+     * Decodificador robusto: limpia bloques <think>, intenta json_decode
+     * directo, luego balancea llaves y por último repara valores sin comillas.
      */
     private function decodificarJsonDesdeTexto(?string $contenido, string $origen, array $respuestaCompletaParaLog = [])
     {
@@ -745,109 +956,310 @@ class IAClinicaTrabajoService
         return implode("\n", $reparado);
     }
 
-    // ======================================================================
-    // PEGAR DENTRO de la clase App\Services\IAClinicaTrabajoService
-    // (junto a analizarTranscripcionValoracion). Reutiliza
-    // consultarGeminiTrabajo() que ya existe en el archivo.
-    // ======================================================================
+    // =========================================================
+    // NORMALIZACIÓN DE ESPIROMETRÍA
+    // =========================================================
 
     /**
-     * Analiza el dictado/chat completo de la Ficha Médica Ocupacional y
-     * devuelve los campos que necesita el formulario del frontend.
-     * La IA solo PROPONE; el médico revisa y confirma.
+     * Convierte la respuesta por nombre a la estructura que espera el
+     * frontend y registra en log las maniobras cuyo FEV1/FVC no cuadra con
+     * FEV1 / FVC (posible desplazamiento de columna). No corrige nada.
      */
-    public function analizarFichaOcupacional(string $textoCompleto): ?array
+    private function normalizarEspirometria(array $data): array
     {
-        set_time_limit(120);
+        $filas = $data['filas'] ?? [];
 
-        $vocabulario = DiccionarioMedico::textoReferencia();
+        $mapaColumnas = ['prueba3' => 3, 'prueba4' => 4, 'prueba6' => 6];
+        $mapaCampos = [
+            'fvc'      => 'fvc_l',
+            'fev1'     => 'fev1_l',
+            'fev1_fvc' => 'fev1_fvc_ratio',
+            'fef25_75' => 'fef25_75',
+            'pef'      => 'pef_l_s',
+            'fet'      => 'fet_s',
+            'fivc'     => 'fivc_l',
+            'pif'      => 'pif_l_s',
+            'eotv'     => 'eotv_l',
+            'bev'      => 'bev_l',
+        ];
 
-        $prompt = <<<PROMPT
-            Eres un co-piloto experto en Medicina del Trabajo que apoya a un médico a llenar la Ficha Médica Ocupacional a partir del dictado/chat de la consulta.
+        $maniobras = [3 => ['numero' => 3], 4 => ['numero' => 4], 6 => ['numero' => 6]];
 
-            Tu tarea tiene dos partes muy claras con reglas distintas:
-            1. **Clasificación Estricta**: Para los campos 'empresa', 'puesto_trabajo', 'descripcion_puesto', 'epp_requerido', 'antecedentes', 'examen_fisico' y 'examenes_complementarios'. Aquí solo debes estructurar y resumir lo que ya está mencionado en el texto. Si un dato no se menciona, responde estrictamente con "". NUNCA inventes ni asumas datos clínicos.
-            2. **Sugerencia Proactiva**: Para los campos 'departamento', 'antiguedad', 'dictamen', 'recomendaciones' y 'sintomas_detectados'. Aquí la IA DEBE proponer de manera inteligente y proactiva sugerencias automatizadas basadas en su conocimiento de medicina ocupacional y los riesgos del puesto descritos, para que el médico los valide o edite.
+        foreach ($mapaCampos as $fila => $campo) {
+            $valores = $filas[$fila] ?? [];
+            foreach ($mapaColumnas as $columna => $numero) {
+                $valor = $valores[$columna] ?? null;
+                $maniobras[$numero][$campo] = ($valor === null || $valor === '') ? null : (float) $valor;
+            }
+        }
 
-            Vocabulario de referencia (coloquial -> término médico):
-            {$vocabulario}
+        $resultado = [
+            'maniobras'      => array_values($maniobras),
+            'calidad_sesion' => $data['calidad_sesion'] ?? null,
+            'fev1_var'       => $data['fev1_var'] ?? null,
+            'fvc_var'        => $data['fvc_var'] ?? null,
+            'interpretacion' => $data['interpretacion'] ?? null,
+        ];
 
-            TEXTO DE LA CONSULTA:
-            "{$textoCompleto}"
+        foreach ($mapaCampos as $fila => $campo) {
+            $valores = $filas[$fila] ?? [];
+            $resultado[$fila . '_pred']     = $valores['pred'] ?? null;
+            $resultado[$fila . '_lln']      = $valores['lln'] ?? null;
+            $resultado['mejor_' . $fila]    = $valores['mejor'] ?? null;
+            $resultado[$fila . '_pct']      = $valores['pct_pred'] ?? null;
+        }
 
-            REGLAS GENERALES
-            - Devuelve EXCLUSIVAMENTE el JSON indicado, sin Markdown ni texto extra.
-            - Respeta las negaciones: "sin limitación", "niega alergias" o "sin dolor" describen AUSENCIA de hallazgos; no son restricciones ni antecedentes positivos.
-            - Copia el contenido clínico con fidelidad, pero SIN encabezados ni frases introductorias del dictado (quita cosas como "En el historial clínico:", "El EPP requerido incluye:", "Exámenes complementarios:").
+        $this->validarFev1Fvc($resultado['maniobras']);
 
-            CAMPOS
-            - empresa: razón social completa, incluyendo el sufijo (ej. "S.A. de C.V.").
-            - departamento: área o departamento. Si no se menciona explícitamente, infiere un área lógica según el puesto (ej. "Operaciones", "Construcción", "Mantenimiento", "Producción").
-            - puesto_trabajo: solo el nombre del puesto, sin la empresa.
-            - antiguedad: antigüedad en la empresa. Si el texto no menciona años/meses y es evaluación periódica, coloca "No especificada (evaluación periódica)". Si es de ingreso, "Nuevo ingreso".
-            - descripcion_puesto: actividades/tareas del puesto, en una o dos frases.
-            - riesgos: arreglo con las claves de los factores a los que el trabajador está expuesto POR SU PUESTO. Solo estas claves: "ruido", "quimicos", "polvos", "vibraciones", "ergonomicos", "psicosociales", "alturas".
-            - epp_requerido: lista de EPP separada por comas.
-            - antecedentes: antecedentes patológicos, quirúrgicos, alérgicos, hábitos y ocupacionales dictados.
-            - examen_fisico: SOLO hallazgos de la exploración física.
-            - examenes_complementarios: resultados de laboratorio/gabinete (espirometría, audiometría, antidoping, RX, etc.).
-            - dictamen: Sugiere de forma inteligente y razonable un dictamen de aptitud basándote en el análisis de la salud, exploración física, y exámenes complementarios del trabajador en relación con los riesgos de su puesto. Solo responde con "apto", "apto_con_restricciones" o "no_apto". (Ejemplo: si la exploración y exámenes complementarios son normales y sanos, debe sugerir "apto").
-            - restricciones: solo si el dictamen sugerido es "apto_con_restricciones" y se mencionan limitaciones; si no, "".
-            - recomendaciones: Genera y sugiere proactivamente de 2 a 4 recomendaciones preventivas, de seguridad, higiene o de vigilancia de la salud oportunas según los riesgos de este puesto (ej. uso continuo y obligatorio del EPP auditivo, visual o respiratorio; higiene postural; exámenes de espirometría y audiometría periódicos anuales; pausas activas; hidratación constante). ¡Debes proponerlas proactivamente de forma automatizada y completa, nunca las dejes vacías!
-            - sintomas_detectados: un arreglo JSON de textos cortos (de 2 a 5 palabras cada uno) que representen de forma exhaustiva TODOS los factores de riesgo de exposición descritos para el puesto de trabajo (ej. "Ruido Elevado", "Humos de soldadura", "Sustancias químicas", "Trabajo en alturas", "Vibraciones") y los hallazgos o resultados clínicos de relevancia (ej. "Espirometría normal", "Audiometría normal", "Antidoping negativo"). ¡Extrae de forma detallada cada factor del texto!
+        return $resultado;
+    }
 
-            {"empresa":"","departamento":"","puesto_trabajo":"","antiguedad":"","descripcion_puesto":"","riesgos":[],"epp_requerido":"","antecedentes":"","examen_fisico":"","examenes_complementarios":"","dictamen":"","restricciones":"","recomendaciones":"","sintomas_detectados":[]}
-            PROMPT;
+    /**
+     * Compara FEV1/FVC extraído contra FEV1 / FVC de la misma maniobra.
+     * Solo registra discrepancias; no corrige.
+     */
+    private function validarFev1Fvc(array $maniobras): void
+    {
+        foreach ($maniobras as $m) {
+            if (empty($m['fev1_l']) || empty($m['fvc_l']) || empty($m['fev1_fvc_ratio'])) {
+                continue;
+            }
 
-                    return $this->consultarGeminiTrabajo($prompt, 'analizarFichaOcupacional');
+            $calculado = $m['fev1_l'] / $m['fvc_l'];
+
+            if (abs($calculado - $m['fev1_fvc_ratio']) > 0.002) {
+                Log::warning('Posible desplazamiento de columna en espirometría', [
+                    'prueba' => $m['numero'],
+                    'esperado' => round($calculado, 3),
+                    'extraido' => $m['fev1_fvc_ratio'],
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Lee la tabla de maniobras directamente del texto del PDF (formato ndd).
+     * Orden de celdas en el texto: %Pred | Prueba 3 | Prueba 4 | Prueba 6 | Mejor | LLN | Pred
+     */
+    private function extraerTablaDesdeTexto(string $texto): ?array
+    {
+        $columnas = $this->extraerColumnasEncabezado($texto);
+        if ($columnas === null) {
+            Log::warning('No se encontró el encabezado de la tabla de espirometría en el texto del PDF');
+            return null;
+        }
+
+        // etiqueta en el texto => [clave en filas, unidad, decimales, campo en la maniobra]
+        $etiquetas = [
+            'FVC [L]'         => ['fvc', 'L', 2, 'fvc_l'],
+            'FEV1 [L]'        => ['fev1', 'L', 2, 'fev1_l'],
+            'FEV1/FVC'        => ['fev1_fvc', '', 3, 'fev1_fvc_ratio'],
+            'FEF25-75% [L/s]' => ['fef25_75', 'L/s', 2, 'fef25_75'],
+            'PEF [L/s]'       => ['pef', 'L/s', 2, 'pef_l_s'],
+            'FET [s]'         => ['fet', 's', 1, 'fet_s'],
+            'FIVC [L]'        => ['fivc', 'L', 2, 'fivc_l'],
+            'PIF [L/s]'       => ['pif', 'L/s', 2, 'pif_l_s'],
+            'EOTV [L]'        => ['eotv', 'L', 2, 'eotv_l'],
+            'BEV [L]'         => ['bev', 'L', 2, 'bev_l'],
+        ];
+
+        $alternativas = implode('|', array_map(fn ($e) => preg_quote($e, '/'), array_keys($etiquetas)));
+
+        // Formato A: etiqueta al final y valores pegados ("4.354.00...FVC [L]")
+        $patronEtiquetaAlFinal = '/^([\d\.\-\*\s—–]*?)\s*(' . $alternativas . ')$/u';
+        // Formato B: etiqueta al inicio y valores separados por espacios ("FVC [L]  4.35 3.62 ...")
+        $patronEtiquetaAlInicio = '/^(' . $alternativas . ')\s+(.+)$/u';
+
+        $filas = [];
+        $maniobras = []; // [numero] => ['numero' => n, 'campo' => valor, ..., 'marcados' => [...]]
+
+        foreach (preg_split('/\R/', $texto) as $linea) {
+            $linea = trim($linea);
+
+            if (preg_match($patronEtiquetaAlInicio, $linea, $m)) {
+                $etiqueta = $m[1];
+                $fila = $this->tokenizarFilaEspaciada($m[2], $columnas);
+            } elseif (preg_match($patronEtiquetaAlFinal, $linea, $m)) {
+                $etiqueta = $m[2];
+                $nums = str_replace(['—', '–'], '-', preg_replace('/\s+/u', '', $m[1]));
+                $fila = $this->tokenizarFilaEspirometria($nums, $etiquetas[$etiqueta][2], $columnas);
+            } else {
+                continue;
+            }
+
+            [$clave, $unidad, , $campo] = $etiquetas[$etiqueta];
+
+            if ($fila === null) {
+                Log::warning('Fila de espirometría no válida al leer el texto del PDF', [
+                    'fila' => $clave,
+                    'linea' => $linea,
+                ]);
+                continue;
+            }
+
+            $v = $fila['valores'];
+
+            $filas[$clave] = [
+                'unidad'   => $unidad,
+                'pred'     => $v['pred'] ?? null,
+                'lln'      => $v['lln'] ?? null,
+                'mejor'    => $v['mejor'] ?? null,
+                'pct_pred' => $v['pct'] ?? null,
+            ];
+
+            // Cada columna "Prueba N" del encabezado se convierte en una maniobra N
+            foreach ($columnas as $columna) {
+                if (!str_starts_with($columna, 'run:')) {
+                    continue;
                 }
 
+                $numero = (int) substr($columna, 4);
+                $maniobras[$numero] ??= ['numero' => $numero, 'marcados' => []];
+                $maniobras[$numero][$campo] = $v[$columna] ?? null;
+
+                if (!empty($fila['marcadas'][$columna])) {
+                    $maniobras[$numero]['marcados'][$campo] = true;
+                }
+            }
+        }
+
+        if (empty($filas)) {
+            Log::warning('No se leyó ninguna fila de la tabla de espirometría del texto del PDF');
+            return null;
+        }
+
+        ksort($maniobras);
+
+        // Validación informativa: el Mejor de PIF y EOTV debería ser el máximo de las pruebas
+        foreach (['pif' => 'pif_l_s', 'eotv' => 'eotv_l'] as $clave => $campo) {
+            if (!isset($filas[$clave]) || $filas[$clave]['mejor'] === null) {
+                continue;
+            }
+
+            $pruebas = array_filter(array_column($maniobras, $campo), fn ($v) => $v !== null);
+
+            if ($pruebas && abs(max($pruebas) - $filas[$clave]['mejor']) > 0.005) {
+                Log::info('Mejor distinto del máximo de las pruebas (puede ser normal según el informe)', [
+                    'fila' => $clave,
+                    'mejor' => $filas[$clave]['mejor'],
+                    'maximo' => max($pruebas),
+                ]);
+            }
+        }
+
+        return ['filas' => $filas, 'maniobras' => array_values($maniobras)];
+    }
     /**
-     * Consulta a la IA con contexto de la ficha médica ocupacional
-     * para responder preguntas del médico en tiempo real
+     * Separa una fila de números pegados (ej. "-0.100.110.11---") en sus 7 celdas.
+     * Un "-" es celda vacía. Si la fila tiene 6 tokens y el primero empieza con "-",
+     * ese guion es la celda %Pred vacía pegada al número.
      */
-    public function consultarMedicinaOcupacional(
-        string $mensaje,
-        int $pacienteId,
-        array $contexto = []
-    ): ?array {
-        set_time_limit(60);
+     /**
+     * Separa una fila de números pegados según las columnas del encabezado.
+     * Un "-" es celda vacía. Devuelve ['valores' => [...], 'marcadas' => [...]] o null.
+     */
+    private function tokenizarFilaEspirometria(string $nums, int $dec, array $columnas): ?array
+    {
+        $pctEntero = null;
 
-        $vocabulario = DiccionarioMedico::textoReferencia();
-
-        $contextoTexto = '';
-        if (!empty($contexto)) {
-            $contextoTexto = "\nCONTEXTO ACTUAL DE LA FICHA:\n" . json_encode($contexto, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+        if ($columnas[0] === 'pct' && preg_match('/^(\d{2,3})(?=-?\d+\.\d)/', $nums, $p)) {
+            $pctEntero = (int) $p[1];
+            $nums = substr($nums, strlen($p[1]));
         }
 
-        $prompt = "
-        Eres un asistente experto en Medicina del Trabajo que apoya al médico durante la consulta ocupacional en tiempo real.
+        preg_match_all('/-?\d+\.\d{' . $dec . '}\*?|-/', $nums, $t);
+        $tokens = $t[0];
 
-        {$contextoTexto}
-
-        Vocabulario de referencia (coloquial -> término médico):
-        {$vocabulario}
-
-        PREGUNTA DEL MÉDICO:
-        \"{$mensaje}\"
-
-        REGLAS:
-        - Responde de forma concisa, profesional y útil para el médico
-        - Si la pregunta es sobre llenar un campo específico, da la respuesta directa
-        - Si es una pregunta clínica, da orientación basada en medicina ocupacional
-        - Si pide cálculos (IMC, etc.), hazlos con los datos del contexto
-        - NO inventes datos que no estén en el contexto
-        - Si no tienes información suficiente, dilo claramente
-
-        Devuelve EXCLUSIVAMENTE el siguiente JSON:
-        {
-            \"respuesta\": \"tu respuesta aquí\",
-            \"campos_completados\": {}
+        // Guion de %Pred vacío pegado al número: "-0.10" = "-" + "0.10"
+        if ($columnas[0] === 'pct' && $pctEntero === null
+            && count($tokens) === count($columnas) - 1
+            && strlen($tokens[0]) > 1 && str_starts_with($tokens[0], '-')) {
+            $primero = array_shift($tokens);
+            array_unshift($tokens, '-', substr($primero, 1));
         }
 
-        En \"campos_completados\" solo incluye campos si el médico pidió explícitamente llenarlos y tú tienes la info del contexto. Formato: {\"campo\": \"valor\"}.
-        ";
+        $esperadas = count($columnas) - ($pctEntero !== null ? 1 : 0);
+        if (count($tokens) !== $esperadas) {
+            return null;
+        }
 
-        return $this->consultarGeminiTrabajo($prompt, 'consultarMedicinaOcupacional');
+        $celdas = $pctEntero !== null ? array_merge([(string) $pctEntero], $tokens) : $tokens;
+
+        return $this->construirValoresFila($celdas, $columnas);
+    }
+
+    /**
+     * Lee el orden de las columnas desde el encabezado del texto extraído.
+     * Devuelve algo como: ['pct', 'run:3', 'run:4', 'run:6', 'mejor', 'lln', 'pred']
+     */
+    private function extraerColumnasEncabezado(string $texto): ?array
+    {
+        foreach (preg_split('/\R/', $texto) as $linea) {
+            if (!str_contains($linea, 'Parámetro') || !str_contains($linea, 'Mejor')) {
+                continue;
+            }
+
+            preg_match_all('/%Pred|Prueba \d+|Mejor|LLN|Pred/u', $linea, $m);
+
+            $columnas = [];
+            foreach ($m[0] as $token) {
+                if ($token === '%Pred') {
+                    $columnas[] = 'pct';
+                } elseif ($token === 'Pred') {
+                    $columnas[] = 'pred';
+                } elseif ($token === 'LLN') {
+                    $columnas[] = 'lln';
+                } elseif ($token === 'Mejor') {
+                    $columnas[] = 'mejor';
+                } else {
+                    $columnas[] = 'run:' . (int) substr($token, 7); // "Prueba 3" => run:3
+                }
+            }
+
+            $hayPruebas = array_filter($columnas, fn ($c) => str_starts_with($c, 'run:'));
+            return $hayPruebas ? $columnas : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Formato con espacios: separa por espacios y convierte "—" en celda vacía.
+     */
+    private function tokenizarFilaEspaciada(string $resto, array $columnas): ?array
+    {
+        $partes = preg_split('/\s+/u', trim($resto), -1, PREG_SPLIT_NO_EMPTY);
+
+        if (count($partes) !== count($columnas)) {
+            return null;
+        }
+
+        $celdas = array_map(fn ($p) => preg_match('/^[—–\-]+$/u', $p) ? '-' : $p, $partes);
+
+        return $this->construirValoresFila($celdas, $columnas);
+    }
+
+    /**
+     * Convierte las celdas de una fila en valores numéricos y marcas de asterisco.
+     */
+    private function construirValoresFila(array $celdas, array $columnas): array
+    {
+        $valores = [];
+        $marcadas = [];
+
+        foreach ($columnas as $i => $columna) {
+            $c = $celdas[$i];
+
+            if ($columna === 'pct') {
+                $valores[$columna] = $c === '-' ? null : (int) $c;
+            } else {
+                $valores[$columna] = $c === '-' ? null : (float) str_replace('*', '', $c);
+            }
+
+            // El asterisco solo se registra; el número no cambia
+            $marcadas[$columna] = str_contains($c, '*');
+        }
+
+        return ['valores' => $valores, 'marcadas' => $marcadas];
     }
 }

@@ -286,6 +286,7 @@ Route::middleware('auth')->group(function () {
             Route::put('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'update'])->name('update');
             Route::delete('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'destroy'])->name('destroy');
             Route::get('{id}/imprimir', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'imprimir'])->name('imprimir');
+            Route::post('importar', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'importarArchivo'])->name('importar');
         });
 
         // ═════════════════════════════════════════════════════════════
