@@ -7,314 +7,556 @@
         </h5>
       </div>
       <div class="card-body">
-        <!-- GUARD: No renderizar hasta que maniobras esté listo -->
-        <div v-if="!maniobrasListas" class="alert alert-info text-center">
-          <i class="fas fa-spinner fa-spin mr-2"></i> Inicializando componente...
+
+        <!-- SECCIÓN DE IMPORTACIÓN CON IA -->
+        <div class="card mb-4 border-primary">
+          <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="fas fa-robot mr-2"></i>Importar Informe de Espirometría (IA)</h6>
+          </div>
+          <div class="card-body">
+            <div class="row align-items-end">
+              <div class="col-md-8 mb-3">
+                <label class="font-weight-bold">Seleccionar PDF del Informe</label>
+                <div class="custom-file">
+                  <input type="file" class="custom-file-input" id="archivoEspirometria" accept=".pdf" @change="seleccionarArchivo">
+                  <label class="custom-file-label" for="archivoEspirometria">{{ nombreArchivo || 'Elegir archivo...' }}</label>
+                </div>
+                <small class="text-muted d-block mt-1">
+                  <i class="fas fa-info-circle"></i> Sube el PDF generado por el equipo (ndd, Vitalograph, etc.)
+                </small>
+              </div>
+              <div class="col-md-4 mb-3">
+                <button type="button" class="btn btn-primary btn-block" @click="importarConIA" :disabled="!archivoSeleccionado || procesandoIA">
+                  <i :class="procesandoIA ? 'fas fa-spinner fa-spin' : 'fas fa-magic'" class="mr-2"></i>
+                  {{ procesandoIA ? 'Analizando...' : 'Extraer Datos con IA' }}
+                </button>
+              </div>
+            </div>
+
+            <div v-if="mensajeIA" class="alert mt-3" :class="exitoIA ? 'alert-success' : 'alert-danger'">
+              <i :class="exitoIA ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="mr-2"></i>
+              {{ mensajeIA }}
+            </div>
+          </div>
         </div>
 
-        <template v-else>
-          <!-- CONFIGURACIÓN DE REFERENCIA -->
+        <!-- CONFIGURACIÓN DE REFERENCIA -->
+        <div class="row mb-4">
+          <div class="col-md-4 mb-3">
+            <label class="font-weight-bold">Ecuación de Referencia <span class="text-danger">*</span></label>
+            <select v-model="localForm.referencia" @change="emitChange" class="form-control" style="height: 38px;">
+              <option value="NHANES III">NHANES III (EE.UU.)</option>
+              <option value="GLI-2012">GLI-2012 (Global)</option>
+              <option value="Hankinson">Hankinson (EE.UU.)</option>
+              <option value="Lloveras">Lloveras (Latinoamérica)</option>
+              <option value="Pellegrino">Pellegrino (Europa)</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label class="font-weight-bold">Interpretación Predicha *</label>
+            <select v-model="localForm.interpretacion_predicha" @change="emitChange" class="form-control" style="height: 38px;">
+              <option value="GOLD(2008)/Hardie">GOLD (2008) / Hardie</option>
+              <option value="ATS/ERS 2021">ATS/ERS 2021</option>
+              <option value="GOLD-2023">GOLD 2023 (Actualizada)</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label class="font-weight-bold">Número de Maniobras</label>
+            <input type="number" :value="maniobrasOrdenadas.length" class="form-control" style="height: 38px;" readonly />
+            <small class="text-muted d-block mt-1">ATS/ERS recomienda ≥3 maniobras aceptables</small>
+          </div>
+        </div>
+
+        <!-- BOTONES DE GESTIÓN DE MANIOBRAS -->
+        <div class="d-flex justify-content-between mb-3">
+          <button type="button" @click="agregarManiobra" class="btn btn-success btn-sm" :disabled="maniobrasOrdenadas.length >= 8">
+            <i class="fas fa-plus mr-1"></i> Agregar Maniobra
+          </button>
+          <button type="button" @click="eliminarUltimaManiobra" class="btn btn-danger btn-sm" :disabled="maniobrasOrdenadas.length <= 1">
+            <i class="fas fa-minus mr-1"></i> Eliminar Última
+          </button>
+        </div>
+
+        <!-- TABLA COMPARATIVA DE MANIOBRAS -->
+        <div class="table-responsive mb-2">
+          <table class="table table-sm table-bordered table-hover align-middle">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="text-center" rowspan="2" style="vertical-align: middle;">Parámetro</th>
+                <th class="text-center" rowspan="2" style="vertical-align: middle;">Unidad</th>
+                <th class="text-center" rowspan="2" style="vertical-align: middle;">Pred</th>
+                <th class="text-center" rowspan="2" style="vertical-align: middle;">LLN</th>
+                <th class="text-center bg-blue-50" rowspan="2" style="vertical-align: middle;">Mejor</th>
+                <th class="text-center" :colspan="maniobrasOrdenadas.length">Maniobras</th>
+                <th class="text-center" rowspan="2" style="vertical-align: middle;">%Pred</th>
+              </tr>
+              <tr>
+                <!-- MUESTRA LAS PRUEBAS EN ORDEN DESCENDENTE (6, 4, 3) como en el PDF -->
+                <th class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'header-'+index">
+                  Prueba {{ maniobra.numero }}
+                  <button type="button" @click="eliminarManiobraPorNumero(maniobra.numero)" class="btn btn-xs btn-danger ml-1"
+                    v-if="maniobrasOrdenadas.length > 1" style="padding: 2px 6px; font-size: 10px;">
+                    ✕
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- FVC -->
+              <tr>
+                <td class="font-weight-bold">FVC</td>
+                <td class="text-center text-muted small">L</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fvc_pred, dec: 2 }" @input="setDec(localForm, 'fvc_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fvc_lln, dec: 2 }" @input="setDec(localForm, 'fvc_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fvc, 2) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fvc-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fvc_l') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fvc_l, dec: 2 }" @input="setDec(maniobra, 'fvc_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center font-weight-bold" :class="getColorPorcentaje('fvc')">{{ localForm.fvc_porcentaje_predicho || '—' }}%</td>
+              </tr>
+
+              <!-- FEV1 -->
+              <tr>
+                <td class="font-weight-bold">FEV1</td>
+                <td class="text-center text-muted small">L</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_pred, dec: 2 }" @input="setDec(localForm, 'fev1_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_lln, dec: 2 }" @input="setDec(localForm, 'fev1_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fev1, 2) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fev1-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fev1_l') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fev1_l, dec: 2 }" @input="setDec(maniobra, 'fev1_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center font-weight-bold" :class="getColorPorcentaje('fev1')">{{ localForm.fev1_porcentaje_predicho || '—' }}%</td>
+              </tr>
+
+              <!-- FEV1/FVC -->
+              <tr>
+                <td class="font-weight-bold">FEV1/FVC</td>
+                <td class="text-center text-muted small">—</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_fvc_pred, dec: 3 }" @input="setDec(localForm, 'fev1_fvc_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_fvc_lln, dec: 3 }" @input="setDec(localForm, 'fev1_fvc_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fev1_fvc, 3) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'ratio-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fev1_fvc_ratio') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fev1_fvc_ratio, dec: 3 }" @input="setDec(maniobra, 'fev1_fvc_ratio', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center font-weight-bold" :class="getColorPorcentaje('fev1_fvc')">{{ localForm.fev1_fvc_porcentaje_predicho || '—' }}%</td>
+              </tr>
+
+              <!-- FEF25-75% -->
+              <tr>
+                <td class="font-weight-bold">FEF25-75%</td>
+                <td class="text-center text-muted small">L/s</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fef25_75_pred, dec: 2 }" @input="setDec(localForm, 'fef25_75_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fef25_75_lln, dec: 2 }" @input="setDec(localForm, 'fef25_75_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fef25_75, 2) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fef-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fef25_75') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fef25_75, dec: 2 }" @input="setDec(maniobra, 'fef25_75', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center font-weight-bold" :class="getColorPorcentaje('fef25_75')">{{ localForm.fef25_75_porcentaje_predicho || '—' }}%</td>
+              </tr>
+
+              <!-- PEF -->
+              <tr>
+                <td class="font-weight-bold">PEF</td>
+                <td class="text-center text-muted small">L/s</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.pef_pred, dec: 2 }" @input="setDec(localForm, 'pef_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.pef_lln, dec: 2 }" @input="setDec(localForm, 'pef_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_pef, 2) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'pef-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'pef_l_s') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.pef_l_s, dec: 2 }" @input="setDec(maniobra, 'pef_l_s', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center font-weight-bold" :class="getColorPorcentaje('pef')">{{ localForm.pef_porcentaje_predicho || '—' }}%</td>
+              </tr>
+
+              <!-- FET -->
+              <tr>
+                <td class="font-weight-bold">FET</td>
+                <td class="text-center text-muted small">s</td>
+                <td class="text-center">—</td>
+                <td class="text-center">—</td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fet, 1) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fet-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fet_s') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fet_s, dec: 1 }" @input="setDec(maniobra, 'fet_s', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                  <small :class="maniobra.fet_s >= 6 ? 'text-success' : 'text-warning'">
+                    {{ maniobra.fet_s >= 6 ? '✓' : '⚠' }}
+                  </small>
+                </td>
+                <td class="text-center text-muted">
+                  <small class="text-muted">≥ 6 seg en adultos</small>
+                </td>
+              </tr>
+
+              <!-- FIVC -->
+              <tr>
+                <td class="font-weight-bold">FIVC</td>
+                <td class="text-center text-muted small">L</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fvc_pred, dec: 2 }" class="form-control form-control-sm text-center" style="height: 34px;" readonly />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fvc_lln, dec: 2 }" class="form-control form-control-sm text-center" style="height: 34px;" readonly />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fivc, 2) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fivc-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fivc_l') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fivc_l, dec: 2 }" @input="setDec(maniobra, 'fivc_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center font-weight-bold" :class="getColorPorcentaje('fivc')">{{ localForm.fivc_porcentaje_predicho || '—' }}%</td>
+              </tr>
+
+              <!-- PIF -->
+              <tr>
+                <td class="font-weight-bold">PIF</td>
+                <td class="text-center text-muted small">L/s</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.pif_pred, dec: 2 }" @input="setDec(localForm, 'pif_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.pif_lln, dec: 2 }" @input="setDec(localForm, 'pif_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_pif, 2) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'pif-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'pif_l_s') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.pif_l_s, dec: 2 }" @input="setDec(maniobra, 'pif_l_s', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center font-weight-bold" :class="getColorPorcentaje('pif')">{{ localForm.pif_porcentaje_predicho ? localForm.pif_porcentaje_predicho + '%' : '—' }}</td>
+              </tr>
+
+              <!-- EOTV -->
+              <tr>
+                <td class="font-weight-bold">EOTV</td>
+                <td class="text-center text-muted small">L</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.eotv_pred, dec: 2 }" @input="setDec(localForm, 'eotv_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.eotv_lln, dec: 2 }" @input="setDec(localForm, 'eotv_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_eotv, 2) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'eotv-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'eotv_l') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.eotv_l, dec: 2 }" @input="setDec(maniobra, 'eotv_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center text-muted">Info</td>
+              </tr>
+
+              <!-- BEV -->
+              <tr>
+                <td class="font-weight-bold">BEV</td>
+                <td class="text-center text-muted small">L</td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.bev_pred, dec: 2 }" @input="setDec(localForm, 'bev_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.bev_lln, dec: 2 }" @input="setDec(localForm, 'bev_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_bev, 2) || '—' }}</td>
+                <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'bev-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'bev_l') }">
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.bev_l, dec: 2 }" @input="setDec(maniobra, 'bev_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                </td>
+                <td class="text-center text-muted">Info</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- LEYENDA DE VALORES MARCADOS EN EL INFORME -->
+        <div v-if="hayMarcados" class="small text-muted mb-4">
+          <span class="leyenda-marcada-swatch"></span>
+          Valor marcado en el informe con *: fuera del rango normal o cambio posterior significativo.
+        </div>
+
+        <!-- GRÁFICAS ESPIROMÉTRICAS: debajo de la tabla, una fila con dos columnas -->
+        <div class="card mb-4 card-graficas">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-chart-line mr-2"></i>GRÁFICAS ESPIROMÉTRICAS</h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <h6 class="titulo-grafica">Curva Flujo / Volumen [L/s vs L]</h6>
+                <p v-if="!hayDatosGrafica" class="text-muted small text-center mb-2">
+                  Importa el informe o captura las maniobras para ver la gráfica.
+                </p>
+                <div class="grafica-contenedor">
+                  <canvas ref="canvasFV"></canvas>
+                </div>
+                <div class="pie-grafica">
+                  <span v-for="item in itemsLeyenda" :key="'fv-' + item.texto" class="item-leyenda">
+                    <span class="caja-leyenda" :class="item.clase"></span>{{ item.texto }}
+                  </span>
+                  <span class="eje-x-titulo">Volumen [L]</span>
+                </div>
+                <div class="text-center mt-2 text-nowrap">
+                  <button type="button" class="btn btn-sm btn-outline-primary" @click="construirGraficas">
+                    <i class="fas fa-redo mr-1"></i>Regenerar
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-success ml-2" @click="descargarGrafica('fv')">
+                    <i class="fas fa-download mr-1"></i>PNG
+                  </button>
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <h6 class="titulo-grafica">Curva Volumen / Tiempo [L vs s]</h6>
+                <p v-if="!hayDatosGrafica" class="text-muted small text-center mb-2">
+                  Importa el informe o captura las maniobras para ver la gráfica.
+                </p>
+                <div class="grafica-contenedor">
+                  <canvas ref="canvasVT"></canvas>
+                </div>
+                <div class="pie-grafica">
+                  <span v-for="item in itemsLeyenda" :key="'vt-' + item.texto" class="item-leyenda">
+                    <span class="caja-leyenda" :class="item.clase"></span>{{ item.texto }}
+                  </span>
+                  <span class="eje-x-titulo">Tiempo [s]</span>
+                </div>
+                <div class="text-center mt-2 text-nowrap">
+                  <button type="button" class="btn btn-sm btn-outline-primary" @click="construirGraficas">
+                    <i class="fas fa-redo mr-1"></i>Regenerar
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-success ml-2" @click="descargarGrafica('vt')">
+                    <i class="fas fa-download mr-1"></i>PNG
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Leyenda y nota, en el mismo estilo que la leyenda ISO del audiómetro -->
+            <div class="leyenda-graficas">
+              <div class="leyenda-graficas-titulo">Leyenda de las gráficas</div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div><span class="sw sw-mejor"></span> Prueba Mejor (línea azul continua)</div>
+                  <div><span class="sw sw-prueba"></span> Otras pruebas (línea verde punteada)</div>
+                </div>
+                <div class="col-md-6">
+                  <div><span class="sw sw-predicho"></span> Predicho (línea gris punteada)</div>
+                  <div><span class="pt-fev1"></span> FEV1 a 1 s (volumen-tiempo)</div>
+                </div>
+              </div>
+              <div class="nota-graficas">
+                Curvas generadas a partir de la tabla; pueden diferir de la escala del equipo. La forma es aproximada; los valores son los del informe.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CRITERIOS DE CALIDAD Y REPETIBILIDAD (ATS/ERS) -->
+        <div class="border-top pt-4">
+          <h5 class="font-weight-bold text-dark mb-3">
+            <i class="fas fa-clipboard-check mr-2 text-primary"></i> CRITERIOS DE CALIDAD Y REPETIBILIDAD (ATS/ERS)
+          </h5>
+
           <div class="row mb-4">
             <div class="col-md-4 mb-3">
-              <label class="font-weight-bold">Ecuación de Referencia <span class="text-danger">*</span></label>
-              <select v-model="localForm.referencia" @change="emitChange" class="form-control" style="height: 38px;">
-                <option value="NHANES III">NHANES III (EE.UU.)</option>
-                <option value="GLI-2012">GLI-2012 (Global)</option>
-                <option value="Hankinson">Hankinson (EE.UU.)</option>
-                <option value="Lloveras">Lloveras (Latinoamérica)</option>
-                <option value="Pellegrino">Pellegrino (Europa)</option>
-              </select>
+              <label class="font-weight-bold">Varianza FEV1 (L)</label>
+              <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_var_l, dec: 2 }" class="form-control" style="height: 38px;" readonly />
+              <div class="mt-1">
+                <span class="badge" :class="(localForm.fev1_var_l || 999) <= 0.150 ? 'badge-success' : 'badge-danger'">
+                  {{ (localForm.fev1_var_l || 999) <= 0.150 ? '✓ Cumple' : '✗ Excede límite' }}
+                </span>
+                <small class="text-muted d-block mt-1">Debe ser ≤ 0.150 L para Grado A</small>
+              </div>
             </div>
             <div class="col-md-4 mb-3">
-              <label class="font-weight-bold">Interpretación Predicha *</label>
-              <select v-model="localForm.interpretacion_predicha" @change="emitChange" class="form-control" style="height: 38px;">
-                <option value="GOLD(2008)/Hardie">GOLD (2008) / Hardie</option>
-                <option value="ATS/ERS 2021">ATS/ERS 2021</option>
-                <option value="GOLD-2023">GOLD 2023 (Actualizada)</option>
-              </select>
+              <label class="font-weight-bold">Varianza FVC (L)</label>
+              <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fvc_var_l, dec: 2 }" class="form-control" style="height: 38px;" readonly />
+              <div class="mt-1">
+                <span class="badge" :class="(localForm.fvc_var_l || 999) <= 0.150 ? 'badge-success' : 'badge-danger'">
+                  {{ (localForm.fvc_var_l || 999) <= 0.150 ? '✓ Cumple' : '✗ Excede límite' }}
+                </span>
+                <small class="text-muted d-block mt-1">Debe ser ≤ 0.150 L para Grado A</small>
+              </div>
             </div>
             <div class="col-md-4 mb-3">
-              <label class="font-weight-bold">Número de Maniobras</label>
-              <input type="number" :value="maniobras.length" class="form-control" style="height: 38px;" readonly />
-              <small class="text-muted d-block mt-1">ATS/ERS recomienda ≥3 maniobras aceptables</small>
+              <label class="font-weight-bold">Calidad de Sesión</label>
+              <div class="form-control" style="height: 38px; background: #f8f9fa; display: flex; align-items: center;">
+                <span :class="getCalidadClass()" class="font-weight-bold">
+                  {{ calidadSesion || '—' }}
+                </span>
+              </div>
+              <small class="text-muted d-block mt-1">Grado A, B, C, D o F según ATS/ERS</small>
             </div>
           </div>
 
-          <!-- BOTONES DE GESTIÓN DE MANIOBRAS -->
-          <div class="d-flex justify-content-between mb-3">
-            <button type="button" @click="agregarManiobra" class="btn btn-success btn-sm" :disabled="maniobras.length >= 8">
-              <i class="fas fa-plus mr-1"></i> Agregar Maniobra
+          <div class="d-flex justify-content-end">
+            <button type="button" @click="validarCalidadSesion" class="btn text-white font-weight-bold px-4 py-2"
+              style="background: linear-gradient(135deg, #43A047 0%, #2E7D32 100%); border: none; border-radius: 0.375rem;">
+              <i class="fas fa-check-circle mr-2"></i> VALIDAR CALIDAD DE SESIÓN
             </button>
-            <button type="button" @click="eliminarUltimaManiobra" class="btn btn-danger btn-sm" :disabled="maniobras.length <= 1">
-              <i class="fas fa-minus mr-1"></i> Eliminar Última
-            </button>
           </div>
 
-          <!-- TABLA COMPARATIVA DE MANIOBRAS -->
-          <div class="table-responsive mb-4">
-            <table class="table table-sm table-bordered table-hover align-middle">
-              <thead class="bg-gray-100">
-                <tr>
-                  <th class="text-center" rowspan="2" style="vertical-align: middle;">Parámetro</th>
-                  <th class="text-center" rowspan="2" style="vertical-align: middle;">Unidad</th>
-                  <th class="text-center" rowspan="2" style="vertical-align: middle;">Predicho</th>
-                  <th class="text-center" rowspan="2" style="vertical-align: middle;">LLN</th>
-                  <th class="text-center" :colspan="maniobras.length">Maniobras</th>
-                  <th class="text-center bg-blue-50" rowspan="2" style="vertical-align: middle;">Mejor Valor</th>
-                  <th class="text-center" rowspan="2" style="vertical-align: middle;">% Pred</th>
-                  <th class="text-center" rowspan="2" style="vertical-align: middle;">Interpretación</th>
-                </tr>
-                <tr>
-                  <th class="text-center" v-for="(maniobra, index) in maniobras" :key="'header-'+index">
-                    Prueba {{ index + 1 }}
-                    <button type="button" @click="eliminarManiobra(index)" class="btn btn-xs btn-danger ml-1" 
-                      v-if="maniobras.length > 1" style="padding: 2px 6px; font-size: 10px;">
-                      ✕
-                    </button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- FVC -->
-                <tr>
-                  <td class="font-weight-bold">FVC</td>
-                  <td class="text-center text-muted small">L</td>
-                  <td class="text-center">
-                    <input type="number" step="0.01" v-model.number="localForm.fvc_pred" @input="recalcularTodo" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center">
-                    <input type="number" step="0.01" v-model.number="localForm.fvc_lln" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'fvc-'+index">
-                    <input type="number" step="0.01" v-model.number="maniobra.fvc_l" @input="recalcularTodo" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ localForm.mejor_fvc || '—' }}</td>
-                  <td class="text-center font-weight-bold" :class="getColorPorcentaje('fvc')">{{ localForm.fvc_porcentaje_predicho || '—' }}%</td>
-                  <td class="text-center"><span :class="getBadgeClass('fvc')" class="badge">{{ getInterpretacion('fvc') }}</span></td>
-                </tr>
-
-                <!-- FEV1 -->
-                <tr>
-                  <td class="font-weight-bold">FEV1</td>
-                  <td class="text-center text-muted small">L</td>
-                  <td class="text-center">
-                    <input type="number" step="0.01" v-model.number="localForm.fev1_pred" @input="recalcularTodo" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center">
-                    <input type="number" step="0.01" v-model.number="localForm.fev1_lln" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'fev1-'+index">
-                    <input type="number" step="0.01" v-model.number="maniobra.fev1_l" @input="recalcularTodo" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ localForm.mejor_fev1 || '—' }}</td>
-                  <td class="text-center font-weight-bold" :class="getColorPorcentaje('fev1')">{{ localForm.fev1_porcentaje_predicho || '—' }}%</td>
-                  <td class="text-center"><span :class="getBadgeClass('fev1')" class="badge">{{ getInterpretacion('fev1') }}</span></td>
-                </tr>
-
-                <!-- FEV1/FVC -->
-                <tr>
-                  <td class="font-weight-bold">FEV1/FVC</td>
-                  <td class="text-center text-muted small">—</td>
-                  <td class="text-center">
-                    <input type="number" step="0.001" v-model.number="localForm.fev1_fvc_pred" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center">
-                    <input type="number" step="0.001" v-model.number="localForm.fev1_fvc_lln" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'ratio-'+index">
-                    <input type="number" step="0.001" v-model.number="maniobra.fev1_fvc_ratio" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ localForm.mejor_fev1_fvc || '—' }}</td>
-                  <td class="text-center font-weight-bold" :class="getColorPorcentaje('fev1_fvc')">{{ localForm.fev1_fvc_porcentaje_predicho || '—' }}%</td>
-                  <td class="text-center"><span :class="getBadgeClass('fev1_fvc')" class="badge">{{ getInterpretacion('fev1_fvc') }}</span></td>
-                </tr>
-
-                <!-- FEF25-75% -->
-                <tr>
-                  <td class="font-weight-bold">FEF25-75%</td>
-                  <td class="text-center text-muted small">L/s</td>
-                  <td class="text-center">
-                    <input type="number" step="0.01" v-model.number="localForm.fef25_75_pred" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center">
-                    <input type="number" step="0.01" v-model.number="localForm.fef25_75_lln" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'fef-'+index">
-                    <input type="number" step="0.01" v-model.number="maniobra.fef25_75" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ localForm.mejor_fef25_75 || '—' }}</td>
-                  <td class="text-center font-weight-bold" :class="getColorPorcentaje('fef25_75')">{{ localForm.fef25_75_porcentaje_predicho || '—' }}%</td>
-                  <td class="text-center"><span :class="getBadgeClass('fef25_75')" class="badge">{{ getInterpretacion('fef25_75') }}</span></td>
-                </tr>
-
-                <!-- PEF -->
-                <tr>
-                  <td class="font-weight-bold">PEF</td>
-                  <td class="text-center text-muted small">L/s</td>
-                  <td class="text-center">
-                    <input type="number" step="0.01" v-model.number="localForm.pef_pred" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center">
-                    <input type="number" step="0.01" v-model.number="localForm.pef_lln" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'pef-'+index">
-                    <input type="number" step="0.01" v-model.number="maniobra.pef_l_s" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ localForm.mejor_pef || '—' }}</td>
-                  <td class="text-center font-weight-bold" :class="getColorPorcentaje('pef')">{{ localForm.pef_porcentaje_predicho || '—' }}%</td>
-                  <td class="text-center"><span :class="getBadgeClass('pef')" class="badge">{{ getInterpretacion('pef') }}</span></td>
-                </tr>
-
-                <!-- FET -->
-                <tr>
-                  <td class="font-weight-bold">FET</td>
-                  <td class="text-center text-muted small">s</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'fet-'+index">
-                    <input type="number" step="0.1" v-model.number="maniobra.fet_s" class="form-control form-control-sm text-center" style="height: 34px;" />
-                    <small :class="maniobra.fet_s >= 6 ? 'text-success' : 'text-warning'">
-                      {{ maniobra.fet_s >= 6 ? '✓' : '⚠' }}
-                    </small>
-                  </td>
-                  <td class="text-center bg-blue-50">—</td>
-                  <td class="text-center text-muted" colspan="2">
-                    <small class="text-muted">≥ 6 seg en adultos</small>
-                  </td>
-                </tr>
-
-                <!-- FIVC -->
-                <tr>
-                  <td class="font-weight-bold">FIVC</td>
-                  <td class="text-center text-muted small">L</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'fivc-'+index">
-                    <input type="number" step="0.01" v-model.number="maniobra.fivc_l" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50">—</td>
-                  <td class="text-center text-muted" colspan="2">Info</td>
-                </tr>
-
-                <!-- PIF -->
-                <tr>
-                  <td class="font-weight-bold">PIF</td>
-                  <td class="text-center text-muted small">L/s</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'pif-'+index">
-                    <input type="number" step="0.01" v-model.number="maniobra.pif_l_s" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50">—</td>
-                  <td class="text-center text-muted" colspan="2">Info</td>
-                </tr>
-
-                <!-- BEV -->
-                <tr>
-                  <td class="font-weight-bold">BEV</td>
-                  <td class="text-center text-muted small">L</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'bev-'+index">
-                    <input type="number" step="0.01" v-model.number="maniobra.bev_l" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50">—</td>
-                  <td class="text-center text-muted" colspan="2">Info</td>
-                </tr>
-
-                <!-- EOTV -->
-                <tr>
-                  <td class="font-weight-bold">EOTV</td>
-                  <td class="text-center text-muted small">L</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center">—</td>
-                  <td class="text-center" v-for="(maniobra, index) in maniobras" :key="'eotv-'+index">
-                    <input type="number" step="0.01" v-model.number="maniobra.eotv_l" class="form-control form-control-sm text-center" style="height: 34px;" />
-                  </td>
-                  <td class="text-center bg-blue-50">—</td>
-                  <td class="text-center text-muted" colspan="2">Info</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-if="validacionCalidad" class="mt-4 p-3 border rounded"
+            :class="validacionCalidad.ok ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'">
+            <h6 class="font-weight-bold mb-2 d-flex align-items-center"
+              :class="validacionCalidad.ok ? 'text-success' : 'text-danger'">
+              <i :class="validacionCalidad.ok ? 'fas fa-check-circle mr-2' : 'fas fa-times-circle mr-2'"></i>
+              {{ validacionCalidad.ok ? '✓ SESIÓN VÁLIDA' : '✗ SESIÓN REQUIERE REVISIÓN' }}
+            </h6>
+            <ul class="text-sm mb-0">
+              <li v-for="(item, idx) in validacionCalidad.detalles" :key="idx" :class="validacionCalidad.ok ? 'text-success' : 'text-danger'">
+                {{ item }}
+              </li>
+            </ul>
           </div>
-
-          <!-- CRITERIOS DE CALIDAD Y REPETIBILIDAD (ATS/ERS) -->
-          <div class="border-top pt-4">
-            <h5 class="font-weight-bold text-dark mb-3">
-              <i class="fas fa-clipboard-check mr-2 text-primary"></i> CRITERIOS DE CALIDAD Y REPETIBILIDAD (ATS/ERS)
-            </h5>
-            
-            <div class="row mb-4">
-              <div class="col-md-4 mb-3">
-                <label class="font-weight-bold">Varianza FEV1 (L)</label>
-                <input type="number" step="0.001" :value="localForm.fev1_var_l" class="form-control" 
-                  style="height: 38px;" readonly />
-                <div class="mt-1">
-                  <span class="badge" :class="(localForm.fev1_var_l || 999) <= 0.150 ? 'badge-success' : 'badge-danger'">
-                    {{ (localForm.fev1_var_l || 999) <= 0.150 ? '✓ Cumple' : ' Excede límite' }}
-                  </span>
-                  <small class="text-muted d-block mt-1">Debe ser ≤ 0.150 L para Grado A</small>
-                </div>
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="font-weight-bold">Varianza FVC (L)</label>
-                <input type="number" step="0.001" :value="localForm.fvc_var_l" class="form-control" 
-                  style="height: 38px;" readonly />
-                <div class="mt-1">
-                  <span class="badge" :class="(localForm.fvc_var_l || 999) <= 0.150 ? 'badge-success' : 'badge-danger'">
-                    {{ (localForm.fvc_var_l || 999) <= 0.150 ? '✓ Cumple' : '✗ Excede límite' }}
-                  </span>
-                  <small class="text-muted d-block mt-1">Debe ser ≤ 0.150 L para Grado A</small>
-                </div>
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="font-weight-bold">Calidad de Sesión</label>
-                <div class="form-control" style="height: 38px; background: #f8f9fa; display: flex; align-items: center;">
-                  <span :class="getCalidadClass()" class="font-weight-bold">
-                    {{ calidadSesion || '—' }}
-                  </span>
-                </div>
-                <small class="text-muted d-block mt-1">Grado A, B, C, D o F según ATS/ERS</small>
-              </div>
-            </div>
-
-            <div class="d-flex justify-content-end">
-              <button type="button" @click="validarCalidadSesion" class="btn text-white font-weight-bold px-4 py-2"
-                style="background: linear-gradient(135deg, #43A047 0%, #2E7D32 100%); border: none; border-radius: 0.375rem;">
-                <i class="fas fa-check-circle mr-2"></i> VALIDAR CALIDAD DE SESIÓN
-              </button>
-            </div>
-
-            <div v-if="validacionCalidad" class="mt-4 p-3 border rounded"
-              :class="validacionCalidad.ok ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'">
-              <h6 class="font-weight-bold mb-2 d-flex align-items-center"
-                :class="validacionCalidad.ok ? 'text-success' : 'text-danger'">
-                <i :class="validacionCalidad.ok ? 'fas fa-check-circle mr-2' : 'fas fa-times-circle mr-2'"></i>
-                {{ validacionCalidad.ok ? '✓ SESIÓN VÁLIDA' : '✗ SESIÓN REQUIERE REVISIÓN' }}
-              </h6>
-              <ul class="text-sm mb-0">
-                <li v-for="(item, idx) in validacionCalidad.detalles" :key="idx" :class="validacionCalidad.ok ? 'text-success' : 'text-danger'">
-                  {{ item }}
-                </li>
-              </ul>
-            </div>
-          </div>
-        </template>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import Chart from 'chart.js/auto'
+import { markRaw } from 'vue'
+
+// ---------- Utilidades ----------
+
+// Formatea un número con los decimales indicados; devuelve '' si no hay valor
+function formatearNumero(valor, dec = 2) {
+  if (valor === null || valor === undefined || valor === '' || isNaN(Number(valor))) return ''
+  return Number(valor).toFixed(dec)
+}
+
+// Devuelve el número si es válido, o null
+function numValido(valor) {
+  if (valor === null || valor === undefined || valor === '') return null
+  const n = Number(valor)
+  return Number.isFinite(n) ? n : null
+}
+
+// ---------- Gráficas ----------
+
+const COLOR_MEJOR = '#1F3FA0'
+const COLOR_PRUEBA = '#16A34A'
+const COLOR_PREDICHO = '#9AA5B1'
+
+// Forma de la espiración: u = fracción exhalada desde TLC (0) hasta FVC (1).
+// Sube rápido hasta el PEF y baja a 0 al final de la espiración.
+function formaEspiracion(u) {
+  return Math.pow(1 - Math.exp(-u / 0.05), 0.5) * Math.pow(1 - u, 1.2)
+}
+
+// Máximo de la forma, para escalar la curva de modo que su pico sea exactamente el PEF
+const MAXIMO_FORMA = (() => {
+  let m = 0
+  for (let i = 0; i <= 1000; i++) m = Math.max(m, formaEspiracion(i / 1000))
+  return m
+})()
+
+// Curva flujo-volumen: espiración de 0 a FVC y luego inspiración de FIVC a 0
+function puntosFlujoVolumen({ fvc, pef, fivc, pif }) {
+  const pts = []
+  for (let i = 0; i <= 100; i++) {
+    const u = i / 100
+    pts.push({ x: +(u * fvc).toFixed(3), y: +(pef * formaEspiracion(u) / MAXIMO_FORMA).toFixed(2) })
+  }
+  for (let i = 100; i >= 0; i--) {
+    const w = i / 100
+    pts.push({ x: +(w * fivc).toFixed(3), y: +(-pif * Math.pow(Math.sin(Math.PI * w), 0.8)).toFixed(2) })
+  }
+  return pts
+}
+
+// Curva volumen-tiempo: V(t) = FVC · (1 − e^(−t/τ)), con τ tal que el FEV1 se alcanza en t = 1 s
+function puntosVolumenTiempo({ fvc, fev1 }) {
+  const ratio = Math.min(Math.max(fev1 / fvc, 0.05), 0.99)
+  const tau = -1 / Math.log(1 - ratio)
+  const pts = []
+  for (let i = 0; i <= 100; i++) {
+    const t = i / 10
+    pts.push({ x: t, y: +(fvc * (1 - Math.exp(-t / tau))).toFixed(3) })
+  }
+  return pts
+}
+
+function estiloCurva(esMejor) {
+  return esMejor
+    ? { borderColor: COLOR_MEJOR, borderWidth: 3, borderDash: [] }
+    : { borderColor: COLOR_PRUEBA, borderWidth: 2, borderDash: [2, 3] }
+}
+
+function configuracionGrafica(datos, ejes) {
+  return {
+    type: 'line',
+    data: { datasets: datos.datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: 'nearest', intersect: false },
+      // La leyenda y el título del eje X se muestran en HTML, debajo de la gráfica
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: datos.x.min,
+          max: datos.x.max,
+          ticks: { stepSize: 1 },
+          // Línea vertical negra en x = 0, como en el reporte del equipo
+          grid: { color: ctx => (ctx.tick && ctx.tick.value === 0 ? '#000' : 'rgba(0,0,0,0.06)') }
+        },
+        y: {
+          min: datos.y.min,
+          max: datos.y.max,
+          title: { display: true, text: ejes.tituloY },
+          ticks: { stepSize: ejes.stepY },
+          grid: { color: 'rgba(0,0,0,0.06)' }
+        }
+      }
+    }
+  }
+}
+
 export default {
   name: 'ParametrosFvlEspirometria',
   props: {
     modelValue: { type: Object, required: true }
   },
   emits: ['update:modelValue'],
+  directives: {
+    // Muestra el valor con los decimales del informe (ej. 3.90) sin perder el número.
+    // No reescribe el campo mientras el usuario lo está escribiendo.
+    dec: {
+      mounted(el, binding) {
+        el._dec = binding.value
+        el._decBlur = () => {
+          el.value = formatearNumero(el._dec.valor, el._dec.dec)
+        }
+        el.addEventListener('blur', el._decBlur)
+        el.value = formatearNumero(binding.value.valor, binding.value.dec)
+      },
+      updated(el, binding) {
+        el._dec = binding.value
+        if (document.activeElement !== el) {
+          el.value = formatearNumero(binding.value.valor, binding.value.dec)
+        }
+      },
+      unmounted(el) {
+        el.removeEventListener('blur', el._decBlur)
+      }
+    }
+  },
   data() {
     return {
-      validacionCalidad: null,
       localForm: {
         referencia: 'NHANES III',
         interpretacion_predicha: 'GOLD(2008)/Hardie',
@@ -333,16 +575,32 @@ export default {
         mejor_fev1_fvc: null,
         mejor_fef25_75: null,
         mejor_pef: null,
+        mejor_fivc: null,
+        mejor_pif: null,
+        mejor_eotv: null,
+        mejor_fet: null,
+        mejor_bev: null,
+        pif_pred: null,
+        pif_lln: null,
+        pif_porcentaje_predicho: null,
+        eotv_pred: null,
+        eotv_lln: null,
+        bev_pred: null,
+        bev_lln: null,
         fvc_porcentaje_predicho: null,
         fev1_porcentaje_predicho: null,
         fev1_fvc_porcentaje_predicho: null,
         fef25_75_porcentaje_predicho: null,
         pef_porcentaje_predicho: null,
+        fivc_porcentaje_predicho: null,
         fev1_var_l: null,
         fvc_var_l: null,
+        calidad_sesion: '',
+        interpretacion_sistema: '',
         maniobras: []
       },
       plantillaManiobra: {
+        numero: null,
         fvc_l: null,
         fev1_l: null,
         fev1_fvc_ratio: null,
@@ -352,57 +610,248 @@ export default {
         fivc_l: null,
         pif_l_s: null,
         bev_l: null,
-        eotv_l: null
-      }
+        eotv_l: null,
+        marcados: {}
+      },
+      validacionCalidad: null,
+      graficaFV: null,
+      graficaVT: null,
+      archivoSeleccionado: null,
+      nombreArchivo: '',
+      procesandoIA: false,
+      mensajeIA: '',
+      exitoIA: false
     }
   },
   computed: {
-    maniobras() {
-      return this.localForm.maniobras || []
+    // ORDENA LAS MANIOBRAS ASCENDENTE (3, 4, 6)
+    maniobrasOrdenadas() {
+      if (!Array.isArray(this.localForm.maniobras)) return []
+      return [...this.localForm.maniobras].sort((a, b) => {
+        const numA = a.numero || 999
+        const numB = b.numero || 999
+        return numA - numB
+      })
     },
-    maniobrasListas() {
-      return Array.isArray(this.localForm.maniobras) && this.localForm.maniobras.length > 0
+    // ORDENA LAS MANIOBRAS DESCENDENTE (6, 4, 3) como en el PDF
+    maniobrasOrdenadasDesc() {
+      if (!Array.isArray(this.localForm.maniobras)) return []
+      return [...this.localForm.maniobras].sort((a, b) => {
+        const numA = a.numero || 999
+        const numB = b.numero || 999
+        return numB - numA
+      })
+    },
+    // Indica si alguna celda del informe trae asterisco (para mostrar la leyenda)
+    hayMarcados() {
+      return (this.localForm.maniobras || []).some(m =>
+        m.marcados && Object.values(m.marcados).some(Boolean)
+      )
+    },
+    // Elementos de la leyenda debajo de las gráficas (mismo orden que las curvas)
+    itemsLeyenda() {
+      const mejor = this.maniobraMejor
+      const items = this.maniobrasOrdenadas
+        .filter(m => numValido(m.fvc_l) !== null && numValido(m.pef_l_s) !== null)
+        .sort((a, b) => (a === mejor) - (b === mejor))
+        .map(m => ({
+          texto: `Prueba ${m.numero}${m === mejor ? ' (Mejor)' : ''}`,
+          clase: m === mejor ? 'sw-mejor' : 'sw-prueba'
+        }))
+      if (numValido(this.localForm.fvc_pred) !== null && numValido(this.localForm.pef_pred) !== null) {
+        items.push({ texto: 'Predicho', clase: 'sw-predicho' })
+      }
+      return items
+    },
+    // Maniobra Mejor: la que coincide con el Mejor FEV1 del informe; si no, la de mayor FEV1
+    maniobraMejor() {
+      const conFev1 = this.maniobrasOrdenadas.filter(m => numValido(m.fev1_l) !== null)
+      if (conFev1.length === 0) return null
+      const mejorFev1 = numValido(this.localForm.mejor_fev1)
+      const coincide = mejorFev1 !== null
+        ? conFev1.find(m => Math.abs(numValido(m.fev1_l) - mejorFev1) < 0.005)
+        : null
+      return coincide || conFev1.reduce((a, b) => (numValido(b.fev1_l) > numValido(a.fev1_l) ? b : a))
+    },
+    // Hay datos suficientes para dibujar las curvas
+    hayDatosGrafica() {
+      return this.maniobrasOrdenadas.some(m =>
+        numValido(m.fvc_l) !== null && numValido(m.pef_l_s) !== null
+      )
     },
     calidadSesion() {
+      // Si el informe trae la calidad, se usa tal cual
+      if (this.localForm.calidad_sesion) return this.localForm.calidad_sesion
+
       const fev1Var = this.localForm.fev1_var_l
       const fvcVar = this.localForm.fvc_var_l
-      
-      if (fev1Var === null || fev1Var === undefined || fvcVar === null || fvcVar === undefined) return null
-      
+      if (fev1Var == null || fvcVar == null) return null
       if (fev1Var <= 0.150 && fvcVar <= 0.150) return 'A'
       if (fev1Var <= 0.200 && fvcVar <= 0.200) return 'B'
       if (fev1Var <= 0.250 && fvcVar <= 0.250) return 'C'
       return 'D'
-    }
+    },
   },
   created() {
-    // CRÍTICO: Inicializar en created() ANTES del primer render
     this.inicializarDesdeProps()
+  },
+  mounted() {
+    this.$nextTick(() => this.construirGraficas())
+  },
+  beforeUnmount() {
+    clearTimeout(this._timerGraficas)
+    this.destruirGraficas()
   },
   watch: {
     modelValue: {
       handler(newVal) {
         if (newVal && typeof newVal === 'object') {
-          // Solo actualizar si hay cambios reales para evitar loops
           Object.keys(newVal).forEach(key => {
             if (key !== 'maniobras' && this.localForm[key] !== newVal[key]) {
               this.localForm[key] = newVal[key]
             }
           })
-          // Sincronizar maniobras si vienen del padre
           if (newVal.maniobras && Array.isArray(newVal.maniobras)) {
             this.localForm.maniobras = JSON.parse(JSON.stringify(newVal.maniobras))
           }
-          this.recalcularTodo()
+          this.recalcularTodo({ respetarImportado: true })
         }
       },
       deep: true,
       immediate: true
+    },
+    // Solo redibuja las gráficas; NO emite al padre, para no provocar un bucle
+    // con el watcher de modelValue.
+    localForm: {
+      handler() {
+        this.programarGraficas()
+      },
+      deep: true
     }
   },
   methods: {
+    fmt(valor, dec = 2) {
+      return formatearNumero(valor, dec)
+    },
+
+    // Convierte lo escrito en el input a número (acepta coma o punto)
+    setDec(objeto, campo, texto) {
+      const limpio = String(texto ?? '').trim().replace(',', '.')
+      objeto[campo] = (limpio === '' || isNaN(Number(limpio))) ? null : Number(limpio)
+      this.onEdicion()
+    },
+
+    esMarcado(maniobra, campo) {
+      return !!(maniobra && maniobra.marcados && maniobra.marcados[campo])
+    },
+
+    seleccionarArchivo(event) {
+      const file = event.target.files[0]
+      if (file) {
+        this.archivoSeleccionado = file
+        this.nombreArchivo = file.name
+        this.mensajeIA = ''
+        this.exitoIA = false
+      }
+    },
+
+    async importarConIA() {
+      if (!this.archivoSeleccionado) return
+
+      this.procesandoIA = true
+      this.mensajeIA = 'Enviando archivo a la IA para análisis...'
+      this.exitoIA = false
+
+      const formData = new FormData()
+      formData.append('archivo', this.archivoSeleccionado)
+
+      try {
+        const response = await axios.post('/clinica/espirometria/importar', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+
+        if (!response.data.success) {
+          throw new Error(response.data.message || 'Error desconocido al extraer datos')
+        }
+
+        const datos = response.data.data
+        const numManiobras = Array.isArray(datos.maniobras) ? datos.maniobras.length : 0
+
+        this.exitoIA = true
+        this.mensajeIA = `¡Datos extraídos exitosamente! Se encontraron ${numManiobras} maniobras.`
+
+        // Referencias (Pred / LLN)
+        this.localForm.fvc_pred = datos.fvc_pred ?? null
+        this.localForm.fvc_lln = datos.fvc_lln ?? null
+        this.localForm.fev1_pred = datos.fev1_pred ?? null
+        this.localForm.fev1_lln = datos.fev1_lln ?? null
+        this.localForm.fev1_fvc_pred = datos.fev1_fvc_pred ?? null
+        this.localForm.fev1_fvc_lln = datos.fev1_fvc_lln ?? null
+        this.localForm.fef25_75_pred = datos.fef25_75_pred ?? null
+        this.localForm.fef25_75_lln = datos.fef25_75_lln ?? null
+        this.localForm.pef_pred = datos.pef_pred ?? null
+        this.localForm.pef_lln = datos.pef_lln ?? null
+
+        // Mejor maniobra y %Pred tal como vienen del informe
+        this.localForm.mejor_fvc = datos.mejor_fvc ?? null
+        this.localForm.mejor_fev1 = datos.mejor_fev1 ?? null
+        this.localForm.mejor_fev1_fvc = datos.mejor_fev1_fvc ?? null
+        this.localForm.mejor_fef25_75 = datos.mejor_fef25_75 ?? null
+        this.localForm.mejor_pef = datos.mejor_pef ?? null
+        this.localForm.mejor_fivc = datos.mejor_fivc ?? null
+        this.localForm.mejor_pif = datos.mejor_pif ?? null
+        this.localForm.mejor_eotv = datos.mejor_eotv ?? null
+        this.localForm.mejor_fet = datos.mejor_fet ?? null
+
+        this.localForm.mejor_bev = datos.mejor_bev ?? null
+        this.localForm.pif_pred = datos.pif_pred ?? null
+        this.localForm.pif_lln = datos.pif_lln ?? null
+        this.localForm.eotv_pred = datos.eotv_pred ?? null
+        this.localForm.eotv_lln = datos.eotv_lln ?? null
+        this.localForm.bev_pred = datos.bev_pred ?? null
+        this.localForm.bev_lln = datos.bev_lln ?? null
+
+        this.localForm.fvc_porcentaje_predicho = datos.fvc_pct ?? null
+        this.localForm.fev1_porcentaje_predicho = datos.fev1_pct ?? null
+        this.localForm.fev1_fvc_porcentaje_predicho = datos.fev1_fvc_pct ?? null
+        this.localForm.fef25_75_porcentaje_predicho = datos.fef25_75_pct ?? null
+        this.localForm.pef_porcentaje_predicho = datos.pef_pct ?? null
+        this.localForm.fivc_porcentaje_predicho = datos.fivc_pct ?? null
+        this.localForm.pif_porcentaje_predicho = datos.pif_pct ?? null
+
+        // Calidad de sesión y varianzas del informe
+        this.localForm.calidad_sesion = datos.calidad_sesion ?? ''
+        this.localForm.fev1_var_l = datos.fev1_var ?? null
+        this.localForm.fvc_var_l = datos.fvc_var ?? null
+        this.localForm.interpretacion_sistema = datos.interpretacion ?? ''
+
+        // Maniobras (con numero y las marcas de asterisco)
+        if (numManiobras > 0) {
+          this.localForm.maniobras = datos.maniobras.map((m, idx) => ({
+            ...this.plantillaManiobra,
+            ...m,
+            numero: m.numero ?? (idx + 1),
+            marcados: { ...(m.marcados || {}) }
+          }))
+        }
+
+        // Recalcula solo lo que falte; no sobrescribe lo que vino del PDF
+        this.recalcularTodo({ respetarImportado: true })
+        this.programarGraficas()
+
+        this.emitChange()
+      } catch (error) {
+        console.error('Error al importar con IA:', error)
+        this.exitoIA = false
+        this.mensajeIA = error.response?.data?.message
+          || error.message
+          || 'Ocurrió un error al procesar el archivo. Verifica que sea un informe legible.'
+      } finally {
+        this.procesandoIA = false
+      }
+    },
+
     inicializarDesdeProps() {
-      // Copiar datos del padre si existen
       if (this.modelValue && typeof this.modelValue === 'object') {
         Object.keys(this.modelValue).forEach(key => {
           if (key in this.localForm) {
@@ -410,34 +859,41 @@ export default {
           }
         })
       }
-      
-      // Garantizar que maniobras sea un array con al menos 3 elementos
       if (!Array.isArray(this.localForm.maniobras) || this.localForm.maniobras.length === 0) {
         this.localForm.maniobras = [
-          { ...this.plantillaManiobra },
-          { ...this.plantillaManiobra },
-          { ...this.plantillaManiobra }
+          { ...this.plantillaManiobra, numero: 1, marcados: {} },
+          { ...this.plantillaManiobra, numero: 2, marcados: {} },
+          { ...this.plantillaManiobra, numero: 3, marcados: {} }
         ]
       }
-      
       this.$nextTick(() => {
-        this.recalcularTodo()
+        this.recalcularTodo({ respetarImportado: true })
         this.emitChange()
       })
     },
     emitChange() {
       this.$emit('update:modelValue', { ...this.localForm })
     },
+    // Edición manual: recalcula todo y avisa al padre
+    onEdicion() {
+      this.recalcularTodo()
+      this.emitChange()
+    },
     agregarManiobra() {
       if (this.localForm.maniobras.length < 8) {
-        this.localForm.maniobras.push({ ...this.plantillaManiobra })
+        const nuevoNumero = this.localForm.maniobras.length + 1
+        this.localForm.maniobras.push({ ...this.plantillaManiobra, numero: nuevoNumero, marcados: {} })
         this.recalcularTodo()
         this.emitChange()
       }
     },
-    eliminarManiobra(index) {
-      if (this.localForm.maniobras.length > 1) {
+    eliminarManiobraPorNumero(numero) {
+      const index = this.localForm.maniobras.findIndex(m => m.numero === numero)
+      if (index !== -1 && this.localForm.maniobras.length > 1) {
         this.localForm.maniobras.splice(index, 1)
+        this.localForm.maniobras.forEach((m, idx) => {
+          m.numero = idx + 1
+        })
         this.recalcularTodo()
         this.emitChange()
       }
@@ -449,76 +905,302 @@ export default {
         this.emitChange()
       }
     },
-    recalcularTodo() {
-      this.calcularMejoresValores()
-      this.calcularPorcentajes()
-      this.calcularVarianzas()
+    recalcularTodo(opciones = {}) {
+      const respetar = opciones.respetarImportado === true
+
+      this.calcularMejoresValores(respetar)
+      this.calcularPorcentajes(respetar)
+      this.calcularVarianzas(respetar)
     },
-    calcularMejoresValores() {
+
+    calcularMejoresValores(respetarImportado = false) {
       const maniobras = this.localForm.maniobras || []
-      
-      const fvcValues = maniobras.map(m => m.fvc_l).filter(v => v !== null && v !== undefined && !isNaN(v))
-      this.localForm.mejor_fvc = fvcValues.length > 0 ? Math.max(...fvcValues) : null
-      
-      const fev1Values = maniobras.map(m => m.fev1_l).filter(v => v !== null && v !== undefined && !isNaN(v))
-      this.localForm.mejor_fev1 = fev1Values.length > 0 ? Math.max(...fev1Values) : null
-      
-      if (this.localForm.mejor_fev1 && this.localForm.mejor_fvc && this.localForm.mejor_fvc > 0) {
-        this.localForm.mejor_fev1_fvc = parseFloat((this.localForm.mejor_fev1 / this.localForm.mejor_fvc).toFixed(3))
-      } else {
-        this.localForm.mejor_fev1_fvc = null
+      const max = (campo) => {
+        const valores = maniobras
+          .map(m => m[campo])
+          .filter(v => v !== null && v !== undefined && !isNaN(v))
+        return valores.length > 0 ? Math.max(...valores) : null
       }
-      
-      const fefValues = maniobras.map(m => m.fef25_75).filter(v => v !== null && v !== undefined && !isNaN(v))
-      this.localForm.mejor_fef25_75 = fefValues.length > 0 ? Math.max(...fefValues) : null
-      
-      const pefValues = maniobras.map(m => m.pef_l_s).filter(v => v !== null && v !== undefined && !isNaN(v))
-      this.localForm.mejor_pef = pefValues.length > 0 ? Math.max(...pefValues) : null
+
+      const reglas = {
+        mejor_fvc: () => max('fvc_l'),
+        mejor_fev1: () => max('fev1_l'),
+        mejor_fef25_75: () => max('fef25_75'),
+        mejor_pef: () => max('pef_l_s'),
+        mejor_fivc: () => max('fivc_l'),
+        mejor_pif: () => max('pif_l_s'),
+        mejor_eotv: () => max('eotv_l'),
+      }
+
+      Object.entries(reglas).forEach(([campo, calcular]) => {
+        // Si el informe ya trae el Mejor y no es una edición manual, lo conserva
+        if (respetarImportado && this.localForm[campo] !== null && this.localForm[campo] !== undefined) return
+        this.localForm[campo] = calcular()
+      })
+
+      // FEV1/FVC mejor: solo como respaldo si el informe no lo trae
+      if (!(respetarImportado && this.localForm.mejor_fev1_fvc != null)) {
+        const fev1 = this.localForm.mejor_fev1
+        const fvc = this.localForm.mejor_fvc
+        this.localForm.mejor_fev1_fvc = (fev1 && fvc && fvc > 0)
+          ? parseFloat((fev1 / fvc).toFixed(3))
+          : null
+      }
+
+      // FET del Mejor: el FET de la maniobra con mayor FEV1
+      if (!(respetarImportado && this.localForm.mejor_fet != null)) {
+        const mejorManiobra = maniobras
+          .filter(m => m.fev1_l != null && m.fet_s != null)
+          .sort((a, b) => b.fev1_l - a.fev1_l)[0]
+        this.localForm.mejor_fet = mejorManiobra ? mejorManiobra.fet_s : null
+      }
     },
-    calcularPorcentajes() {
+
+    calcularPorcentajes(respetarImportado = false) {
       const f = this.localForm
-      if (f.fvc_pred > 0 && f.mejor_fvc) {
-        f.fvc_porcentaje_predicho = Math.round((f.mejor_fvc / f.fvc_pred) * 100)
-      } else {
-        f.fvc_porcentaje_predicho = null
+
+      const pct = (mejor, pred) => (pred > 0 && mejor)
+        ? Math.round((mejor / pred) * 100)
+        : null
+
+      const reglas = [
+        ['fvc_porcentaje_predicho', 'mejor_fvc', 'fvc_pred'],
+        ['fev1_porcentaje_predicho', 'mejor_fev1', 'fev1_pred'],
+        ['fev1_fvc_porcentaje_predicho', 'mejor_fev1_fvc', 'fev1_fvc_pred'],
+        ['fef25_75_porcentaje_predicho', 'mejor_fef25_75', 'fef25_75_pred'],
+        ['pef_porcentaje_predicho', 'mejor_pef', 'pef_pred'],
+        ['fivc_porcentaje_predicho', 'mejor_fivc', 'fvc_pred'],
+      ]
+
+      reglas.forEach(([destino, mejor, referencia]) => {
+        if (respetarImportado && f[destino] != null) return
+        f[destino] = pct(f[mejor], f[referencia])
+      })
+    },
+
+    calcularVarianzas(respetarImportado = false) {
+      const f = this.localForm
+
+      const calcularDiferencia = (campo) => {
+        const valores = (this.localForm.maniobras || [])
+          .map(m => m[campo])
+          .filter(v => v !== null && v !== undefined && !isNaN(v))
+          .sort((a, b) => b - a)
+        return valores.length >= 2
+          ? parseFloat(Math.abs(valores[0] - valores[1]).toFixed(3))
+          : null
       }
-      if (f.fev1_pred > 0 && f.mejor_fev1) {
-        f.fev1_porcentaje_predicho = Math.round((f.mejor_fev1 / f.fev1_pred) * 100)
-      } else {
-        f.fev1_porcentaje_predicho = null
+
+      if (!(respetarImportado && f.fev1_var_l != null)) {
+        f.fev1_var_l = calcularDiferencia('fev1_l')
       }
-      if (f.fev1_fvc_pred > 0 && f.mejor_fev1_fvc) {
-        f.fev1_fvc_porcentaje_predicho = Math.round((f.mejor_fev1_fvc / f.fev1_fvc_pred) * 100)
-      } else {
-        f.fev1_fvc_porcentaje_predicho = null
-      }
-      if (f.fef25_75_pred > 0 && f.mejor_fef25_75) {
-        f.fef25_75_porcentaje_predicho = Math.round((f.mejor_fef25_75 / f.fef25_75_pred) * 100)
-      } else {
-        f.fef25_75_porcentaje_predicho = null
-      }
-      if (f.pef_pred > 0 && f.mejor_pef) {
-        f.pef_porcentaje_predicho = Math.round((f.mejor_pef / f.pef_pred) * 100)
-      } else {
-        f.pef_porcentaje_predicho = null
+      if (!(respetarImportado && f.fvc_var_l != null)) {
+        f.fvc_var_l = calcularDiferencia('fvc_l')
       }
     },
-    calcularVarianzas() {
-      const maniobras = this.localForm.maniobras || []
-      const fev1Values = maniobras.map(m => m.fev1_l).filter(v => v !== null && v !== undefined && !isNaN(v)).sort((a, b) => b - a)
-      const fvcValues = maniobras.map(m => m.fvc_l).filter(v => v !== null && v !== undefined && !isNaN(v)).sort((a, b) => b - a)
-      
-      if (fev1Values.length >= 2) {
-        this.localForm.fev1_var_l = parseFloat(Math.abs(fev1Values[0] - fev1Values[1]).toFixed(3))
-      } else {
-        this.localForm.fev1_var_l = null
+
+    // ---------- Gráficas ----------
+
+    // Arma los datos de ambas gráficas a partir de las maniobras y los predichos
+    construirDatosGraficas() {
+      const f = this.localForm
+      const mejor = this.maniobraMejor
+
+      const validas = this.maniobrasOrdenadas.filter(m =>
+        numValido(m.fvc_l) !== null && numValido(m.pef_l_s) !== null
+      )
+
+      // Las no-Mejor primero y la Mejor al final, para que quede encima
+      const ordenadas = [...validas].sort((a, b) => (a === mejor) - (b === mejor))
+
+      const datasetsFV = []
+      const datasetsVT = []
+      let maxVolumen = 0
+      let maxFlujo = 0
+      let maxPif = 0
+
+      ordenadas.forEach(m => {
+        const fvc = numValido(m.fvc_l)
+        const pef = numValido(m.pef_l_s)
+        const fev1 = numValido(m.fev1_l) ?? fvc * 0.8
+        const pif = numValido(m.pif_l_s) ?? pef * 0.6
+        const fivc = numValido(m.fivc_l) ?? fvc
+        const esMejor = m === mejor
+
+        maxVolumen = Math.max(maxVolumen, fvc)
+        maxFlujo = Math.max(maxFlujo, pef)
+        maxPif = Math.max(maxPif, pif)
+
+        datasetsFV.push({
+          label: `Prueba ${m.numero}${esMejor ? ' (Mejor)' : ''}`,
+          data: puntosFlujoVolumen({ fvc, pef, fivc, pif }),
+          ...estiloCurva(esMejor),
+          backgroundColor: esMejor ? 'rgba(31,63,160,0.06)' : 'transparent',
+          fill: esMejor ? 'origin' : false,
+          pointRadius: 0,
+          tension: 0.35
+        })
+
+        datasetsVT.push({
+          label: `Prueba ${m.numero}${esMejor ? ' (Mejor)' : ''}`,
+          data: puntosVolumenTiempo({ fvc, fev1 }),
+          ...estiloCurva(esMejor),
+          fill: false,
+          pointRadius: 0,
+          tension: 0.3
+        })
+      })
+
+      // Predicho
+      const fvcPred = numValido(f.fvc_pred)
+      const pefPred = numValido(f.pef_pred)
+      const fev1Pred = numValido(f.fev1_pred)
+      const pifPred = numValido(f.pif_pred) ?? (pefPred !== null ? pefPred * 0.6 : null)
+
+      if (fvcPred !== null && pefPred !== null) {
+        maxVolumen = Math.max(maxVolumen, fvcPred)
+        maxFlujo = Math.max(maxFlujo, pefPred)
+        datasetsFV.push({
+          label: 'Predicho',
+          data: [{ x: 0.6, y: pefPred }, { x: fvcPred, y: 0 }],
+          borderColor: COLOR_PREDICHO,
+          borderWidth: 2,
+          borderDash: [8, 5],
+          pointRadius: 0,
+          fill: false
+        })
       }
-      if (fvcValues.length >= 2) {
-        this.localForm.fvc_var_l = parseFloat(Math.abs(fvcValues[0] - fvcValues[1]).toFixed(3))
-      } else {
-        this.localForm.fvc_var_l = null
+      if (fvcPred !== null && fev1Pred !== null) {
+        datasetsVT.push({
+          label: 'Predicho',
+          data: puntosVolumenTiempo({ fvc: fvcPred, fev1: fev1Pred }),
+          borderColor: COLOR_PREDICHO,
+          borderWidth: 2,
+          borderDash: [8, 5],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.3
+        })
+        // Marcador del FEV1 predicho en t = 1 s
+        datasetsVT.push({
+          label: '',
+          data: [{ x: 1, y: fev1Pred }],
+          showLine: false,
+          pointRadius: 5,
+          pointBackgroundColor: COLOR_PREDICHO,
+          pointBorderColor: COLOR_PREDICHO
+        })
+      }
+
+      // Marcador del FEV1 del Mejor en t = 1 s
+      if (mejor && numValido(mejor.fev1_l) !== null) {
+        datasetsVT.push({
+          label: '',
+          data: [{ x: 1, y: numValido(mejor.fev1_l) }],
+          showLine: false,
+          pointRadius: 5,
+          pointBackgroundColor: COLOR_MEJOR,
+          pointBorderColor: COLOR_MEJOR
+        })
+      }
+
+      // Ejes: enteros y redondeados para que las etiquetas sean limpias
+      const xMaxFV = Math.max(1, Math.ceil(maxVolumen + 0.5))
+      const mitadFlujo = Math.max(4, Math.ceil(maxFlujo / 2) * 2 + 2)
+      const mitadPif = Math.max(4, Math.ceil(maxPif / 2) * 2 + 2)
+      const yMaxVT = Math.max(2, Math.ceil(maxVolumen) + 1)
+
+      // Línea horizontal en cero (no aparece en la leyenda)
+      datasetsFV.push({
+        label: '',
+        data: [{ x: 0, y: 0 }, { x: xMaxFV, y: 0 }],
+        borderColor: '#000',
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: false
+      })
+
+      return {
+        fv: {
+          datasets: datasetsFV,
+          x: { min: 0, max: xMaxFV },
+          y: { min: -mitadPif, max: mitadFlujo }
+        },
+        vt: {
+          datasets: datasetsVT,
+          x: { min: 0, max: 10 },
+          y: { min: 0, max: yMaxVT }
+        }
       }
     },
+
+    // Crea o recrea ambas gráficas (botón "Regenerar")
+    construirGraficas() {
+      const canvasFV = this.$refs.canvasFV
+      const canvasVT = this.$refs.canvasVT
+      if (!canvasFV || !canvasVT) return
+
+      this.destruirGraficas()
+      const datos = this.construirDatosGraficas()
+
+      // markRaw: evita que Vue vuelva reactiva la instancia de Chart.js (causaba
+      // el desbordamiento de pila y que la primera importación no dibujara)
+      this.graficaFV = markRaw(new Chart(canvasFV, configuracionGrafica(datos.fv, {
+        tituloX: 'Volumen [L]', tituloY: 'Flujo [L/s]', stepY: 2
+      })))
+      this.graficaVT = markRaw(new Chart(canvasVT, configuracionGrafica(datos.vt, {
+        tituloX: 'Tiempo [s]', tituloY: 'Volumen [L]', stepY: 1
+      })))
+    },
+
+    // Actualiza las gráficas existentes sin recrearlas (más ligero al editar)
+    actualizarGraficas() {
+      if (!this.graficaFV || !this.graficaVT) {
+        this.construirGraficas()
+        return
+      }
+      const datos = this.construirDatosGraficas()
+      this.aplicarDatos(this.graficaFV, datos.fv)
+      this.aplicarDatos(this.graficaVT, datos.vt)
+    },
+
+    aplicarDatos(grafica, datos) {
+      grafica.data.datasets = datos.datasets
+      grafica.options.scales.x.min = datos.x.min
+      grafica.options.scales.x.max = datos.x.max
+      grafica.options.scales.y.min = datos.y.min
+      grafica.options.scales.y.max = datos.y.max
+      grafica.update('none')
+    },
+
+    // Agrupa los cambios seguidos (por ejemplo, al escribir) en una sola actualización
+    programarGraficas() {
+      clearTimeout(this._timerGraficas)
+      this._timerGraficas = setTimeout(() => this.actualizarGraficas(), 150)
+    },
+
+    destruirGraficas() {
+      if (this.graficaFV) {
+        this.graficaFV.destroy()
+        this.graficaFV = null
+      }
+      if (this.graficaVT) {
+        this.graficaVT.destroy()
+        this.graficaVT = null
+      }
+    },
+
+    descargarGrafica(tipo) {
+      const grafica = tipo === 'fv' ? this.graficaFV : this.graficaVT
+      if (!grafica) return
+      const link = document.createElement('a')
+      link.download = tipo === 'fv' ? 'curva-flujo-volumen.png' : 'curva-volumen-tiempo.png'
+      link.href = grafica.toBase64Image()
+      link.click()
+    },
+
+    // ---------- Colores y validación ----------
+
     getColorPorcentaje(key) {
       const pct = this.localForm[key + '_porcentaje_predicho']
       if (!pct) return 'text-muted'
@@ -553,43 +1235,22 @@ export default {
       const f = this.localForm
 
       if (f.fev1_var_l !== null && f.fev1_var_l !== undefined) {
-        if (f.fev1_var_l <= 0.150) {
-          detalles.push(`✓ Varianza FEV1 = ${f.fev1_var_l.toFixed(3)} L (≤ 0.150 L)`)
-        } else {
-          detalles.push(`✗ Varianza FEV1 = ${f.fev1_var_l.toFixed(3)} L (> 0.150 L)`)
-          ok = false
-        }
-      } else {
-        detalles.push('⚠ Varianza FEV1 no calculada (se necesitan ≥2 maniobras)')
-        ok = false
-      }
+        if (f.fev1_var_l <= 0.150) detalles.push(`✓ Varianza FEV1 = ${f.fev1_var_l.toFixed(3)} L (≤ 0.150 L)`)
+        else { detalles.push(`✗ Varianza FEV1 = ${f.fev1_var_l.toFixed(3)} L (> 0.150 L)`); ok = false }
+      } else { detalles.push('⚠ Varianza FEV1 no calculada (se necesitan ≥2 maniobras)'); ok = false }
 
       if (f.fvc_var_l !== null && f.fvc_var_l !== undefined) {
-        if (f.fvc_var_l <= 0.150) {
-          detalles.push(`✓ Varianza FVC = ${f.fvc_var_l.toFixed(3)} L (≤ 0.150 L)`)
-        } else {
-          detalles.push(`✗ Varianza FVC = ${f.fvc_var_l.toFixed(3)} L (> 0.150 L)`)
-          ok = false
-        }
-      } else {
-        detalles.push('⚠ Varianza FVC no calculada (se necesitan ≥2 maniobras)')
-        ok = false
-      }
+        if (f.fvc_var_l <= 0.150) detalles.push(`✓ Varianza FVC = ${f.fvc_var_l.toFixed(3)} L (≤ 0.150 L)`)
+        else { detalles.push(`✗ Varianza FVC = ${f.fvc_var_l.toFixed(3)} L (> 0.150 L)`); ok = false }
+      } else { detalles.push('⚠ Varianza FVC no calculada (se necesitan ≥2 maniobras)'); ok = false }
 
       const numManiobras = this.localForm.maniobras.length
-      if (numManiobras >= 3) {
-        detalles.push(`✓ ${numManiobras} maniobras realizadas (≥ 3 requeridas)`)
-      } else {
-        detalles.push(`✗ Solo ${numManiobras} maniobras (< 3 requeridas)`)
-        ok = false
-      }
+      if (numManiobras >= 3) detalles.push(`✓ ${numManiobras} maniobras realizadas (≥ 3 requeridas)`)
+      else { detalles.push(`✗ Solo ${numManiobras} maniobras (< 3 requeridas)`); ok = false }
 
       const maniobrasConFETValido = this.localForm.maniobras.filter(m => m.fet_s >= 6).length
-      if (maniobrasConFETValido >= 2) {
-        detalles.push(`✓ ${maniobrasConFETValido} maniobras con FET ≥ 6 seg`)
-      } else {
-        detalles.push(` Solo ${maniobrasConFETValido} maniobras con FET ≥ 6 seg`)
-      }
+      if (maniobrasConFETValido >= 2) detalles.push(`✓ ${maniobrasConFETValido} maniobras con FET ≥ 6 seg`)
+      else detalles.push(`⚠ Solo ${maniobrasConFETValido} maniobras con FET ≥ 6 seg`)
 
       this.validacionCalidad = { ok, detalles }
     }
@@ -598,69 +1259,30 @@ export default {
 </script>
 
 <style scoped>
-.seccion-parametros-fvl-espirometria {
-  background: #f8f9fa;
-}
-
-.card {
-  border: 1px solid #dee2e6;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-}
-
-.card-header {
-  background: linear-gradient(135deg, #43A047 0%, #2E7D32 100%) !important;
-  color: white !important;
-  border-bottom: none;
-  padding: 0.75rem 1.25rem;
-}
-
-.card-body {
-  padding: 1.25rem;
-}
-
-.form-control {
-  border-radius: 4px;
-  border: 1px solid #ced4da;
-  font-size: 14px;
-  padding: 10px 12px;
-}
-
-.form-control:focus {
-  border-color: #43A047;
-  box-shadow: 0 0 0 0.2rem rgba(67, 160, 71, 0.25);
-}
-
-.form-control-sm {
-  font-size: 0.8125rem;
-  padding: 4px 8px;
-}
-
-.badge {
-  font-size: 0.75rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 2rem;
-}
-
+.seccion-parametros-fvl-espirometria { background: #f8f9fa; }
+.card { border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+.card-header { background: linear-gradient(135deg, #43A047 0%, #2E7D32 100%) !important; color: white !important; border-bottom: none; padding: 0.75rem 1.25rem; }
+.card-body { padding: 1.25rem; }
+.form-control { border-radius: 4px; border: 1px solid #ced4da; font-size: 14px; padding: 10px 12px; }
+.form-control:focus { border-color: #43A047; box-shadow: 0 0 0 0.2rem rgba(67, 160, 71, 0.25); }
+.form-control-sm { font-size: 0.8125rem; padding: 4px 8px; }
+.badge { font-size: 0.75rem; padding: 0.375rem 0.75rem; border-radius: 2rem; }
 .badge-success { background-color: #28a745; color: white; }
 .badge-warning { background-color: #ffc107; color: #212529; }
 .badge-danger { background-color: #dc3545; color: white; }
-
 .text-success { color: #28a745 !important; }
 .text-warning { color: #ffc107 !important; }
 .text-danger { color: #dc3545 !important; }
 .text-muted { color: #6c757d !important; }
 .text-blue-700 { color: #1e40af !important; }
-
 .font-weight-bold { font-weight: 600 !important; }
 .bg-light { background-color: #f8f9fa !important; }
 .bg-white { background-color: #fff !important; }
 .bg-blue-50 { background-color: #eff6ff !important; }
-
 .border { border: 1px solid #dee2e6 !important; }
 .border-top { border-top: 1px solid #dee2e6 !important; }
 .border-success { border-color: #28a745 !important; }
 .border-danger { border-color: #dc3545 !important; }
-
 .rounded { border-radius: 0.25rem !important; }
 .p-3 { padding: 1rem !important; }
 .mt-1 { margin-top: 0.25rem !important; }
@@ -672,56 +1294,58 @@ export default {
 .mb-4 { margin-bottom: 1.5rem !important; }
 .px-4 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
 .py-2 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
-
 .d-flex { display: flex !important; }
 .justify-content-between { justify-content: space-between !important; }
 .justify-content-end { justify-content: flex-end !important; }
 .align-items-center { align-items: center !important; }
 .text-center { text-align: center !important; }
-
+.text-nowrap { white-space: nowrap !important; }
 .text-sm { font-size: 0.875rem !important; }
 .small { font-size: 0.8125rem !important; }
-
-.table {
-  width: 100%;
-  margin-bottom: 1rem;
-  color: #212529;
-  background-color: #fff;
-  border-collapse: collapse;
-}
-
-.table th, .table td {
-  padding: 0.5rem;
-  vertical-align: middle;
-  border-top: 1px solid #dee2e6;
-}
-
-.table thead th {
-  vertical-align: bottom;
-  border-bottom: 2px solid #dee2e6;
-  background-color: #f8f9fa;
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(0, 0, 0, 0.03);
-}
-
+.table { width: 100%; margin-bottom: 1rem; color: #212529; background-color: #fff; border-collapse: collapse; }
+.table th, .table td { padding: 0.5rem; vertical-align: middle; border-top: 1px solid #dee2e6; }
+.table thead th { vertical-align: bottom; border-bottom: 2px solid #dee2e6; background-color: #f8f9fa; }
+.table-hover tbody tr:hover { background-color: rgba(0, 0, 0, 0.03); }
 .table-bordered { border: 1px solid #dee2e6; }
 .table-bordered th, .table-bordered td { border: 1px solid #dee2e6; }
-
 .align-middle { vertical-align: middle !important; }
-
 .bg-opacity-10 { background-color: rgba(40, 167, 69, 0.1) !important; }
+.btn-xs { padding: 2px 6px; font-size: 10px; line-height: 1.5; border-radius: 0.2rem; }
 
-.btn-xs {
-  padding: 2px 6px;
-  font-size: 10px;
-  line-height: 1.5;
-  border-radius: 0.2rem;
-}
+/* Tarjeta de gráficas (mismo estilo que la sección del audiómetro) */
+.titulo-grafica { text-align: center; font-weight: 600; color: #37474f; margin-bottom: 8px; }
+
+/* Contenedor de las gráficas: alto fijo para que Chart.js no crezca al redibujar */
+.grafica-contenedor { position: relative; height: 340px; width: 100%; }
+
+/* Leyenda inferior de las gráficas */
+.leyenda-graficas { background: #fafcfb; border: 1px solid #dfe6e9; border-radius: 4px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #37474f; }
+.leyenda-graficas-titulo { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.leyenda-graficas .sw { display: inline-block; width: 28px; border-top: 3px solid; vertical-align: middle; margin-right: 8px; }
+.sw-mejor { border-color: #1F3FA0; }
+.sw-prueba { border-top-style: dotted !important; border-color: #16A34A; }
+.sw-predicho { border-top-style: dashed !important; border-color: #9AA5B1; }
+.pt-fev1 { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #1F3FA0; vertical-align: middle; margin: 0 12px 0 10px; }
+.nota-graficas { margin-top: 8px; font-size: 12px; color: #607d8b; }
+
+/* Pie de cada gráfica: leyenda centrada debajo de la gráfica, con el título del eje X en la misma línea */
+.pie-grafica { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 18px; margin-top: 6px; font-size: 12px; color: #37474f; }
+.item-leyenda { white-space: nowrap; }
+.eje-x-titulo { font-weight: 600; white-space: nowrap; }
+
+/* Símbolos rectangulares de la leyenda */
+.caja-leyenda { display: inline-block; width: 24px; height: 12px; border: 2px solid; margin-right: 6px; vertical-align: middle; }
+.caja-leyenda.sw-mejor { border: 3px solid #1F3FA0; background: rgba(31, 63, 160, 0.08); }
+.caja-leyenda.sw-prueba { border-style: dotted; border-color: #16A34A; background: rgba(22, 163, 74, 0.08); }
+.caja-leyenda.sw-predicho { border-style: dashed; border-color: #9AA5B1; background: rgba(154, 165, 177, 0.2); }
+
+/* Celdas con valor marcado en el informe (asterisco) */
+.celda-marcada { background-color: #FFE8A3 !important; box-shadow: inset 0 0 0 2px #F5B400; }
+.leyenda-marcada-swatch { display: inline-block; width: 14px; height: 14px; background: #FFE8A3; border: 2px solid #F5B400; vertical-align: middle; margin-right: 6px; }
 
 @media (max-width: 768px) {
   .col-md-4 { flex: 0 0 100%; max-width: 100%; }
   .table-responsive { overflow-x: auto; }
+  .grafica-contenedor { height: 280px; }
 }
 </style>

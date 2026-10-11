@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\ClinicaTrabajo;
 
+use Illuminate\Http\Request;
+use App\Services\IAClinicaTrabajoService;
 use App\Http\Controllers\Controller;
 use App\Models\ClinicaTrabajo\ValoracionEspirometria;
 use App\Http\Requests\ClinicaTrabajo\StoreEspirometriaRequest;
@@ -14,20 +16,20 @@ class ValoracionEspirometriaController extends Controller
      * GET /clinica-trabajo/espirometria
      * Lista todas las valoraciones espirométricas con filtros
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $query = ValoracionEspirometria::query();
 
-        if (request('empresa_id')) {
-            $query->where('empresa_cliente_id', request('empresa_id'));
+        if ($request->filled('empresa_id')) {
+            $query->where('empresa_cliente_id', $request->input('empresa_id'));
         }
-        if (request('tipo')) {
-            $query->where('tipo_evaluacion', request('tipo'));
+        if ($request->filled('tipo')) {
+            $query->where('tipo_evaluacion', $request->input('tipo'));
         }
-        if (request('fecha_desde') && request('fecha_hasta')) {
+        if ($request->filled('fecha_desde') && $request->filled('fecha_hasta')) {
             $query->whereBetween('fecha_valoracion', [
-                request('fecha_desde'),
-                request('fecha_hasta')
+                $request->input('fecha_desde'),
+                $request->input('fecha_hasta'),
             ]);
         }
 
@@ -48,7 +50,7 @@ class ValoracionEspirometriaController extends Controller
             'paciente',
             'empresa',
             'puesto',
-            'medico'
+            'medico',
         ])->findOrFail($id);
 
         return response()->json($valoracion);
@@ -63,12 +65,12 @@ class ValoracionEspirometriaController extends Controller
         $validated = $request->validated();
 
         $valoracion = ValoracionEspirometria::create(array_merge($validated, [
-            'medico_id' => $request->user()->id
+            'medico_id' => $request->user()->id,
         ]));
 
         return response()->json([
             'message' => 'Valoración espirométrica creada exitosamente',
-            'data' => $valoracion->load(['paciente', 'empresa', 'puesto', 'medico'])
+            'data' => $valoracion->load(['paciente', 'empresa', 'puesto', 'medico']),
         ], 201);
     }
 
@@ -85,7 +87,7 @@ class ValoracionEspirometriaController extends Controller
 
         return response()->json([
             'message' => 'Valoración espirométrica actualizada',
-            'data' => $valoracion->load(['paciente', 'empresa', 'puesto', 'medico'])
+            'data' => $valoracion->load(['paciente', 'empresa', 'puesto', 'medico']),
         ]);
     }
 
@@ -98,23 +100,25 @@ class ValoracionEspirometriaController extends Controller
         ValoracionEspirometria::findOrFail($id)->delete();
 
         return response()->json([
-            'message' => 'Valoración espirométrica eliminada'
+            'message' => 'Valoración espirométrica eliminada',
         ]);
     }
 
     /**
      * GET /clinica-trabajo/espirometria/{id}/imprimir
+     * Devuelve los datos del reporte, incluyendo mejores valores, porcentajes,
+     * varianzas, calidad de sesión y maniobras, para que coincidan con la tabla.
      */
-    public function imprimir($id)
+    public function imprimir($id): JsonResponse
     {
         $valoracion = ValoracionEspirometria::with([
-            'paciente', 'empresa', 'medico', 'puesto'
+            'paciente', 'empresa', 'medico', 'puesto',
         ])->findOrFail($id);
 
         return response()->json([
             'folio' => $valoracion->folio,
-            'paciente' => $valoracion->paciente->nombre,
-            'empresa' => $valoracion->empresa->razon_social,
+            'paciente' => $valoracion->paciente?->nombre,
+            'empresa' => $valoracion->empresa?->razon_social,
             'fecha' => $valoracion->fecha_valoracion,
             'tipo' => $valoracion->tipo_evaluacion,
             'aptitud' => $valoracion->aptitud,
@@ -123,6 +127,10 @@ class ValoracionEspirometriaController extends Controller
             'interpretacion_sistema' => $valoracion->interpretacion_sistema,
             'diagnostico_medico' => $valoracion->diagnostico_medico,
             'recomendaciones' => $valoracion->recomendaciones,
+            'varianza' => [
+                'fev1_var_l' => $valoracion->fev1_var_l,
+                'fvc_var_l' => $valoracion->fvc_var_l,
+            ],
             'parametros' => [
                 'fvc_l' => $valoracion->fvc_l,
                 'fev1_l' => $valoracion->fev1_l,
@@ -133,6 +141,38 @@ class ValoracionEspirometriaController extends Controller
                 'fev1_porcentaje_predicho' => $valoracion->fev1_porcentaje_predicho,
                 'fvc_porcentaje_predicho' => $valoracion->fvc_porcentaje_predicho,
             ],
+            'maniobras' => $valoracion->maniobras,
+        ]);
+    }
+
+    /**
+     * POST /clinica-trabajo/espirometria/importar
+     * Recibe el PDF del informe ndd, lo analiza con IA y devuelve los datos estructurados.
+     * El servicio solo procesa PDF, por eso no se aceptan imágenes.
+     */
+    public function importarArchivo(Request $request, IAClinicaTrabajoService $iaService): JsonResponse
+    {
+        $request->validate([
+            'archivo' => 'required|file|mimes:pdf|max:10240', // Máximo 10MB
+        ]);
+
+        $archivo = $request->file('archivo');
+        $rutaCompleta = $archivo->getRealPath();
+        $mime = $archivo->getMimeType();
+
+        $datosExtraidos = $iaService->analizarEspirometria($rutaCompleta, $mime);
+
+        if (!$datosExtraidos) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudieron extraer los datos del informe. Verifica que sea un PDF de espirometría ndd con texto legible.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Datos extraídos exitosamente',
+            'data' => $datosExtraidos,
         ]);
     }
 }
