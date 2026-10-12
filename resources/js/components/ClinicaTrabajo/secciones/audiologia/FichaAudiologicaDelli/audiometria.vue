@@ -471,6 +471,7 @@
 
 <script>
 import Chart from 'chart.js/auto'
+import { markRaw } from 'vue'
 
 export default {
   name: 'Hoja4AudiometriaDelli',
@@ -553,13 +554,15 @@ export default {
   watch: {
     modelValue: {
       handler(newVal) {
-        if (newVal && Object.keys(newVal).length > 0) {
-          this.localData = { ...this.localData, ...newVal }
-          this.$nextTick(() => {
-            this.calcularPTA()
-            this.actualizarGrafica()
-          })
-        }
+        if (!newVal || Object.keys(newVal).length === 0) return
+        // Si el valor recibido es igual al local, no redibujar
+        if (JSON.stringify(newVal) === JSON.stringify(this.localData)) return
+
+        this.localData = { ...this.localData, ...newVal }
+        this.$nextTick(() => {
+          this.calcularPTA()
+          this.actualizarGrafica()
+        })
       },
       deep: true,
       immediate: true
@@ -668,6 +671,7 @@ export default {
       return resultado
     },
     actualizarGrafica() {
+      console.count('actualizarGrafica')
       this.$nextTick(() => {
         const datosAireDerechos = this.obtenerDatosOido('derecho')
         const datosAireIzquierdos = this.obtenerDatosOido('izquierdo')
@@ -696,10 +700,11 @@ export default {
     },
     crearGraficaOido(elementId, datosAire, datosOsea, datosEnmascarado, oido, instanceProperty) {
       const canvas = document.getElementById(elementId)
-      if (!canvas) return
+      if (!canvas || !canvas.isConnected) return
 
       if (this[instanceProperty]) {
         this[instanceProperty].destroy()
+        this[instanceProperty] = null
       }
 
       const esDerecho = oido === 'derecho'
@@ -718,7 +723,7 @@ export default {
       const hayDatosOsea = datosOsea.some(v => v !== null && v !== undefined)
       const hayDatosEnmascarado = datosEnmascarado.some(v => v !== null && v !== undefined)
 
-      this[instanceProperty] = new Chart(canvas, {
+      this[instanceProperty] = markRaw(new Chart(canvas, {
         type: 'line',
         data: {
           labels: this.frecuencias.map(f => f >= 1000 ? (f/1000) + 'k' : f),
@@ -792,6 +797,7 @@ export default {
           ]
         },
         options: {
+          animation: false,
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
@@ -837,7 +843,7 @@ export default {
             }
           }
         }
-      })
+      }))
     },
     emitChange() {
       this.$emit('update:modelValue', { ...this.localData })
