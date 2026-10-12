@@ -486,7 +486,7 @@ return [
                     'submenu' => [
                         [
                             'text' => 'Lista de consulta', 
-                            'url'  => 'ListaConsultas',
+                            'url'  => '#',
                             'icon' => 'fas fa-fw fa-notes-medical',
                         ],
                         [

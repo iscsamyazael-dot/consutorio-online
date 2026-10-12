@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid py-4">
     <!-- BÚSQUEDA DE PACIENTES -->
-    <div v-if="!trabajadorSeleccionado" class="row">
+    <!-- <div v-if="!trabajadorSeleccionado" class="row">
       <div class="col-lg-8 mx-auto">
         <div class="card card-primary card-outline shadow-sm">
           <div class="card-header">
@@ -54,11 +54,11 @@
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- EVALUACIÓN ACTIVA -->
-    <div v-else class="row">
-      
+    <!-- <div v-else class="row"> -->
+    <div class="row">
       <!-- CHAT IA (ARRIBA) -->
       <div class="col-12 order-1 mb-4">
         <div class="card card-primary card-outline shadow-sm">
