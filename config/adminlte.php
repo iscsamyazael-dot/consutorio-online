@@ -475,136 +475,187 @@ return [
             'icon'    => 'fas fa-fw fa-briefcase-medical', // Icono representativo para el menú principal
             'can'     => 'modulo-medicina-trabajo',
             'submenu' => [
-                // ------------------------------------------
-                // 🩺 VALORACIONES OCUPACIONALES
+
+                 // ------------------------------------------
+                // 🩺 CONSULTAS
                 // ------------------------------------------
                 [
-                    'text'    => 'Valoraciones ocupacionales',
+                    'text'    => 'Consultas',
                     'icon'    => 'fas fa-fw fa-stethoscope',
-                    'can'     => 'modulo-medicina-trabajo',
+                    'can'     => 'acceso-general',
                     'submenu' => [
                         [
-                            'text' => 'Lista de valoraciones',
-                            'icon' => 'fas fa-fw fa-list',
-                            'url'  => '/clinica/medicina',
+                            'text' => 'Lista de consulta', 
+                            'url'  => 'ListaConsultas',
+                            'icon' => 'fas fa-fw fa-notes-medical',
                         ],
                         [
-                            'text' => 'Nueva valoración',
-                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'text' => 'Valoración Ocupacional',
+                            'icon' => 'fas fa-fw fa-briefcase-medical',
                             'url'  => '/ficha-ocupacional',
                         ],
-                    ],
-                ],
-
-                // ------------------------------------------
-                // 🧠 PSICOLOGÍA OCUPACIONAL
-                // ------------------------------------------
-                [
-                    'text'    => 'Valoraciones psicológicas',
-                    'icon'    => 'fas fa-fw fa-brain',
-                    'can'     => 'modulo-medicina-trabajo',
-                    'submenu' => [
                         [
-                            'text' => 'Lista de valoraciones',
-                            'icon' => 'fas fa-fw fa-list',
-                            'url'  => '/clinica/psicologia',
-                        ],
-                        [
-                            'text' => 'Nueva valoración',
-                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'text' => 'Valoración Psicológica',
+                            'icon' => 'fas fa-fw fa-brain',
                             'url'  => '/clinica/psicologia/nueva',
                         ],
-                    ],
-                ],
-
-                // ------------------------------------------
-                // 🥗 NUTRICIÓN OCUPACIONAL
-                // ------------------------------------------
-                [
-                    'text'    => 'Valoraciones nutricionales',
-                    'icon'    => 'fas fa-fw fa-apple-alt',
-                    'can'     => 'modulo-medicina-trabajo',
-                    'submenu' => [
                         [
-                            'text' => 'Lista de valoraciones',
-                            'icon' => 'fas fa-fw fa-list',
-                            'url'  => '/clinica/nutricion',
-                        ],
-                        [
-                            'text' => 'Nueva valoración',
-                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'text' => 'Valoración Nutricional',
+                            'icon' => 'fas fa-fw fa-apple-alt',
                             'url'  => '/clinica/nutricion/nueva',
                         ],
-                    ],
-                ],
-
-                // ------------------------------------------
-                // 👂 AUDIOLOGÍA OCUPACIONAL
-                // ------------------------------------------
-                [
-                    'text'    => 'Valoraciones audiológicas',
-                    'icon'    => 'fas fa-fw fa-deaf',
-                    'can'     => 'modulo-medicina-trabajo',
-                    'submenu' => [
                         [
-                            'text' => 'Lista de valoraciones',
-                            'icon' => 'fas fa-fw fa-list',
-                            'url'  => '/clinica/audiologia',
-                        ],
-                        [
-                            'text' => 'Ficha Historia Clínica',
-                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'text' => 'Valoración Audiológia - Historia Clinica',
+                            'icon' => 'fas fa-fw fa-assistive-listening-systems',
                             'url'  => 'FichaDelliAudiologia',
                         ],
                         [
-                            'text' => 'Ficha Trabajo Alto Riesgo',
-                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'text' => 'Valoración Audiológia - Trabajo Alto Riesgo',
+                            'icon' => 'fas fa-fw fa-hard-hat',
                             'url'  => 'FichaTrabajoAltoRiesgo',
                         ],
-                    ],
-                ],
-
-                // ------------------------------------------
-                // 🪑 ERGONOMÍA OCUPACIONAL
-                // ------------------------------------------
-                [
-                    'text'    => 'Valoraciones ergonómicas',
-                    'icon'    => 'fas fa-fw fa-chair',
-                    'can'     => 'modulo-medicina-trabajo',
-                    'submenu' => [
                         [
-                            'text' => 'Lista de valoraciones',
-                            'icon' => 'fas fa-fw fa-list',
-                            'url'  => '/clinica/ergonomia',
-                        ],
-                        [
-                            'text' => 'Nueva valoración',
-                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'text' => 'Valoración Ergonómica',
+                            'icon' => 'fas fa-fw fa-chair',
                             'url'  => '/clinica/ergonomia/nueva',
                         ],
-                    ],
-                ],
-
-                // ------------------------------------------
-                // 🫁 ESPIROMETRÍA
-                // ------------------------------------------
-                [
-                    'text'    => 'Valoraciones espirometría',
-                    'icon'    => 'fas fa-fw fa-lungs',
-                    'can'     => 'modulo-medicina-trabajo', // Ajusta este permiso si tienes uno específico como 'modulo-espirometria'
-                    'submenu' => [
                         [
-                            'text' => 'Lista de espirometrías',
-                            'icon' => 'fas fa-fw fa-list',
-                            'url'  => '/clinica/espirometria',
-                        ],
-                        [
-                            'text' => 'Nueva espirometría',
-                            'icon' => 'fas fa-fw fa-plus-circle',
+                            'text' => 'Valoración Espirometría',
+                            'icon' => 'fas fa-fw fa-lungs',
                             'url'  => 'ficha-espirometria',
                         ],
                     ],
                 ],
+                // ------------------------------------------
+                // 🩺 VALORACIONES OCUPACIONALES
+                // ------------------------------------------
+                // [
+                //     'text'    => 'Valoraciones ocupacionales',
+                //     'icon'    => 'fas fa-fw fa-stethoscope',
+                //     'can'     => 'modulo-medicina-trabajo',
+                //     'submenu' => [
+                //         [
+                //             'text' => 'Lista de valoraciones',
+                //             'icon' => 'fas fa-fw fa-list',
+                //             'url'  => '/clinica/medicina',
+                //         ],
+                //         [
+                //             'text' => 'Nueva valoración',
+                //             'icon' => 'fas fa-fw fa-plus-circle',
+                //             'url'  => '/ficha-ocupacional',
+                //         ],
+                //     ],
+                // ],
+
+                // ------------------------------------------
+                // 🧠 PSICOLOGÍA OCUPACIONAL
+                // ------------------------------------------
+                // [
+                //     'text'    => 'Valoraciones psicológicas',
+                //     'icon'    => 'fas fa-fw fa-brain',
+                //     'can'     => 'modulo-medicina-trabajo',
+                //     'submenu' => [
+                //         [
+                //             'text' => 'Lista de valoraciones',
+                //             'icon' => 'fas fa-fw fa-list',
+                //             'url'  => '/clinica/psicologia',
+                //         ],
+                //         [
+                //             'text' => 'Nueva valoración',
+                //             'icon' => 'fas fa-fw fa-plus-circle',
+                //             'url'  => '/clinica/psicologia/nueva',
+                //         ],
+                //     ],
+                // ],
+
+                // ------------------------------------------
+                // 🥗 NUTRICIÓN OCUPACIONAL
+                // ------------------------------------------
+                // [
+                //     'text'    => 'Valoraciones nutricionales',
+                //     'icon'    => 'fas fa-fw fa-apple-alt',
+                //     'can'     => 'modulo-medicina-trabajo',
+                //     'submenu' => [
+                //         [
+                //             'text' => 'Lista de valoraciones',
+                //             'icon' => 'fas fa-fw fa-list',
+                //             'url'  => '/clinica/nutricion',
+                //         ],
+                //         [
+                //             'text' => 'Nueva valoración',
+                //             'icon' => 'fas fa-fw fa-plus-circle',
+                //             'url'  => '/clinica/nutricion/nueva',
+                //         ],
+                //     ],
+                // ],
+
+                // ------------------------------------------
+                // 👂 AUDIOLOGÍA OCUPACIONAL
+                // ------------------------------------------
+                // [
+                //     'text'    => 'Valoraciones audiológicas',
+                //     'icon'    => 'fas fa-fw fa-deaf',
+                //     'can'     => 'modulo-medicina-trabajo',
+                //     'submenu' => [
+                //         [
+                //             'text' => 'Lista de valoraciones',
+                //             'icon' => 'fas fa-fw fa-list',
+                //             'url'  => '/clinica/audiologia',
+                //         ],
+                //         [
+                //             'text' => 'Ficha Historia Clínica',
+                //             'icon' => 'fas fa-fw fa-plus-circle',
+                //             'url'  => 'FichaDelliAudiologia',
+                //         ],
+                //         [
+                //             'text' => 'Ficha Trabajo Alto Riesgo',
+                //             'icon' => 'fas fa-fw fa-plus-circle',
+                //             'url'  => 'FichaTrabajoAltoRiesgo',
+                //         ],
+                //     ],
+                // ],
+
+                // ------------------------------------------
+                // 🪑 ERGONOMÍA OCUPACIONAL
+                // ------------------------------------------
+                // [
+                //     'text'    => 'Valoraciones ergonómicas',
+                //     'icon'    => 'fas fa-fw fa-chair',
+                //     'can'     => 'modulo-medicina-trabajo',
+                //     'submenu' => [
+                //         [
+                //             'text' => 'Lista de valoraciones',
+                //             'icon' => 'fas fa-fw fa-list',
+                //             'url'  => '/clinica/ergonomia',
+                //         ],
+                //         [
+                //             'text' => 'Nueva valoración',
+                //             'icon' => 'fas fa-fw fa-plus-circle',
+                //             'url'  => '/clinica/ergonomia/nueva',
+                //         ],
+                //     ],
+                // ],
+
+                // ------------------------------------------
+                // 🫁 ESPIROMETRÍA
+                // ------------------------------------------
+                // [
+                //     'text'    => 'Valoraciones espirometría',
+                //     'icon'    => 'fas fa-fw fa-lungs',
+                //     'can'     => 'modulo-medicina-trabajo', // Ajusta este permiso si tienes uno específico como 'modulo-espirometria'
+                //     'submenu' => [
+                //         [
+                //             'text' => 'Lista de espirometrías',
+                //             'icon' => 'fas fa-fw fa-list',
+                //             'url'  => '/clinica/espirometria',
+                //         ],
+                //         [
+                //             'text' => 'Nueva espirometría',
+                //             'icon' => 'fas fa-fw fa-plus-circle',
+                //             'url'  => 'ficha-espirometria',
+                //         ],
+                //     ],
+                // ],
 
                 // ------------------------------------------
                 // ⚠️ ACCIDENTES DE TRABAJO
