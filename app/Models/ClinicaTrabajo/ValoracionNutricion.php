@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Builder;
-use App\Models\Paciente;
+use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo as Paciente;
 use App\Models\Medico;
 use App\Models\EmpresaCliente;
 use App\Models\PuestoTrabajo;

@@ -17,7 +17,7 @@ class UpdateMedicinaRequest extends FormRequest
         $id = $this->route('id');
         return [
             'folio' => 'sometimes|required|string|unique:valoraciones_ocupacionales,folio,' . $id,
-            'paciente_id' => 'sometimes|required|exists:pacientes,id',
+            'paciente_id' => 'sometimes|required|exists:pacientes_clinica_trabajo,id',
             'empresa_cliente_id' => 'sometimes|required|exists:empresas_cliente,id',
             'puesto_trabajo_id' => 'nullable|exists:puestos_trabajo,id',
             'medico_id' => 'sometimes|required|exists:medicos,id',

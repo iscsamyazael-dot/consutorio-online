@@ -289,6 +289,28 @@ Route::middleware('auth')->group(function () {
             Route::post('importar', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'importarArchivo'])->name('importar');
         });
 
+        // ========== PACIENTES CLINICA TRABAJO ==========
+        Route::prefix('clinica/pacientes')->name('clinica.pacientes.')->group(function () {
+            Route::get('/', [PacientesClinicaTrabajoController::class, 'index'])->name('index');
+            Route::get('{id}', [PacientesClinicaTrabajoController::class, 'show'])->name('show');
+            Route::post('/', [PacientesClinicaTrabajoController::class, 'store'])->name('store');
+            Route::put('{id}', [PacientesClinicaTrabajoController::class, 'update'])->name('update');
+            Route::delete('{id}', [PacientesClinicaTrabajoController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/restaurar', [PacientesClinicaTrabajoController::class, 'restore'])->name('restore');
+            Route::delete('{id}/forzar-eliminacion', [PacientesClinicaTrabajoController::class, 'forceDelete'])->name('forceDelete');
+        });
+
+        // ========== TRIAGE CLINICA TRABAJO ==========
+        Route::prefix('clinica/triage')->name('clinica.triage.')->group(function () {
+            Route::get('/', [TriageClinicaTrabajoController::class, 'index'])->name('index');
+            Route::get('{id}', [TriageClinicaTrabajoController::class, 'show'])->name('show');
+            Route::post('/', [TriageClinicaTrabajoController::class, 'store'])->name('store');
+            Route::put('{id}', [TriageClinicaTrabajoController::class, 'update'])->name('update');
+            Route::delete('{id}', [TriageClinicaTrabajoController::class, 'destroy'])->name('destroy');
+            Route::get('{id}/restaurar', [TriageClinicaTrabajoController::class, 'restore'])->name('restore');
+            Route::delete('{id}/forzar-eliminacion', [TriageClinicaTrabajoController::class, 'forceDelete'])->name('forceDelete');
+        });
+
         // ═════════════════════════════════════════════════════════════
         // BLOQUE 1: RUTAS GENERALES (sin datos clínicos sensibles)
         // Accesibles por cualquier usuario autenticado del tenant.

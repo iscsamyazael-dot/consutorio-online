@@ -5,10 +5,11 @@ namespace App\Services\ClinicaTrabajo;
 use App\Models\ClinicaTrabajo\ValoracionOcupacional;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Paciente;
+use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo as Paciente;
 use App\Models\Medico;
 use App\Models\EmpresaCliente;
 use App\Models\PuestoTrabajo;
+use App\Models\ClinicaTrabajo\DatosLaboral;
 
 class MedicinaService
 {
@@ -43,9 +44,10 @@ class MedicinaService
         $antecedentes = $datos['antecedentes'] ?? [];
         $clinicoExamen = $datos['clinico_examen'] ?? [];
 
-        // Determinar empresa y puesto del paciente si no vienen en datos
-        $empresaId = $datosPuesto['empresa_cliente_id'] ?? $paciente->empresa_cliente_id;
-        $puestoId = $datosPuesto['puesto_trabajo_id'] ?? $paciente->puesto_trabajo_id;
+        // Determinar empresa y puesto del paciente desde datos_laborales (registro más reciente)
+        $ultimoDatosLaboral = $paciente->datosLaborales()->latest()->first();
+        $empresaId = $datosPuesto['empresa_cliente_id'] ?? ($ultimoDatosLaboral ? $ultimoDatosLaboral->empresa_cliente_id : null);
+        $puestoId = $datosPuesto['puesto_trabajo_id'] ?? ($ultimoDatosLaboral ? $ultimoDatosLaboral->puesto_trabajo_id : null);
 
         // Generar folio único
         $folio = $this->generarFolio();
