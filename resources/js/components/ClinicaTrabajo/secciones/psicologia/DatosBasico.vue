@@ -163,7 +163,7 @@
 </template>
 
 <script>
-import ApiService from '../../../../services/ApiService'
+import ApiServiceClinicaTrabajo from '../../../../services/ApiServiceClinicaTrabajo'
 
 const RUTAS = {
   pacientes: '/pacientes',

@@ -170,7 +170,7 @@ import Hoja1DatosbasicosDelli from './secciones/audiologia/FichaAudiologicaDelli
 import Hoja2RiesgosototoxicosDelli from './secciones/audiologia/FichaAudiologicaDelli/riesgosototoxicos.vue'
 import Hoja3AntecedentessintomasDelli from './secciones/audiologia/FichaAudiologicaDelli/antecedentessintomas.vue'
 import Hoja4AudiometriaDelli from './secciones/audiologia/FichaAudiologicaDelli/audiometria.vue'
-import { clinicaTrabajo } from '../../services/ApiService'
+import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterFichaAudiologicaDelli',

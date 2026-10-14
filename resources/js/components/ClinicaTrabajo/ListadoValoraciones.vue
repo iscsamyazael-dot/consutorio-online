@@ -108,7 +108,7 @@
 </template>
 
 <script>
-  import ApiService, { clinicaTrabajo } from '../../services/ApiService.js'
+  import ApiServiceClinicaTrabajo, { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo.js'
 
 export default {
   name: 'ListadoValoraciones',

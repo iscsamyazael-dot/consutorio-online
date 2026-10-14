@@ -170,7 +170,7 @@ import Hoja1IdentificacionempleoTr from './secciones/audiologia/ExamenTrabajoTR/
 import Hoja2AntecedentessaludTr from './secciones/audiologia/ExamenTrabajoTR/antecedentessalud.vue'
 import Hoja3ExploracionfisicaTr from './secciones/audiologia/ExamenTrabajoTR/exploracionfisica.vue'
 import Hoja4ParaclinicodiagnosticosTr from './secciones/audiologia/ExamenTrabajoTR/paraclinicodiagnosticos.vue'
-import { clinicaTrabajo } from '../../services/ApiService'
+import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterExamenTrabajoTr',

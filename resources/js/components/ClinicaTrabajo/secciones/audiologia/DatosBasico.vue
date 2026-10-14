@@ -190,7 +190,7 @@
 </template>
 
 <script>
-import ApiService from '../../../../services/ApiService'
+import ApiServiceClinicaTrabajo from '../../../../services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'DatosBásicoAudiologia',

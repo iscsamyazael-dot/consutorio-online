@@ -159,7 +159,7 @@
 </template>
 
 <script>
-import ApiService from '../../../../services/ApiService'
+import ApiServiceClinicaTrabajo from '../../../../services/ApiServiceClinicaTrabajo'
 
 // AJUSTA AQUÍ la ruta según `php artisan route:list --path=alimentos`
 const RUTAS = {

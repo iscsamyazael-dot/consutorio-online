@@ -254,7 +254,7 @@ import DiagnosticoNutricion from './secciones/nutricion/Diagnostico.vue'
 import AptitudDictamenNutricion from './secciones/nutricion/AptitudDictamen.vue'
 
 // Servicio API (Ajusta el nombre según tu proyecto)
-import { clinicaTrabajo } from '../../services/ApiService'
+import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterNutricion',
