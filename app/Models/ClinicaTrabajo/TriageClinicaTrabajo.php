@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TriageClinicaTrabajo extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'triage_clinica_trabajo';
 
@@ -36,7 +37,6 @@ class TriageClinicaTrabajo extends Model
         'evaluacion_ia',
         'observaciones',
         'historial_ediciones',
-        'deleted_at',
     ];
 
     protected $dates = [
@@ -84,5 +84,22 @@ class TriageClinicaTrabajo extends Model
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'usuario_triage_id');
+    }
+
+    /**
+     * Boot the model - generate folio automatically
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            // Generate folio if empty: TRI-AAAA-NNNN
+            if (empty($model->folio)) {
+                $year = now()->year;
+                $count = static::withTrashed()->whereYear('created_at', $year)->count() + 1;
+                $model->folio = 'TRI-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            }
+        });
     }
 }

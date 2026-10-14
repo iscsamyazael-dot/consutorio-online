@@ -4,7 +4,7 @@ namespace App\Http\Controllers\ClinicaTrabajo;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClinicaTrabajo\ValoracionOcupacional;
-use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo as Paciente;
+use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo;
 use App\Http\Requests\ClinicaTrabajo\StoreMedicinaRequest;
 use App\Http\Requests\ClinicaTrabajo\UpdateMedicinaRequest;
 use App\Services\ClinicaTrabajo\MedicinaService;
@@ -108,7 +108,7 @@ class ValoracionMedicinaController extends Controller
     public function guardarFichaCompleta(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'paciente_id' => 'required|exists:pacientes,id',
+            'paciente_id' => 'required|exists:pacientes_clinica_trabajo,id',
             'datos_puesto' => 'required|array',
             'exposicion_riesgos' => 'nullable|array',
             'antecedentes' => 'nullable|array',
@@ -136,7 +136,7 @@ class ValoracionMedicinaController extends Controller
     {
         $validated = $request->validate([
             'mensaje' => 'required|string|min:1|max:40000',
-            'paciente_id' => 'required|exists:pacientes,id',
+            'paciente_id' => 'required|exists:pacientes_clinica_trabajo,id',
             'contexto' => 'nullable|array',
         ]);
 

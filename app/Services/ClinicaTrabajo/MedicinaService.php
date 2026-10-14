@@ -5,7 +5,7 @@ namespace App\Services\ClinicaTrabajo;
 use App\Models\ClinicaTrabajo\ValoracionOcupacional;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo as Paciente;
+use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo;
 use App\Models\Medico;
 use App\Models\EmpresaCliente;
 use App\Models\PuestoTrabajo;
@@ -18,7 +18,7 @@ class MedicinaService
      */
     public function crear(array $datos, int $usuarioId): ValoracionOcupacional
     {
-        // Generar folio único: FO-YYYYMMDD-NNNN
+        // Generar folio único: FO-YYYYMM-NNNN
         if (!isset($datos['folio'])) {
             $datos['folio'] = $this->generarFolio();
         }
@@ -38,7 +38,7 @@ class MedicinaService
      */
     public function crearFichaCompleta(array $datos, int $usuarioId): ValoracionOcupacional
     {
-        $paciente = Paciente::findOrFail($datos['paciente_id']);
+        $paciente = PacientesClinicaTrabajo::findOrFail($datos['paciente_id']);
         $datosPuesto = $datos['datos_puesto'] ?? [];
         $exposicionRiesgos = $datos['exposicion_riesgos'] ?? [];
         $antecedentes = $datos['antecedentes'] ?? [];

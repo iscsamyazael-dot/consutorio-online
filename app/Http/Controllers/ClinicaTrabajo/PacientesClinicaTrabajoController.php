@@ -47,7 +47,6 @@ class PacientesClinicaTrabajoController extends Controller
     {
         $validated = $request->validate([
             'paciente_origen_id' => 'nullable|exists:pacientes,id',
-            'folio' => 'required|string|max:20|unique:pacientes_clinica_trabajo,folio',
             'nombre' => 'required|string|max:255',
             'fecha_nacimiento' => 'required|date',
             'genero' => 'nullable|string|max:20',
@@ -58,7 +57,7 @@ class PacientesClinicaTrabajoController extends Controller
             'cedula_profesional' => 'nullable|string|max:50|unique:pacientes_clinica_trabajo,cedula_profesional',
             'foto' => 'nullable|string|max:255',
             'tipo_sangre' => 'nullable|in:O,A,B,AB',
-            'rh' => 'nullable|in:+, -',
+            'rh' => 'nullable|in:+,-',
             'telefono' => 'nullable|string|max:20',
             'celular' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255|unique:pacientes_clinica_trabajo,email',
@@ -81,7 +80,6 @@ class PacientesClinicaTrabajoController extends Controller
             'primer_empleo_puesto' => 'nullable|string|max:150',
             'consentimiento_datos' => 'nullable|boolean',
             'whatsapp_id' => 'nullable|string|max:50',
-            'qr_token' => 'nullable|string|max:36|unique:pacientes_clinica_trabajo,qr_token',
             'notas_generales' => 'nullable|string',
         ]);
 
@@ -118,7 +116,6 @@ class PacientesClinicaTrabajoController extends Controller
     {
         $validated = $request->validate([
             'paciente_origen_id' => 'nullable|exists:pacientes,id',
-            'folio' => 'sometimes|required|string|max:20|unique:pacientes_clinica_trabajo,folio,'.$pacienteClinicaTrabajo->id,
             'nombre' => 'sometimes|required|string|max:255',
             'fecha_nacimiento' => 'sometimes|required|date',
             'genero' => 'nullable|string|max:20',
@@ -129,7 +126,7 @@ class PacientesClinicaTrabajoController extends Controller
             'cedula_profesional' => 'sometimes|nullable|string|max:50|unique:pacientes_clinica_trabajo,cedula_profesional,'.$pacienteClinicaTrabajo->id,
             'foto' => 'nullable|string|max:255',
             'tipo_sangre' => 'nullable|in:O,A,B,AB',
-            'rh' => 'nullable|in:+, -',
+            'rh' => 'nullable|in:+,-',
             'telefono' => 'nullable|string|max:20',
             'celular' => 'nullable|string|max:20',
             'email' => 'sometimes|nullable|email|max:255|unique:pacientes_clinica_trabajo,email,'.$pacienteClinicaTrabajo->id,
@@ -152,7 +149,6 @@ class PacientesClinicaTrabajoController extends Controller
             'primer_empleo_puesto' => 'nullable|string|max:150',
             'consentimiento_datos' => 'nullable|boolean',
             'whatsapp_id' => 'nullable|string|max:50',
-            'qr_token' => 'sometimes|nullable|string|max:36|unique:pacientes_clinica_trabajo,qr_token,'.$pacienteClinicaTrabajo->id,
             'notas_generales' => 'nullable|string',
         ]);
 

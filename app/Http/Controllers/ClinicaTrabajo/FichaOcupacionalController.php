@@ -5,7 +5,7 @@ namespace App\Http\Controllers\ClinicaTrabajo;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ClinicaTrabajo\ValoracionOcupacional;
-use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo as Paciente;
+use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo;
 use App\Services\IAClinicaTrabajoService;
 
 class FichaOcupacionalController extends Controller

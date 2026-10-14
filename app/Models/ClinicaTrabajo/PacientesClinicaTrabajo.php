@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class PacientesClinicaTrabajo extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'pacientes_clinica_trabajo';
 
@@ -52,7 +54,6 @@ class PacientesClinicaTrabajo extends Model
         'qr_token',
         'ultima_interaccion',
         'notas_generales',
-        'deleted_at',
     ];
 
     protected $dates = [
@@ -111,5 +112,40 @@ class PacientesClinicaTrabajo extends Model
     public function valoracionesOcupacionales(): HasMany
     {
         return $this->hasMany(ValoracionOcupacional::class, 'paciente_id');
+    }
+
+    /**
+     * Boot the model - generate folio and qr_token automatically
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            // Generate folio if empty: PCT-AAAA-NNNN
+            if (empty($model->folio)) {
+                $year = now()->year;
+                $count = static::withTrashed()->whereYear('created_at', $year)->count() + 1;
+                $model->folio = 'PCT-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            }
+
+            // Generate qr_token if empty: UUID
+            if (empty($model->qr_token)) {
+                $model->qr_token = (string) Str::uuid();
+            }
+        });
+    }
+
+    /**
+     * Get sex reference for spirometry calculations based on gender
+     * Returns: 'Masculino', 'Femenino', or null for non-binary/other/unspecified
+     */
+    public function sexoReferencia()
+    {
+        return match($this->genero) {
+            'Hombre' => 'Masculino',
+            'Mujer' => 'Femenino',
+            default => null,
+        };
     }
 }

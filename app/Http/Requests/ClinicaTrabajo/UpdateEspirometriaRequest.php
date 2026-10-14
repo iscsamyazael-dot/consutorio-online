@@ -34,10 +34,6 @@ class UpdateEspirometriaRequest extends FormRequest
             'nombre' => 'nullable|string|max:255',
             'id_empleado' => 'nullable|string|max:100',
             'edad' => 'nullable|integer|min:14|max:100',
-            'sexo' => [
-                'nullable',
-                Rule::in(['Masculino','Femenino'])
-            ],
             'origen_etnico' => [
                 'nullable',
                 Rule::in(['Hispano','Caucásico','Afrodescendiente','Otro'])

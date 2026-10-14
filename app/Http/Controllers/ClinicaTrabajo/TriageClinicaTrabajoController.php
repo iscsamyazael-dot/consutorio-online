@@ -47,7 +47,6 @@ class TriageClinicaTrabajoController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'folio' => 'required|string|max:20|unique:triage_clinica_trabajo,folio',
             'paciente_clinica_id' => 'required|exists:pacientes_clinica_trabajo,id',
             'valoracion_id' => 'nullable|exists:valoraciones_ocupacionales,id',
             'usuario_triage_id' => 'required|exists:users,id',
@@ -101,7 +100,6 @@ class TriageClinicaTrabajoController extends Controller
     public function update(Request $request, TriageClinicaTrabajo $triageClinicaTrabajo)
     {
         $validated = $request->validate([
-            'folio' => 'sometimes|required|string|max:20|unique:triage_clinica_trabajo,folio,'.$triageClinicaTrabajo->id,
             'paciente_clinica_id' => 'sometimes|required|exists:pacientes_clinica_trabajo,id',
             'valoracion_id' => 'nullable|exists:valoraciones_ocupacionales,id',
             'usuario_triage_id' => 'sometimes|required|exists:users,id',
