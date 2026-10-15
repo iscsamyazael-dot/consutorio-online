@@ -3,47 +3,172 @@
 namespace App\Http\Controllers\ClinicaTrabajo;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClinicaTrabajo\EmpresaCliente;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class EmpresaClienteController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        // Lista compacta para los selects de los formularios
+        if ($request->boolean('select')) {
+            $empresas = EmpresaCliente::where('activo', 1)
+                ->orderBy('razon_social')
+                ->get(['id', 'razon_social', 'giro_actividad']);
+
+            return response()->json($empresas);
+        }
+
+        $query = EmpresaCliente::query();
+
+        if ($request->filled('buscar')) {
+            $buscar = $request->buscar;
+            $query->where(function ($q) use ($buscar) {
+                $q->where('razon_social', 'like', "%{$buscar}%")
+                  ->orWhere('rfc', 'like', "%{$buscar}%")
+                  ->orWhere('folio', 'like', "%{$buscar}%");
+            });
+        }
+
+        if ($request->filled('activo')) {
+            $query->where('activo', $request->boolean('activo'));
+        }
+
+        $empresas = $query->orderBy('razon_social')->paginate(15);
+
+        return response()->json($empresas);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    // Pendiente de definir: JSON o vista Blade
+    public function create()
+    {
+        return response()->json(['message' => 'Pendiente de definir.'], 501);
+    }
+
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'razon_social'      => 'required|string|max:255',
+            'rfc'               => 'nullable|string|max:13|unique:empresas_cliente,rfc',
+            'giro_actividad'    => 'nullable|string|max:255',
+            'direccion'         => 'nullable|string|max:500',
+            'contacto_nombre'   => 'nullable|string|max:255',
+            'contacto_telefono' => 'nullable|string|max:20',
+            'contacto_email'    => 'nullable|email|max:255',
+            'activo'            => 'sometimes|boolean',
+        ]);
+
+        try {
+            $empresa = EmpresaCliente::create([
+                'razon_social'      => $request->razon_social,
+                'rfc'               => $request->rfc,
+                'giro_actividad'    => $request->giro_actividad,
+                'direccion'         => $request->direccion,
+                'contacto_nombre'   => $request->contacto_nombre,
+                'contacto_telefono' => $request->contacto_telefono,
+                'contacto_email'    => $request->contacto_email,
+                'activo'            => $request->boolean('activo', true) ? 1 : 0,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Empresa registrada correctamente',
+                'folio'   => $empresa->folio,
+                'empresa' => $empresa,
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Error al registrar empresa cliente: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar la empresa',
+            ], 500);
+        }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show($id)
     {
-        //
+        $empresa = EmpresaCliente::with([
+            'puestosTrabajo' => fn ($q) => $q->where('activo', 1)->orderBy('nombre'),
+        ])->findOrFail($id);
+
+        return response()->json($empresa);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    // Pendiente de definir: JSON o vista Blade
+    public function edit($id)
     {
-        //
+        return response()->json(['message' => 'Pendiente de definir.'], 501);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function update(Request $request, $id)
     {
-        //
+        $request->validate([
+            'razon_social'      => 'required|string|max:255',
+            'rfc'               => ['nullable', 'string', 'max:13', Rule::unique('empresas_cliente', 'rfc')->ignore($id)],
+            'giro_actividad'    => 'nullable|string|max:255',
+            'direccion'         => 'nullable|string|max:500',
+            'contacto_nombre'   => 'nullable|string|max:255',
+            'contacto_telefono' => 'nullable|string|max:20',
+            'contacto_email'    => 'nullable|email|max:255',
+            'activo'            => 'sometimes|boolean',
+        ]);
+
+        try {
+            $empresa = EmpresaCliente::findOrFail($id);
+
+            $empresa->razon_social      = $request->razon_social;
+            $empresa->rfc               = $request->rfc;
+            $empresa->giro_actividad    = $request->giro_actividad;
+            $empresa->direccion         = $request->direccion;
+            $empresa->contacto_nombre   = $request->contacto_nombre;
+            $empresa->contacto_telefono = $request->contacto_telefono;
+            $empresa->contacto_email    = $request->contacto_email;
+
+            if ($request->has('activo')) {
+                $empresa->activo = $request->boolean('activo') ? 1 : 0;
+            }
+
+            $empresa->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Empresa actualizada correctamente',
+                'folio'   => $empresa->folio,
+                'empresa' => $empresa->fresh(),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar empresa cliente: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la empresa',
+            ], 500);
+        }
+    }
+
+    // Baja lógica: la empresa se conserva porque puede tener datos laborales asociados
+    public function destroy($id)
+    {
+        $empresa = EmpresaCliente::find($id);
+
+        if (!$empresa) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Empresa no encontrada',
+            ], 404);
+        }
+
+        $empresa->activo = 0;
+        $empresa->save();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Empresa dada de baja correctamente',
+        ]);
     }
 }

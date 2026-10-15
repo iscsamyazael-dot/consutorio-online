@@ -68,6 +68,7 @@ import MasterPsicologia from './components/ClinicaTrabajo/MasterPsicologia.vue'
 import MasterNutricion from './components/ClinicaTrabajo/Masternutricion.vue'
 import MasterAudiologia from './components/ClinicaTrabajo/Masteraudiologia.vue'
 import MasterErgonomia from './components/ClinicaTrabajo/Masterergonomia.vue'
+import MasterEmpresasCliente from './components/ClinicaTrabajo/Empresas/MasterEmpresasCliente.vue'
 
 import MasterFichaAudiologicaDelli from './components/ClinicaTrabajo/MasterFichaAudiologica-DELLI.vue'
 import MasterExamenTrabajoTr from './components/ClinicaTrabajo/MasterExamenTrabajo-TR.vue'
@@ -125,6 +126,7 @@ app.component('master-psicologia', MasterPsicologia)
 app.component('master-nutricion', MasterNutricion)
 app.component('master-audiologia', MasterAudiologia)
 app.component('master-ergonomia', MasterErgonomia)
+app.component('master-empresas-cliente', MasterEmpresasCliente)
 
 app.component('master-ficha-audiologica-delli', MasterFichaAudiologicaDelli)
 app.component('master-examen-trabajo-tr', MasterExamenTrabajoTr)

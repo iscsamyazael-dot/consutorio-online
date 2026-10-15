@@ -45,18 +45,13 @@ use App\Http\Controllers\ClinicaTrabajo\ValoracionMedicinaController;
 use App\Http\Controllers\ClinicaTrabajo\CatalogoController;
 use App\Http\Controllers\ClinicaTrabajo\AudiologiaDELLIController;
 use App\Http\Controllers\ClinicaTrabajo\AudiologiaTRController;
+use App\Http\Controllers\ClinicaTrabajo\EmpresaClienteController;
 
 
 Route::get('/', function () { return view('auth.login'); });
 
 Route::middleware('auth')->group(function () {
 
-        //VISTAS PARA EL MODULO MEDICINA-TRABAJO//
-         // ========== MEDICINA OCUPACIONAL ==========
-        // Route::get('/clinica/medicina', function () {
-        //     return view('clinica-trabajo.Medicina');
-        // })->name('clinica.medicina.index');
-        
         Route::get('/clinica/medicina/nueva', function () {
             return view('clinica-trabajo.Medicina');
         })->name('clinica.medicina.create');
@@ -107,19 +102,6 @@ Route::middleware('auth')->group(function () {
             Route::get('{id}/imprimir', [ValoracionNutricionController::class, 'imprimir'])->name('imprimir');
         });
 
-        // // ========== AUDIOLOGÍA OCUPACIONAL ==========
-        // Route::get('/clinica/audiologia', function () {
-        //     return view('clinica-trabajo.Audiologia');
-        // })->name('clinica.audiologia.index');
-        
-        // Route::get('/clinica/audiologia/nueva', function () {
-        //     return view('clinica-trabajo.Audiologia');
-        // })->name('clinica.audiologia.create');
-        
-        // Route::get('/clinica/audiologia/{id}', function () {
-        //     return view('clinica-trabajo.Audiologia');
-        // })->name('clinica.audiologia.show');
-        
         // ========== ERGONOMÍA OCUPACIONAL ==========
         Route::get('/clinica/ergonomia', function () {
             return view('clinica-trabajo.Ergonomia');
@@ -143,16 +125,6 @@ Route::middleware('auth')->group(function () {
             Route::get('{id}/imprimir', [ValoracionErgonomicaController::class, 'imprimir'])->name('imprimir');
         });
 
-        // ═════════════════════════════════════════════════════════════
-        // CLÍNICA DE TRABAJO
-        // ════════════════════════════════════════════════════════════
-        //Route::get('/ficha-ocupacional', [ValoracionMedicinaController::class, 'vista'])->name('clinica-trabajo.Medicina');
-        // Rutas antiguas comentadas (usaban FichaOcupacionalController)
-        // Route::get('/ficha-ocupacional', [FichaOcupacionalController::class, 'vista'])->name('clinica-trabajo.Medicina');
-        // Route::get('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'index'])->name('api.clinica-trabajo.ficha-ocupacional.index');
-        // Route::post('/api/clinica-trabajo/ficha-ocupacional', [FichaOcupacionalController::class, 'store'])->name('api.clinica-trabajo.ficha-ocupacional.store');
-        // Route::post('/api/clinica-trabajo/ficha-ocupacional/analizar', [FichaOcupacionalController::class, 'analizar']);
-        
         // PSICOLOGÍA
         Route::prefix('clinica/psicologia')->name('psicologia.')->group(function () {
             Route::get('/', [ValoracionPsicologicaController::class, 'index'])->name('index');
@@ -177,7 +149,6 @@ Route::middleware('auth')->group(function () {
         // ========== AUDIOLOGÍA - VISTAS WEB (Blade) ==========
          
         
-
         Route::prefix('clinica/audiologia')->name('clinica.audiologia.')->group(function () {
 
             // ===== DELLI 2026 =====
@@ -268,7 +239,10 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [CatalogoController::class, 'empresasCliente'])->name('index');
         });
 
-        // ESPIROMETRÍA API
+        // Vista para el catálogo de empresas cliente
+        Route::view('/clinica/empresas', 'clinica-trabajo.EmpresasCliente')->name('clinica.empresas.index');
+
+        // ESPIROMETRÍA API//
         Route::prefix('api/clinica/espirometria')->name('api.espirometria.')->group(function () {
             Route::get('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'index'])->name('index');
             Route::get('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'show'])->name('show');
@@ -576,6 +550,9 @@ Route::middleware('auth')->group(function () {
             Route::get('consultaIA/{consultaId}/sesion', [ConsultaIAController::class, 'obtenerHistorialSesion'])
              ->name('consultaIA.obtenerHistorialSesion');
 
+             //RUTAS RESOURCES O APIS PARA LOS CONTROLADORES CLINICA DEL TRABAJO//
+             Route::resource('EmpresaCliente', EmpresaClienteController::class);
+
              
         });
 
@@ -667,6 +644,7 @@ Route::middleware('auth')->group(function () {
             Route::get('ficha-espirometria', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria');
             Route::get('ficha-espirometria/nueva', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria.create');
             Route::get('ficha-espirometria/{id}', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria.show');
+            Route::get('RegistroEmpresas', function() { return view('clinica-trabajo.EmpresasCliente'); })->name('clinica-trabajo.EmpresasCliente');
         });
 
 });

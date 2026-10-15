@@ -694,7 +694,7 @@ return [
                         [
                             'text' => 'Registrar empresa',
                             'icon' => 'fas fa-fw fa-plus-circle',
-                            'url'  => 'EmpresaClienteNueva',
+                            'url'  => 'RegistroEmpresas',
                         ],
                     ],
                 ],

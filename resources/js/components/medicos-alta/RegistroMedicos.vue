@@ -612,15 +612,7 @@ export default {
     }
 
 }
-
-
 </script>
-
-
-
-
-
-
 
 <style>
 

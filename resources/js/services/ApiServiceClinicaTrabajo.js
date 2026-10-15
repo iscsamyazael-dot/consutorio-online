@@ -128,6 +128,9 @@ export const clinicaTrabajo = {
   empresas: {
     lista: () => apiClient.get('/empresas-cliente'),
     obtener: (id) => apiClient.get(`/empresas-cliente/${id}`),
+    crear: (data) => apiClient.post('/empresas-cliente', data),
+    actualizar: (id, data) => apiClient.put(`/empresas-cliente/${id}`, data),
+    eliminar: (id) => apiClient.delete(`/empresas-cliente/${id}`),
   },
   medicos: {
     lista: () => apiClient.get('/medicos'),
