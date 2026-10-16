@@ -475,7 +475,26 @@ return [
             'icon'    => 'fas fa-fw fa-briefcase-medical', // Icono representativo para el menú principal
             'can'     => 'modulo-medicina-trabajo',
             'submenu' => [
-
+                // ------------------------------------------
+                // 👤 PACIENTES
+                // ------------------------------------------
+                [
+                    'text'    => 'Pacientes',
+                    'icon'    => 'fas fa-fw fa-user',
+                    'can'     => 'acceso-general',
+                    'submenu' => [
+                        [
+                            'text' => 'Lista de pacientes',
+                            'icon' => 'fas fa-fw fa-list',
+                            'url'  => '#',
+                        ],
+                        [
+                            'text' => 'Registrar paciente',
+                            'icon' => 'fas fa-fw fa-user-plus',
+                            'url'  => 'RegistroPacientesClinicaTrabajo',
+                        ],
+                    ],
+                ],
                  // ------------------------------------------
                 // 🩺 CONSULTAS
                 // ------------------------------------------

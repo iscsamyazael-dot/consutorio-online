@@ -58,6 +58,9 @@ class EmpresaClienteController extends Controller
             'contacto_telefono' => 'nullable|string|max:20',
             'contacto_email'    => 'nullable|email|max:255',
             'activo'            => 'sometimes|boolean',
+            'puestos'           => 'nullable|array',
+            'puestos.*.id'      => 'nullable|integer',
+            'puestos.*.nombre'  => 'required|string|max:255',
         ]);
 
         try {
@@ -71,6 +74,8 @@ class EmpresaClienteController extends Controller
                 'contacto_email'    => $request->contacto_email,
                 'activo'            => $request->boolean('activo', true) ? 1 : 0,
             ]);
+
+            $this->sincronizarPuestos($empresa, $request);
 
             return response()->json([
                 'success' => true,
@@ -87,6 +92,40 @@ class EmpresaClienteController extends Controller
                 'message' => 'Error al registrar la empresa',
             ], 500);
         }
+    }
+
+    /**
+     * Crea, renombra y da de baja puestos de la empresa.
+     * Solo actúa si el request trae la llave "puestos".
+     * Los puestos que ya no vienen se desactivan, no se borran,
+     * porque pueden tener asignaciones de pacientes.
+     */
+    private function sincronizarPuestos(EmpresaCliente $empresa, Request $request): void
+    {
+        if (!$request->has('puestos')) {
+            return;
+        }
+
+        $idsConservados = [];
+
+        foreach ($request->input('puestos', []) as $p) {
+            if (!empty($p['id'])) {
+                $puesto = $empresa->puestosTrabajo()->find($p['id']);
+                if ($puesto) {
+                    $puesto->update(['nombre' => $p['nombre'], 'activo' => 1]);
+                    $idsConservados[] = $puesto->id;
+                }
+            } else {
+                $idsConservados[] = $empresa->puestosTrabajo()
+                    ->create(['nombre' => $p['nombre'], 'activo' => 1])
+                    ->id;
+            }
+        }
+
+        $empresa->puestosTrabajo()
+            ->where('activo', 1)
+            ->whereNotIn('id', $idsConservados)
+            ->update(['activo' => 0]);
     }
 
     public function show($id)
@@ -115,6 +154,9 @@ class EmpresaClienteController extends Controller
             'contacto_telefono' => 'nullable|string|max:20',
             'contacto_email'    => 'nullable|email|max:255',
             'activo'            => 'sometimes|boolean',
+            'puestos'           => 'nullable|array',
+            'puestos.*.id'      => 'nullable|integer',
+            'puestos.*.nombre'  => 'required|string|max:255',
         ]);
 
         try {
@@ -133,6 +175,7 @@ class EmpresaClienteController extends Controller
             }
 
             $empresa->save();
+            $this->sincronizarPuestos($empresa, $request);
 
             return response()->json([
                 'success' => true,

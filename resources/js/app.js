@@ -73,7 +73,7 @@ import MasterEmpresasCliente from './components/ClinicaTrabajo/Empresas/MasterEm
 import MasterFichaAudiologicaDelli from './components/ClinicaTrabajo/MasterFichaAudiologica-DELLI.vue'
 import MasterExamenTrabajoTr from './components/ClinicaTrabajo/MasterExamenTrabajo-TR.vue'
 import MasterEspirometria from './components/ClinicaTrabajo/MasterEspirometria.vue'
-
+import RegitroPacienteClinicaTrabajo from './components/ClinicaTrabajo/Pacientes/FormPacienteClinica.vue'
  
 // ------------------------------------------------------
 // Instancia única de la app
@@ -131,6 +131,8 @@ app.component('master-empresas-cliente', MasterEmpresasCliente)
 app.component('master-ficha-audiologica-delli', MasterFichaAudiologicaDelli)
 app.component('master-examen-trabajo-tr', MasterExamenTrabajoTr)
 app.component('master-espirometria', MasterEspirometria)
+
+app.component('registro-paciente-clinicatrabajo', RegitroPacienteClinicaTrabajo)
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 

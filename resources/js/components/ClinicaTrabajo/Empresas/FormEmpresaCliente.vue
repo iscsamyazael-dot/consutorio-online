@@ -177,6 +177,38 @@
               </div>
             </div>
           </div>
+          <!-- PUESTOS DE TRABAJO -->
+          <div class="modern-card mb-4">
+            <div class="card-header-gradient bg-primary-gradient">
+              <div class="d-flex align-items-center">
+                <div class="card-icon bg-white text-primary">
+                  <i class="fas fa-user-tie"></i>
+                </div>
+                <h5 class="mb-0 text-white font-weight-bold ml-3">Puestos de Trabajo</h5>
+              </div>
+            </div>
+            <div class="card-body-custom">
+              <p class="text-muted small mb-3">Puestos que existen en esta empresa. Se elegirán en la asignación laboral del paciente.</p>
+              <div v-for="(puesto, i) in puestos" :key="i" class="d-flex align-items-center mb-2">
+                <div class="input-modern flex-grow-1">
+                  <i class="fas fa-user-tie input-icon"></i>
+                  <input
+                    type="text"
+                    class="form-input"
+                    placeholder="Ej. Operador de montacargas"
+                    v-model="puesto.nombre"
+                  >
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 ml-2" @click="quitarPuesto(i)" title="Quitar puesto">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+              <p v-if="puestos.length === 0" class="text-muted small mb-3">Sin puestos registrados.</p>
+              <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" @click="agregarPuesto">
+                <i class="fas fa-plus mr-1"></i> Agregar puesto
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- COLUMNA DERECHA - Resumen y Acción -->
@@ -300,8 +332,10 @@ export default {
         contacto_nombre: '',
         contacto_telefono: '',
         contacto_email: '',
-        activo: true
+        activo: true,
+        puestos: []
       },
+      puestos: [],
       cargando: false,
       toastSuccess: false,
       mensajeSuccess: '',
@@ -324,6 +358,7 @@ export default {
             contacto_email: empresa.contacto_email || '',
             activo: empresa.activo == 1
           };
+          this.cargarPuestos(empresa.id);
         } else {
           this.form = {
             razon_social: '',
@@ -335,11 +370,28 @@ export default {
             contacto_email: '',
             activo: true
           };
+          this.puestos = [];
         }
       }
     }
   },
   methods: {
+    agregarPuesto() {
+      this.puestos.push({ id: null, nombre: '' });
+    },
+    quitarPuesto(i) {
+      this.puestos.splice(i, 1);
+    },
+    async cargarPuestos(id) {
+      try {
+        const response = await ApiServiceClinicaTrabajo.get('/empresa-cliente/' + id);
+        const lista = response.data.puestosTrabajo || response.data.puestos_trabajo || [];
+        this.puestos = lista.map(p => ({ id: p.id, nombre: p.nombre }));
+      } catch (error) {
+        console.error('Error al cargar puestos:', error);
+        this.puestos = [];
+      }
+    },
     async guardarEmpresa() {
       this.cargando = true;
       this.toastError = false;
@@ -349,10 +401,10 @@ export default {
         let response;
         if (this.empresa === null) {
           // Alta nueva empresa (POST)
-          response = await ApiServiceClinicaTrabajo.post('/EmpresaCliente', this.form);
+          response = await ApiServiceClinicaTrabajo.post('/empresa-cliente', { ...this.form, puestos: this.puestos.filter(p => p.nombre.trim()) });
         } else {
           // Edición existente (PUT)
-          response = await ApiServiceClinicaTrabajo.put('/EmpresaCliente/' + this.empresa.id, this.form);
+          response = await ApiServiceClinicaTrabajo.put('/empresa-cliente/' + this.empresa.id, { ...this.form, puestos: this.puestos.filter(p => p.nombre.trim()) });
         }
 
         this.mensajeSuccess = response.data.message || 'Empresa registrado ó actualizada correctamente';
@@ -360,6 +412,7 @@ export default {
 
         this.$emit('guardado', response.data);
         if (this.empresa === null) {
+          this.puestos = [];
           this.form = {
             razon_social: '',
             rfc: '',

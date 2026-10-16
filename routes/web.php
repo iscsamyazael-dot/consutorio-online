@@ -46,6 +46,9 @@ use App\Http\Controllers\ClinicaTrabajo\CatalogoController;
 use App\Http\Controllers\ClinicaTrabajo\AudiologiaDELLIController;
 use App\Http\Controllers\ClinicaTrabajo\AudiologiaTRController;
 use App\Http\Controllers\ClinicaTrabajo\EmpresaClienteController;
+use App\Http\Controllers\ClinicaTrabajo\PacientesClinicaTrabajoController;
+use App\Http\Controllers\ClinicaTrabajo\DatosLaboralClinicaTrabajoController;
+use App\Http\Controllers\ClinicaTrabajo\TriageClinicaTrabajoController;
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -234,10 +237,6 @@ Route::middleware('auth')->group(function () {
             Route::get('riesgos-ergonomicos', [CatalogoController::class, 'riesgosErgonomicos'])->name('riesgos');
         });
 
-        // EMPRESAS CLIENTE (para select en formularios)
-        Route::prefix('empresas-cliente')->name('empresas-cliente.')->group(function () {
-            Route::get('/', [CatalogoController::class, 'empresasCliente'])->name('index');
-        });
 
         // Vista para el catálogo de empresas cliente
         Route::view('/clinica/empresas', 'clinica-trabajo.EmpresasCliente')->name('clinica.empresas.index');
@@ -263,16 +262,6 @@ Route::middleware('auth')->group(function () {
             Route::post('importar', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'importarArchivo'])->name('importar');
         });
 
-        // ========== PACIENTES CLINICA TRABAJO ==========
-        Route::prefix('clinica/pacientes')->name('clinica.pacientes.')->group(function () {
-            Route::get('/', [PacientesClinicaTrabajoController::class, 'index'])->name('index');
-            Route::get('{id}', [PacientesClinicaTrabajoController::class, 'show'])->name('show');
-            Route::post('/', [PacientesClinicaTrabajoController::class, 'store'])->name('store');
-            Route::put('{id}', [PacientesClinicaTrabajoController::class, 'update'])->name('update');
-            Route::delete('{id}', [PacientesClinicaTrabajoController::class, 'destroy'])->name('destroy');
-            Route::get('{id}/restaurar', [PacientesClinicaTrabajoController::class, 'restore'])->name('restore');
-            Route::delete('{id}/forzar-eliminacion', [PacientesClinicaTrabajoController::class, 'forceDelete'])->name('forceDelete');
-        });
 
         // ========== TRIAGE CLINICA TRABAJO ==========
         Route::prefix('clinica/triage')->name('clinica.triage.')->group(function () {
@@ -321,13 +310,14 @@ Route::middleware('auth')->group(function () {
         ///*** RUTAS PARA LAS APIS Y CONSUMO DE DATOS */
         // Vista principal (Blade)
 
-        // Endpoints consumidos por el API Service
-       Route::prefix('api')->group(function () {
+            // Endpoints consumidos por el API Service
+        Route::prefix('api')->group(function () {
             Route::get('/evaluaciones-ia', [EvaluacionesIAController::class, 'api'])->name('api.evaluaciones-ia.index');
             Route::get('/evaluaciones-ia-opciones', [EvaluacionesIAController::class, 'opcionesFiltros']);
             Route::get('/evaluaciones-ia/indicadores', [EvaluacionesIAController::class, 'indicadores'])->name('api.evaluaciones-ia.indicadores');
             Route::get('/evaluaciones-ia/{folio}', [EvaluacionesIAController::class, 'show'])->name('api.evaluaciones-ia.show');
         });
+
         //RUTA PARA ACTUALIZAR EL ESTADO DE CONSULTA
         Route::patch('/pacientes/{paciente}/estado-consulta', [ConsultaController::class, 'actualizarEstadoConsulta']);
         //RUTA PARA ACTUALIZAR EL ESTADO DE DERIVACION
@@ -547,13 +537,14 @@ Route::middleware('auth')->group(function () {
             Route::put('/archivos-clinicos/{id}', [ArchivosClinicosController::class, 'update']);
             Route::resource('archivoclinico', ArchivosClinicosController::class);
             //RUTA PARA REAUNUDAR LA CONSULTA CONSERVANDO LOS DIAGNOSTICOS DETECTADOS//
-            Route::get('consultaIA/{consultaId}/sesion', [ConsultaIAController::class, 'obtenerHistorialSesion'])
-             ->name('consultaIA.obtenerHistorialSesion');
+            Route::get('consultaIA/{consultaId}/sesion', [ConsultaIAController::class, 'obtenerHistorialSesion'])->name('consultaIA.obtenerHistorialSesion');
 
-             //RUTAS RESOURCES O APIS PARA LOS CONTROLADORES CLINICA DEL TRABAJO//
-             Route::resource('EmpresaCliente', EmpresaClienteController::class);
-
-             
+            //RUTAS RESOURCES O APIS PARA LOS CONTROLADORES CLINICA DEL TRABAJO//
+            Route::resource('empresa-cliente', EmpresaClienteController::class);
+            Route::resource('clinica-trabajo-pacientes', PacientesClinicaTrabajoController::class);
+            Route::resource('clinica-trabajo-DatosLaborales', DatosLaboralClinicaTrabajoController::class);
+            Route::get('clinica-trabajo-pacientes/{id}/restaurar', [PacientesClinicaTrabajoController::class, 'restore'])->name('clinica-trabajo-pacientes.restore');
+            Route::delete('clinica-trabajo-pacientes/{id}/forzar-eliminacion', [PacientesClinicaTrabajoController::class, 'forceDelete'])->name('clinica-trabajo-pacientes.forceDelete');
         });
 
 
@@ -645,6 +636,7 @@ Route::middleware('auth')->group(function () {
             Route::get('ficha-espirometria/nueva', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria.create');
             Route::get('ficha-espirometria/{id}', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria.show');
             Route::get('RegistroEmpresas', function() { return view('clinica-trabajo.EmpresasCliente'); })->name('clinica-trabajo.EmpresasCliente');
+            Route::get('RegistroPacientesClinicaTrabajo', function() { return view('clinica-trabajo.RegistroPaciente'); })->name('clinica-trabajo.RegistroPaciente');
         });
 
 });

@@ -548,10 +548,6 @@ export default {
                 )
             }
         },
-
-
-        
-
         async guardarMedico() {
 
             try {

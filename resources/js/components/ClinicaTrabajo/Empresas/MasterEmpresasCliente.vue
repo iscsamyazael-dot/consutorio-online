@@ -68,7 +68,7 @@ export default {
     async cargarLista() {
       this.cargando = true;
       try {
-        const response = await ApiServiceClinicaTrabajo.get('/EmpresaCliente', {
+        const response = await ApiServiceClinicaTrabajo.get('/empresa-cliente', {
           params: {
             buscar: this.filtros.buscar,
             activo: this.filtros.activo,
@@ -128,7 +128,7 @@ export default {
     async abrirEdicion(id) {
       this.cargando = true;
       try {
-        const response = await ApiServiceClinicaTrabajo.get('/EmpresaCliente/' + id);
+        const response = await ApiServiceClinicaTrabajo.get('/empresa-cliente/' + id);
         console.log('Response de obtener empresa:', response);
         this.empresaSeleccionada = response.data || response;
         this.vistaActual = 'registro';
@@ -174,7 +174,7 @@ export default {
     async eliminarEmpresa(id) {
       this.cargando = true;
       try {
-        await ApiServiceClinicaTrabajo.delete('/EmpresaCliente/' + id);
+        await ApiServiceClinicaTrabajo.delete('/empresa-cliente/' + id);
         await this.cargarLista();
         Swal.fire({
           title: 'Éxito',
