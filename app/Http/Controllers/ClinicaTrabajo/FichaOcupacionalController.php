@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ClinicaTrabajo;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ClinicaTrabajo\ValoracionOcupacional;
+use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo;
 use App\Services\IAClinicaTrabajoService;
 
 class FichaOcupacionalController extends Controller
@@ -33,7 +34,7 @@ class FichaOcupacionalController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'paciente_id' => 'required|exists:pacientes,id',
+            'paciente_id' => 'required|exists:pacientes_clinica_trabajo,id',
             'empresa' => 'nullable|string',
             'departamento' => 'nullable|string',
             'puesto_trabajo' => 'nullable|string',

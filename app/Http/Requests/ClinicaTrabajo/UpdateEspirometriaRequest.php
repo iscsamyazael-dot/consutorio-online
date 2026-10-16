@@ -18,7 +18,7 @@ class UpdateEspirometriaRequest extends FormRequest
 
         return [
             'folio' => 'sometimes|required|string|unique:valoraciones_espirometria,folio,' . $id,
-            'paciente_id' => 'sometimes|required|exists:pacientes,id',
+            'paciente_id' => 'sometimes|required|exists:pacientes_clinica_trabajo,id',
             'empresa_cliente_id' => 'sometimes|required|exists:empresas_cliente,id',
             'puesto_trabajo_id' => 'nullable|exists:puestos_trabajo,id',
             'medico_id' => 'nullable|exists:medicos,id',
@@ -34,10 +34,6 @@ class UpdateEspirometriaRequest extends FormRequest
             'nombre' => 'nullable|string|max:255',
             'id_empleado' => 'nullable|string|max:100',
             'edad' => 'nullable|integer|min:14|max:100',
-            'sexo' => [
-                'nullable',
-                Rule::in(['Masculino','Femenino'])
-            ],
             'origen_etnico' => [
                 'nullable',
                 Rule::in(['Hispano','Caucásico','Afrodescendiente','Otro'])

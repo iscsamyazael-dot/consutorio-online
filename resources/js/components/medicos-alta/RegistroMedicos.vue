@@ -548,10 +548,6 @@ export default {
                 )
             }
         },
-
-
-        
-
         async guardarMedico() {
 
             try {
@@ -612,15 +608,7 @@ export default {
     }
 
 }
-
-
 </script>
-
-
-
-
-
-
 
 <style>
 

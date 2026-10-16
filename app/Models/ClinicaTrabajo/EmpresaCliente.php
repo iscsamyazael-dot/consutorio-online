@@ -27,6 +27,24 @@ class EmpresaCliente extends Model
         'activo' => 'boolean',
     ];
 
+    
+    protected static function booted(): void
+    {
+        static::creating(function (EmpresaCliente $empresa) {
+            if (! empty($empresa->folio)) {
+                return;
+            }
+
+            $prefijo = 'EMP-' . now()->year . '-';
+
+            $ultimo = static::where('folio', 'like', $prefijo . '%')
+                ->selectRaw('MAX(CAST(SUBSTRING(folio, ' . (strlen($prefijo) + 1) . ') AS UNSIGNED)) AS ultimo')
+                ->value('ultimo') ?? 0;
+
+            $empresa->folio = $prefijo . str_pad($ultimo + 1, 4, '0', STR_PAD_LEFT);
+        });
+    }
+
     public function puestosTrabajo(): HasMany
     {
         return $this->hasMany(PuestoTrabajo::class, 'empresa_cliente_id');

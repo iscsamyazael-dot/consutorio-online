@@ -4,7 +4,7 @@ namespace App\Http\Controllers\ClinicaTrabajo;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClinicaTrabajo\ValoracionOcupacional;
-use App\Models\Paciente;
+use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo;
 use App\Http\Requests\ClinicaTrabajo\StoreMedicinaRequest;
 use App\Http\Requests\ClinicaTrabajo\UpdateMedicinaRequest;
 use App\Services\ClinicaTrabajo\MedicinaService;
@@ -64,22 +64,38 @@ class ValoracionMedicinaController extends Controller
 
         $match = strlen($buscar) < 3 ? "{$buscar}%" : "%{$buscar}%";
 
-        $pacientes = Paciente::select('id', 'paciente_id', 'nombre', 'apellido_paterno', 'apellido_materno', 'fecha_nacimiento', 'sexo')
-            ->where('paciente_id', 'like', $match)
+        $pacientes = PacientesClinicaTrabajo::select('id', 'folio', 'nombre', 'fecha_nacimiento', 'genero')
+            ->where('folio', 'like', $match)
             ->orWhere('nombre', 'like', $match)
-            ->orWhere('apellido_paterno', 'like', $match)
-            ->orWhere('apellido_materno', 'like', $match)
+            ->orWhereHas('datosLaborales', function($q) use ($match) {
+                $q->where('numero_empleado', 'like', $match);
+            })
             ->limit(10)
             ->get()
             ->map(function ($paciente) {
-                $paciente->nombre_completo = trim("{$paciente->nombre} {$paciente->apellido_paterno} {$paciente->apellido_materno}");
-                $paciente->edad = $paciente->fecha_nacimiento
-                    ? \Carbon\Carbon::parse($paciente->fecha_nacimiento)->age
-                    : null;
-                $paciente->edad_formateada = $paciente->fecha_nacimiento
-                    ? "{$paciente->edad} años"
-                    : 'Edad no registrada';
-                return $paciente;
+                $edad = null;
+                if ($paciente->fecha_nacimiento) {
+                    $edad = \Carbon\Carbon::parse($paciente->fecha_nacimiento)->age;
+                }
+                // obtener ultimo datos laboral
+                $ultimoDatosLaboral = $paciente->datosLaborales->sortByDesc('created_at')->first();
+                $empresa = null;
+                $puesto = null;
+                if ($ultimoDatosLaboral) {
+                    $empresa = $ultimoDatosLaboral->empresaCliente ? $ultimoDatosLaboral->empresaCliente->razon_social : null;
+                    $puestoObj = $ultimoDatosLaboral->puestoTrabajo;
+                    $puesto = $puestoObj ? $puestoObj->nombre : null;
+                }
+                return (object) [
+                    'id' => $paciente->id,
+                    'folio' => $paciente->folio,
+                    'nombre' => $paciente->nombre,
+                    'fecha_nacimiento' => $paciente->fecha_nacimiento,
+                    'genero' => $paciente->genero,
+                    'edad' => $edad,
+                    'empresa' => $empresa,
+                    'puesto' => $puesto,
+                ];
             });
 
         return response()->json($pacientes);
@@ -92,7 +108,7 @@ class ValoracionMedicinaController extends Controller
     public function guardarFichaCompleta(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'paciente_id' => 'required|exists:pacientes,id',
+            'paciente_id' => 'required|exists:pacientes_clinica_trabajo,id',
             'datos_puesto' => 'required|array',
             'exposicion_riesgos' => 'nullable|array',
             'antecedentes' => 'nullable|array',
@@ -120,7 +136,7 @@ class ValoracionMedicinaController extends Controller
     {
         $validated = $request->validate([
             'mensaje' => 'required|string|min:1|max:40000',
-            'paciente_id' => 'required|exists:pacientes,id',
+            'paciente_id' => 'required|exists:pacientes_clinica_trabajo,id',
             'contexto' => 'nullable|array',
         ]);
 

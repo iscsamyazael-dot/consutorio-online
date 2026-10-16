@@ -191,7 +191,7 @@ import ParametrosFvlEspirometria from './secciones/espirometria/ParametrosFvlEsp
 import InterpretacionEspirometria from './secciones/espirometria/InterpretacionEspirometria.vue'
 
 // 3. Servicio API (ajusta la ruta si tu ApiService está en otro lugar, ej: '@/services/ApiService')
-import { clinicaTrabajo } from '../../services/ApiService'
+import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterEspirometria',

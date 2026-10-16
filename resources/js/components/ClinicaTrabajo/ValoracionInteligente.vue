@@ -126,7 +126,7 @@
 </template>
 
 <script>
-import { clinicaTrabajo } from '../../services/ApiService.js'
+import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo.js'
 
 // Componentes por sección (importar según sea necesario)
 import DatosBasicoPsicologia from './secciones/psicologia/DatosBasico.vue'

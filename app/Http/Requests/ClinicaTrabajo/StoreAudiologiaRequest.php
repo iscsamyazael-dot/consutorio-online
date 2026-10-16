@@ -16,7 +16,7 @@ class StoreAudiologiaRequest extends FormRequest
     {
         return [
             'folio' => 'required|string|unique:valoraciones_audiologia,folio',
-            'paciente_id' => 'required|exists:pacientes,id',
+            'paciente_id' => 'required|exists:pacientes_clinica_trabajo,id',
             'empresa_cliente_id' => 'required|exists:empresas_cliente,id',
             'puesto_trabajo_id' => 'nullable|exists:puestos_trabajo,id',
             'audiologo_id' => 'required|exists:medicos,id',

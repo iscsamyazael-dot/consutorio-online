@@ -249,7 +249,7 @@ import ExposicionRiesgos from './secciones/medicina-enfermeria/exposicionriesgos
 import Antecedentes from './secciones/medicina-enfermeria/antecedentes.vue'
 import ClinicoExamen from './secciones/medicina-enfermeria/clinicoexamen.vue'
 import AptitudDictamen from './secciones/medicina-enfermeria/aptituddictamen.vue'
-import { clinicaTrabajo } from '../../services/ApiService'
+import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterFichaOcupacional',

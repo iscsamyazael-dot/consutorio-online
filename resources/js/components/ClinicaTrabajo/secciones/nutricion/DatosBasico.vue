@@ -163,7 +163,7 @@
 </template>
 
 <script>
-import ApiService from '../../../../services/ApiService'
+import ApiServiceClinicaTrabajo from '../../../../services/ApiServiceClinicaTrabajo'
 
 // AJUSTA AQUÍ las rutas según `php artisan route:list`.
 // /empresas dio 404, así que probablemente cuelga de /clinica o /api.
