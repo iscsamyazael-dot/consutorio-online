@@ -486,7 +486,7 @@ return [
                         [
                             'text' => 'Lista de pacientes',
                             'icon' => 'fas fa-fw fa-list',
-                            'url'  => '#',
+                            'url'  => 'ListaPacientesClinicaTrabajo',
                         ],
                         [
                             'text' => 'Registrar paciente',

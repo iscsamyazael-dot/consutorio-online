@@ -177,6 +177,7 @@
               </div>
             </div>
           </div>
+
           <!-- PUESTOS DE TRABAJO -->
           <div class="modern-card mb-4">
             <div class="card-header-gradient bg-primary-gradient">
@@ -189,21 +190,57 @@
             </div>
             <div class="card-body-custom">
               <p class="text-muted small mb-3">Puestos que existen en esta empresa. Se elegirán en la asignación laboral del paciente.</p>
-              <div v-for="(puesto, i) in puestos" :key="i" class="d-flex align-items-center mb-2">
-                <div class="input-modern flex-grow-1">
-                  <i class="fas fa-user-tie input-icon"></i>
-                  <input
-                    type="text"
-                    class="form-input"
-                    placeholder="Ej. Operador de montacargas"
-                    v-model="puesto.nombre"
-                  >
+              
+              <div v-for="(puesto, i) in puestos" :key="i" class="border rounded p-3 mb-3 bg-light">
+                <div class="row">
+                  <!-- Nombre del Puesto -->
+                  <div class="col-md-6 mb-2">
+                    <label class="modern-label">
+                      Nombre del Puesto <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-modern">
+                      <i class="fas fa-user-tie input-icon"></i>
+                      <input
+                        type="text"
+                        class="form-input"
+                        placeholder="Ej. Operador de montacargas"
+                        v-model="puesto.nombre"
+                      >
+                    </div>
+                  </div>
+                  
+                  <!-- Departamento -->
+                  <div class="col-md-5 mb-2">
+                    <label class="modern-label">
+                      Departamento / Área
+                    </label>
+                    <div class="input-modern">
+                      <i class="fas fa-building input-icon"></i>
+                      <input
+                        type="text"
+                        class="form-input"
+                        placeholder="Ej. Producción, Logística, RH..."
+                        v-model="puesto.departamento"
+                      >
+                    </div>
+                  </div>
+                  
+                  <!-- Botón Eliminar -->
+                  <div class="col-md-1 mb-2 d-flex align-items-end">
+                    <button 
+                      type="button" 
+                      class="btn btn-outline-danger btn-sm rounded-pill w-100" 
+                      @click="quitarPuesto(i)" 
+                      title="Quitar puesto"
+                    >
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
                 </div>
-                <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 ml-2" @click="quitarPuesto(i)" title="Quitar puesto">
-                  <i class="fas fa-trash-alt"></i>
-                </button>
               </div>
+              
               <p v-if="puestos.length === 0" class="text-muted small mb-3">Sin puestos registrados.</p>
+              
               <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" @click="agregarPuesto">
                 <i class="fas fa-plus mr-1"></i> Agregar puesto
               </button>
@@ -377,7 +414,11 @@ export default {
   },
   methods: {
     agregarPuesto() {
-      this.puestos.push({ id: null, nombre: '' });
+      this.puestos.push({ 
+        id: null, 
+        nombre: '',
+        departamento: '' 
+      });
     },
     quitarPuesto(i) {
       this.puestos.splice(i, 1);
@@ -386,7 +427,11 @@ export default {
       try {
         const response = await ApiServiceClinicaTrabajo.get('/empresa-cliente/' + id);
         const lista = response.data.puestosTrabajo || response.data.puestos_trabajo || [];
-        this.puestos = lista.map(p => ({ id: p.id, nombre: p.nombre }));
+        this.puestos = lista.map(p => ({ 
+          id: p.id, 
+          nombre: p.nombre,
+          departamento: p.departamento || '' 
+        }));
       } catch (error) {
         console.error('Error al cargar puestos:', error);
         this.puestos = [];
@@ -399,15 +444,31 @@ export default {
 
       try {
         let response;
+        
+        // Filtrar puestos y asegurar que envíen departamento
+        const puestosLimpios = this.puestos
+          .filter(p => p.nombre.trim())
+          .map(p => ({
+            id: p.id,
+            nombre: p.nombre.trim(),
+            departamento: (p.departamento || '').trim()
+          }));
+        
         if (this.empresa === null) {
           // Alta nueva empresa (POST)
-          response = await ApiServiceClinicaTrabajo.post('/empresa-cliente', { ...this.form, puestos: this.puestos.filter(p => p.nombre.trim()) });
+          response = await ApiServiceClinicaTrabajo.post('/empresa-cliente', { 
+            ...this.form, 
+            puestos: puestosLimpios 
+          });
         } else {
           // Edición existente (PUT)
-          response = await ApiServiceClinicaTrabajo.put('/empresa-cliente/' + this.empresa.id, { ...this.form, puestos: this.puestos.filter(p => p.nombre.trim()) });
+          response = await ApiServiceClinicaTrabajo.put('/empresa-cliente/' + this.empresa.id, { 
+            ...this.form, 
+            puestos: puestosLimpios 
+          });
         }
 
-        this.mensajeSuccess = response.data.message || 'Empresa registrado ó actualizada correctamente';
+        this.mensajeSuccess = response.data.message || 'Empresa registrada ó actualizada correctamente';
         this.toastSuccess = true;
 
         this.$emit('guardado', response.data);

@@ -170,7 +170,7 @@ import Hoja1IdentificacionempleoTr from './secciones/audiologia/ExamenTrabajoTR/
 import Hoja2AntecedentessaludTr from './secciones/audiologia/ExamenTrabajoTR/antecedentessalud.vue'
 import Hoja3ExploracionfisicaTr from './secciones/audiologia/ExamenTrabajoTR/exploracionfisica.vue'
 import Hoja4ParaclinicodiagnosticosTr from './secciones/audiologia/ExamenTrabajoTR/paraclinicodiagnosticos.vue'
-import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
+import  clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterExamenTrabajoTr',
@@ -182,6 +182,11 @@ export default {
   },
   data() {
     return {
+      
+      pacienteId: null,               
+      infoPacientes: null,            
+      datosLaboralesActuales: null,   
+
       hojaActual: 1,
       trabajadorSeleccionado: null,
       busqueda: '',
@@ -203,6 +208,12 @@ export default {
           empresa: '',
           numero_empleado: '',
           departamento: '',
+          
+          antiguedad_empresa_anos: 0,
+          antiguedad_empresa_meses: 0,
+          antiguedad_puesto_anos: 0,
+          antiguedad_puesto_meses: 0,
+
           tipo_trabajo_riesgo: {
             altura: false,
             espacio_confinado: false,
@@ -302,6 +313,102 @@ export default {
   },
 
   methods: {
+   async obtenerPacientes() {
+      if (!this.pacienteId) {
+        console.warn('No hay pacienteId para cargar el expediente')
+        return
+      }
+
+      try {
+        this.cargando = true
+        const response = await clinicaTrabajo.get(`/PacientesDetalleClinicaTrabajo/${this.pacienteId}`)
+        const data = response.data.data
+        this.infoPacientes = data
+
+        // Datos laborales (último registro)
+        const datosLaborales = data.datos_laborales || []
+        const laboral = datosLaborales.length > 0 ? datosLaborales[datosLaborales.length - 1] : null
+        this.datosLaboralesActuales = laboral
+
+        // Helper para calcular edad exacta
+        const calcularEdad = (fechaStr) => {
+          if (!fechaStr) return 0
+          const hoy = new Date()
+          const nacimiento = new Date(fechaStr)
+          let edad = hoy.getFullYear() - nacimiento.getFullYear()
+          const mes = hoy.getMonth() - nacimiento.getMonth()
+          if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+            edad--
+          }
+          return edad
+        }
+
+        // ✅ NUEVO: Helper para calcular antigüedad en años y meses
+        const calcularAntiguedad = (fechaIngresoStr) => {
+          if (!fechaIngresoStr) return { anos: 0, meses: 0 }
+          
+          const ingreso = new Date(fechaIngresoStr)
+          const hoy = new Date()
+          
+          let anos = hoy.getFullYear() - ingreso.getFullYear()
+          let meses = hoy.getMonth() - ingreso.getMonth()
+          
+          // Ajustar si el día del mes aún no ha llegado
+          if (meses < 0 || (meses === 0 && hoy.getDate() < ingreso.getDate())) {
+            anos--
+            meses += 12
+          }
+          
+          return { anos, meses }
+        }
+
+        // Calcular antigüedad si existe fecha de ingreso
+        const antiguedad = calcularAntiguedad(laboral?.fecha_ingreso_empresa)
+
+        // ==========================================
+        // MAPEO: HOJA 1 - Identificación y Empleo
+        // ==========================================
+        this.form.hoja1 = {
+          ...this.form.hoja1,
+          nombre: data.nombre || '',
+          fecha_nacimiento: data.fecha_nacimiento ? data.fecha_nacimiento.split('T')[0] : '',
+          edad: calcularEdad(data.fecha_nacimiento),
+          genero: data.genero === 'Hombre' ? 'Masculino' : (data.genero === 'Mujer' ? 'Femenino' : (data.genero || '')),
+          empresa: laboral?.empresa_cliente?.razon_social || '',
+          numero_empleado: laboral?.numero_empleado || '',
+          departamento: laboral?.puesto_trabajo?.departamento || '',
+          puesto: laboral?.puesto_trabajo?.nombre || '',
+          
+          // ✅ NUEVO: Asignar antigüedades calculadas
+          antiguedad_empresa_anos: antiguedad.anos,
+          antiguedad_empresa_meses: antiguedad.meses,
+          antiguedad_puesto_anos: antiguedad.anos, // Si no hay fecha específica del puesto, usamos la de empresa
+          antiguedad_puesto_meses: antiguedad.meses
+        }
+
+        // NOTA: Las hojas 2, 3 y 4 se mantienen con sus valores por defecto
+        // (Si tu backend ya devuelve estos datos guardados en este mismo endpoint, avísame y los mapeamos).
+
+        // Sincronizar trabajador seleccionado para el Chat IA
+        this.trabajadorSeleccionado = {
+          id: this.pacienteId,
+          nombre: data.nombre,
+          empresa: this.form.hoja1.empresa,
+          numero_empleado: this.form.hoja1.numero_empleado,
+          puesto: this.form.hoja1.puesto
+        }
+
+        console.log('✅ Expediente base cargado correctamente:', this.infoPacientes)
+        console.log(' Antigüedad calculada:', antiguedad)
+
+      } catch (error) {
+        console.error('❌ Error al obtener paciente:', error)
+        alert('Error al cargar el expediente: ' + (error.response?.data?.message || error.message))
+      } finally {
+        this.cargando = false
+      }
+    },
+
     async buscarPacientes() {
       if (this.busqueda.length < 2) {
         this.resultados = []
@@ -415,19 +522,19 @@ export default {
           presion_sistolica: 0,
           presion_diastolica: 0,
           frecuencia_cardiaca: 0,
-          cabeza: { estado: 'Normal', hallazgs: '' },
-          ojos: { estado: 'Normal', hallazgs: '' },
-          oidos: { estado: 'Normal', hallazgs: '' },
-          nariz: { estado: 'Normal', hallazgs: '' },
-          boca: { estado: 'Normal', hallazgs: '' },
-          cuello: { estado: 'Normal', hallazgs: '' },
-          cardiovascular: { estado: 'Normal', hallazgs: '' },
-          pulmonar: { estado: 'Normal', hallazgs: '' },
-          abdomen: { estado: 'Normal', hallazgs: '' },
-          genitourinario: { estado: 'Normal', hallazgs: '' },
-          osteomuscular: { estado: 'Normal', hallazgs: '' },
-          neurologico: { estado: 'Normal', hallazgs: '' },
-          tegumentos: { estado: 'Normal', hallazgs: '' }
+          cabeza: { estado: 'Normal', hallazgos: '' },
+          ojos: { estado: 'Normal', hallazgos: '' },
+          oidos: { estado: 'Normal', hallazgos: '' },
+          nariz: { estado: 'Normal', hallazgos: '' },
+          boca: { estado: 'Normal', hallazgos: '' },
+          cuello: { estado: 'Normal', hallazgos: '' },
+          cardiovascular: { estado: 'Normal', hallazgos: '' },
+          pulmonar: { estado: 'Normal', hallazgos: '' },
+          abdomen: { estado: 'Normal', hallazgos: '' },
+          genitourinario: { estado: 'Normal', hallazgos: '' },
+          osteomuscular: { estado: 'Normal', hallazgos: '' },
+          neurologico: { estado: 'Normal', hallazgos: '' },
+          tegumentos: { estado: 'Normal', hallazgos: '' }
         },
         hoja4: {
           ecg: { realizado: false, fecha: '', resultado: 'Normal', reporte: '' },
@@ -536,6 +643,18 @@ export default {
     imprimir() {
       alert('🖨️ Funcionalidad de impresión en desarrollo')
       // TODO: Implementar impresión con HTML2PDF
+    }
+  },
+
+  mounted() {
+    // 1. OBTENER EL ID DE LA URL AUTOMÁTICAMENTE
+    // Intenta tomarlo de Vue Router, si no, lo extrae de la URL del navegador
+    this.pacienteId = this.$route?.params?.id || window.location.pathname.split('/').pop();
+
+    // 2. SI HAY UN ID VÁLIDO, CARGAMOS LOS DATOS DEL PACIENTE
+    // La condición !isNaN asegura que no intente cargar si la URL termina en texto (ej. '/tr')
+    if (this.pacienteId && !isNaN(this.pacienteId) && this.pacienteId !== 'tr') {
+      this.obtenerPacientes();
     }
   },
 

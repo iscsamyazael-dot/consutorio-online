@@ -74,6 +74,39 @@ class ValoracionEspirometria extends Model
         'tuberculosis' => 'boolean',
         'neumonia_previa' => 'boolean',
         'seguimiento_requerido' => 'boolean',
+
+                // Predicho y LLN por parámetro
+        'fvc_pred' => 'decimal:2',
+        'fvc_lln' => 'decimal:2',
+        'fev1_pred' => 'decimal:2',
+        'fev1_lln' => 'decimal:2',
+        'fev1_fvc_pred' => 'decimal:2',
+        'fev1_fvc_lln' => 'decimal:2',
+        'fef25_75_pred' => 'decimal:2',
+        'fef25_75_lln' => 'decimal:2',
+        'pef_pred' => 'decimal:2',
+        'pef_lln' => 'decimal:2',
+        'fivc_pred' => 'decimal:2',
+        'fivc_lln' => 'decimal:2',
+
+        // Puntuación Z (solo cuando el informe la trae)
+        'fvc_z' => 'decimal:2',
+        'fev1_z' => 'decimal:2',
+        'fev1_fvc_z' => 'decimal:2',
+        'fef25_75_z' => 'decimal:2',
+        'pef_z' => 'decimal:2',
+        'fivc_z' => 'decimal:2',
+
+        // Calidad por FEV1 y FVC (cuando el informe la trae)
+        'calidad_fev1' => 'string',
+        'calidad_fvc' => 'string',
+
+        // Porcentajes predichos faltantes
+        'fev1_fvc_porcentaje_predicho' => 'int',
+        'fivc_porcentaje_predicho' => 'int',
+
+        // Maniobras (columna JSON)
+        'maniobras' => 'array',
     ];
 
     public function paciente(): BelongsTo

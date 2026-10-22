@@ -191,7 +191,7 @@ import ParametrosFvlEspirometria from './secciones/espirometria/ParametrosFvlEsp
 import InterpretacionEspirometria from './secciones/espirometria/InterpretacionEspirometria.vue'
 
 // 3. Servicio API (ajusta la ruta si tu ApiService está en otro lugar, ej: '@/services/ApiService')
-import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
+import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterEspirometria',
@@ -206,6 +206,7 @@ export default {
       esNuevo: false,
       esEdicion: false,
       guardando: false,
+      cargando: false, 
       escuchando: false,
       mensajeActual: '',
       archivoSeleccionado: null,
@@ -410,12 +411,85 @@ export default {
       // TODO: Integrar html2pdf.js o window.print() con estilos específicos
     },
 
-    async cargarDatosExistentes() {
-      // TODO: Lógica para cargar los datos si `esEdicion` es true
-      // const id = window.location.pathname.split('/').pop()
-      // const response = await clinicaTrabajo.obtenerEspirometria(id)
-      // this.form = response.data
-    }
+     async cargarDatosExistentes() {
+      // 1. Extraer el ID de la URL (ej: /ficha-espirometria/4)
+      const pathname = window.location.pathname;
+      const pacienteId = pathname.split('/').pop();
+
+      if (!pacienteId || isNaN(pacienteId)) {
+        console.warn('No se encontró un ID válido en la URL');
+        return;
+      }
+
+      try {
+        this.cargando = true;
+        
+        // 2. Petición al endpoint unificado de pacientes
+        const response = await clinicaTrabajo.get(`/PacientesDetalleClinicaTrabajo/${pacienteId}`);
+        const data = response.data.data;
+        
+        // 3. Obtener datos laborales (último registro)
+        const datosLaborales = data.datos_laborales || [];
+        const laboral = datosLaborales.length > 0 ? datosLaborales[datosLaborales.length - 1] : null;
+
+        // 4. Helper para calcular edad exacta
+        const calcularEdad = (fechaStr) => {
+          if (!fechaStr) return 0;
+          const hoy = new Date();
+          const nacimiento = new Date(fechaStr);
+          let edad = hoy.getFullYear() - nacimiento.getFullYear();
+          const mes = hoy.getMonth() - nacimiento.getMonth();
+          if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+            edad--;
+          }
+          return edad;
+        };
+
+        // 5. MAPEO: Hoja 1 - Datos Generales
+        this.form.datosGenerales = {
+          ...this.form.datosGenerales,
+          folio: this.folioEspirometria,
+          fecha_valoracion: new Date().toISOString().split('T')[0],
+          
+          // Datos del paciente
+          nombre: data.nombre || '',
+          fecha_nacimiento: data.fecha_nacimiento ? data.fecha_nacimiento.split('T')[0] : '',
+          edad: calcularEdad(data.fecha_nacimiento),
+          sexo: data.genero === 'Hombre' ? 'Masculino' : (data.genero === 'Mujer' ? 'Femenino' : ''),
+          
+          // Datos laborales
+          id_empleado: laboral?.numero_empleado || '',
+          empresa: laboral?.empresa_cliente?.razon_social || '',
+          
+          // Campos clínicos que el médico completará en la evaluación 
+          // (se inicializan en null/false para forzar la captura o mantener el default)
+          altura_cm: null,
+          peso_kg: null,
+          imc: 0,
+          origen_etnico: 'Hispano',
+          remitido_por: '',
+          prescrito_por: '',
+          fumador: false,
+          cigarrillos_dia: 0,
+          anos_fumador: 0,
+          antecedente_covid: false,
+          asma: false,
+          epoc: false,
+          comentarios: ''
+        };
+
+        console.log('✅ Datos del paciente cargados para Espirometría:', this.form.datosGenerales);
+
+      } catch (error) {
+        console.error('❌ Error al cargar datos del paciente:', error);
+        alert('Error al cargar el expediente: ' + (error.response?.data?.message || error.message));
+        
+        // Redirigir al listado si la carga falla
+        window.location.href = '/clinica/espirometria';
+      } finally {
+        this.cargando = false;
+      }
+    },
   },
 
   mounted() {

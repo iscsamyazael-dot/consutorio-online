@@ -108,7 +108,7 @@
 </template>
 
 <script>
-  import ApiServiceClinicaTrabajo, { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo.js'
+  import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'ListadoValoraciones',
@@ -156,15 +156,27 @@ export default {
     async cargar() {
       this.cargando = true
       try {
-        const response = await clinicaTrabajo[this.submodulo].lista()
+        // Mapeo de submódulos a sus endpoints reales
+        const endpoints = {
+          medicina: '/clinica/valoraciones-ocupacionales',
+          psicologia: '/clinica/valoraciones-psicologicas',
+          nutricion: '/clinica/valoraciones-nutricion',
+          audiologia: '/clinica/valoraciones-audiologia',
+          ergonomia: '/clinica/ergonomia',        // ← Ruta del Grupo 2
+          espirometria: '/clinica/valoraciones-espirometria'
+        }
+        
+        const endpoint = endpoints[this.submodulo]
+        const response = await clinicaTrabajo.get(endpoint)
         this.valoraciones = response.data || response
       } catch (error) {
         console.error('Error cargando valoraciones:', error)
-        this.$toast?.error('Error cargando valoraciones')
+        this.valoraciones = []
       } finally {
         this.cargando = false
       }
     },
+
 
     abrir(valoracion) {
       this.$router.push({
@@ -209,10 +221,11 @@ export default {
 
     async cargarEmpresas() {
       try {
-        const response = await clinicaTrabajo.empresas.lista()
+        const response = await clinicaTrabajo.get('empresa-cliente')
         this.empresas = response.data || response
       } catch (error) {
         console.error('Error cargando empresas:', error)
+        this.empresas = []
       }
     }
   },

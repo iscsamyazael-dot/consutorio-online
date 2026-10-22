@@ -117,6 +117,12 @@ const props = defineProps({
   initialData: { type: Object, default: () => ({}) }
 })
 
+// Solo los campos que este tab edita
+const CAMPOS = [
+  'telefono', 'celular', 'whatsapp_id', 'email', 'direccion',
+  'contacto_emergencia', 'relacion_contacto_emergencia', 'telefono_emergencia'
+]
+
 const form = ref({
   telefono: '', celular: '', email: '', direccion: '',
   contacto_emergencia: '', relacion_contacto_emergencia: '',
@@ -124,9 +130,10 @@ const form = ref({
 })
 
 watch(() => props.initialData, (newData) => {
-  if (newData && Object.keys(newData).length > 0) {
-    form.value = { ...form.value, ...newData }
-  }
+  if (!newData || Object.keys(newData).length === 0) return
+  CAMPOS.forEach(campo => {
+    if (newData[campo] !== undefined) form.value[campo] = newData[campo]
+  })
 }, { immediate: true })
 
 defineExpose({ getFormData: () => form.value })
@@ -187,7 +194,6 @@ defineExpose({ getFormData: () => form.value })
   flex-direction: column;
 }
 
-/* ✅ NUEVO: Clase para ocupar 2 columnas */
 .form-group.col-span-2 {
   grid-column: span 2;
 }

@@ -14,16 +14,16 @@
             <label class="font-weight-bold d-block mb-1">Folio *</label>
             <input
               type="text"
-              v-model="form.folio"
+              :value="form.folio"
               class="form-control"
               readonly
-              placeholder="Auto-generado al guardar"
+              placeholder="Auto-generado"
             />
             <small class="text-muted">Formato: ERG-YYYY-NNNN</small>
           </div>
           <div class="col-md-3 mb-3">
             <label class="font-weight-bold d-block mb-1">Tipo de Evaluación *</label>
-            <select v-model="form.tipo_evaluacion" class="form-control" required>
+            <select :value="form.tipo_evaluacion" @change="updateField('tipo_evaluacion', $event.target.value)" class="form-control" required>
               <option value="">Seleccionar...</option>
               <option value="ingreso">Ingreso</option>
               <option value="periodica">Periódica</option>
@@ -36,7 +36,8 @@
             <label class="font-weight-bold d-block mb-1">Fecha Valoración *</label>
             <input
               type="date"
-              v-model="form.fecha_valoracion"
+              :value="form.fecha_valoracion"
+              @input="updateField('fecha_valoracion', $event.target.value)"
               class="form-control"
               :max="fechaHoy"
               required
@@ -46,44 +47,43 @@
             <label class="font-weight-bold d-block mb-1">Hora Valoración *</label>
             <input
               type="time"
-              v-model="form.hora_valoracion"
+              :value="form.hora_valoracion"
+              @input="updateField('hora_valoracion', $event.target.value)"
               class="form-control"
               required
             />
           </div>
         </div>
+        
         <!-- Fila 2: Paciente, Empresa, Puesto de trabajo, Ergónomo -->
         <div class="row mb-4">
           <div class="col-md-3 mb-3">
             <label class="font-weight-bold d-block mb-1">Paciente *</label>
-            <select v-model="form.paciente_id" class="form-control" required>
-              <option value="">Seleccionar paciente...</option>
-              <option v-for="p in pacientes" :key="p.id" :value="p.id">
-                {{ p.nombre }} {{ p.apellido_paterno }} {{ p.apellido_materno }}
-              </option>
-            </select>
+            <input 
+              type="text" 
+              :value="form.nombre_paciente" 
+              class="form-control" 
+            />
           </div>
           <div class="col-md-3 mb-3">
             <label class="font-weight-bold d-block mb-1">Empresa *</label>
-            <select v-model="form.empresa_cliente_id" class="form-control" required @change="onEmpresaChange">
-              <option value="">Seleccionar empresa...</option>
-              <option v-for="e in empresas" :key="e.id" :value="e.id">
-                {{ e.nombre || e.razon_social }}
-              </option>
-            </select>
+            <input 
+              type="text" 
+              :value="form.nombre_empresa" 
+              class="form-control" 
+            />
           </div>
           <div class="col-md-3 mb-3">
             <label class="font-weight-bold d-block mb-1">Puesto de Trabajo *</label>
-            <select v-model="form.puesto_trabajo_id" class="form-control" required>
-              <option value="">Seleccionar puesto...</option>
-              <option v-for="p in puestos" :key="p.id" :value="p.id">
-                {{ p.nombre }}
-              </option>
-            </select>
+            <input 
+              type="text" 
+              :value="form.nombre_puesto" 
+              class="form-control" 
+            />
           </div>
           <div class="col-md-3 mb-3">
             <label class="font-weight-bold d-block mb-1">Ergónomo *</label>
-            <select v-model="form.ergonomo_id" class="form-control" required>
+            <select :value="form.ergonomo_id" @change="updateField('ergonomo_id', $event.target.value)" class="form-control" required>
               <option value="">Seleccionar ergónomo...</option>
               <option v-for="m in medicos" :key="m.id" :value="m.id">
                 {{ m.nombre }} {{ m.apellido_paterno }}
@@ -91,30 +91,28 @@
             </select>
           </div>
         </div>
-        <!-- Info paciente seleccionado -->
-        <div v-if="form.paciente_id" class="mt-4 p-3" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-          <div class="row">
+
+        <!-- Info de respaldo (IDs) -->
+        <!-- <div v-if="form.paciente_id" class="mt-4 p-3" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+          <div class="row text-muted" style="font-size: 0.85rem;">
             <div class="col-md-4">
-              <span class="font-weight-bold">Edad: </span>
-              {{ calcularEdad(pacienteSeleccionado?.fecha_nacimiento) }} años
+              <span class="font-weight-bold">ID Paciente:</span> {{ form.paciente_id }}
             </div>
             <div class="col-md-4">
-              <span class="font-weight-bold">Puesto: </span>
-              {{ puestoSeleccionado?.nombre }}
+              <span class="font-weight-bold">ID Empresa:</span> {{ form.empresa_cliente_id }}
             </div>
             <div class="col-md-4">
-              <span class="font-weight-bold">Empresa: </span>
-              {{ empresaSeleccionada?.nombre || empresaSeleccionada?.razon_social }}
+              <span class="font-weight-bold">ID Puesto:</span> {{ form.puesto_trabajo_id }}
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { clinicaTrabajo } from '../../../../services/ApiServiceClinicaTrabajo'
+import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'DatosBasicoErgonomia',
@@ -127,91 +125,52 @@ export default {
   emits: ['update:modelValue'],
   data() {
     return {
-      pacientes: [],
-      empresas: [],
-      puestos: [],
       medicos: [],
       fechaHoy: new Date().toISOString().split('T')[0]
     }
   },
   computed: {
-    form: {
-      get() { return this.modelValue },
-      set(val) { this.$emit('update:modelValue', val) }
-    },
-    pacienteSeleccionado() {
-      return this.pacientes.find(p => p.id === this.form.paciente_id)
-    },
-    empresaSeleccionada() {
-      return this.empresas.find(e => e.id === this.form.empresa_cliente_id)
-    },
-    puestoSeleccionado() {
-      return this.puestos.find(p => p.id === this.form.puesto_trabajo_id)
+    form() {
+      return this.modelValue
     }
   },
   methods: {
     updateField(key, value) {
       this.$emit('update:modelValue', { ...this.form, [key]: value })
     },
-    async cargarPacientes() {
-      try {
-        const response = await clinicaTrabajo.pacientes.lista()
-        this.pacientes = response.data || response
-      } catch (error) {
-        console.error('Error cargando pacientes:', error)
-      }
-    },
-    async cargarEmpresas() {
-      try {
-        const response = await clinicaTrabajo.empresas.lista()
-        this.empresas = response.data || response
-      } catch (error) {
-        console.error('Error cargando empresas:', error)
-      }
-    },
-    async cargarPuestos() {
-      if (!this.form.empresa_cliente_id) {
-        this.puestos = []
-        return
-      }
-      try {
-        const response = await clinicaTrabajo.puestos.lista()
-        this.puestos = response.data || response
-      } catch (error) {
-        console.error('Error cargando puestos:', error)
-      }
-    },
     async cargarMedicos() {
       try {
-        const response = await clinicaTrabajo.medicos.lista()
+        const response = await clinicaTrabajo.get('medicos');
         this.medicos = response.data || response
       } catch (error) {
         console.error('Error cargando médicos:', error)
       }
-    },
-    onEmpresaChange() {
-      this.updateField('puesto_trabajo_id', null)
-      this.cargarPuestos()
-    },
-    calcularEdad(fechaNacimiento) {
-      if (!fechaNacimiento) return 0
-      const hoy = new Date()
-      const nacimiento = new Date(fechaNacimiento)
-      let edad = hoy.getFullYear() - nacimiento.getFullYear()
-      const mes = hoy.getMonth() - nacimiento.getMonth()
-      if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--
-      return edad
     }
   },
   mounted() {
-    this.cargarPacientes()
-    this.cargarEmpresas()
     this.cargarMedicos()
+    
+    // Generar folio de forma reactiva si no existe
     if (!this.form.folio) {
       const año = new Date().getFullYear()
-      this.form.folio = `ERG-${año}-****`
+      this.updateField('folio', `ERG-${año}-****`)
     }
-  }
+  },
+  // watch: {
+  //   'form.paciente_id'(newVal) {
+  //     if (newVal && this.pacientes.length > 0) {
+  //       const paciente = this.pacientes.find(p => p.id === newVal)
+  //       if (paciente) {
+  //         this.$emit('update:modelValue', {
+  //           ...this.form,
+  //           nombre_paciente: paciente.nombre || '',
+  //           nombre_empresa: paciente.empresa || '',
+  //           nombre_puesto: paciente.puesto || ''
+  //         })
+  //       }
+  //     }
+  //   }
+  // }
 }
 </script>
 
@@ -219,25 +178,26 @@ export default {
 .seccion-datos-basicos-ergonomia {
   background: #f8f9fa;
 }
-
 .card {
   border: 1px solid #dee2e6;
   box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
-
 .form-control {
   border-radius: 4px;
   border: 1px solid #ced4da;
   font-size: 14px;
   padding: 10px 12px;
+  background-color: #fff;
 }
-
+.form-control[readonly] {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
 .font-weight-bold {
   font-size: 0.875rem;
   margin-bottom: 0.5rem;
   color: #2c3e50;
 }
-
 .text-muted {
   color: #6c757d !important;
 }

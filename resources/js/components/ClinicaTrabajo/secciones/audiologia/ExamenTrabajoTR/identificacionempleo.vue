@@ -114,30 +114,66 @@
             >
           </div>
 
-          <!-- ANTIGÜEDAD EN EMPRESA -->
-          <div class="col-md-3 mb-3">
+          <!-- ✅ CORREGIDO: ANTIGÜEDAD EN EMPRESA (2 inputs separados) -->
+          <div class="col-md-6 mb-3">
             <label class="font-weight-bold">ANTIGÜEDAD EN EMPRESA</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              v-model="localData.antiguedad_empresa"
-              @change="emitChange"
-              placeholder="Ej: 2 años 3 meses"
-              style="height: 38px;"
-            >
+            <div class="row">
+              <div class="col-6">
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="localData.antiguedad_empresa_anos"
+                  @change="emitChange"
+                  placeholder="Años"
+                  min="0"
+                  style="height: 38px;"
+                >
+              </div>
+              <div class="col-6">
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="localData.antiguedad_empresa_meses"
+                  @change="emitChange"
+                  placeholder="Meses"
+                  min="0"
+                  max="11"
+                  style="height: 38px;"
+                >
+              </div>
+            </div>
+            <small class="text-muted">Años y Meses</small>
           </div>
 
-          <!-- ANTIGÜEDAD EN PUESTO -->
-          <div class="col-md-3 mb-3">
+          <!-- ✅ CORREGIDO: ANTIGÜEDAD EN PUESTO (2 inputs separados) -->
+          <div class="col-md-6 mb-3">
             <label class="font-weight-bold">ANTIGÜEDAD EN PUESTO</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              v-model="localData.antiguedad_puesto"
-              @change="emitChange"
-              placeholder="Ej: 1 año 6 meses"
-              style="height: 38px;"
-            >
+            <div class="row">
+              <div class="col-6">
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="localData.antiguedad_puesto_anos"
+                  @change="emitChange"
+                  placeholder="Años"
+                  min="0"
+                  style="height: 38px;"
+                >
+              </div>
+              <div class="col-6">
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="localData.antiguedad_puesto_meses"
+                  @change="emitChange"
+                  placeholder="Meses"
+                  min="0"
+                  max="11"
+                  style="height: 38px;"
+                >
+              </div>
+            </div>
+            <small class="text-muted">Años y Meses</small>
           </div>
         </div>
       </div>
@@ -367,8 +403,11 @@ export default {
         empresa: '',
         numero_empleado: '',
         departamento: '',
-        antiguedad_empresa: '',
-        antiguedad_puesto: '',
+        // ✅ CORREGIDO: Ahora coincide con la estructura del padre
+        antiguedad_empresa_anos: 0,
+        antiguedad_empresa_meses: 0,
+        antiguedad_puesto_anos: 0,
+        antiguedad_puesto_meses: 0,
         puesto: '',
         antecedentes_laborales: [
           {
@@ -415,7 +454,7 @@ export default {
     modelValue: {
       handler(newVal) {
         if (newVal && Object.keys(newVal).length > 0) {
-          this.localData = JSON.parse(JSON.stringify(newVal))
+          this.localData = { ...this.localData, ...newVal }
         }
       },
       deep: true
@@ -454,7 +493,7 @@ export default {
   },
   mounted() {
     if (this.modelValue && Object.keys(this.modelValue).length > 0) {
-      this.localData = JSON.parse(JSON.stringify(this.modelValue))
+      this.localData = { ...this.localData, ...this.modelValue }
     }
   }
 }

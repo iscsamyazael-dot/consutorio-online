@@ -249,7 +249,7 @@ import ExposicionRiesgos from './secciones/medicina-enfermeria/exposicionriesgos
 import Antecedentes from './secciones/medicina-enfermeria/antecedentes.vue'
 import ClinicoExamen from './secciones/medicina-enfermeria/clinicoexamen.vue'
 import AptitudDictamen from './secciones/medicina-enfermeria/aptituddictamen.vue'
-import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
+import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterFichaOcupacional',
@@ -262,6 +262,10 @@ export default {
   },
   data() {
     return {
+      pacienteId: null,               
+      infoPacientes: null,            
+      datosLaboralesActuales: null,   
+      cargando: false,  
       hojaActual: 1,
       trabajadorSeleccionado: null,
       busqueda: '',
@@ -639,6 +643,218 @@ export default {
       return `MED-${ano}${mes}${dia}-${numero}`
     },
 
+    async obtenerPacientes() {
+      if (!this.pacienteId) {
+        console.warn('No hay pacienteId para cargar el expediente')
+        return
+      }
+
+      try {
+        this.cargando = true
+        const response = await clinicaTrabajo.get(`/PacientesDetalleClinicaTrabajo/${this.pacienteId}`)
+        const data = response.data.data
+        this.infoPacientes = data
+
+        const datosLaborales = data.datos_laborales || []
+        const laboral = datosLaborales.length > 0 ? datosLaborales[datosLaborales.length - 1] : null
+        this.datosLaboralesActuales = laboral
+
+        // Helper para calcular edad
+        const calcularEdad = (fechaStr) => {
+          if (!fechaStr) return ''
+          const hoy = new Date()
+          const nacimiento = new Date(fechaStr)
+          let edad = hoy.getFullYear() - nacimiento.getFullYear()
+          const mes = hoy.getMonth() - nacimiento.getMonth()
+          if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--
+          return edad
+        }
+
+        // Helper para calcular antigüedad en texto
+        const calcularAntiguedadTexto = (fechaIngresoStr) => {
+          if (!fechaIngresoStr) return ''
+          const ingreso = new Date(fechaIngresoStr)
+          const hoy = new Date()
+          let anos = hoy.getFullYear() - ingreso.getFullYear()
+          let meses = hoy.getMonth() - ingreso.getMonth()
+          if (meses < 0 || (meses === 0 && hoy.getDate() < ingreso.getDate())) {
+            anos--
+            meses += 12
+          }
+          if (anos > 0 && meses > 0) return `${anos} años, ${meses} meses`
+          if (anos > 0) return `${anos} años`
+          return `${meses} meses`
+        }
+
+        const antiguedadTexto = calcularAntiguedadTexto(laboral?.fecha_ingreso_empresa)
+
+        // ==========================================
+        // HELPERS DE MAPEO PARA COINCIDIR CON LOS <option value=""> DEL HIJO
+        // ==========================================
+        const mapGenero = (g) => g === 'Hombre' ? 'M' : (g === 'Mujer' ? 'F' : 'Otro')
+        
+        const mapEstadoCivil = (ec) => {
+          const val = (ec || '').toLowerCase().trim()
+          if (val.includes('casad')) return 'casado'
+          if (val.includes('solter')) return 'soltero'
+          if (val.includes('divorci')) return 'divorciado'
+          if (val.includes('viud')) return 'viudo'
+          if (val.includes('union') || val.includes('unión')) return 'union_libre'
+          return ''
+        }
+
+        const mapEscolaridad = (esc) => {
+          const val = (esc || '').toLowerCase().trim()
+          if (val.includes('universidad') || val.includes('licenciatura') || val.includes('profesional')) return 'profesional'
+          if (val.includes('tecnico') || val.includes('técnico')) return 'tecnico'
+          if (val.includes('secundaria')) return 'secundaria'
+          if (val.includes('primaria')) return 'primaria'
+          if (val.includes('posgrado') || val.includes('maestria') || val.includes('doctorado')) return 'posgrado'
+          if (val.includes('ninguna')) return 'ninguna'
+          return ''
+        }
+
+        const mapTipoContrato = (tc) => {
+          const val = (tc || '').toLowerCase().trim()
+          if (val.includes('indefinido') || val.includes('planta')) return 'indefinido'
+          if (val.includes('temporal') || val.includes('fijo') || val.includes('determinado')) return 'temporal'
+          if (val.includes('proyecto') || val.includes('obra')) return 'proyecto'
+          if (val.includes('practicante') || val.includes('pasantia') || val.includes('becario')) return 'practicante'
+          return ''
+        }
+
+        const mapJornada = (jor) => {
+          const val = (jor || '').toLowerCase().trim()
+          if (val.includes('matutino') || val.includes('diurno') || val.includes('dia')) return 'diurna'
+          if (val.includes('nocturno') || val.includes('noche')) return 'nocturna'
+          if (val.includes('mixto') || val.includes('mixta')) return 'mixta'
+          if (val.includes('rotativo') || val.includes('rotatoria')) return 'rotatoria'
+          return ''
+        }
+
+        const mapModalidad = (mod) => {
+          const val = (mod || '').toLowerCase().trim()
+          if (val.includes('presencial') || val.includes('oficina')) return 'presencial'
+          if (val.includes('remoto') || val.includes('home') || val.includes('casa')) return 'remoto'
+          if (val.includes('hibrido') || val.includes('híbrido')) return 'hibrido'
+          if (val.includes('turno') || val.includes('turnos')) return 'turnos'
+          return ''
+        }
+
+        const mapCategoria = (cat) => {
+          const val = (cat || '').toLowerCase().trim()
+          if (val.includes('operativo') || val.includes('operario') || val.includes('obrero')) return 'operativo'
+          if (val.includes('tecnico') || val.includes('técnico') || val.includes('tecnólogo')) return 'tecnico'
+          if (val.includes('profesional') || val.includes('ingeniero') || val.includes('licenciado')) return 'profesional'
+          if (val.includes('admin') || val.includes('oficina') || val.includes('staff')) return 'administrativo'
+          if (val.includes('directivo') || val.includes('gerente') || val.includes('director') || val.includes('jefe')) return 'directivo'
+          return ''
+        }
+
+        // ==========================================
+        // MAPEO: HOJA 1 - Datos Puesto
+        // ==========================================
+        this.form.datos_puesto = {
+          ...this.form.datos_puesto,
+          folio: this.form.datos_puesto.folio || this.generarFolio(),
+          nombre: data.nombre || '',
+          fecha_nacimiento: data.fecha_nacimiento ? data.fecha_nacimiento.split('T')[0] : '',
+          edad: calcularEdad(data.fecha_nacimiento),
+          
+          // ✅ MAPEO CORREGIDO PARA QUE COINCIDA CON LOS <option value=""> DEL HIJO
+          genero: mapGenero(data.genero),
+          estado_civil: mapEstadoCivil(data.estado_civil),
+          escolaridad: mapEscolaridad(data.escolaridad),
+          
+          lugar_nacimiento: data.lugar_nacimiento || '',
+          cedula: data.cedula_profesional || '',
+          tipo_sanguineo: (data.tipo_sangre && data.rh) ? `${data.tipo_sangre}${data.rh}` : '',
+          telefono: data.telefono || '',
+          celular: data.celular || '',
+          email: data.email || '',
+          direccion: data.direccion || '',
+          emergencia_nombre: data.contacto_emergencia || '',
+          emergencia_telefono: data.telefono_emergencia || '',
+          emergencia_relacion: data.relacion_contacto_emergencia || '',
+          ultima_consulta_fecha: data.fecha_ultima_consulta_medica ? data.fecha_ultima_consulta_medica.split('T')[0] : '',
+          ultima_consulta_motivo: data.motivo_ultima_consulta_medica || '',
+          
+          // Datos laborales con mapeo correcto
+          numero_empleado: laboral?.numero_empleado || '',
+          empresa: laboral?.empresa_cliente?.razon_social || '',
+          departamento: laboral?.puesto_trabajo?.departamento || '',
+          puesto: laboral?.puesto_trabajo?.nombre || '',
+          antiguedad_empresa: antiguedadTexto,
+          antiguedad: antiguedadTexto,
+          tipo_contrato: mapTipoContrato(laboral?.tipo_contrato),
+          jornada: mapJornada(laboral?.turno),
+          modalidad_trabajo: mapModalidad(laboral?.modalidad_trabajo),
+          categoria_laboral: mapCategoria(laboral?.categoria_laboral),
+          descripcion_puesto: laboral?.puesto_trabajo?.descripcion_actividades || '',
+          riesgos_identificados: laboral?.puesto_trabajo?.riesgos_adicionales || ''
+        }
+
+        // ==========================================
+        // MAPEO: HOJA 2 - Antecedentes (Transformación de Strings a Estructura)
+        // ==========================================
+
+        // 1. ALERGIAS (Convertir strings separados por coma a array de objetos)
+        const alergiasArray = []
+        if (data.alergias && data.alergias.trim() !== 'Ninguno' && data.alergias.trim() !== '') {
+          data.alergias.split(',').forEach(item => {
+            if (item.trim()) {
+              alergiasArray.push({ sustancia: item.trim(), tipo_reaccion: '', hospitalizacion: false })
+            }
+          })
+        }
+        if (data.alergia_medicamentos && data.alergia_medicamentos.trim() !== 'Ninguno' && data.alergia_medicamentos.trim() !== '') {
+          data.alergia_medicamentos.split(',').forEach(item => {
+            if (item.trim()) {
+              alergiasArray.push({ sustancia: item.trim(), tipo_reaccion: 'Medicamento', hospitalizacion: false })
+            }
+          })
+        }
+        // Asignamos el array o dejamos uno vacío por defecto si no hay alergias
+        this.form.antecedentes.alergias = alergiasArray.length > 0 
+          ? alergiasArray 
+          : [{ sustancia: '', tipo_reaccion: '', hospitalizacion: false }]
+
+        // 2. CIRUGÍAS / ACCIDENTES NO LABORALES
+        if (data.antecedentes_quirurgicos && data.antecedentes_quirurgicos.trim() !== 'Ninguno' && data.antecedentes_quirurgicos.trim() !== '') {
+          this.form.antecedentes.cirugias_accidentes_no_laborales = [{ descripcion: data.antecedentes_quirurgicos.trim() }]
+        }
+
+        // 3. ANTECEDENTES PATOLÓGICOS / ENFERMEDADES CRÓNICAS (Otros)
+        const otrosPatologicos = []
+        if (data.antecedentes_medicos && data.antecedentes_medicos.trim() !== 'Ninguno' && data.antecedentes_medicos.trim() !== '') {
+          otrosPatologicos.push(data.antecedentes_medicos.trim())
+        }
+        if (data.enfermedades_cronicas && data.enfermedades_cronicas.trim() !== 'Ninguna' && data.enfermedades_cronicas.trim() !== '') {
+          otrosPatologicos.push(`Enfermedades crónicas: ${data.enfermedades_cronicas.trim()}`)
+        }
+
+        if (otrosPatologicos.length > 0) {
+          this.form.antecedentes.patologicos.otros = otrosPatologicos.join('. ')
+        }
+
+        this.trabajadorSeleccionado = {
+          id: this.pacienteId,
+          nombre: data.nombre,
+          empresa: this.form.datos_puesto.empresa,
+          numero_empleado: this.form.datos_puesto.numero_empleado,
+          puesto: this.form.datos_puesto.puesto
+        }
+
+        console.log('✅ Expediente base cargado y mapeado correctamente:', this.form.datos_puesto)
+
+      } catch (error) {
+        console.error('❌ Error al obtener paciente:', error)
+        alert('Error al cargar el expediente: ' + (error.response?.data?.message || error.message))
+      } finally {
+        this.cargando = false
+      }
+    },
+
     async buscarPacientes() {
       if (this.busqueda.length < 2) {
         this.resultados = []
@@ -761,6 +977,17 @@ export default {
       } finally {
         this.guardando = false
       }
+    }
+  },
+
+  mounted() {
+    // 1. OBTENER EL ID DE LA URL AUTOMÁTICAMENTE
+    this.pacienteId = this.$route?.params?.id || window.location.pathname.split('/').pop();
+
+    // 2. SI HAY UN ID VÁLIDO, CARGAMOS LOS DATOS DEL PACIENTE
+    // La condición !isNaN asegura que no intente cargar si la URL termina en texto
+    if (this.pacienteId && !isNaN(this.pacienteId) && this.pacienteId !== 'ocupacional') {
+      this.obtenerPacientes();
     }
   },
 
