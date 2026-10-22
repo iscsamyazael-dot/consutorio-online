@@ -310,7 +310,7 @@ export default {
   },
   mounted() {
     if (this.modelValue && Object.keys(this.modelValue).length > 0) {
-      this.localData = { ...this.localData, ...newVal }
+      this.localData = { ...this.localData, ...this.modelValue }  // ← Cambiar newVal por this.modelValue
     }
   }
 }

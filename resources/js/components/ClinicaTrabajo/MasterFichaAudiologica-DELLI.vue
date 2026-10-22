@@ -170,7 +170,7 @@ import Hoja1DatosbasicosDelli from './secciones/audiologia/FichaAudiologicaDelli
 import Hoja2RiesgosototoxicosDelli from './secciones/audiologia/FichaAudiologicaDelli/riesgosototoxicos.vue'
 import Hoja3AntecedentessintomasDelli from './secciones/audiologia/FichaAudiologicaDelli/antecedentessintomas.vue'
 import Hoja4AudiometriaDelli from './secciones/audiologia/FichaAudiologicaDelli/audiometria.vue'
-import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
+import  clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterFichaAudiologicaDelli',
@@ -182,6 +182,10 @@ export default {
   },
   data() {
     return {
+      pacienteId: null,               
+      infoPacientes: null,            
+      datosLaboralesActuales: null,
+
       hojaActual: 1,
       trabajadorSeleccionado: null,
       busqueda: '',
@@ -360,6 +364,198 @@ export default {
       }
     },
 
+   async obtenerPacientes() {
+      if (!this.pacienteId) {
+        console.warn('No hay pacienteId para cargar el expediente')
+        return
+      }
+
+      try {
+        this.cargando = true
+        const response = await clinicaTrabajo.get(`/PacientesDetalleClinicaTrabajo/${this.pacienteId}`)
+        const data = response.data.data
+        this.infoPacientes = data
+
+        // 1. OBTENER DATOS LABORALES (Último registro)
+        const datosLaborales = data.datos_laborales || []
+        const laboral = datosLaborales.length > 0 ? datosLaborales[datosLaborales.length - 1] : null
+        this.datosLaboralesActuales = laboral
+
+        // Helper para calcular edad exacta desde la fecha de nacimiento
+        const calcularEdad = (fechaStr) => {
+          if (!fechaStr) return 0
+          const hoy = new Date()
+          const nacimiento = new Date(fechaStr)
+          let edad = hoy.getFullYear() - nacimiento.getFullYear()
+          const mes = hoy.getMonth() - nacimiento.getMonth()
+          if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+            edad--
+          }
+          return edad
+        }
+
+        // Helper para calcular antigüedad en años y meses
+        const calcularAntiguedad = (fechaIngresoStr) => {
+          if (!fechaIngresoStr) return { anos: 0, meses: 0 }
+          const ingreso = new Date(fechaIngresoStr)
+          const hoy = new Date()
+          let anos = hoy.getFullYear() - ingreso.getFullYear()
+          let meses = hoy.getMonth() - ingreso.getMonth()
+          if (meses < 0 || (meses === 0 && hoy.getDate() < ingreso.getDate())) {
+            anos--
+            meses += 12
+          }
+          return { anos, meses }
+        }
+
+        const antiguedadEmp = calcularAntiguedad(laboral?.fecha_ingreso_empresa)
+
+        // ==========================================
+        // MAPEO CORREGIDO PARA QUE COINCIDA CON LOS COMPONENTES HIJOS
+        // ==========================================
+        
+        // HOJA 1: Datos Básicos
+        this.form.hoja1 = {
+          ...this.form.hoja1,
+          folio: data.folio || this.form.hoja1.folio,
+          nombre: data.nombre || '',
+          fecha_nacimiento: data.fecha_nacimiento ? data.fecha_nacimiento.split('T')[0] : '', // Formato YYYY-MM-DD
+          edad: calcularEdad(data.fecha_nacimiento),
+          // ✅ CORRECCIÓN: Mapear "Hombre" a "Masculino" para que el select lo reconozca
+          genero: data.genero === 'Hombre' ? 'Masculino' : (data.genero === 'Mujer' ? 'Femenino' : (data.genero || '')),
+          
+          // ✅ CORRECCIÓN: Extraer de la relación anidada de datos_laborales
+          empresa_actual: laboral?.empresa_cliente?.razon_social || '',
+          numero_empleado: laboral?.numero_empleado || '',
+          departamento: laboral?.puesto_trabajo?.departamento || '',
+          puesto: laboral?.puesto_trabajo?.nombre || '',
+          
+          antiguedad_empresa_anos: antiguedadEmp.anos,
+          antiguedad_empresa_meses: antiguedadEmp.meses,
+          antiguedad_puesto_anos: 0, // Si tienes este dato en otro lado, mapearlo aquí
+          antiguedad_puesto_meses: 0,
+          empresas_anteriores: [],
+          otra_empresa_actual: []
+        }
+
+        // HOJA 2: Riesgos y Ototóxicos
+        this.form.hoja2 = {
+          ...this.form.hoja2,
+          riesgo_auditivo: laboral?.puesto_trabajo?.riesgo_ruido ? 'Medio (82-84.9 dB)' : '', // Inferencia básica
+          duracion_exposicion: '',
+          medidas_control: '',
+          uso_proteccion: '',
+          tipo_protector: '',
+          // ✅ CORRECCIÓN: Forzar string 'true' o 'false' para los radio buttons
+          tabaquismo: 'false', 
+          cigarrillos_dia: 0,
+          agentes_ototoxicos: [],
+          toxicomanias: false,
+          antibioticos: false,
+          diureticos: false,
+          salicilatos: false,
+          armas_fuego_caneria: false,
+          niveles_altos_musica: false,
+          lugares_ruidosos_discoteca: false,
+          automovilismo_motociclismo: false,
+          otros_pasatiempos_ruido: false
+        }
+
+        // HOJA 3: Antecedentes y Síntomas
+        this.form.hoja3 = {
+          ...this.form.hoja3,
+          historia_familiar_perdida: 'false',
+          parentesco: '',
+          observaciones_familia: '',
+          
+          // ✅ CORRECCIÓN CRÍTICA: Si hay texto en alergias, el radio debe ser 'true' (string)
+          alergias: data.alergias ? 'true' : 'false',
+          alergias_especificar: data.alergias || '', // Aquí va "Mariscos, Polvo"
+          
+          covid19: 'false',
+          covid19_obs: '',
+          resfriado: 'false',
+          resfriado_obs: '',
+          otitis: 'false',
+          otitis_obs: '',
+          descripcion_hipoacusia: '',
+          tiempo_evolucion: '',
+          niega_sintomatologia: false,
+          
+          // Checkboxes (booleanos reales)
+          otalgia_der: false, otalgia_izq: false,
+          otorrea_der: false, otorrea_izq: false,
+          prurito_der: false, prurito_izq: false,
+          otodinia_der: false, otodinia_izq: false,
+          otorragia_der: false, otorragia_izq: false,
+          autofonia_der: false, autofonia_izq: false,
+          acufenos: false, congestion: false, algiacusia: false,
+          
+          conducto_auditivo_der: 'Normal',
+          conducto_auditivo_izq: 'Normal',
+          conducto_hallazgos_der: '',
+          conducto_hallazgos_izq: '',
+          oido_medio_der: 'Normal',
+          oido_medio_izq: 'Normal',
+          oido_medio_hallazgos_der: '',
+          oido_medio_hallazgos_izq: '',
+          
+          sarampion: false, hipertension: false, paperas: false,
+          meningitis: false, diabetes: false, enfermedad1: false, enfermedad2: false,
+          uso_aparat: false, ninguna_otitis: false, vertigo: false,
+          paracusias_willis: false, paracusias_weber: false, paracusias_negado: false,
+          paracusias_hipo: false, paracusias_hiper: false, fatiga: false, sensibilidad: false,
+          examen_otoscopico: '', patron: ''
+        }
+
+        // HOJA 4: Audiometría
+        this.form.hoja4 = {
+          ...this.form.hoja4,
+          tipo_audiometria: '',
+          fecha_ultima_calibracion: '',
+          exposicion_14horas: 'false', // String para radio button
+          
+          // Inicializar todos los campos de audiometría en null para que las gráficas no dibujen en 0
+          audiometria_125_der: null, audiometria_250_der: null, audiometria_500_der: null,
+          audiometria_1000_der: null, audiometria_2000_der: null, audiometria_3000_der: null,
+          audiometria_4000_der: null, audiometria_6000_der: null, audiometria_8000_der: null,
+          
+          audiometria_125_izq: null, audiometria_250_izq: null, audiometria_500_izq: null,
+          audiometria_1000_izq: null, audiometria_2000_izq: null, audiometria_3000_izq: null,
+          audiometria_4000_izq: null, audiometria_6000_izq: null, audiometria_8000_izq: null,
+          
+          via_osea_250_der: null, via_osea_500_der: null, via_osea_1000_der: null,
+          via_osea_2000_der: null, via_osea_3000_der: null, via_osea_4000_der: null,
+          via_osea_250_izq: null, via_osea_500_izq: null, via_osea_1000_izq: null,
+          via_osea_2000_izq: null, via_osea_3000_izq: null, via_osea_4000_izq: null,
+          
+          enmascarado_250_der: null, enmascarado_500_der: null, enmascarado_1000_der: null,
+          enmascarado_2000_der: null, enmascarado_3000_der: null, enmascarado_4000_der: null,
+          enmascarado_250_izq: null, enmascarado_500_izq: null, enmascarado_1000_izq: null,
+          enmascarado_2000_izq: null, enmascarado_3000_izq: null, enmascarado_4000_izq: null,
+          
+          pta_der: 0, pta_izq: 0, pta_promedio: 0,
+          clasificacion: '', interpretacion: '', tipo_hipoacusia: '',
+          restricciones: '', aptitud: '', valoracion: ''
+        }
+
+        // Sincronizar trabajador seleccionado para el Chat IA
+        this.trabajadorSeleccionado = {
+          id: this.pacienteId,
+          nombre: data.nombre,
+          empresa: this.form.hoja1.empresa_actual,
+          numero_empleado: this.form.hoja1.numero_empleado
+        }
+
+        console.log('✅ Expediente cargado y mapeado correctamente:', this.form)
+
+      } catch (error) {
+        console.error('❌ Error al obtener paciente:', error)
+        alert('Error al cargar el expediente: ' + (error.response?.data?.message || error.message))
+      } finally {
+        this.cargando = false
+      }
+    },
     seleccionarTrabajador(trabajador) {
       this.trabajadorSeleccionado = trabajador
       this.busqueda = ''
@@ -614,6 +810,20 @@ export default {
   },
 
   mounted() {
+    // 1. OBTENER EL ID DE LA URL AUTOMÁTICAMENTE
+    // Intenta tomarlo de Vue Router, si no, lo extrae de la URL del navegador (ej: "/FichaDelliAudiologia/4" -> "4")
+    this.pacienteId = this.$route?.params?.id || window.location.pathname.split('/').pop();
+
+    // 2. SI HAY UN ID, CARGAMOS LOS DATOS DEL PACIENTE
+    if (this.pacienteId && this.pacienteId !== 'FichaDelliAudiologia') {
+      this.obtenerPacientes();
+    } else {
+      // 3. SI NO HAY ID, ES UN REGISTRO NUEVO (Generar folio)
+      if (!this.form.hoja1.folio) {
+        this.form.hoja1.folio = this.folioDelli;
+      }
+    }
+
     // Auto-generar folio si es nuevo
     if (!this.form.hoja1.folio) {
       this.form.hoja1.folio = this.folioDelli

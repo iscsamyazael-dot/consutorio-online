@@ -43,7 +43,7 @@
                 <div v-for="(msg, index) in conversacion" :key="index" class="mb-3">
                   <div v-if="msg.sender === 'user'" class="direct-chat-msg">
                     <div class="direct-chat-infos clearfix">
-                      <span class="direct-chat-name float-left">👨‍⚕️ Ergonómico</span>
+                      <span class="direct-chat-name float-left">👨⚕️ Ergonómico</span>
                     </div>
                     <div class="direct-chat-text bg-success text-white">
                       {{ msg.text }}
@@ -96,7 +96,7 @@
                 </div>
               </div>
               <div v-if="archivoSeleccionado" class="mt-2 text-sm text-gray-600">
-                📎 Archivo: {{ archivoSeleccionado.name }}
+                 Archivo: {{ archivoSeleccionado.name }}
                 <button class="btn btn-sm btn-link text-danger p-0 ml-2" @click="quitarArchivo">Quitar</button>
               </div>
             </div>
@@ -254,8 +254,8 @@ import SelectorInstrumentoErgonomia from './secciones/ergonomia/SelectorInstrume
 import InstrumentoEspecificoErgonomia from './secciones/ergonomia/InstrumentoEspecifico.vue'
 import AptitudDictamenErgonomia from './secciones/ergonomia/AptitudDictamen.vue'
 
-// 3. Servicio API (ajusta la ruta si tu ApiService está en otro lugar, ej: '@/services/ApiService')
-import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo'
+// 3. Servicio API
+import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterErgonomia',
@@ -278,6 +278,7 @@ export default {
       esNuevo: false,
       esEdicion: false,
       guardando: false,
+      cargando: false, 
       escuchando: false,
       mensajeActual: '',
       archivoSeleccionado: null,
@@ -291,8 +292,11 @@ export default {
           fecha_valoracion: new Date().toISOString().split('T')[0],
           hora_valoracion: '',
           paciente_id: null,
+          nombre_paciente: '',
           empresa_cliente_id: null,
+          nombre_empresa: '',
           puesto_trabajo_id: null,
+          nombre_puesto: '',
           ergonomo_id: null,
           paciente: null
         },
@@ -320,7 +324,9 @@ export default {
           cirugias: 'no',
           cirugias_especifique: '',
           consumo_medicamentos: '',
-          alergias: ''
+          alergias: '',
+          // ✅ CORREGIDO: Agregar am_otros para antecedentes médicos
+          am_otros: ''
         },
         habitos: {
           tabaquismo: false,
@@ -457,7 +463,6 @@ export default {
       this.scrollearChat()
 
       try {
-        // Llamada al backend para procesar el mensaje o el archivo con IA
         const response = await clinicaTrabajo.consultarIAErgonomia({
           mensaje: textoEnviar,
           archivo: this.archivoSeleccionado,
@@ -480,14 +485,13 @@ export default {
         console.error('Error enviando mensaje a IA:', error)
         this.conversacion.push({
           sender: 'ia',
-          text: '❌ Disculpa, hubo un error al procesar tu solicitud o el archivo.',
+          text: ' Disculpa, hubo un error al procesar tu solicitud o el archivo.',
           timestamp: new Date()
         })
       }
     },
 
     fusionarDatosIA(nuevosDatos) {
-      // Fusiona recursivamente los datos que la IA extrae en el objeto form
       for (const seccion in nuevosDatos) {
         if (this.form[seccion]) {
           this.form[seccion] = { ...this.form[seccion], ...nuevosDatos[seccion] }
@@ -513,7 +517,6 @@ export default {
     },
 
     async guardar() {
-      // Validar campos requeridos
       if (!this.form.datosBasicos.paciente_id) {
         return alert('⚠️ Por favor selecciona un paciente en la Hoja 1.')
       }
@@ -554,41 +557,216 @@ export default {
 
     imprimir() {
       alert('🖨️ Generando vista previa para impresión en PDF...')
-      // TODO: Integrar html2pdf.js o window.print() con estilos específicos
     },
 
     async cargarDatosExistentes() {
-      // TODO: Lógica para cargar los datos si `esEdicion` es true
-      // const id = window.location.pathname.split('/').pop()
-      // const response = await clinicaTrabajo.obtenerErgonomia(id)
-      // this.form = response.data
+      const pathname = window.location.pathname;
+      const valoracionId = pathname.split('/').pop();
+
+      if (!valoracionId || isNaN(valoracionId)) {
+        console.warn('No se encontró un ID válido en la URL');
+        return;
+      }
+
+      try {
+        this.cargando = true;
+
+        // ✅ CORREGIDO: Usar endpoint de valoraciones ergonómicas
+        const response = await clinicaTrabajo.get(`/clinica/ergonomia/${valoracionId}`);
+        const data = response.data.data || response.data;
+
+        // Mapear los datos de la valoración existente al formulario
+        this.form = {
+          ...this.form,
+          datosBasicos: {
+            folio: data.folio || this.folioErgonomia,
+            tipo_evaluacion: data.tipo_evaluacion || '',
+            fecha_valoracion: data.fecha_valoracion || new Date().toISOString().split('T')[0],
+            hora_valoracion: data.hora_valoracion || '',
+            paciente_id: data.paciente_id,
+            nombre_paciente: data.paciente?.nombre || '',
+            empresa_cliente_id: data.empresa_cliente_id,
+            nombre_empresa: data.empresa_cliente?.razon_social || '',
+            puesto_trabajo_id: data.puesto_trabajo_id,
+            nombre_puesto: data.puesto_trabajo?.nombre || '',
+            ergonomo_id: data.ergonomo_id || data.medico_id,
+            paciente: data.paciente || null
+          },
+          antecedentes: {
+            ...this.form.antecedentes,
+            hf_obesidad: data.hf_obesidad || 'no',
+            hf_diabetes: data.hf_diabetes || 'no',
+            hf_hipertension: data.hf_hipertension || 'no',
+            hf_cancer: data.hf_cancer || 'no',
+            hf_nefropatia: data.hf_nefropatia || 'no',
+            hf_otros: data.hf_otros || 'no',
+            am_obesidad: data.am_obesidad || 'no',
+            am_diabetes: data.am_diabetes || 'no',
+            am_hipertension: data.am_hipertension || 'no',
+            am_dislipidemias: data.am_dislipidemias || 'no',
+            am_cardiovasculares: data.am_cardiovasculares || 'no',
+            am_renales: data.am_renales || 'no',
+            am_hepaticos: data.am_hepaticos || 'no',
+            am_musculo_esqueleticos: data.am_musculo_esqueleticos || 'no',
+            am_urologicos: data.am_urologicos || 'no',
+            am_infecciosos: data.am_infecciosos || 'no',
+            menarca_anos: data.menarca_anos || null,
+            ciclos: data.ciclos || '',
+            fum: data.fum || '',
+            metodo_planificacion: data.metodo_planificacion || '',
+            cirugias: data.cirugias || 'no',
+            cirugias_especifique: data.cirugias_especifique || '',
+            consumo_medicamentos: data.consumo_medicamentos || '',
+            alergias: data.alergias || '',
+            am_otros: data.am_otros || ''
+          },
+          habitos: {
+            ...this.form.habitos,
+            tabaquismo: data.tabaquismo || false,
+            alcoholismo: data.alcoholismo || false,
+            varia_consumo_estres: data.varia_consumo_estres || false,
+            varia_consumo_tristeza: data.varia_consumo_tristeza || false,
+            escala_fagerstrm: data.escala_fagerstrm || 0,
+            escala_audit: data.escala_audit || 0,
+            frecuencia_consumo_alcohol: data.frecuencia_consumo_alcohol || '',
+            refiere_diarrea: data.refiere_diarrea || false,
+            refiere_estrenimiento: data.refiere_estrenimiento || false,
+            refiere_gastritis: data.refiere_gastritis || false,
+            refiere_ulcera: data.refiere_ulcera || false,
+            refiere_nauseas: data.refiere_nauseas || false,
+            refiere_reflujo: data.refiere_reflujo || false,
+            refiere_vomitos: data.refiere_vomitos || false,
+            refiere_colitis: data.refiere_colitis || false
+          },
+          factoresLaborales: {
+            ...this.form.factoresLaborales,
+            tension_emocional: data.tension_emocional || 'no',
+            alta_responsabilidad: data.alta_responsabilidad || 'no',
+            carga_excesiva_trabajo: data.carga_excesiva_trabajo || 'no',
+            turno_rotativo: data.turno_rotativo || 'no',
+            turno_nocturno: data.turno_nocturno || 'no',
+            trabajo_repetitivo: data.trabajo_repetitivo || 'no',
+            condiciones_entorno: data.condiciones_entorno || 'no',
+            carga_trabajo: data.carga_trabajo || 'no',
+            falta_control_trabajo: data.falta_control_trabajo || 'no',
+            jornadas_trabajo: data.jornadas_trabajo || 'no',
+            interferencia_trabajo_familia: data.interferencia_trabajo_familia || 'no',
+            relaciones_interpersonales: data.relaciones_interpersonales || 'no',
+            violencia_laboral: data.violencia_laboral || 'no',
+            acontecimientos_traumaticos: data.acontecimientos_traumaticos || 'no'
+          },
+          examenMedico: {
+            ...this.form.examenMedico,
+            examen_medico_realizado: data.examen_medico_realizado || false,
+            seguimiento_requerido: data.seguimiento_requerido || false,
+            plazo_proximo_seguimiento: data.plazo_proximo_seguimiento || null,
+            diagnostico_ergonomico: data.diagnostico_ergonomico || '',
+            observaciones_examen: data.observaciones_examen || '',
+            recomendaciones_examen: data.recomendaciones_examen || '',
+            restricciones_laborales: data.restricciones_laborales || '',
+            derivacion_especialista: data.derivacion_especialista || '',
+            derivacion_especialista_otro: data.derivacion_especialista_otro || '',
+            hallazgos: data.hallazgos || {}
+          },
+          hallazgos: {
+            ...this.form.hallazgos,
+            rula_puntuacion: data.rula_puntuacion || null,
+            rula_nivel_riesgo: data.rula_nivel_riesgo || '',
+            reba_puntuacion: data.reba_puntuacion || null,
+            reba_nivel_accion: data.reba_nivel_accion || '',
+            niosh_indice_levantamiento: data.niosh_indice_levantamiento || null,
+            niosh_es_seguro: data.niosh_es_seguro || false,
+            posturas_forzadas: data.posturas_forzadas || false,
+            movimientos_repetitivos: data.movimientos_repetitivos || false,
+            manipulacion_cargas: data.manipulacion_cargas || false,
+            carga_maxima_manipulada_kg: data.carga_maxima_manipulada_kg || null
+          },
+          instrumento_utilizado: data.instrumento_utilizado || '',
+          otro_descripcion: data.otro_descripcion || '',
+          otro_puntuacion: data.otro_puntuacion || null,
+          aptitud: data.aptitud || '',
+          restricciones: data.restricciones || '',
+          recomendaciones: data.recomendaciones || '',
+          seguimiento_requerido: data.seguimiento_requerido || false,
+          plazo_proximo_seguimiento: data.plazo_proximo_seguimiento || null
+        };
+
+        console.log('✅ Valoración ergonómica cargada correctamente:', this.form);
+
+      } catch (error) {
+        console.error('❌ Error al cargar valoración ergonómica:', error);
+        alert('Error al cargar la valoración: ' + (error.response?.data?.message || error.message));
+        window.location.href = '/clinica/ergonomia';
+      } finally {
+        this.cargando = false;
+      }
     },
 
-    async cargarDatosIniciales() {
-      try {
-        // Cargar datos iniciales para selects
-        const [pacientesResp, empresasResp, medicosResp] = await Promise.all([
-          clinicaTrabajo.pacientes.lista(),
-          clinicaTrabajo.empresas.lista(),
-          clinicaTrabajo.medicos.lista()
-        ])
+    async cargarDatosPaciente(pacienteId) {
+      if (!pacienteId) return;
 
-        this.pacientes = pacientesResp.data || pacientesResp
-        this.empresas = empresasResp.data || empresasResp
-        this.medicos = medicosResp.data || medicosResp
+      try {
+        this.cargando = true;
+        
+        const response = await clinicaTrabajo.get(`/PacientesDetalleClinicaTrabajo/${pacienteId}`);
+        const data = response.data.data;
+        
+        const datosLaborales = data.datos_laborales || [];
+        const laboral = datosLaborales.length > 0 ? datosLaborales[datosLaborales.length - 1] : {};
+
+        this.form.datosBasicos = {
+          ...this.form.datosBasicos,
+          paciente_id: pacienteId,
+          nombre_paciente: data.nombre || '',
+          empresa_cliente_id: laboral.empresa_cliente_id || null,
+          nombre_empresa: laboral.empresa_cliente?.razon_social || '',
+          puesto_trabajo_id: laboral.puesto_trabajo_id || null,
+          nombre_puesto: laboral.puesto_trabajo?.nombre || '',
+          folio: this.folioErgonomia
+        };
+
+        // ✅ CORREGIDO: Usar propiedades que sí existen
+        if (data.alergias) {
+          this.form.antecedentes.alergias = data.alergias;
+        }
+        
+        // ✅ CORREGIDO: Usar am_otros en lugar de patologicos.otros
+        if (data.antecedentes_medicos && data.antecedentes_medicos !== 'Ninguno') {
+          this.$set(this.form.antecedentes, 'am_otros', data.antecedentes_medicos);
+        }
+
+        console.log('✅ Datos del paciente prellenados correctamente:', this.form.datosBasicos);
+
       } catch (error) {
-        console.error('Error cargando datos iniciales:', error)
+        console.error('❌ Error al cargar datos del paciente:', error);
+        alert('No se pudieron cargar los datos del paciente.');
+      } finally {
+        this.cargando = false;
       }
     }
   },
 
   mounted() {
-    this.detectarRuta()
-    this.cargarDatosIniciales()
+    this.detectarRuta();
 
     // Inicializar folio si es nuevo
     if (this.esNuevo && !this.form.datosBasicos.folio) {
-      this.form.datosBasicos.folio = this.folioErgonomia
+      this.form.datosBasicos.folio = this.folioErgonomia;
+    }
+
+    // ✅ EXTRAER ID DIRECTAMENTE DE LA URL
+    const pathname = window.location.pathname;
+    // La URL es: /clinica/ergonomia/nueva/4
+    // Queremos extraer el "4" del final
+    const partes = pathname.split('/');
+    const ultimoSegmento = partes[partes.length - 1];
+    const pacienteId = !isNaN(ultimoSegmento) ? parseInt(ultimoSegmento) : null;
+
+    if (pacienteId && this.esNuevo) {
+      console.log('🔍 ID detectado en URL:', pacienteId);
+      this.cargarDatosPaciente(pacienteId);
+    } else {
+      console.log('ℹ️ No se detectó ID válido en la URL o no es modo nuevo');
     }
   }
 }
@@ -601,7 +779,6 @@ export default {
   padding: 15px;
 }
 
-/* Chat styling (AdminLTE / Bootstrap compatible) */
 .direct-chat-msg {
   margin-right: 0;
   margin-left: 0;
@@ -659,7 +836,6 @@ export default {
   100% { opacity: 1; }
 }
 
-/* Tabs styling */
 .nav-tabs {
   border-bottom: 2px solid #dee2e6;
 }

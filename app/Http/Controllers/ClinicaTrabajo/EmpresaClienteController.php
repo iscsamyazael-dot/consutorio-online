@@ -12,7 +12,6 @@ class EmpresaClienteController extends Controller
 {
     public function index(Request $request)
     {
-        // Lista compacta para los selects de los formularios
         if ($request->boolean('select')) {
             $empresas = EmpresaCliente::where('activo', 1)
                 ->orderBy('razon_social')
@@ -41,12 +40,6 @@ class EmpresaClienteController extends Controller
         return response()->json($empresas);
     }
 
-    // Pendiente de definir: JSON o vista Blade
-    public function create()
-    {
-        return response()->json(['message' => 'Pendiente de definir.'], 501);
-    }
-
     public function store(Request $request)
     {
         $request->validate([
@@ -61,6 +54,8 @@ class EmpresaClienteController extends Controller
             'puestos'           => 'nullable|array',
             'puestos.*.id'      => 'nullable|integer',
             'puestos.*.nombre'  => 'required|string|max:255',
+            // ✅ AGREGADO: Validación del departamento
+            'puestos.*.departamento' => 'nullable|string|max:150',
         ]);
 
         try {
@@ -95,10 +90,7 @@ class EmpresaClienteController extends Controller
     }
 
     /**
-     * Crea, renombra y da de baja puestos de la empresa.
-     * Solo actúa si el request trae la llave "puestos".
-     * Los puestos que ya no vienen se desactivan, no se borran,
-     * porque pueden tener asignaciones de pacientes.
+     * Crea, actualiza y da de baja puestos de la empresa.
      */
     private function sincronizarPuestos(EmpresaCliente $empresa, Request $request): void
     {
@@ -109,19 +101,33 @@ class EmpresaClienteController extends Controller
         $idsConservados = [];
 
         foreach ($request->input('puestos', []) as $p) {
+            // ✅ AGREGADO: Extraer departamento con fallback a string vacío
+            $departamento = trim($p['departamento'] ?? '');
+
             if (!empty($p['id'])) {
                 $puesto = $empresa->puestosTrabajo()->find($p['id']);
                 if ($puesto) {
-                    $puesto->update(['nombre' => $p['nombre'], 'activo' => 1]);
+                    // ✅ AGREGADO: Actualizar también el departamento
+                    $puesto->update([
+                        'nombre'       => trim($p['nombre']),
+                        'departamento' => $departamento,
+                        'activo'       => 1
+                    ]);
                     $idsConservados[] = $puesto->id;
                 }
             } else {
+                // ✅ AGREGADO: Crear también con el departamento
                 $idsConservados[] = $empresa->puestosTrabajo()
-                    ->create(['nombre' => $p['nombre'], 'activo' => 1])
+                    ->create([
+                        'nombre'       => trim($p['nombre']),
+                        'departamento' => $departamento,
+                        'activo'       => 1
+                    ])
                     ->id;
             }
         }
 
+        // Desactivar puestos que ya no están en la lista
         $empresa->puestosTrabajo()
             ->where('activo', 1)
             ->whereNotIn('id', $idsConservados)
@@ -135,12 +141,6 @@ class EmpresaClienteController extends Controller
         ])->findOrFail($id);
 
         return response()->json($empresa);
-    }
-
-    // Pendiente de definir: JSON o vista Blade
-    public function edit($id)
-    {
-        return response()->json(['message' => 'Pendiente de definir.'], 501);
     }
 
     public function update(Request $request, $id)
@@ -157,6 +157,8 @@ class EmpresaClienteController extends Controller
             'puestos'           => 'nullable|array',
             'puestos.*.id'      => 'nullable|integer',
             'puestos.*.nombre'  => 'required|string|max:255',
+            // ✅ AGREGADO: Validación del departamento
+            'puestos.*.departamento' => 'nullable|string|max:150',
         ]);
 
         try {
@@ -194,7 +196,6 @@ class EmpresaClienteController extends Controller
         }
     }
 
-    // Baja lógica: la empresa se conserva porque puede tener datos laborales asociados
     public function destroy($id)
     {
         $empresa = EmpresaCliente::find($id);

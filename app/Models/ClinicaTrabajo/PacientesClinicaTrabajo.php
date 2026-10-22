@@ -74,6 +74,11 @@ class PacientesClinicaTrabajo extends Model
         'deleted_at' => 'datetime',
     ];
 
+    // ✅ 1. AGREGADO: Indica a Laravel que incluya este atributo virtual en el JSON
+    protected $appends = [
+        'edad_formateada'
+    ];
+
     /**
      * Relación con el paciente original (si existe)
      */
@@ -147,5 +152,20 @@ class PacientesClinicaTrabajo extends Model
             'Mujer' => 'Femenino',
             default => null,
         };
+    }
+
+    // ✅ 2. AGREGADO: El accesor que calcula la edad automáticamente
+    /**
+     * Obtiene la edad calculada a partir de la fecha de nacimiento.
+     */
+    public function getEdadFormateadaAttribute(): string
+    {
+        // Como 'fecha_nacimiento' ya está en $casts como 'date', 
+        // Laravel ya lo trata como un objeto Carbon.
+        if (!$this->fecha_nacimiento) {
+            return 'N/A';
+        }
+        
+        return $this->fecha_nacimiento->age . ' años';
     }
 }

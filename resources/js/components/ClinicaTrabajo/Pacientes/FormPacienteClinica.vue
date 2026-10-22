@@ -76,7 +76,8 @@
           ref="tabDatosLaborales"
           :pacienteId="pacienteId"
           :empresas="empresas"
-          :asignaciones="asignaciones"
+          :asignaciones="datosPaciente.datos_laborales || []"
+          :initialData="datosPaciente"
           :modoInicial="modoInicial"
           @asignacion-creada="onAsignacionCreada"
           @asignacion-eliminada="onAsignacionEliminada" />
@@ -85,16 +86,16 @@
 
     <!-- Botón Guardar Flotante -->
     <div class="floating-save-btn">
-      <button @click="handleSubmit" class="btn-save">
+      <button @click="handleSubmit" :disabled="guardando" class="btn-save">
         <i class="fas fa-save"></i>
-        <span>Guardar Paciente</span>
+        <span>{{ guardando ? 'Guardando...' : 'Guardar Paciente' }}</span>
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import apiClient from '@/services/ApiServiceClinicaTrabajo'
 import Swal from 'sweetalert2'
 import TabDatosPersonales from './TabDatosPersonales.vue'
@@ -106,13 +107,26 @@ const props = defineProps({
   pacienteId: { type: [Number, String], default: 0 }
 })
 
+// Llaves que el backend maneja solo en lectura o por relación; nunca se envían en el payload
+const CAMPOS_NO_EDITABLES = [
+  'id', 'folio', 'created_at', 'updated_at', 'deleted_at',
+  'paciente_origen_id', 'datos_laborales', 'accidentes_trabajo',
+  'historial_puestos', 'valoraciones_ocupacionales', 'paciente_origen',
+  'edad_formateada', 'edad_inicio_vida_laboral', 'foto'
+]
+
+const limpiarPayload = (obj) =>
+  Object.fromEntries(Object.entries(obj).filter(([k]) => !CAMPOS_NO_EDITABLES.includes(k)))
+
+const RUTA_LISTA_PACIENTES = '/ListaPacientesClinicaTrabajo'
+
 const pacienteId = ref(Number(props.pacienteId) || 0)
 const modoInicial = ref(pacienteId.value > 0 ? 'edicion' : 'alta')
 const datosPaciente = ref({})
 const empresas = ref([])
 const asignaciones = ref([])
+const guardando = ref(false)
 
-// ✅ CORREGIDO: Refs a los componentes hijos para extraer sus datos
 const tabDatosPersonales = ref(null)
 const tabContactoEmergencia = ref(null)
 const tabDatosMedicos = ref(null)
@@ -129,7 +143,18 @@ onMounted(async () => {
 const cargarPaciente = async () => {
   try {
     const respuesta = await apiClient.get('/clinica-trabajo-pacientes/' + pacienteId.value)
-    datosPaciente.value = respuesta.data.data || respuesta.data || {}
+    const data = respuesta.data.data || respuesta.data || {}
+
+    // El .split('T')[0] toma solo la parte "YYYY-MM-DD" y descarta la hora
+    if (data.fecha_nacimiento) {
+      data.fecha_nacimiento = data.fecha_nacimiento.split('T')[0]
+    }
+
+    if (data.fecha_ultima_consulta_medica) {
+      data.fecha_ultima_consulta_medica = data.fecha_ultima_consulta_medica.split('T')[0]
+    }
+
+    datosPaciente.value = data
   } catch (error) {
     console.error('Error cargando paciente:', error)
   }
@@ -171,33 +196,37 @@ const onAsignacionEliminada = (id) => {
   asignaciones.value = asignaciones.value.filter(a => a.id !== id)
 }
 
+const irAListaPacientes = () => {
+  window.location.href = RUTA_LISTA_PACIENTES
+}
+
 const handleSubmit = async (e) => {
-  e.preventDefault()
-
-  // ✅ CORREGIDO: Recolectar datos REALES de los hijos usando getFormData()
-  // La foto (File) no viaja en el JSON; se resuelve al corregir TabDatosPersonales.
-  const { foto, ...datosPersonales } = tabDatosPersonales.value.getFormData()
-  const payload = {
-    ...datosPersonales,
-    ...tabContactoEmergencia.value.getFormData(),
-    ...tabDatosMedicos.value.getFormData(),
-  }
-
-  // ✅ CORREGIDO: Si es alta, incluir asignación laboral si el usuario la llenó
-  if (modoInicial.value === 'alta') {
-    const laborData = tabDatosLaborales.value.getFormData()
-    if (laborData.empresa_cliente_id) {
-      payload.asignacion = laborData
-    }
-  }
+  e?.preventDefault?.()
+  if (guardando.value) return
+  guardando.value = true
 
   try {
+    // La foto (File) no viaja en el JSON; se resuelve al corregir TabDatosPersonales.
+    const { foto, ...datosPersonales } = tabDatosPersonales.value.getFormData()
+
+    const payload = limpiarPayload({
+      ...datosPersonales,
+      ...tabContactoEmergencia.value.getFormData(),
+      ...tabDatosMedicos.value.getFormData(),
+    })
+
+    // Laboral: se envía en alta y edición, solo si hay empresa o hay un registro que desvincular
+    const laborData = tabDatosLaborales.value.getFormData()
+    if (laborData.empresa_cliente_id || laborData.id) {
+      payload.asignacion = laborData
+    }
+
     if (modoInicial.value === 'alta') {
       const respuesta = await apiClient.post('/clinica-trabajo-pacientes', payload)
       pacienteId.value = respuesta.data.data?.id || pacienteId.value
       modoInicial.value = 'edicion'
 
-      Swal.fire({
+      await Swal.fire({
         title: '¡Éxito!',
         text: 'Paciente creado correctamente',
         icon: 'success',
@@ -205,25 +234,29 @@ const handleSubmit = async (e) => {
       })
     } else {
       await apiClient.put(`/clinica-trabajo-pacientes/${pacienteId.value}`, payload)
-      Swal.fire({
+
+      await Swal.fire({
         title: '¡Éxito!',
         text: 'Paciente actualizado correctamente',
         icon: 'success',
         confirmButtonText: 'Aceptar'
       })
     }
+
+    irAListaPacientes()
   } catch (error) {
-    if (error.response && error.response.status === 422) {
+    if (error.response?.status === 422) {
+      const errores = error.response.data?.errors
       Swal.fire({
         title: 'Error de validación',
-        text: error.response.data.message || 'Verifica los campos resaltados',
+        text: errores ? Object.values(errores).flat().join(', ') : (error.response.data?.message || 'Verifica los campos resaltados'),
         icon: 'error',
         confirmButtonText: 'Aceptar'
       })
-    } else if (error.response && error.response.status === 409) {
+    } else if (error.response?.status === 409) {
       Swal.fire({
         title: 'Error',
-        text: error.response.data.message || 'No se pudo generar el folio, intenta de nuevo',
+        text: error.response.data?.message || 'No se pudo generar el folio, intenta de nuevo',
         icon: 'error',
         confirmButtonText: 'Aceptar'
       })
@@ -235,11 +268,10 @@ const handleSubmit = async (e) => {
         confirmButtonText: 'Aceptar'
       })
     }
+  } finally {
+    guardando.value = false
   }
 }
-
-// ✅ ELIMINADAS: Las funciones fetchDatos... que devolvían valores vacíos
-// Ya no son necesarias porque usamos getFormData() de los hijos
 
 defineExpose({ handleSubmit })
 </script>
@@ -252,7 +284,6 @@ defineExpose({ handleSubmit })
   position: relative;
 }
 
-/* Header Banner */
 .registro-header {
   background: linear-gradient(135deg, #0061f2 0%, #00ba94 100%);
   border-radius: 16px;
@@ -313,7 +344,6 @@ defineExpose({ handleSubmit })
   color: white;
 }
 
-/* Tabs Container */
 .tabs-container {
   background: white;
   border-radius: 12px;
@@ -365,7 +395,6 @@ defineExpose({ handleSubmit })
   font-size: 15px;
 }
 
-/* Tab Content */
 .custom-tab-content {
   background: white;
   border-radius: 12px;
@@ -374,7 +403,6 @@ defineExpose({ handleSubmit })
   min-height: 500px;
 }
 
-/* Floating Save Button */
 .floating-save-btn {
   position: fixed;
   bottom: 30px;
@@ -401,6 +429,12 @@ defineExpose({ handleSubmit })
 .btn-save:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 97, 242, 0.5);
+}
+
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-save i {

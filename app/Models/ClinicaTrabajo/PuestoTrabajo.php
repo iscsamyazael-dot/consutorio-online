@@ -17,6 +17,7 @@ class PuestoTrabajo extends Model
     protected $fillable = [
         'empresa_cliente_id',
         'nombre',
+        'departamento',
         'descripcion_actividades',
         'riesgo_ergonomico',
         'riesgo_psicosocial',

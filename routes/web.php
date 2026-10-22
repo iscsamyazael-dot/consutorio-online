@@ -64,9 +64,7 @@ Route::middleware('auth')->group(function () {
             return view('clinica-trabajo.Psicologia');
         })->name('clinica.psicologia.index');
         
-        Route::get('/clinica/psicologia/nueva', function () {
-            return view('clinica-trabajo.Psicologia');
-        })->name('clinica.psicologia.create');
+        
         
         Route::get('/clinica/psicologia/{id}', function () {
             return view('clinica-trabajo.Psicologia');
@@ -87,9 +85,7 @@ Route::middleware('auth')->group(function () {
             return view('clinica-trabajo.Nutricion');
         })->name('clinica.nutricion.index');
         
-        Route::get('/clinica/nutricion/nueva', function () {
-            return view('clinica-trabajo.Nutricion');
-        })->name('clinica.nutricion.create');
+       
         
         Route::get('/clinica/nutricion/{id}', function () {
             return view('clinica-trabajo.Nutricion');
@@ -110,23 +106,11 @@ Route::middleware('auth')->group(function () {
             return view('clinica-trabajo.Ergonomia');
         })->name('clinica.ergonomia.index');
         
-        Route::get('/clinica/ergonomia/nueva', function () {
-            return view('clinica-trabajo.Ergonomia');
-        })->name('clinica.ergonomia.create');
+        
         
         Route::get('/clinica/ergonomia/{id}', function () {
             return view('clinica-trabajo.Ergonomia');
         })->name('clinica.ergonomia.show');
-
-        // API PARA ERGONOMÍA (JSON)
-        Route::prefix('api/clinica/ergonomia')->name('api.ergonomia.')->group(function () {
-            Route::get('/', [ValoracionErgonomicaController::class, 'index'])->name('index');
-            Route::get('{id}', [ValoracionErgonomicaController::class, 'show'])->name('show');
-            Route::post('/', [ValoracionErgonomicaController::class, 'store'])->name('store');
-            Route::put('{id}', [ValoracionErgonomicaController::class, 'update'])->name('update');
-            Route::delete('{id}', [ValoracionErgonomicaController::class, 'destroy'])->name('destroy');
-            Route::get('{id}/imprimir', [ValoracionErgonomicaController::class, 'imprimir'])->name('imprimir');
-        });
 
         // PSICOLOGÍA
         Route::prefix('clinica/psicologia')->name('psicologia.')->group(function () {
@@ -545,6 +529,10 @@ Route::middleware('auth')->group(function () {
             Route::resource('clinica-trabajo-DatosLaborales', DatosLaboralClinicaTrabajoController::class);
             Route::get('clinica-trabajo-pacientes/{id}/restaurar', [PacientesClinicaTrabajoController::class, 'restore'])->name('clinica-trabajo-pacientes.restore');
             Route::delete('clinica-trabajo-pacientes/{id}/forzar-eliminacion', [PacientesClinicaTrabajoController::class, 'forceDelete'])->name('clinica-trabajo-pacientes.forceDelete');
+            Route::get('clinica-trabajo-TotalPacientesyPendientes', [PacientesClinicaTrabajoController::class, 'TotalPacientesyPendientes'])->name('clinica-trabajo-TotalPacientesyPendientes');
+            Route::get('ActualizarPaciente/{id?}', [PacientesClinicaTrabajoController::class, 'create'])->name('clinica-trabajo.RegistroPaciente');
+            Route::get('ExpedienteDetalleClinicaTrabajo/{id}', [PacientesClinicaTrabajoController::class, 'show'])->name('ExpedienteDetalleClinicaTrabajo');
+            Route::get('PacientesDetalleClinicaTrabajo/{id}', [PacientesClinicaTrabajoController::class, 'show'])->name('PacientesDetalleClinicaTrabajo');
         });
 
 
@@ -637,6 +625,20 @@ Route::middleware('auth')->group(function () {
             Route::get('ficha-espirometria/{id}', function() { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria.show');
             Route::get('RegistroEmpresas', function() { return view('clinica-trabajo.EmpresasCliente'); })->name('clinica-trabajo.EmpresasCliente');
             Route::get('RegistroPacientesClinicaTrabajo', function() { return view('clinica-trabajo.RegistroPaciente'); })->name('clinica-trabajo.RegistroPaciente');
+            Route::get('ListaPacientesClinicaTrabajo', function() { return view('clinica-trabajo.ListaPaciente'); })->name('clinica-trabajo.ListaPaciente');
+            Route::get('/clinica/psicologia/nueva', function () { return view('clinica-trabajo.Psicologia'); })->name('clinica.psicologia.create');
+            Route::get('ExpedientePacientesClinicaTrabajo/{id}', function($id) { return view('clinica-trabajo.ExpedientePacientes'); })->name('clinica-trabajo.ExpedientePacientes');
+            Route::get('/clinica/ergonomia/nueva', function () { return view('clinica-trabajo.Ergonomia'); })->name('clinica.ergonomia.create');
+            Route::get('ficha-nutricion', function () { return view('clinica-trabajo.Nutricion'); })->name('clinica.Nutricion');
+
+            //RUTA PARA ABRIR LAS VISTAS DESDE EL EXPEDIENTE MEDICO LABORAL//
+            Route::get('FichaDelliAudiologia/{id}', function($id) { return view('clinica-trabajo.delli-index'); })->name('clinica-trabajo.delli-index');
+            Route::get('FichaTrabajoAltoRiesgo/{id}', function($id) { return view('clinica-trabajo.tr-index'); })->name('clinica-trabajo.delli-index');
+            Route::get('ficha-espirometria/{id}', function($id) { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria');
+            Route::get('clinica/ergonomia/nueva/{id}', function($id) { return view('clinica-trabajo.Ergonomia'); })->name('clinica-trabajo.Ergonomia');
+            Route::get('ficha-nutricion/{id}', function($id) { return view('clinica-trabajo.Nutricion'); })->name('clinica-trabajo.Nutricion');
+            Route::get('clinica/psicologia/nueva/{id}', function($id) { return view('clinica-trabajo.Psicologia'); })->name('clinica.psicologia.create');
+            Route::get('ficha-ocupacional/{id}', function($id) { return view('clinica-trabajo.Medicina'); })->name('clinica-trabajo.Medicina');
         });
 
 });

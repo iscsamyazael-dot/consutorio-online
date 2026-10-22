@@ -95,7 +95,6 @@
         </label>
         <div class="radio-group">
           <label class="radio-option">
-            <!-- ✅ CORREGIDO: Usar :value para mantener el tipo booleano -->
             <input type="radio" v-model="form.transfusion_sanguinea" :value="true">
             <span class="radio-label">Sí</span>
           </label>
@@ -106,7 +105,6 @@
         </div>
       </div>
 
-      <!-- ✅ CORREGIDO: Comparación con booleano true en lugar de string 'true' -->
       <div v-if="form.transfusion_sanguinea === true" class="form-group full-width">
         <label class="form-label">
           <i class="fas fa-info-circle"></i>
@@ -223,6 +221,16 @@ const props = defineProps({
   initialData: { type: Object, default: () => ({}) }
 })
 
+// Solo los campos que este tab edita
+const CAMPOS = [
+  'tipo_sangre', 'rh', 'alergias', 'alergia_medicamentos',
+  'transfusion_sanguinea', 'transfusion_detalle',
+  'antecedentes_medicos', 'antecedentes_quirurgicos',
+  'enfermedades_cronicas', 'medicamentos_actuales',
+  'fecha_ultima_consulta_medica', 'motivo_ultima_consulta_medica',
+  'notas_generales'
+]
+
 const form = ref({
   tipo_sangre: '', rh: '', alergias: '', alergia_medicamentos: '',
   transfusion_sanguinea: false, transfusion_detalle: '',
@@ -233,9 +241,10 @@ const form = ref({
 })
 
 watch(() => props.initialData, (newData) => {
-  if (newData && Object.keys(newData).length > 0) {
-    form.value = { ...form.value, ...newData }
-  }
+  if (!newData || Object.keys(newData).length === 0) return
+  CAMPOS.forEach(campo => {
+    if (newData[campo] !== undefined) form.value[campo] = newData[campo]
+  })
 }, { immediate: true })
 
 defineExpose({ getFormData: () => form.value })

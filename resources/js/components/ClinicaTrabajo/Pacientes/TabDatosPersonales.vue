@@ -126,7 +126,6 @@
     </div>
 
     <div class="form-grid">
-      <!-- ✅ Ahora en 2 columnas -->
       <div class="form-group">
         <label class="form-label">
           <i class="fas fa-fingerprint"></i>
@@ -206,6 +205,13 @@ const props = defineProps({
   initialData: { type: Object, default: () => ({}) }
 })
 
+// Solo los campos que este tab edita
+const CAMPOS = [
+  'nombre', 'fecha_nacimiento', 'genero', 'estado_civil',
+  'escolaridad', 'lugar_nacimiento', 'curp', 'cedula_profesional',
+  'consentimiento_datos'
+]
+
 const form = ref({
   nombre: '', fecha_nacimiento: '', genero: '', estado_civil: '',
   escolaridad: '', lugar_nacimiento: '', curp: '', cedula_profesional: '',
@@ -213,9 +219,10 @@ const form = ref({
 })
 
 watch(() => props.initialData, (newData) => {
-  if (newData && Object.keys(newData).length > 0) {
-    form.value = { ...form.value, ...newData }
-  }
+  if (!newData || Object.keys(newData).length === 0) return
+  CAMPOS.forEach(campo => {
+    if (newData[campo] !== undefined) form.value[campo] = newData[campo]
+  })
 }, { immediate: true })
 
 const edadCalculada = computed(() => {

@@ -16,9 +16,9 @@
           <div class="card-body">
             <div class="row align-items-end">
               <div class="col-md-8 mb-3">
-                <label class="font-weight-bold">Seleccionar PDF del Informe</label>
+                <label class="font-weight-bold">Seleccionar informe (PDF o Excel)</label>
                 <div class="custom-file">
-                  <input type="file" class="custom-file-input" id="archivoEspirometria" accept=".pdf" @change="seleccionarArchivo">
+                  <input type="file" class="custom-file-input" id="archivoEspirometria" accept=".pdf,.xls,.xlsx" @change="seleccionarArchivo">
                   <label class="custom-file-label" for="archivoEspirometria">{{ nombreArchivo || 'Elegir archivo...' }}</label>
                 </div>
                 <small class="text-muted d-block mt-1">
@@ -36,6 +36,12 @@
             <div v-if="mensajeIA" class="alert mt-3" :class="exitoIA ? 'alert-success' : 'alert-danger'">
               <i :class="exitoIA ? 'fas fa-check-circle' : 'fas fa-exclamation-triangle'" class="mr-2"></i>
               {{ mensajeIA }}
+            </div>
+            <div v-if="advertencias.length" class="alert alert-warning mt-3">
+              <strong><i class="fas fa-exclamation-circle mr-1"></i>Revisa antes de guardar:</strong>
+              <ul class="mb-0 mt-2 pl-3">
+                <li v-for="(adv, i) in advertencias" :key="i">{{ adv }}</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -86,6 +92,7 @@
                 <th class="text-center" rowspan="2" style="vertical-align: middle;">Unidad</th>
                 <th class="text-center" rowspan="2" style="vertical-align: middle;">Pred</th>
                 <th class="text-center" rowspan="2" style="vertical-align: middle;">LLN</th>
+                <th class="text-center" rowspan="2" style="vertical-align: middle;">Puntuación Z</th>
                 <th class="text-center bg-blue-50" rowspan="2" style="vertical-align: middle;">Mejor</th>
                 <th class="text-center" :colspan="maniobrasOrdenadas.length">Maniobras</th>
                 <th class="text-center" rowspan="2" style="vertical-align: middle;">%Pred</th>
@@ -112,6 +119,7 @@
                 <td class="text-center">
                   <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fvc_lln, dec: 2 }" @input="setDec(localForm, 'fvc_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
+                <td class="text-center">{{ fmt(localForm.fvc_z, 2) || '—' }}</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fvc, 2) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fvc-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fvc_l') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fvc_l, dec: 2 }" @input="setDec(maniobra, 'fvc_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -129,6 +137,7 @@
                 <td class="text-center">
                   <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_lln, dec: 2 }" @input="setDec(localForm, 'fev1_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
+                <td class="text-center">{{ fmt(localForm.fev1_z, 2) || '—' }}</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fev1, 2) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fev1-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fev1_l') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fev1_l, dec: 2 }" @input="setDec(maniobra, 'fev1_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -141,14 +150,15 @@
                 <td class="font-weight-bold">FEV1/FVC</td>
                 <td class="text-center text-muted small">—</td>
                 <td class="text-center">
-                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_fvc_pred, dec: 3 }" @input="setDec(localForm, 'fev1_fvc_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_fvc_pred, dec: 1 }" @input="setDec(localForm, 'fev1_fvc_pred', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
                 <td class="text-center">
-                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_fvc_lln, dec: 3 }" @input="setDec(localForm, 'fev1_fvc_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                  <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fev1_fvc_lln, dec: 1 }" @input="setDec(localForm, 'fev1_fvc_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
-                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fev1_fvc, 3) || '—' }}</td>
+                <td class="text-center">{{ fmt(localForm.fev1_fvc_z, 2) || '—' }}</td>
+                <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fev1_fvc, 1) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'ratio-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fev1_fvc_ratio') }">
-                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fev1_fvc_ratio, dec: 3 }" @input="setDec(maniobra, 'fev1_fvc_ratio', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
+                  <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fev1_fvc_ratio, dec: 1 }" @input="setDec(maniobra, 'fev1_fvc_ratio', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
                 <td class="text-center font-weight-bold" :class="getColorPorcentaje('fev1_fvc')">{{ localForm.fev1_fvc_porcentaje_predicho || '—' }}%</td>
               </tr>
@@ -163,6 +173,7 @@
                 <td class="text-center">
                   <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fef25_75_lln, dec: 2 }" @input="setDec(localForm, 'fef25_75_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
+                <td class="text-center">{{ fmt(localForm.fef25_75_z, 2) || '—' }}</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fef25_75, 2) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fef-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fef25_75') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fef25_75, dec: 2 }" @input="setDec(maniobra, 'fef25_75', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -180,6 +191,7 @@
                 <td class="text-center">
                   <input type="text" inputmode="decimal" v-dec="{ valor: localForm.pef_lln, dec: 2 }" @input="setDec(localForm, 'pef_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
+                <td class="text-center">{{ fmt(localForm.pef_z, 2) || '—' }}</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_pef, 2) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'pef-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'pef_l_s') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.pef_l_s, dec: 2 }" @input="setDec(maniobra, 'pef_l_s', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -193,6 +205,7 @@
                 <td class="text-center text-muted small">s</td>
                 <td class="text-center">—</td>
                 <td class="text-center">—</td>
+                <td class="text-center text-muted">—</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fet, 1) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fet-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fet_s') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fet_s, dec: 1 }" @input="setDec(maniobra, 'fet_s', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -215,6 +228,7 @@
                 <td class="text-center">
                   <input type="text" inputmode="decimal" v-dec="{ valor: localForm.fvc_lln, dec: 2 }" class="form-control form-control-sm text-center" style="height: 34px;" readonly />
                 </td>
+                <td class="text-center">{{ fmt(localForm.fivc_z, 2) || '—' }}</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_fivc, 2) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'fivc-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'fivc_l') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.fivc_l, dec: 2 }" @input="setDec(maniobra, 'fivc_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -232,6 +246,7 @@
                 <td class="text-center">
                   <input type="text" inputmode="decimal" v-dec="{ valor: localForm.pif_lln, dec: 2 }" @input="setDec(localForm, 'pif_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
+                <td class="text-center text-muted">—</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_pif, 2) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'pif-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'pif_l_s') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.pif_l_s, dec: 2 }" @input="setDec(maniobra, 'pif_l_s', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -249,6 +264,7 @@
                 <td class="text-center">
                   <input type="text" inputmode="decimal" v-dec="{ valor: localForm.eotv_lln, dec: 2 }" @input="setDec(localForm, 'eotv_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
+                <td class="text-center text-muted">—</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_eotv, 2) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'eotv-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'eotv_l') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.eotv_l, dec: 2 }" @input="setDec(maniobra, 'eotv_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -266,6 +282,7 @@
                 <td class="text-center">
                   <input type="text" inputmode="decimal" v-dec="{ valor: localForm.bev_lln, dec: 2 }" @input="setDec(localForm, 'bev_lln', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
                 </td>
+                <td class="text-center text-muted">—</td>
                 <td class="text-center bg-blue-50 font-weight-bold text-blue-700">{{ fmt(localForm.mejor_bev, 2) || '—' }}</td>
                 <td class="text-center" v-for="(maniobra, index) in maniobrasOrdenadasDesc" :key="'bev-'+index" :class="{ 'celda-marcada': esMarcado(maniobra, 'bev_l') }">
                   <input type="text" inputmode="decimal" v-dec="{ valor: maniobra.bev_l, dec: 2 }" @input="setDec(maniobra, 'bev_l', $event.target.value)" class="form-control form-control-sm text-center" style="height: 34px;" />
@@ -338,13 +355,32 @@
               </div>
             </div>
 
+            <!-- Puntuación Z por parámetro, con LLN, predicho y ULN (como el informe ndd) -->
+            <div class="mb-3">
+              <h6 class="titulo-grafica">Puntuación Z por parámetro</h6>
+              <p v-if="!hayZ" class="text-muted small text-center mb-2">
+                El informe no trae puntuación Z, por eso no se dibuja esta gráfica.
+              </p>
+              <div v-show="hayZ" style="position: relative; height: 260px;">
+                <canvas ref="canvasZ"></canvas>
+              </div>
+              <div v-show="hayZ" class="text-center mt-2 text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-primary" @click="construirGraficas">
+                  <i class="fas fa-redo mr-1"></i>Regenerar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success ml-2" @click="descargarGrafica('z')">
+                  <i class="fas fa-download mr-1"></i>PNG
+                </button>
+              </div>
+            </div>
+
             <!-- Leyenda y nota, en el mismo estilo que la leyenda ISO del audiómetro -->
             <div class="leyenda-graficas">
               <div class="leyenda-graficas-titulo">Leyenda de las gráficas</div>
               <div class="row">
                 <div class="col-md-6">
                   <div><span class="sw sw-mejor"></span> Prueba Mejor (línea azul continua)</div>
-                  <div><span class="sw sw-prueba"></span> Otras pruebas (línea verde punteada)</div>
+                  <div><span class="sw sw-prueba"></span> Otras pruebas (línea azul punteada)</div>
                 </div>
                 <div class="col-md-6">
                   <div><span class="sw sw-predicho"></span> Predicho (línea gris punteada)</div>
@@ -391,8 +427,9 @@
                 <span :class="getCalidadClass()" class="font-weight-bold">
                   {{ calidadSesion || '—' }}
                 </span>
+                <small class="text-muted ml-3">FEV1 {{ localForm.calidad_fev1 || '—' }} · FVC {{ localForm.calidad_fvc || '—' }}</small>
               </div>
-              <small class="text-muted d-block mt-1">Grado A, B, C, D o F según ATS/ERS</small>
+              <small class="text-muted d-block mt-1">Grado A a F (U = usable), según ATS/ERS 2019. General = peor de FEV1 y FVC.</small>
             </div>
           </div>
 
@@ -441,11 +478,133 @@ function numValido(valor) {
   return Number.isFinite(n) ? n : null
 }
 
+// FEV1/FVC: el PDF lo trae como fracción (0.779) y el Excel como porcentaje (73.8).
+// Si el valor es ≤ 1 se pasa a porcentaje; si ya es porcentaje, se deja igual.
+function aPorcentaje(valor) {
+  if (valor === null || valor === undefined || valor === '') return null
+  const n = Number(valor)
+  if (!Number.isFinite(n)) return null
+  return n <= 1 ? parseFloat((n * 100).toFixed(1)) : n
+}
+
 // ---------- Gráficas ----------
 
 const COLOR_MEJOR = '#1F3FA0'
-const COLOR_PRUEBA = '#16A34A'
+const COLOR_PRUEBA = '#5B8DEF'
 const COLOR_PREDICHO = '#9AA5B1'
+
+// Puntuación Z: parámetros en orden de aparición en el informe (de arriba hacia abajo)
+const ZONAS_Z = [
+  { etiqueta: 'FVC', campo: 'fvc_z' },
+  { etiqueta: 'FEV1', campo: 'fev1_z' },
+  { etiqueta: 'FEV1/FVC', campo: 'fev1_fvc_z' },
+  { etiqueta: 'FEF25-75', campo: 'fef25_75_z' },
+  { etiqueta: 'PEF', campo: 'pef_z' },
+  { etiqueta: 'FIVC', campo: 'fivc_z' }
+]
+const LLN_Z = -1.645
+const ULN_Z = 1.645
+
+// Dibuja las zonas de color, las líneas de LLN, predicho (0) y ULN, y las etiquetas de cada parámetro
+const plantillaZ = {
+  id: 'plantillaZ',
+  beforeDatasetsDraw(chart) {
+    const { ctx, chartArea: a, scales: { x, y } } = chart
+    if (!a) return
+    const px = v => x.getPixelForValue(v)
+    const py = v => y.getPixelForValue(v)
+
+    ctx.save()
+
+    // Zona anormal (izquierda del LLN): degradado rojo → amarillo; zona normal: verde claro
+    const degradado = ctx.createLinearGradient(px(x.min), 0, px(LLN_Z), 0)
+    degradado.addColorStop(0, '#E07A5F')
+    degradado.addColorStop(1, '#FFD98A')
+    ctx.fillStyle = degradado
+    ctx.fillRect(px(x.min), a.top, px(LLN_Z) - px(x.min), a.bottom - a.top)
+    ctx.fillStyle = '#E2F2D5'
+    ctx.fillRect(px(LLN_Z), a.top, px(x.max) - px(LLN_Z), a.bottom - a.top)
+
+    // Separadores entre parámetros
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'
+    ctx.lineWidth = 1
+    for (let k = 0; k <= ZONAS_Z.length; k++) {
+      const yLinea = py(ZONAS_Z.length - 0.5 - k)
+      ctx.beginPath()
+      ctx.moveTo(a.left, yLinea)
+      ctx.lineTo(a.right, yLinea)
+      ctx.stroke()
+    }
+
+    // Líneas verticales negras: LLN, predicho (0) y ULN
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 3
+    for (const v of [LLN_Z, 0, ULN_Z]) {
+      ctx.beginPath()
+      ctx.moveTo(px(v), a.top)
+      ctx.lineTo(px(v), a.bottom)
+      ctx.stroke()
+    }
+
+    // Etiquetas: encabezados arriba y nombre de cada parámetro a la izquierda
+    ctx.fillStyle = '#000'
+    ctx.font = '12px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('LLN', px(LLN_Z), a.top - 6)
+    ctx.fillText('predicho', px(0), a.top - 6)
+    ctx.textAlign = 'right'
+    ZONAS_Z.forEach((zona, i) => {
+      ctx.fillText(zona.etiqueta, a.left - 8, py(ZONAS_Z.length - 1 - i) + 4)
+    })
+
+    ctx.restore()
+  }
+}
+
+function configuracionZ() {
+  return {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Puntuación Z',
+        data: [],
+        showLine: false,
+        pointStyle: 'star',
+        pointRadius: 9,
+        pointBorderWidth: 3,
+        borderColor: COLOR_MEJOR,
+        backgroundColor: COLOR_MEJOR
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      layout: { padding: { left: 70, top: 14 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `Z = ${ctx.parsed.x.toFixed(2)}` } }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: -5,
+          max: 3,
+          ticks: { stepSize: 1 },
+          title: { display: true, text: 'puntuación z' },
+          grid: { display: false }
+        },
+        y: {
+          min: -0.5,
+          max: ZONAS_Z.length - 0.5,
+          display: false,
+          grid: { display: false }
+        }
+      }
+    },
+    plugins: [plantillaZ]
+  }
+}
 
 // Forma de la espiración: u = fracción exhalada desde TLC (0) hasta FVC (1).
 // Sube rápido hasta el PEF y baja a 0 al final de la espiración.
@@ -467,23 +626,43 @@ function puntosFlujoVolumen({ fvc, pef, fivc, pif }) {
     const u = i / 100
     pts.push({ x: +(u * fvc).toFixed(3), y: +(pef * formaEspiracion(u) / MAXIMO_FORMA).toFixed(2) })
   }
-  for (let i = 100; i >= 0; i--) {
-    const w = i / 100
-    pts.push({ x: +(w * fivc).toFixed(3), y: +(-pif * Math.pow(Math.sin(Math.PI * w), 0.8)).toFixed(2) })
+  // Inspiración: arranca en FVC − FIVC, termina en FVC y tiene su mínimo a la mitad, como en el informe.
+  for (let i = 0; i <= 100; i++) {
+    const u = i / 100
+    pts.push({ x: +(fvc - fivc + u * fivc).toFixed(3), y: +(-pif * Math.pow(Math.sin(Math.PI * u), 0.3)).toFixed(2) })
   }
   return pts
 }
 
-// Curva volumen-tiempo: V(t) = FVC · (1 − e^(−t/τ)), con τ tal que el FEV1 se alcanza en t = 1 s
-function puntosVolumenTiempo({ fvc, fev1 }) {
+// Volumen a un tiempo t: V(t) = FVC · (1 − e^(−t/τ)), con τ tal que el FEV1 se alcanza en t = 1 s
+function volumenEnTiempo(t, fvc, fev1) {
   const ratio = Math.min(Math.max(fev1 / fvc, 0.05), 0.99)
   const tau = -1 / Math.log(1 - ratio)
+  return fvc * (1 - Math.exp(-t / tau))
+}
+
+// Curva volumen-tiempo de 0 a 14 s
+function puntosVolumenTiempo({ fvc, fev1 }) {
   const pts = []
-  for (let i = 0; i <= 100; i++) {
+  for (let i = 0; i <= 140; i++) {
     const t = i / 10
-    pts.push({ x: t, y: +(fvc * (1 - Math.exp(-t / tau))).toFixed(3) })
+    pts.push({ x: t, y: +volumenEnTiempo(t, fvc, fev1).toFixed(3) })
   }
   return pts
+}
+
+// Punto del PEF en la curva flujo-volumen: el máximo de la forma escalado al PEF
+function puntoPEF({ fvc, pef }) {
+  let mejorU = 0
+  let mejorY = -1
+  for (let i = 0; i <= 100; i++) {
+    const y = formaEspiracion(i / 100)
+    if (y > mejorY) {
+      mejorY = y
+      mejorU = i / 100
+    }
+  }
+  return { x: +(mejorU * fvc).toFixed(3), y: pef }
 }
 
 function estiloCurva(esMejor) {
@@ -512,14 +691,17 @@ function configuracionGrafica(datos, ejes) {
           max: datos.x.max,
           ticks: { stepSize: 1 },
           // Línea vertical negra en x = 0, como en el reporte del equipo
-          grid: { color: ctx => (ctx.tick && ctx.tick.value === 0 ? '#000' : 'rgba(0,0,0,0.06)') }
+          grid: {
+            color: ctx => (ctx.tick && ctx.tick.value === 0 ? '#000' : 'rgba(0,0,0,0.25)'),
+            borderDash: [2, 3]
+          }
         },
         y: {
           min: datos.y.min,
           max: datos.y.max,
           title: { display: true, text: ejes.tituloY },
           ticks: { stepSize: ejes.stepY },
-          grid: { color: 'rgba(0,0,0,0.06)' }
+          grid: { color: 'rgba(0,0,0,0.25)', borderDash: [2, 3] }
         }
       }
     }
@@ -596,6 +778,14 @@ export default {
         fev1_var_l: null,
         fvc_var_l: null,
         calidad_sesion: '',
+        calidad_fev1: '',
+        calidad_fvc: '',
+        fvc_z: null,
+        fev1_z: null,
+        fev1_fvc_z: null,
+        fef25_75_z: null,
+        pef_z: null,
+        fivc_z: null,
         interpretacion_sistema: '',
         maniobras: []
       },
@@ -616,11 +806,13 @@ export default {
       validacionCalidad: null,
       graficaFV: null,
       graficaVT: null,
+      graficaZ: null,
       archivoSeleccionado: null,
       nombreArchivo: '',
       procesandoIA: false,
       mensajeIA: '',
-      exitoIA: false
+      exitoIA: false,
+      advertencias: []
     }
   },
   computed: {
@@ -655,11 +847,14 @@ export default {
         .filter(m => numValido(m.fvc_l) !== null && numValido(m.pef_l_s) !== null)
         .sort((a, b) => (a === mejor) - (b === mejor))
         .map(m => ({
-          texto: `Prueba ${m.numero}${m === mejor ? ' (Mejor)' : ''}`,
+          texto: `Previo Prueba ${m.numero}${m === mejor ? ' (Mejor)' : ''}`,
           clase: m === mejor ? 'sw-mejor' : 'sw-prueba'
         }))
       if (numValido(this.localForm.fvc_pred) !== null && numValido(this.localForm.pef_pred) !== null) {
         items.push({ texto: 'Predicho', clase: 'sw-predicho' })
+      }
+      if (numValido(this.localForm.fvc_lln) !== null && numValido(this.localForm.fev1_lln) !== null) {
+        items.push({ texto: 'LLN', clase: 'sw-predicho' })
       }
       return items
     },
@@ -673,6 +868,11 @@ export default {
         : null
       return coincide || conFev1.reduce((a, b) => (numValido(b.fev1_l) > numValido(a.fev1_l) ? b : a))
     },
+    // Hay al menos una puntuación Z en el informe
+    hayZ() {
+      return ZONAS_Z.some(z => numValido(this.localForm[z.campo]) !== null)
+    },
+
     // Hay datos suficientes para dibujar las curvas
     hayDatosGrafica() {
       return this.maniobrasOrdenadas.some(m =>
@@ -752,6 +952,7 @@ export default {
         this.nombreArchivo = file.name
         this.mensajeIA = ''
         this.exitoIA = false
+        this.advertencias = []
       }
     },
 
@@ -761,6 +962,7 @@ export default {
       this.procesandoIA = true
       this.mensajeIA = 'Enviando archivo a la IA para análisis...'
       this.exitoIA = false
+      this.advertencias = []
 
       const formData = new FormData()
       formData.append('archivo', this.archivoSeleccionado)
@@ -779,14 +981,14 @@ export default {
 
         this.exitoIA = true
         this.mensajeIA = `¡Datos extraídos exitosamente! Se encontraron ${numManiobras} maniobras.`
-
+        this.advertencias = datos.advertencias ?? []
         // Referencias (Pred / LLN)
         this.localForm.fvc_pred = datos.fvc_pred ?? null
         this.localForm.fvc_lln = datos.fvc_lln ?? null
         this.localForm.fev1_pred = datos.fev1_pred ?? null
         this.localForm.fev1_lln = datos.fev1_lln ?? null
-        this.localForm.fev1_fvc_pred = datos.fev1_fvc_pred ?? null
-        this.localForm.fev1_fvc_lln = datos.fev1_fvc_lln ?? null
+        this.localForm.fev1_fvc_pred = aPorcentaje(datos.fev1_fvc_pred)
+        this.localForm.fev1_fvc_lln = aPorcentaje(datos.fev1_fvc_lln)
         this.localForm.fef25_75_pred = datos.fef25_75_pred ?? null
         this.localForm.fef25_75_lln = datos.fef25_75_lln ?? null
         this.localForm.pef_pred = datos.pef_pred ?? null
@@ -795,7 +997,7 @@ export default {
         // Mejor maniobra y %Pred tal como vienen del informe
         this.localForm.mejor_fvc = datos.mejor_fvc ?? null
         this.localForm.mejor_fev1 = datos.mejor_fev1 ?? null
-        this.localForm.mejor_fev1_fvc = datos.mejor_fev1_fvc ?? null
+        this.localForm.mejor_fev1_fvc = aPorcentaje(datos.mejor_fev1_fvc)
         this.localForm.mejor_fef25_75 = datos.mejor_fef25_75 ?? null
         this.localForm.mejor_pef = datos.mejor_pef ?? null
         this.localForm.mejor_fivc = datos.mejor_fivc ?? null
@@ -821,6 +1023,16 @@ export default {
 
         // Calidad de sesión y varianzas del informe
         this.localForm.calidad_sesion = datos.calidad_sesion ?? ''
+        this.localForm.calidad_fev1 = datos.calidad_fev1 ?? ''
+        this.localForm.calidad_fvc = datos.calidad_fvc ?? ''
+
+        // Puntuación Z (solo si el informe la trae; si no, queda vacía)
+        this.localForm.fvc_z = datos.fvc_z ?? null
+        this.localForm.fev1_z = datos.fev1_z ?? null
+        this.localForm.fev1_fvc_z = datos.fev1_fvc_z ?? null
+        this.localForm.fef25_75_z = datos.fef25_75_z ?? null
+        this.localForm.pef_z = datos.pef_z ?? null
+        this.localForm.fivc_z = datos.fivc_z ?? null
         this.localForm.fev1_var_l = datos.fev1_var ?? null
         this.localForm.fvc_var_l = datos.fvc_var ?? null
         this.localForm.interpretacion_sistema = datos.interpretacion ?? ''
@@ -830,6 +1042,7 @@ export default {
           this.localForm.maniobras = datos.maniobras.map((m, idx) => ({
             ...this.plantillaManiobra,
             ...m,
+            fev1_fvc_ratio: aPorcentaje(m.fev1_fvc_ratio),
             numero: m.numero ?? (idx + 1),
             marcados: { ...(m.marcados || {}) }
           }))
@@ -929,7 +1142,7 @@ export default {
         mejor_pef: () => max('pef_l_s'),
         mejor_fivc: () => max('fivc_l'),
         mejor_pif: () => max('pif_l_s'),
-        mejor_eotv: () => max('eotv_l'),
+        // mejor_eotv: () => max('eotv_l'),
       }
 
       Object.entries(reglas).forEach(([campo, calcular]) => {
@@ -943,7 +1156,7 @@ export default {
         const fev1 = this.localForm.mejor_fev1
         const fvc = this.localForm.mejor_fvc
         this.localForm.mejor_fev1_fvc = (fev1 && fvc && fvc > 0)
-          ? parseFloat((fev1 / fvc).toFixed(3))
+          ? parseFloat((fev1 / fvc * 100).toFixed(1))
           : null
       }
 
@@ -1032,17 +1245,16 @@ export default {
         maxPif = Math.max(maxPif, pif)
 
         datasetsFV.push({
-          label: `Prueba ${m.numero}${esMejor ? ' (Mejor)' : ''}`,
+          label: `Previo Prueba ${m.numero}${esMejor ? ' (Mejor)' : ''}`,
           data: puntosFlujoVolumen({ fvc, pef, fivc, pif }),
           ...estiloCurva(esMejor),
-          backgroundColor: esMejor ? 'rgba(31,63,160,0.06)' : 'transparent',
-          fill: esMejor ? 'origin' : false,
+          fill: false,
           pointRadius: 0,
           tension: 0.35
         })
 
         datasetsVT.push({
-          label: `Prueba ${m.numero}${esMejor ? ' (Mejor)' : ''}`,
+          label: `Previo Prueba ${m.numero}${esMejor ? ' (Mejor)' : ''}`,
           data: puntosVolumenTiempo({ fvc, fev1 }),
           ...estiloCurva(esMejor),
           fill: false,
@@ -1064,10 +1276,21 @@ export default {
           label: 'Predicho',
           data: [{ x: 0.6, y: pefPred }, { x: fvcPred, y: 0 }],
           borderColor: COLOR_PREDICHO,
-          borderWidth: 2,
+          borderWidth: 4,
           borderDash: [8, 5],
           pointRadius: 0,
           fill: false
+        })
+      }
+      if (fvcPred !== null && pefPred !== null) {
+        datasetsFV.push({
+          label: '',
+          data: [puntoPEF({ fvc: fvcPred, pef: pefPred })],
+          showLine: false,
+          pointStyle: 'rectRot',
+          pointRadius: 6,
+          pointBackgroundColor: COLOR_PREDICHO,
+          pointBorderColor: COLOR_PREDICHO
         })
       }
       if (fvcPred !== null && fev1Pred !== null) {
@@ -1092,6 +1315,50 @@ export default {
         })
       }
 
+      // LLN de FVC y FEV1 (volumen-tiempo), punteada y más fina que el predicho
+      const fvcLln = numValido(f.fvc_lln)
+      const fev1Lln = numValido(f.fev1_lln)
+      if (fvcLln !== null && fev1Lln !== null) {
+        datasetsVT.push({
+          label: 'LLN',
+          data: puntosVolumenTiempo({ fvc: fvcLln, fev1: fev1Lln }),
+          borderColor: COLOR_PREDICHO,
+          borderWidth: 2,
+          borderDash: [3, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.3
+        })
+      }
+
+      // Mejor: rombo del PEF en la flujo-volumen y marcador de FVC a 6 s en la volumen-tiempo
+      if (mejor && numValido(mejor.fvc_l) !== null && numValido(mejor.pef_l_s) !== null) {
+        datasetsFV.push({
+          label: '',
+          data: [puntoPEF({ fvc: numValido(mejor.fvc_l), pef: numValido(mejor.pef_l_s) })],
+          showLine: false,
+          pointStyle: 'rectRot',
+          pointRadius: 6,
+          pointBackgroundColor: COLOR_MEJOR,
+          pointBorderColor: COLOR_MEJOR
+        })
+      }
+      if (mejor && numValido(mejor.fvc_l) !== null && numValido(mejor.fev1_l) !== null) {
+        const fvcM = numValido(mejor.fvc_l)
+        const fev1M = numValido(mejor.fev1_l)
+        datasetsVT.push({
+          label: '',
+          data: [
+            { x: 6, y: +volumenEnTiempo(6, fvcM, fev1M).toFixed(3) },
+            { x: 12, y: +volumenEnTiempo(12, fvcM, fev1M).toFixed(3) }
+          ],
+          showLine: false,
+          pointRadius: 5,
+          pointBackgroundColor: COLOR_MEJOR,
+          pointBorderColor: COLOR_MEJOR
+        })
+      }
+
       // Marcador del FEV1 del Mejor en t = 1 s
       if (mejor && numValido(mejor.fev1_l) !== null) {
         datasetsVT.push({
@@ -1105,10 +1372,12 @@ export default {
       }
 
       // Ejes: enteros y redondeados para que las etiquetas sean limpias
-      const xMaxFV = Math.max(1, Math.ceil(maxVolumen + 0.5))
+      const xMaxFV = Math.max(8, Math.ceil(maxVolumen + 0.5))
       const mitadFlujo = Math.max(4, Math.ceil(maxFlujo / 2) * 2 + 2)
       const mitadPif = Math.max(4, Math.ceil(maxPif / 2) * 2 + 2)
-      const yMaxVT = Math.max(2, Math.ceil(maxVolumen) + 1)
+      const yMaxVT = Math.max(8, Math.ceil(maxVolumen) + 1)
+      const limiteFlujo = Math.max(14, mitadFlujo)
+      const limitePif = Math.max(14, mitadPif)
 
       // Línea horizontal en cero (no aparece en la leyenda)
       datasetsFV.push({
@@ -1123,15 +1392,41 @@ export default {
       return {
         fv: {
           datasets: datasetsFV,
-          x: { min: 0, max: xMaxFV },
-          y: { min: -mitadPif, max: mitadFlujo }
+          x: { min: -2, max: xMaxFV },
+          y: { min: -limitePif, max: limiteFlujo }
         },
         vt: {
           datasets: datasetsVT,
-          x: { min: 0, max: 10 },
+          x: { min: -1, max: 14 },
           y: { min: 0, max: yMaxVT }
         }
       }
+    },
+
+    // Puntos (z, fila) de la gráfica Z; solo los parámetros que traen valor
+    puntosZ() {
+      return ZONAS_Z
+        .map((zona, i) => ({ x: numValido(this.localForm[zona.campo]), y: ZONAS_Z.length - 1 - i }))
+        .filter(p => p.x !== null)
+    },
+
+    // Crea o actualiza la gráfica Z; si el informe no trae Z, la quita
+    actualizarZ() {
+      const canvas = this.$refs.canvasZ
+      if (!canvas) return
+      const puntos = this.puntosZ()
+      if (puntos.length === 0) {
+        if (this.graficaZ) {
+          this.graficaZ.destroy()
+          this.graficaZ = null
+        }
+        return
+      }
+      if (!this.graficaZ) {
+        this.graficaZ = markRaw(new Chart(canvas, configuracionZ()))
+      }
+      this.graficaZ.data.datasets[0].data = puntos
+      this.graficaZ.update('none')
     },
 
     // Crea o recrea ambas gráficas (botón "Regenerar")
@@ -1151,6 +1446,7 @@ export default {
       this.graficaVT = markRaw(new Chart(canvasVT, configuracionGrafica(datos.vt, {
         tituloX: 'Tiempo [s]', tituloY: 'Volumen [L]', stepY: 1
       })))
+      this.actualizarZ()
     },
 
     // Actualiza las gráficas existentes sin recrearlas (más ligero al editar)
@@ -1162,6 +1458,7 @@ export default {
       const datos = this.construirDatosGraficas()
       this.aplicarDatos(this.graficaFV, datos.fv)
       this.aplicarDatos(this.graficaVT, datos.vt)
+      this.actualizarZ()
     },
 
     aplicarDatos(grafica, datos) {
@@ -1180,6 +1477,10 @@ export default {
     },
 
     destruirGraficas() {
+      if (this.graficaZ) {
+        this.graficaZ.destroy()
+        this.graficaZ = null
+      }
       if (this.graficaFV) {
         this.graficaFV.destroy()
         this.graficaFV = null
@@ -1191,10 +1492,11 @@ export default {
     },
 
     descargarGrafica(tipo) {
-      const grafica = tipo === 'fv' ? this.graficaFV : this.graficaVT
+      const grafica = { fv: this.graficaFV, vt: this.graficaVT, z: this.graficaZ }[tipo]
       if (!grafica) return
+      const nombres = { fv: 'curva-flujo-volumen.png', vt: 'curva-volumen-tiempo.png', z: 'puntuacion-z.png' }
       const link = document.createElement('a')
-      link.download = tipo === 'fv' ? 'curva-flujo-volumen.png' : 'curva-volumen-tiempo.png'
+      link.download = nombres[tipo]
       link.href = grafica.toBase64Image()
       link.click()
     },
@@ -1323,7 +1625,7 @@ export default {
 .leyenda-graficas-titulo { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
 .leyenda-graficas .sw { display: inline-block; width: 28px; border-top: 3px solid; vertical-align: middle; margin-right: 8px; }
 .sw-mejor { border-color: #1F3FA0; }
-.sw-prueba { border-top-style: dotted !important; border-color: #16A34A; }
+.sw-prueba { border-top-style: dotted !important; border-color: #5B8DEF; }
 .sw-predicho { border-top-style: dashed !important; border-color: #9AA5B1; }
 .pt-fev1 { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #1F3FA0; vertical-align: middle; margin: 0 12px 0 10px; }
 .nota-graficas { margin-top: 8px; font-size: 12px; color: #607d8b; }
@@ -1336,7 +1638,7 @@ export default {
 /* Símbolos rectangulares de la leyenda */
 .caja-leyenda { display: inline-block; width: 24px; height: 12px; border: 2px solid; margin-right: 6px; vertical-align: middle; }
 .caja-leyenda.sw-mejor { border: 3px solid #1F3FA0; background: rgba(31, 63, 160, 0.08); }
-.caja-leyenda.sw-prueba { border-style: dotted; border-color: #16A34A; background: rgba(22, 163, 74, 0.08); }
+.caja-leyenda.sw-prueba { border-style: dotted; border-color: #5B8DEF; background: rgba(91, 141, 239, 0.08); }
 .caja-leyenda.sw-predicho { border-style: dashed; border-color: #9AA5B1; background: rgba(154, 165, 177, 0.2); }
 
 /* Celdas con valor marcado en el informe (asterisco) */
