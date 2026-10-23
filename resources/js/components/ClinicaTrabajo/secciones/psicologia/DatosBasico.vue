@@ -73,48 +73,31 @@
           <!-- PACIENTE -->
           <div class="col-md-3 mb-3">
             <label class="font-weight-bold">Paciente *</label>
-            <select class="form-control"
-                    :value="form.paciente_id"
-                    @change="onPacienteChange($event.target.value)"
-                    style="height: 38px;"
-                    required
-            >
-              <option value="">Seleccionar paciente...</option>
-              <option v-for="p in pacientes" :key="p.id" :value="p.id">
-                {{ p.nombre }} {{ p.apellido_paterno }} {{ p.apellido_materno }}
-              </option>
-            </select>
+            <input 
+              type="text" 
+              :value="form.nombre_paciente" 
+              class="form-control" 
+            />
           </div>
 
           <!-- EMPRESA -->
           <div class="col-md-3 mb-3">
-            <label class="font-weight-bold">Empresa *</label>
-            <select class="form-control"
-                    :value="form.empresa_cliente_id"
-                    @change="onEmpresaChange($event.target.value)"
-                    style="height: 38px;"
-                    required
-            >
-              <option value="">Seleccionar empresa...</option>
-              <option v-for="e in empresas" :key="e.id" :value="e.id">
-                {{ e.nombre || e.razon_social }}
-              </option>
-            </select>
+              <label class="font-weight-bold">Empresa *</label>
+              <input 
+                type="text" 
+                :value="form.nombre_empresa" 
+                class="form-control" 
+              />
           </div>
 
           <!-- PUESTO DE TRABAJO -->
           <div class="col-md-3 mb-3">
             <label class="font-weight-bold">Puesto de Trabajo</label>
-            <select class="form-control"
-                    :value="form.puesto_trabajo_id"
-                    @change="onSelectId('puesto_trabajo_id', puestos, $event.target.value)"
-                    style="height: 38px;"
-            >
-              <option value="">Seleccionar puesto...</option>
-              <option v-for="p in puestos" :key="p.id" :value="p.id">
-                {{ p.nombre }}
-              </option>
-            </select>
+            <input 
+              type="text" 
+              :value="form.nombre_puesto" 
+              class="form-control" 
+            />
           </div>
 
           <!-- PSICÓLOGO -->
@@ -135,7 +118,7 @@
         </div>
 
         <!-- INFO PACIENTE SELECCIONADO -->
-        <div v-if="form.paciente_id" class="mt-4 p-3 bg-light border border-left border-success">
+        <!-- <div v-if="form.paciente_id" class="mt-4 p-3 bg-light border border-left border-success">
           <div class="row">
             <div class="col-md-4">
               <div class="d-flex justify-content-between">
@@ -156,14 +139,14 @@
               </div>
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import ApiServiceClinicaTrabajo from '../../../../services/ApiServiceClinicaTrabajo'
+import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 const RUTAS = {
   pacientes: '/pacientes',
@@ -240,40 +223,15 @@ export default {
       this.updateFields({ empresa_cliente_id: id, puesto_trabajo_id: null })
       this.cargarPuestos(id)
     },
-
-    async cargarPacientes() {
-      try {
-        this.pacientes = this.extraerLista(await ApiService.get(RUTAS.pacientes))
-      } catch (error) {
-        console.error('Error cargando pacientes:', error)
-      }
-    },
-    async cargarEmpresas() {
-      try {
-        this.empresas = this.extraerLista(await ApiService.get(RUTAS.empresas))
-      } catch (error) {
-        console.error('Error cargando empresas:', error)
-      }
-    },
-    async cargarPuestos(empresaId = this.form.empresa_cliente_id) {
-      if (!empresaId) {
-        this.puestos = []
-        return
-      }
-      try {
-        this.puestos = this.extraerLista(await ApiService.get(RUTAS.puestos(empresaId)))
-      } catch (error) {
-        console.error('Error cargando puestos:', error)
-      }
-    },
     async cargarMedicos() {
       try {
-        this.medicos = this.extraerLista(await ApiService.get(RUTAS.medicos))
+        // Ajusta la ruta si tu endpoint de médicos es diferente
+        const response = await clinicaTrabajo.get('medicos')
+        this.medicos = response.data?.data || response.data || []
       } catch (error) {
         console.error('Error cargando médicos:', error)
       }
     },
-
     calcularEdad(fechaNacimiento) {
       if (!fechaNacimiento) return 0
       const hoy = new Date()
@@ -285,8 +243,6 @@ export default {
     }
   },
   mounted() {
-    this.cargarPacientes()
-    this.cargarEmpresas()
     this.cargarMedicos()
     if (this.form.empresa_cliente_id) this.cargarPuestos()
     // Folio temporal si es una valoración nueva

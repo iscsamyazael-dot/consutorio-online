@@ -76,6 +76,7 @@ import MasterEspirometria from './components/ClinicaTrabajo/MasterEspirometria.v
 import RegitroPacienteClinicaTrabajo from './components/ClinicaTrabajo/Pacientes/FormPacienteClinica.vue'
 import ListaPacientesClinicaTrabajo from './components/ClinicaTrabajo/Pacientes/MasterListaPacientes.vue'
 import ExpedienteClinicaTrabajo from './components/ClinicaTrabajo/Pacientes/Masterexpediente.vue'
+import BuscadorPacientesClinicaTrabajo from './components/ClinicaTrabajo/BuscadorPacientes.vue'
 // ------------------------------------------------------
 // Instancia única de la app
 // ------------------------------------------------------
@@ -122,20 +123,21 @@ app.component('vincular-whatsapp', VinculacionWhatsapp);
 app.component('vincular-consulta', headerConsulta);
 app.component('master-ficha-ocupacional', MasterFichaOcupacional);
 
-app.component('master-medicina', MasterMedicina)
-app.component('master-psicologia', MasterPsicologia)
-app.component('master-nutricion', MasterNutricion)
-app.component('master-audiologia', MasterAudiologia)
-app.component('master-ergonomia', MasterErgonomia)
-app.component('master-empresas-cliente', MasterEmpresasCliente)
+app.component('master-medicina', MasterMedicina);
+app.component('master-psicologia', MasterPsicologia);
+app.component('master-nutricion', MasterNutricion);
+app.component('master-audiologia', MasterAudiologia);
+app.component('master-ergonomia', MasterErgonomia);
+app.component('master-empresas-cliente', MasterEmpresasCliente);
 
-app.component('master-ficha-audiologica-delli', MasterFichaAudiologicaDelli)
-app.component('master-examen-trabajo-tr', MasterExamenTrabajoTr)
-app.component('master-espirometria', MasterEspirometria)
+app.component('master-ficha-audiologica-delli', MasterFichaAudiologicaDelli);
+app.component('master-examen-trabajo-tr', MasterExamenTrabajoTr);
+app.component('master-espirometria', MasterEspirometria);
 
-app.component('registro-paciente-clinicatrabajo', RegitroPacienteClinicaTrabajo)
-app.component('lista-paciente-clinicatrabajo', ListaPacientesClinicaTrabajo )
-app.component('master-expediente-clinica-trabajo', ExpedienteClinicaTrabajo )
+app.component('registro-paciente-clinicatrabajo', RegitroPacienteClinicaTrabajo);
+app.component('lista-paciente-clinicatrabajo', ListaPacientesClinicaTrabajo);
+app.component('master-expediente-clinica-trabajo', ExpedienteClinicaTrabajo);
+app.component('buscador-pacientes-clinica-trabajo', BuscadorPacientesClinicaTrabajo);
 // 3. MONTAJE DE LA APP
 app.mount('#app');
 

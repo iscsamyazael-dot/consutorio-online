@@ -583,7 +583,7 @@ export default {
       }
     },
 
-     async cargarDatosPaciente(pacienteId) {
+    async cargarDatosPaciente(pacienteId) {
       console.log('🚀 INICIANDO carga de datos para el paciente ID:', pacienteId);
       
       if (!pacienteId) {
@@ -629,8 +629,7 @@ export default {
       }
     },
 
-  }
-  ,
+  },
   mounted() {
       this.detectarRuta();
 

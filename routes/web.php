@@ -49,6 +49,7 @@ use App\Http\Controllers\ClinicaTrabajo\EmpresaClienteController;
 use App\Http\Controllers\ClinicaTrabajo\PacientesClinicaTrabajoController;
 use App\Http\Controllers\ClinicaTrabajo\DatosLaboralClinicaTrabajoController;
 use App\Http\Controllers\ClinicaTrabajo\TriageClinicaTrabajoController;
+use App\Http\Controllers\ClinicaTrabajo\BuscadorPacientesController;
 
 
 Route::get('/', function () { return view('auth.login'); });
@@ -533,6 +534,16 @@ Route::middleware('auth')->group(function () {
             Route::get('ActualizarPaciente/{id?}', [PacientesClinicaTrabajoController::class, 'create'])->name('clinica-trabajo.RegistroPaciente');
             Route::get('ExpedienteDetalleClinicaTrabajo/{id}', [PacientesClinicaTrabajoController::class, 'show'])->name('ExpedienteDetalleClinicaTrabajo');
             Route::get('PacientesDetalleClinicaTrabajo/{id}', [PacientesClinicaTrabajoController::class, 'show'])->name('PacientesDetalleClinicaTrabajo');
+            
+            // =========================================================================
+            // RUTAS PARA EL BUSCADOR INTELIGENTE DE PACIENTES (CLÍNICA DE TRABAJO)
+            // =========================================================================
+            Route::get('clinica-trabajo-buscador/pacientes', [BuscadorPacientesController::class, 'buscar'])->name('clinica-trabajo-buscador.pacientes');
+            Route::get('clinica-trabajo-buscador/empresas', [BuscadorPacientesController::class, 'empresas'])->name('clinica-trabajo-buscador.empresas');
+            Route::get('clinica-trabajo-buscador/paciente/{id}', [BuscadorPacientesController::class, 'pacienteDetalle'])->name('clinica-trabajo-buscador.paciente-detalle');
+            Route::get('clinica-trabajo-buscador/paciente/{id}/evaluaciones', [BuscadorPacientesController::class, 'evaluacionesPaciente'])->name('clinica-trabajo-buscador.evaluaciones');
+            Route::get('clinica-trabajo-buscador/evaluaciones-pendientes', [BuscadorPacientesController::class, 'evaluacionesPendientes'])->name('clinica-trabajo-buscador.pendientes');
+            Route::get('clinica-trabajo-buscador/estadisticas', [BuscadorPacientesController::class, 'estadisticas'])->name('clinica-trabajo-buscador.estadisticas');
         });
 
 
@@ -630,6 +641,8 @@ Route::middleware('auth')->group(function () {
             Route::get('ExpedientePacientesClinicaTrabajo/{id}', function($id) { return view('clinica-trabajo.ExpedientePacientes'); })->name('clinica-trabajo.ExpedientePacientes');
             Route::get('/clinica/ergonomia/nueva', function () { return view('clinica-trabajo.Ergonomia'); })->name('clinica.ergonomia.create');
             Route::get('ficha-nutricion', function () { return view('clinica-trabajo.Nutricion'); })->name('clinica.Nutricion');
+            Route::get('ficha-psicologia', function () { return view('clinica-trabajo.Psicologia'); })->name('clinica.Psicologia');
+            Route::get('buscador-pacientes-clinicaTrabajo', function () { return view('clinica-trabajo.BuscadorPacientes'); })->name('clinica-trabajo.BuscadorPacientes');
 
             //RUTA PARA ABRIR LAS VISTAS DESDE EL EXPEDIENTE MEDICO LABORAL//
             Route::get('FichaDelliAudiologia/{id}', function($id) { return view('clinica-trabajo.delli-index'); })->name('clinica-trabajo.delli-index');
@@ -637,8 +650,8 @@ Route::middleware('auth')->group(function () {
             Route::get('ficha-espirometria/{id}', function($id) { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria');
             Route::get('clinica/ergonomia/nueva/{id}', function($id) { return view('clinica-trabajo.Ergonomia'); })->name('clinica-trabajo.Ergonomia');
             Route::get('ficha-nutricion/{id}', function($id) { return view('clinica-trabajo.Nutricion'); })->name('clinica-trabajo.Nutricion');
-            Route::get('clinica/psicologia/nueva/{id}', function($id) { return view('clinica-trabajo.Psicologia'); })->name('clinica.psicologia.create');
             Route::get('ficha-ocupacional/{id}', function($id) { return view('clinica-trabajo.Medicina'); })->name('clinica-trabajo.Medicina');
+            Route::get('ficha-psicologia/{id}', function($id) { return view('clinica-trabajo.Psicologia'); })->name('clinica.Psicologia');
         });
 
 });

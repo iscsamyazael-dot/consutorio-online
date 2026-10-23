@@ -155,7 +155,7 @@
 
                         <!-- Psicológica -->
                         <div class="col-md-6">
-                            <a :href="'/clinica/psicologia/nueva/' + infoPacientes.id" class="valoracion-card text-decoration-none">
+                            <a :href="'/ficha-psicologia/' + infoPacientes.id" class="valoracion-card text-decoration-none">
                                 <div class="d-flex align-items-start p-3 border rounded-3 h-100 hover-shadow">
                                     <div class="valoracion-icon bg-info bg-opacity-10 text-info rounded-3 p-3 me-3">
                                         <i class="fas fa-brain fa-2x"></i>
@@ -171,7 +171,7 @@
 
                         <!-- Nutricional -->
                         <div class="col-md-6">
-                            <a :href="'ficha-nutricion' + infoPacientes.id" class="valoracion-card text-decoration-none">
+                            <a :href="'/ficha-nutricion/' + infoPacientes.id" class="valoracion-card text-decoration-none">
                                 <div class="d-flex align-items-start p-3 border rounded-3 h-100 hover-shadow">
                                     <div class="valoracion-icon bg-success bg-opacity-10 text-success rounded-3 p-3 me-3">
                                         <i class="fas fa-apple-alt fa-2x"></i>

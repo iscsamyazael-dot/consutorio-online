@@ -1,15 +1,12 @@
 <template>
   <div class="master-psicologia">
     <!-- LISTADO (Si no es nueva ni edición) -->
-    <listado-valoraciones
-      v-if="!esNuevo && !esEdicion"
-      submodulo="psicologia"
-    ></listado-valoraciones>
+    <!-- <listado-valoraciones v-if="!esNuevo && !esEdicion" submodulo="psicologia"></listado-valoraciones> -->
 
     <!-- FORMULARIO DE EVALUACIÓN (Si es nueva o edición) -->
-    <div v-else class="container-fluid p-0">
+    <div class="container-fluid p-0">
 
-      <!-- 1. CHAT IA / TRANSCRIPCIÓN EN VIVO (Igual que espirometria) -->
+      <!-- 1. CHAT IA / TRANSCRIPCIÓN EN VIVO -->
       <div class="row mb-4">
         <div class="col-12">
           <div class="card card-primary card-outline shadow-sm">
@@ -171,8 +168,6 @@
           ></GuiaIIIFactoresPsicologia>
         </div>
 
-        
-
         <!-- HOJA 4: Diagnóstico -->
         <div id="hoja4" class="tab-pane fade" role="tabpanel">
           <diagnostico-psicologia
@@ -209,23 +204,19 @@
 </template>
 
 <script>
-// 1. Componente de Listado (misma carpeta)
-import ListadoValoraciones from './ListadoValoraciones.vue'
-
-// 2. Componentes de Sección (carpeta secciones/psicologia)
+// 1. Componentes de Sección (carpeta secciones/psicologia)
 import DatosBasicoPsicologia from './secciones/psicologia/DatosBasico.vue'
 import GuiaIEventoPsicologia from './secciones/psicologia/GuiaIEvento.vue'
 import GuiaIIIFactoresPsicologia from './secciones/psicologia/FactoresPsicosociales.vue'
 import DiagnosticoPsicologia from './secciones/psicologia/Diagnostico.vue'
 import AptitudDictamenPsicologia from './secciones/psicologia/AptitudDictamen.vue'
 
-// 3. Servicio API (ajusta la ruta si tu ApiService está en otro lugar, ej: '@/services/ApiService')
-import { clinicaTrabajo } from '../../services/ApiServiceClinicaTrabajo.js'
+// 2. Servicio API
+import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'MasterPsicologia',
   components: {
-    ListadoValoraciones,
     DatosBasicoPsicologia,
     GuiaIEventoPsicologia,
     GuiaIIIFactoresPsicologia, 
@@ -237,21 +228,25 @@ export default {
       esNuevo: false,
       esEdicion: false,
       guardando: false,
+      cargando: false, 
       escuchando: false,
       mensajeActual: '',
       archivoSeleccionado: null,
       conversacion: [],
       factoresDisponibles: [],
 
-      // Estado centralizado del formulario dividido por secciones lógicas
+      // Estado centralizado del formulario
       form: {
         datosBasicos: {
           folio: '',
           fecha_valoracion: new Date().toISOString().split('T')[0],
           hora_valoracion: '',
           paciente_id: null,
+          nombre_paciente: '',      // ✅ AGREGADO
           empresa_cliente_id: null,
+          nombre_empresa: '',       // ✅ AGREGADO
           puesto_trabajo_id: null,
+          nombre_puesto: '',        // ✅ AGREGADO
           psicologo_id: null
         },
         guiaIEvento: {
@@ -296,35 +291,69 @@ export default {
     }
   },
   methods: {
-    detectarRuta() {
-        const pathname = window.location.pathname
+    async cargarDatosPaciente(pacienteId) {
+      console.log('🚀 INICIANDO carga de datos para el paciente ID:', pacienteId);
+      
+      if (!pacienteId) {
+        console.warn('⚠️ No se proporcionó un pacienteId válido');
+        return;
+      }
 
-        // Detecta /psicologia/nueva o /psicologia (sin ID)
-        if (pathname.includes('/psicologia/nueva') ||
-            pathname === '/psicologia' ||
-            pathname.endsWith('/psicologia')) {
+      try {
+        this.cargando = true;
+
+        const response = await clinicaTrabajo.get(`/PacientesDetalleClinicaTrabajo/${pacienteId}`);
+        const data = response.data.data;
+
+        const datosLaborales = data.datos_laborales || [];
+        const laboral = datosLaborales.length > 0 ? datosLaborales[datosLaborales.length - 1] : {};
+
+        this.form.datosBasicos = {
+          ...this.form.datosBasicos,
+          paciente_id: pacienteId,
+          nombre_paciente: data.nombre || '',
+          empresa_cliente_id: laboral.empresa_cliente_id || null,
+          nombre_empresa: laboral.empresa_cliente?.razon_social || '',
+          puesto_trabajo_id: laboral.puesto_trabajo_id || null,
+          nombre_puesto: laboral.puesto_trabajo?.nombre || '',
+          folio: this.folioPsicologia // ✅ CORREGIDO: Era folioNutricion
+        };
+
+        console.log('✅ Datos del paciente prellenados correctamente:', this.form.datosBasicos);
+
+      } catch (error) {
+        console.error('❌ Error al cargar datos del paciente:', error);
+        alert('No se pudieron cargar los datos del paciente.');
+      } finally {
+        this.cargando = false;
+      }
+    },
+
+    detectarRuta() {
+      const pathname = window.location.pathname
+      // Detecta si es nueva evaluación (incluye "nueva" o "ficha")
+      if (pathname.includes('/nueva') || pathname.includes('/ficha')) {
         this.esNuevo = true
         this.esEdicion = false
-        }
-        // Detecta /psicologia/{id} para edición
-        else if (/\/psicologia\/\d+/.test(pathname)) {
+      } 
+      // Detecta edición (ruta con ID numérico al final, pero NO es ficha)
+      else if (/\/psicologia\/\d+$/.test(pathname) && !pathname.includes('/ficha')) {
         this.esNuevo = false
         this.esEdicion = true
         this.cargarDatosExistentes()
-        }
-        // Cualquier otra ruta muestra el listado
-        else {
+      } 
+      else {
         this.esNuevo = false
         this.esEdicion = false
-        }
+      }
     },
 
     alternarEscucha() {
       this.escuchando = !this.escuchando
       if (this.escuchando) {
-        this.conversacion.push({ sender: 'ia', text: '🎙️ Escuchando datos psicológicos... (Prueba dictando: "Presenció robo a mano armada en el trabajo")' })
+        this.conversacion.push({ sender: 'ia', text: '🎙️ Escuchando datos psicológicos... (Prueba dictando: "Presenció robo a mano armada en el trabajo")', timestamp: new Date() })
       } else {
-        this.conversacion.push({ sender: 'ia', text: '⏹️ Transcripción detenida.' })
+        this.conversacion.push({ sender: 'ia', text: '⏹️ Transcripción detenida.', timestamp: new Date() })
       }
       this.scrollearChat()
     },
@@ -342,10 +371,10 @@ export default {
       this.scrollearChat()
 
       try {
-        // Llamada al backend para procesar el mensaje o el archivo con IA
-        const response = await clinicaTrabajo.consultarIAPsicologia({
+        const response = await clinicaTrabajo.post('/clinica/psicologia/ia-consultar', {
           mensaje: textoEnviar,
           archivo: this.archivoSeleccionado,
+          paciente_id: this.form.datosBasicos.paciente_id,
           contexto_actual: this.form
         })
 
@@ -372,7 +401,6 @@ export default {
     },
 
     fusionarDatosIA(nuevosDatos) {
-      // Fusiona recursivamente los datos que la IA extrae en el objeto form
       for (const seccion in nuevosDatos) {
         if (this.form[seccion]) {
           this.form[seccion] = { ...this.form[seccion], ...nuevosDatos[seccion] }
@@ -398,7 +426,6 @@ export default {
     },
 
     async guardar() {
-      // Validar campos requeridos
       if (!this.form.datosBasicos.paciente_id) {
         return alert('⚠️ Por favor selecciona un paciente en la Hoja 1.')
       }
@@ -417,7 +444,8 @@ export default {
           tipo_evaluacion: 'psicologia'
         }
 
-        const response = await clinicaTrabajo.guardarPsicologia(payload)
+        // ✅ CORREGIDO: Usar post directo en lugar de método inexistente
+        const response = await clinicaTrabajo.post('/clinica/psicologia', payload)
 
         if (response.data.success) {
           alert('✅ Valoración Psicológica guardada correctamente.')
@@ -427,7 +455,7 @@ export default {
         console.error('Error guardando:', error)
         alert('❌ Error al guardar: ' + (error.response?.data?.message || error.message))
       } finally {
-        this.guardando = false
+        this.guardando = false;
       }
     },
 
@@ -439,23 +467,63 @@ export default {
 
     imprimir() {
       alert('🖨️ Generando vista previa para impresión en PDF...')
-      // TODO: Integrar html2pdf.js o window.print() con estilos específicos
     },
 
     async cargarDatosExistentes() {
-      // TODO: Lógica para cargar los datos si `esEdicion` es true
-      // const id = window.location.pathname.split('/').pop()
-      // const response = await clinicaTrabajo.obtenerPsicologia(id)
-      // this.form = response.data
+      const pathname = window.location.pathname;
+      const valoracionId = pathname.split('/').pop();
+
+      if (!valoracionId || isNaN(valoracionId)) {
+        console.warn('No se encontró un ID válido en la URL');
+        return;
+      }
+
+      try {
+        this.cargando = true;
+
+        // ✅ CORREGIDO: Implementación real en lugar de TODO
+        const response = await clinicaTrabajo.get(`/clinica/psicologia/${valoracionId}`);
+        const data = response.data.data || response.data;
+
+        this.form = {
+          ...this.form,
+          datosBasicos: {
+            ...this.form.datosBasicos,
+            folio: data.folio || this.folioPsicologia,
+            fecha_valoracion: data.fecha_valoracion || new Date().toISOString().split('T')[0],
+            hora_valoracion: data.hora_valoracion || '',
+            paciente_id: data.paciente_id,
+            nombre_paciente: data.paciente?.nombre || '',
+            empresa_cliente_id: data.empresa_cliente_id,
+            nombre_empresa: data.empresa_cliente?.razon_social || '',
+            puesto_trabajo_id: data.puesto_trabajo_id,
+            nombre_puesto: data.puesto_trabajo?.nombre || '',
+            psicologo_id: data.psicologo_id || data.medico_id
+          },
+          guiaIEvento: data.guiaIEvento || this.form.guiaIEvento,
+          guiaIIIFactores: data.guiaIIIFactores || this.form.guiaIIIFactores,
+          diagnostico: data.diagnostico || this.form.diagnostico,
+          aptitudDictamen: data.aptitudDictamen || this.form.aptitudDictamen
+        };
+
+        console.log('✅ Valoración psicológica cargada correctamente:', this.form);
+
+      } catch (error) {
+        console.error('❌ Error al cargar valoración psicológica:', error);
+        alert('Error al cargar la valoración: ' + (error.response?.data?.message || error.message));
+        window.location.href = '/clinica/psicologia';
+      } finally {
+        this.cargando = false;
+      }
     },
 
     async cargarFactores() {
       try {
-        const response = await clinicaTrabajo.catalogo.factoresPsicosociales()
-        this.factoresDisponibles = response.data || response
+        // Ajusta la ruta según tu backend real
+        const response = await clinicaTrabajo.get('/clinica/catalogo/factores-psicosociales')
+        this.factoresDisponibles = response.data?.data || response.data || []
       } catch (error) {
         console.error('Error cargando factores psicosociales:', error)
-        // Usa datos mock si hay error
         this.factoresDisponibles = [
           { id: 1, nombre: 'Carga mental', descripcion: 'Demanda cognitiva' },
           { id: 2, nombre: 'Control', descripcion: 'Falta de autonomía' },
@@ -473,6 +541,19 @@ export default {
     if (this.esNuevo && !this.form.datosBasicos.folio) {
       this.form.datosBasicos.folio = this.folioPsicologia
     }
+
+    // ✅ DETECTAR SI VIENE UN PACIENTE ESPECÍFICO EN LA URL
+    const pathname = window.location.pathname;
+    const partes = pathname.split('/');
+    const ultimoSegmento = partes[partes.length - 1];
+    const pacienteId = !isNaN(ultimoSegmento) ? parseInt(ultimoSegmento) : null;
+
+    if (pacienteId && this.esNuevo) {
+      console.log('🔍 ID detectado en URL:', pacienteId);
+      this.cargarDatosPaciente(pacienteId);
+    } else {
+      console.log('ℹ️ No se detectó ID válido en la URL o no es modo nueva evaluación');
+    }
   }
 }
 </script>
@@ -484,7 +565,6 @@ export default {
   padding: 15px;
 }
 
-/* Chat styling (AdminLTE / Bootstrap compatible) */
 .direct-chat-msg {
   margin-right: 0;
   margin-left: 0;
@@ -542,7 +622,6 @@ export default {
   100% { opacity: 1; }
 }
 
-/* Tabs styling */
 .nav-tabs {
   border-bottom: 2px solid #dee2e6;
 }
