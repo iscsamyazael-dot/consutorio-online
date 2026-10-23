@@ -495,7 +495,7 @@ return [
                         ],
                     ],
                 ],
-                 // ------------------------------------------
+                // ------------------------------------------
                 // 🩺 CONSULTAS
                 // ------------------------------------------
                 [
@@ -511,37 +511,37 @@ return [
                         [
                             'text' => 'Valoración Ocupacional',
                             'icon' => 'fas fa-fw fa-briefcase-medical',
-                            'url'  => '/ficha-ocupacional',
+                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=ocupacional', 
                         ],
                         [
                             'text' => 'Valoración Psicológica',
                             'icon' => 'fas fa-fw fa-brain',
-                            'url'  => '/clinica/psicologia/nueva',
+                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=psicologia',
                         ],
                         [
                             'text' => 'Valoración Nutricional',
                             'icon' => 'fas fa-fw fa-apple-alt',
-                            'url'  => '/clinica/nutricion/nueva',
+                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=nutricion',
                         ],
                         [
                             'text' => 'Valoración Audiológia - Historia Clinica',
                             'icon' => 'fas fa-fw fa-assistive-listening-systems',
-                            'url'  => 'FichaDelliAudiologia',
+                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=audiologia_hc',
                         ],
                         [
                             'text' => 'Valoración Audiológia - Trabajo Alto Riesgo',
                             'icon' => 'fas fa-fw fa-hard-hat',
-                            'url'  => 'FichaTrabajoAltoRiesgo',
+                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=audiologia_ar',
                         ],
                         [
                             'text' => 'Valoración Ergonómica',
                             'icon' => 'fas fa-fw fa-chair',
-                            'url'  => '/clinica/ergonomia/nueva',
+                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=ergonomia',
                         ],
                         [
                             'text' => 'Valoración Espirometría',
                             'icon' => 'fas fa-fw fa-lungs',
-                            'url'  => 'ficha-espirometria',
+                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=espirometria',
                         ],
                     ],
                 ],
@@ -705,11 +705,6 @@ return [
                     'icon'    => 'fas fa-fw fa-building',
                     'can'     => 'modulo-medicina-trabajo',
                     'submenu' => [
-                        [
-                            'text' => 'Lista de empresas',
-                            'icon' => 'fas fa-fw fa-list',
-                            'url'  => 'EmpresasClientes',
-                        ],
                         [
                             'text' => 'Registrar empresa',
                             'icon' => 'fas fa-fw fa-plus-circle',
