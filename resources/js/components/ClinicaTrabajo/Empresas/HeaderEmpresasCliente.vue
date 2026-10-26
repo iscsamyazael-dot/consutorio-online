@@ -20,14 +20,29 @@
         
         <!-- Botón Registrar -->
         <div class="col-auto">
-          <button @click="$emit('ir-a-registro')" class="btn-registrar">
-            <div class="btn-registrar-content">
+          <button @click="$emit('ir-a-registro')" class="btn-accion">
+            <div class="btn-content">
               <div class="btn-icon-circle">
                 <i class="fas fa-plus"></i>
               </div>
               <div class="btn-text">
                 <span class="btn-title">Registrar Empresa</span>
                 <span class="btn-subtitle">Nueva empresa cliente</span>
+              </div>
+            </div>
+          </button>
+        </div>
+        
+        <!-- Botón Importar (MISMO DISEÑO) -->
+        <div class="col-auto ms-3">
+          <button @click="$emit('abrir-importar')" class="btn-accion btn-importar">
+            <div class="btn-content">
+              <div class="btn-icon-circle">
+                <i class="fas fa-file-excel"></i>
+              </div>
+              <div class="btn-text">
+                <span class="btn-title">Importar Excel</span>
+                <span class="btn-subtitle">Cargar empresas y puestos</span>
               </div>
             </div>
           </button>
@@ -41,7 +56,14 @@
 export default {
   data() {
     return {}
-  }
+  },
+  emits: [
+    'ir-a-registro',
+    'abrir-importar',  // ✅ Un solo emit para importar
+    'filtro-cambiado',
+    'actualizar-buscar',
+    'actualizar-activo'
+  ],
 }
 </script>
 
@@ -77,7 +99,8 @@ h2 + small {
   font-size: 0.82rem;
 }
 
-.btn-registrar {
+/* Estilo unificado para ambos botones */
+.btn-accion {
   background: linear-gradient(135deg, #0061f2 0%, #00ba94 100%);
   border: none;
   border-radius: 10px;
@@ -87,12 +110,22 @@ h2 + small {
   box-shadow: 0 4px 12px rgba(0, 97, 242, 0.3);
 }
 
-.btn-registrar:hover {
+.btn-accion:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 97, 242, 0.4);
 }
 
-.btn-registrar-content {
+/* Color diferente para el botón Importar */
+.btn-importar {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-importar:hover {
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.btn-content {
   display: flex;
   align-items: center;
   gap: 10px;
