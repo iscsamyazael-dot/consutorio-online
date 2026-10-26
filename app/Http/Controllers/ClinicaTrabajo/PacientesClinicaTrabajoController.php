@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
+// ✅ Importamos la nueva clase de importación (sin Maatwebsite)
+use App\Imports\ClinicaTrabajo\PacientesImport;
+
 class PacientesClinicaTrabajoController extends Controller
 {
     // Llave que va a datos_laborales, no a pacientes_clinica_trabajo
@@ -401,6 +404,42 @@ class PacientesClinicaTrabajoController extends Controller
                 ->update($datos);
         } else {
             DatosLaboral::create(['paciente_id' => $pacienteId] + $datos);
+        }
+    }
+
+    /**
+     * ✅ MÉTODO DE IMPORTACIÓN ACTUALIZADO (Sin Maatwebsite)
+     */
+    public function importar(Request $request)
+    {
+        $request->validate([
+            'archivo' => 'required|file|mimes:xlsx,xls,csv|max:5120'
+        ]);
+
+        try {
+            // Instanciamos la clase de importación y llamamos al método process
+            $importer = new PacientesImport();
+            $stats = $importer->process($request->file('archivo')->getPathname());
+
+            // Construimos un mensaje informativo basado en las estadísticas
+            $message = "Proceso de importación finalizado. ";
+            if ($stats['imported'] > 0) {
+                $message .= "{$stats['imported']} pacientes importados exitosamente. ";
+            }
+            if ($stats['errors'] > 0) {
+                $message .= "{$stats['errors']} filas tuvieron errores y fueron omitidas (revisar logs del sistema).";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => trim($message)
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error en importación de pacientes: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

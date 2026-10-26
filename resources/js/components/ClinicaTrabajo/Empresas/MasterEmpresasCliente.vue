@@ -1,16 +1,17 @@
 <template>
   <div class="container-fluid px-0">
-    <!-- Encabezado del master (vista tabla) -->
+    <!-- Header con 2 botones -->
     <HeaderEmpresasCliente
       v-if="vistaActual === 'tabla'"
       :filtros="filtros"
       @ir-a-registro="vistaActual = 'registro'"
+      @abrir-importar="abrirModalImportar"
       @filtro-cambiado="aplicarFiltros"
       @actualizar-buscar="actualizarBuscar"
       @actualizar-activo="actualizarActivo"
     ></HeaderEmpresasCliente>
 
-    <!-- Si la vista actual es 'tabla', mostramos la lista -->
+    <!-- Tabla de empresas -->
     <TablaEmpresasCliente
       v-if="vistaActual === 'tabla'"
       :empresas="lista.data"
@@ -23,13 +24,21 @@
       @pagina-cambiada="cambiarPagina"
     ></TablaEmpresasCliente>
 
-    <!-- Si la vista actual es 'registro', mostramos el formulario -->
+    <!-- Formulario de empresa -->
     <FormEmpresaCliente
       v-else-if="vistaActual === 'registro'"
       :empresa="empresaSeleccionada"
       @guardado="empresaGuardada"
       @cancelar="vistaActual = 'tabla'"
     ></FormEmpresaCliente>
+
+    <!-- ✅ Modal único de Importación -->
+    <ImportarExcelModal 
+      :show="mostrarModalImportar" 
+      tipo="empresa" 
+      @close="mostrarModalImportar = false"
+      @success="onImportacionExitosa"
+    />
   </div>
 </template>
 
@@ -37,6 +46,7 @@
 import HeaderEmpresasCliente from './HeaderEmpresasCliente.vue';
 import TablaEmpresasCliente from './TablaEmpresasCliente.vue';
 import FormEmpresaCliente from './FormEmpresaCliente.vue';
+import ImportarExcelModal from '../Pacientes/ImportarExcelModal.vue';
 import ApiServiceClinicaTrabajo from '@/services/ApiServiceClinicaTrabajo.js';
 import Swal from 'sweetalert2';
 
@@ -44,7 +54,8 @@ export default {
   components: {
     HeaderEmpresasCliente,
     TablaEmpresasCliente,
-    FormEmpresaCliente
+    FormEmpresaCliente,
+    ImportarExcelModal
   },
   data() {
     return {
@@ -61,7 +72,8 @@ export default {
       },
       pagina: 1,
       cargando: false,
-      empresaSeleccionada: null
+      empresaSeleccionada: null,
+      mostrarModalImportar: false
     }
   },
   methods: {
@@ -76,18 +88,11 @@ export default {
           }
         });
         
-        console.log('=== RESPONSE COMPLETA ===', response);
-        console.log('response.data:', response.data);
-        
-        // Verificar si response.data existe o si los datos están en response directamente
         if (response.data) {
           this.lista = response.data;
         } else if (response) {
-          // Si response es directamente el objeto de paginación
           this.lista = response;
         }
-        
-        console.log('this.lista después de asignar:', this.lista);
       } catch (error) {
         console.error('Error al cargar la lista de empresas:', error);
         Swal.fire({
@@ -129,7 +134,6 @@ export default {
       this.cargando = true;
       try {
         const response = await ApiServiceClinicaTrabajo.get('/empresa-cliente/' + id);
-        console.log('Response de obtener empresa:', response);
         this.empresaSeleccionada = response.data || response;
         this.vistaActual = 'registro';
       } catch (error) {
@@ -193,6 +197,12 @@ export default {
       } finally {
         this.cargando = false;
       }
+    },
+    abrirModalImportar() {
+      this.mostrarModalImportar = true;
+    },
+    onImportacionExitosa() {
+      this.cargarLista();
     }
   },
   mounted() {

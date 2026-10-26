@@ -11,15 +11,26 @@
             <small class="text-muted">Gestión médica laboral inteligente</small>
         </div>
 
-        <a href="{{ url('PacienteNuevo') }}" class="btn btn-primary shadow-sm px-4 rounded-pill">
-            <i class="fas fa-user-plus"></i> Nuevo Paciente
-        </a>
+        <!-- Contenedor de botones para mantenerlos alineados -->
+        <div class="d-flex gap-2">
+            <!-- NUEVO BOTÓN: Dispara un evento global que Vue escuchará -->
+            <button type="button" class="btn btn-success shadow-sm px-4 rounded-pill" 
+                    onclick="window.dispatchEvent(new Event('abrir-modal-importar'))">
+                <i class="fas fa-file-excel me-1"></i> Importar Excel
+            </button>
+
+            <!-- BOTÓN EXISTENTE -->
+            <a href="{{ url('RegistroPacientesClinicaTrabajo') }}" class="btn btn-primary shadow-sm px-4 rounded-pill">
+                <i class="fas fa-user-plus me-1"></i> Nuevo Paciente
+            </a>
+        </div>
     </div>
 @stop
 
 @section('content')
 <div class="container-fluid">
     <div id="app">
+        <!-- Tu componente principal de Vue -->
         <lista-paciente-clinicatrabajo></lista-paciente-clinicatrabajo>
     </div>
 </div>

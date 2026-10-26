@@ -19,14 +19,23 @@
             </div>
         </div>
 
-        <!-- Modales -->
+        <!-- Modales existentes -->
         <PatientViewModal :show="modalVer" :paciente="detallePaciente" @close="modalVer = false" />
         <PatientDeleteModal :show="modalEliminar" @close="modalEliminar = false" @confirm="confirmarEliminacion" />
+        
+        <!-- ✅ Modal de Importación (Ya estaba aquí, ahora sí funcionará) -->
+        <ImportarExcelModal 
+            :show="mostrarModalImportar" 
+            tipo="paciente" 
+            @close="mostrarModalImportar = false"
+            @success="onImportacionExitosa"
+        />
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+// ✅ 1. Agregamos onUnmounted a los imports de Vue
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import ApiServiceClinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 import StatsCards from './StatsCards.vue'
@@ -34,6 +43,7 @@ import PatientSearch from './PacienteSearch.vue'
 import PatientTable from './PacienteTabla.vue'
 import PatientViewModal from './PacienteVerModal.vue'
 import PatientDeleteModal from './PacienteEliminarModal.vue'
+import ImportarExcelModal from './ImportarExcelModal.vue'
 
 // Estado de la tabla
 const pacientes = ref([])
@@ -42,6 +52,9 @@ const detallePaciente = ref({})
 const pacienteAEliminar = ref(null)
 const modalVer = ref(false)
 const modalEliminar = ref(false)
+
+// ✅ 2. Nueva variable para controlar el modal de importar
+const mostrarModalImportar = ref(false)
 
 const pacientesFiltrados = computed(() => {
     if (!buscar.value.trim()) return pacientes.value
@@ -97,8 +110,26 @@ const confirmarEliminacion = async () => {
     }
 }
 
+// ✅ 3. Función que se ejecuta cuando la importación termina con éxito
+const onImportacionExitosa = () => {
+    obtenerPacientes() // Recarga la tabla automáticamente con los nuevos datos
+}
+
+// ✅ 4. Función que escucha el evento enviado desde el botón del archivo .blade.php
+const manejarAperturaModal = () => {
+    mostrarModalImportar.value = true
+}
+
 onMounted(() => { 
-    obtenerPacientes() 
+    obtenerPacientes()
+    
+    // ✅ 5. Registrar el listener al montar el componente
+    window.addEventListener('abrir-modal-importar', manejarAperturaModal)
+})
+
+// ✅ 6. Limpiar el listener al destruir el componente (evita fugas de memoria y comportamientos extraños)
+onUnmounted(() => {
+    window.removeEventListener('abrir-modal-importar', manejarAperturaModal)
 })
 </script>
 

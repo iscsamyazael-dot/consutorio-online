@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
+// ✅ Imports actualizados (sin Maatwebsite)
+use App\Imports\ClinicaTrabajo\EmpresasYPuestosImport;
+use App\Imports\ClinicaTrabajo\PuestosImport;
+
 class EmpresaClienteController extends Controller
 {
     public function index(Request $request)
@@ -54,7 +58,6 @@ class EmpresaClienteController extends Controller
             'puestos'           => 'nullable|array',
             'puestos.*.id'      => 'nullable|integer',
             'puestos.*.nombre'  => 'required|string|max:255',
-            // ✅ AGREGADO: Validación del departamento
             'puestos.*.departamento' => 'nullable|string|max:150',
         ]);
 
@@ -101,13 +104,11 @@ class EmpresaClienteController extends Controller
         $idsConservados = [];
 
         foreach ($request->input('puestos', []) as $p) {
-            // ✅ AGREGADO: Extraer departamento con fallback a string vacío
             $departamento = trim($p['departamento'] ?? '');
 
             if (!empty($p['id'])) {
                 $puesto = $empresa->puestosTrabajo()->find($p['id']);
                 if ($puesto) {
-                    // ✅ AGREGADO: Actualizar también el departamento
                     $puesto->update([
                         'nombre'       => trim($p['nombre']),
                         'departamento' => $departamento,
@@ -116,7 +117,6 @@ class EmpresaClienteController extends Controller
                     $idsConservados[] = $puesto->id;
                 }
             } else {
-                // ✅ AGREGADO: Crear también con el departamento
                 $idsConservados[] = $empresa->puestosTrabajo()
                     ->create([
                         'nombre'       => trim($p['nombre']),
@@ -127,7 +127,6 @@ class EmpresaClienteController extends Controller
             }
         }
 
-        // Desactivar puestos que ya no están en la lista
         $empresa->puestosTrabajo()
             ->where('activo', 1)
             ->whereNotIn('id', $idsConservados)
@@ -157,7 +156,6 @@ class EmpresaClienteController extends Controller
             'puestos'           => 'nullable|array',
             'puestos.*.id'      => 'nullable|integer',
             'puestos.*.nombre'  => 'required|string|max:255',
-            // ✅ AGREGADO: Validación del departamento
             'puestos.*.departamento' => 'nullable|string|max:150',
         ]);
 
@@ -214,5 +212,82 @@ class EmpresaClienteController extends Controller
             'status'  => 'success',
             'message' => 'Empresa dada de baja correctamente',
         ]);
+    }
+
+    /**
+     * ✅ MÉTODO DE IMPORTACIÓN UNIFICADO (Empresas + Puestos)
+     */
+    public function importar(Request $request)
+    {
+        $request->validate([
+            'archivo' => 'required|file|mimes:xlsx,xls,csv|max:5120'
+        ]);
+
+        try {
+            // Instanciamos la clase y llamamos al método process
+            $importer = new EmpresasYPuestosImport();
+            $stats = $importer->process($request->file('archivo')->getPathname());
+
+            // Construimos un mensaje informativo basado en las estadísticas
+            $message = "Proceso de importación finalizado. ";
+            if ($stats['empresas_importadas'] > 0) {
+                $message .= "{$stats['empresas_importadas']} empresas importadas. ";
+            }
+            if ($stats['puestos_importados'] > 0) {
+                $message .= "{$stats['puestos_importados']} puestos importados. ";
+            }
+            
+            $totalErrores = $stats['empresas_errores'] + $stats['puestos_errores'];
+            if ($totalErrores > 0) {
+                $message .= "{$totalErrores} filas tuvieron errores y fueron omitidas (revisar logs del sistema).";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => trim($message)
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error en importación de empresas: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ MÉTODO DE IMPORTACIÓN SOLO DE PUESTOS
+     */
+    public function importarPuestos(Request $request)
+    {
+        $request->validate([
+            'archivo' => 'required|file|mimes:xlsx,xls,csv|max:5120'
+        ]);
+
+        try {
+            // Instanciamos la clase y llamamos al método process
+            $importer = new PuestosImport();
+            $stats = $importer->process($request->file('archivo')->getPathname());
+
+            // Construimos un mensaje informativo
+            $message = "Proceso de importación finalizado. ";
+            if ($stats['imported'] > 0) {
+                $message .= "{$stats['imported']} puestos importados exitosamente. ";
+            }
+            if ($stats['errors'] > 0) {
+                $message .= "{$stats['errors']} filas tuvieron errores y fueron omitidas (revisar logs del sistema).";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => trim($message)
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error en importación de puestos: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

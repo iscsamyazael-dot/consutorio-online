@@ -544,6 +544,11 @@ Route::middleware('auth')->group(function () {
             Route::get('clinica-trabajo-buscador/paciente/{id}/evaluaciones', [BuscadorPacientesController::class, 'evaluacionesPaciente'])->name('clinica-trabajo-buscador.evaluaciones');
             Route::get('clinica-trabajo-buscador/evaluaciones-pendientes', [BuscadorPacientesController::class, 'evaluacionesPendientes'])->name('clinica-trabajo-buscador.pendientes');
             Route::get('clinica-trabajo-buscador/estadisticas', [BuscadorPacientesController::class, 'estadisticas'])->name('clinica-trabajo-buscador.estadisticas');
+
+            //RUTAS PARA IMPORTAR DESDE UN ARCHIVO EXCEL LOS DATOS DE LOS PACIENTES Y EMPRESAS ASI COMO SUS PUESTOS//
+            Route::post('ImportarExcelInformacionPacientes', [PacientesClinicaTrabajoController::class, 'importar']);
+            Route::post('ImportarExcelInformacionEmpresas', [EmpresaClienteController::class, 'importar']);
+            Route::post('ImportarExcelInformacionPuestoTrabajo', [EmpresaClienteController::class, 'importarPuestos']);
         });
 
 
