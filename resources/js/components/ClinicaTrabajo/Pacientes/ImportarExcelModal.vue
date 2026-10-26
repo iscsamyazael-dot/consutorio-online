@@ -15,7 +15,8 @@
             <div>
               <strong>Antes de subir:</strong> Descarga la plantilla oficial para asegurar que las columnas sean correctas.
               <br>
-              <a :href="urlPlantilla" download class="btn btn-sm btn-outline-primary mt-2 rounded-pill">
+              <!-- ✅ CORREGIDO: Botón con mejor contraste -->
+              <a :href="urlPlantilla" download class="btn btn-sm btn-primary mt-2 rounded-pill text-white">
                 <i class="fas fa-download me-1"></i> Descargar Plantilla Excel
               </a>
             </div>
@@ -92,9 +93,9 @@ const btnColor = computed(() => {
 // 2. ✅ CORREGIDO: URL de la plantilla (Agregada la 's' en /plantillas/ y extensiones .xlsx)
 const urlPlantilla = computed(() => {
   const map = {
-    'paciente': 'plantilla_pacientes.xlsx',      // ⚠️ Si lo dejaste como .csv, cámbialo aquí a 'plantilla_pacientes.csv'
+    'paciente': 'plantilla_pacientes.xlsx',      // ️ Si lo dejaste como .csv, cámbialo aquí a 'plantilla_pacientes.csv'
     'empresa': 'plantilla_empresas_puestos.xlsx', // ✅ Archivo unificado
-    'puesto': 'plantilla_puestos.xlsx'           // ⚠️ Si lo dejaste como .csv, cámbialo aquí a 'plantilla_puestos.csv'
+    'puesto': 'plantilla_puestos.xlsx'           // ️ Si lo dejaste como .csv, cámbialo aquí a 'plantilla_puestos.csv'
   }
   return `/plantillas/${map[props.tipo]}` // ✅ Corregido: ahora dice /plantillas/ (con 's')
 })
@@ -163,7 +164,23 @@ const subirArchivo = async () => {
 </script>
 
 <style scoped>
-    .border-dashed { border-style: dashed !important; transition: all 0.3s ease; }
-    .cursor-pointer { cursor: pointer; }
-    .upload-zone:hover { background-color: #f8f9fa; border-color: #198754 !important; }
+.border-dashed { border-style: dashed !important; transition: all 0.3s ease; }
+.cursor-pointer { cursor: pointer; }
+.upload-zone:hover { background-color: #f8f9fa; border-color: #198754 !important; }
+
+/* ✅ NUEVO: Estilo personalizado para el botón de descarga dentro del alert */
+.alert a.btn-primary {
+  background-color: #0d6efd !important;
+  border-color: #0d6efd !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+}
+
+.alert a.btn-primary:hover {
+  background-color: #0b5ed7 !important;
+  border-color: #0a58ca !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+}
 </style>
