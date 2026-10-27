@@ -437,14 +437,20 @@ class PacientesClinicaTrabajoController extends Controller
             if ($stats['imported'] > 0) {
                 $message .= "{$stats['imported']} pacientes importados exitosamente. ";
             }
+            
             if ($stats['errors'] > 0) {
-                $message .= "{$stats['errors']} filas tuvieron errores y fueron omitidas (revisar logs del sistema).";
+                $message .= "{$stats['errors']} filas fueron omitidas. ";
+            }
+            if (count($stats['advertencias']) > 0) {
+                $message .= "Revisa los avisos antes de continuar.";
             }
 
             return response()->json([
                 'success' => true,
-                'message' => trim($message)
+                'message' => trim($message),
+                'advertencias' => $stats['advertencias'],
             ]);
+
         } catch (\Exception $e) {
             \Log::error('Error en importación de pacientes: ' . $e->getMessage());
             return response()->json([

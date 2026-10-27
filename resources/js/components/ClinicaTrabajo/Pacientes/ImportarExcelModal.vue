@@ -6,7 +6,7 @@
           <h5 class="modal-title fw-bold">
             <i class="fas fa-file-excel me-2"></i>Importar {{ titulo }}
           </h5>
-          <button type="button" class="btn-close btn-close-white" @click="$emit('close')"></button>
+          <button type="button" class="btn-close btn-close-white" @click="cerrar"></button>
         </div>
         
         <div class="modal-body p-4">
@@ -45,11 +45,19 @@
           <div v-if="mensajeExito" class="alert alert-success mt-3 mb-0">
             <i class="fas fa-check-circle me-2"></i>{{ mensajeExito }}
           </div>
+          <div v-if="advertencias.length" class="alert alert-warning mt-3 mb-0">
+            <strong><i class="fas fa-exclamation-triangle me-2"></i>{{ advertencias.length }} aviso(s):</strong>
+            <ul class="mb-0 mt-2 small ps-3" style="max-height: 200px; overflow-y: auto">
+              <li v-for="(a, i) in advertencias" :key="i">
+                Fila {{ a.fila }} ({{ a.campo }}): {{ a.mensaje }}
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div class="modal-footer border-0 bg-light">
-          <button type="button" class="btn btn-secondary rounded-pill px-4" @click="$emit('close')" :disabled="cargando">
-            Cancelar
+          <button type="button" class="btn btn-secondary rounded-pill px-4" @click="cerrar" :disabled="cargando">
+           {{ advertencias.length ? 'Cerrar' : 'Cancelar' }}
           </button>
           <button type="button" class="btn text-white rounded-pill px-4" :class="btnColor" @click="subirArchivo" :disabled="!archivo || cargando">
             <span v-if="cargando" class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -65,6 +73,14 @@
 <script setup>
 import { ref, computed } from 'vue'
 import ApiServiceClinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
+
+const advertencias = ref([])
+
+// Refresca la tabla solo si hubo importación; luego cierra
+const cerrar = () => {
+  if (mensajeExito.value) emit('success')
+  emit('close')
+}
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -113,6 +129,7 @@ const endpoint = computed(() => {
 const handleFileChange = (event) => {
   const file = event.target.files[0]
   if (file) {
+    advertencias.value = []
     if (file.size > 5 * 1024 * 1024) {
       mensajeError.value = 'El archivo es demasiado grande. Máximo 5MB.'
       archivo.value = null
@@ -136,6 +153,7 @@ const subirArchivo = async () => {
   cargando.value = true
   mensajeError.value = ''
   mensajeExito.value = ''
+  advertencias.value = []
 
   const formData = new FormData()
   formData.append('archivo', archivo.value)
@@ -146,11 +164,12 @@ const subirArchivo = async () => {
     })
 
     if (response.data.success) {
-      mensajeExito.value = response.data.message || `¡Importación completada con éxito!`
-      setTimeout(() => {
-        emit('success')
-        emit('close')
-      }, 1500)
+      mensajeExito.value = response.data.message || '¡Importación completada con éxito!'
+      advertencias.value = response.data.advertencias || []
+      // Solo cierra sola si no hay avisos; si los hay, el usuario la cierra al leerlos
+      if (advertencias.value.length === 0) {
+        setTimeout(() => cerrar(), 1500)
+      }
     } else {
       mensajeError.value = response.data.message || 'Error al procesar el archivo.'
     }
