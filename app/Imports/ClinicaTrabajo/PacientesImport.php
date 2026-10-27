@@ -27,37 +27,52 @@ class PacientesImport
                 throw new \Exception('El archivo está vacío.');
             }
 
-            // 1. Extraer encabezados y crear mapa seguro
             $headers = array_shift($rows);
             $headerMap = [];
             foreach ($headers as $index => $header) {
                 $headerMap[strtolower(trim($header))] = $index;
             }
 
-            // ✅ CORREGIDO: Función segura que recibe $row como parámetro
+            // ✅ FUNCIÓN SEGURA: Evita el error "Undefined array key"
             $get = function (array $row, string $key) use ($headerMap) {
                 if (!isset($headerMap[$key])) return null;
                 $val = $row[$headerMap[$key]] ?? null;
                 return $val === null ? null : trim((string)$val);
             };
 
+            // ✅ SANITIZADORES: Previenen errores de base de datos (N/A y espacios en RH)
+            $limpiarCedula = function (?string $valor): ?string {
+                if (!$valor) return null;
+                $valor = strtoupper(trim($valor));
+                return in_array($valor, ['N/A', 'NA', 'NO APLICA', '']) ? null : $valor;
+            };
+
+            $limpiarRh = function (?string $valor): ?string {
+                if (!$valor) return null;
+                $valor = trim($valor);
+                return in_array($valor, ['+', '-']) ? $valor : null;
+            };
+
+            $limpiarTipoSangre = function (?string $valor): ?string {
+                if (!$valor) return null;
+                $valor = strtoupper(trim($valor));
+                return in_array($valor, ['A', 'B', 'AB', 'O']) ? $valor : null;
+            };
+
             foreach ($rows as $rowIndex => $row) {
                 if (empty(array_filter($row))) continue;
 
-                // ✅ CORREGIDO: Ahora pasamos $row como argumento
                 $nombreCompleto = $get($row, 'nombre_completo');
                 if (empty($nombreCompleto)) continue;
 
                 DB::beginTransaction();
                 try {
-                    // 1. Empresa
                     $razonSocial = $get($row, 'empresa_cliente_razon_social');
                     $empresa = $razonSocial ? EmpresaCliente::firstOrCreate(
                         ['razon_social' => $razonSocial],
                         ['activo' => true]
                     ) : null;
 
-                    // 2. Puesto
                     $nombrePuesto = $get($row, 'puesto_trabajo_nombre');
                     $puesto = null;
                     if ($nombrePuesto && $empresa) {
@@ -67,7 +82,6 @@ class PacientesImport
                         );
                     }
 
-                    // 3. Crear Paciente (con TODOS los campos)
                     $paciente = PacientesClinicaTrabajo::create([
                         'nombre' => $nombreCompleto,
                         'fecha_nacimiento' => $this->parseDate($get($row, 'fecha_nacimiento')),
@@ -76,7 +90,10 @@ class PacientesImport
                         'escolaridad' => $get($row, 'escolaridad'),
                         'lugar_nacimiento' => $get($row, 'lugar_nacimiento'),
                         'curp' => strtoupper($get($row, 'curp') ?? ''),
-                        'cedula_profesional' => $get($row, 'cedula_profesional'),
+                        
+                        // ✅ APLICAMOS SANITIZACIÓN AQUÍ
+                        'cedula_profesional' => $limpiarCedula($get($row, 'cedula_profesional')),
+                        
                         'telefono' => $get($row, 'telefono'),
                         'celular' => $get($row, 'celular'),
                         'whatsapp_id' => $get($row, 'whatsapp_id'),
@@ -85,8 +102,11 @@ class PacientesImport
                         'contacto_emergencia' => $get($row, 'contacto_emergencia'),
                         'relacion_contacto_emergencia' => $get($row, 'relacion_contacto_emergencia'),
                         'telefono_emergencia' => $get($row, 'telefono_emergencia'),
-                        'tipo_sangre' => strtoupper($get($row, 'tipo_sangre') ?? ''),
-                        'rh' => $get($row, 'rh'),
+                        
+                        // ✅ APLICAMOS SANITIZACIÓN AQUÍ
+                        'tipo_sangre' => $limpiarTipoSangre($get($row, 'tipo_sangre')),
+                        'rh' => $limpiarRh($get($row, 'rh')),
+                        
                         'alergias' => $get($row, 'alergias'),
                         'alergia_medicamentos' => $get($row, 'alergia_medicamentos'),
                         'transfusion_sanguinea' => $this->parseBoolean($get($row, 'transfusion_sanguinea')),
@@ -99,7 +119,6 @@ class PacientesImport
                         'notas_generales' => $get($row, 'notas_generales'),
                     ]);
 
-                    // 4. Datos Laborales
                     if ($empresa) {
                         DatosLaboral::create([
                             'paciente_id' => $paciente->id,

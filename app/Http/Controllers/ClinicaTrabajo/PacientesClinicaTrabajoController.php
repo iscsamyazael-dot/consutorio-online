@@ -27,23 +27,34 @@ class PacientesClinicaTrabajoController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PacientesClinicaTrabajo::with(['pacienteOrigen', 'datosLaborales']);
+        // ✅ 1. Cargamos también la relación 'empresaCliente' dentro de 'datosLaborales'
+        $query = PacientesClinicaTrabajo::with(['pacienteOrigen', 'datosLaborales.empresaCliente']);
 
+        // Filtro por texto (nombre, folio, email)
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('nombre', 'like', "%{$search}%")
-                  ->orWhere('folio', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                ->orWhere('folio', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
+        // Filtro por género
         if ($request->filled('genero')) {
             $query->where('genero', $request->input('genero'));
         }
 
+        // Filtro por estado civil
         if ($request->filled('estado_civil')) {
             $query->where('estado_civil', $request->input('estado_civil'));
+        }
+
+        // ✅ 2. NUEVO: Filtro por Empresa (usando whereHas para buscar en la relación)
+        if ($request->filled('empresa_id')) {
+            $query->whereHas('datosLaborales', function ($q) use ($request) {
+                $q->where('empresa_cliente_id', $request->input('empresa_id'));
+            });
         }
 
         $pacientes = $query->latest()->get();
