@@ -125,6 +125,7 @@
         <div id="hoja1" class="tab-pane fade show active" role="tabpanel">
           <datos-generales-espirometria
             :modelValue="form.datosGenerales"
+            :puestosDisponibles="puestosEmpresa"
             @update:modelValue="form.datosGenerales = $event"
           ></datos-generales-espirometria>
         </div>
@@ -135,6 +136,7 @@
             :modelValue="form.parametrosFVL"
             @update:modelValue="form.parametrosFVL = $event"
             @importar-interpretacion="alImportarInterpretacion($event)"
+            @importar-datos-generales="fusionarDatosIA({ datosGenerales: $event })"
           ></parametros-fvl-espirometria>
         </div>
 
@@ -277,6 +279,7 @@ function formularioVacio() {
     origen_etnico: 'Hispano',
     sexo: '',
     fecha_prueba: '',
+    puesto_trabajo_id: null,
     fumador: false, asma: false, epoc: false, antecedente_covid: false,
     rinitis_alergica: false, tuberculosis: false, neumonia_previa: false,
     cigarrillos_dia: 0, anos_fumador: 0,
@@ -317,6 +320,7 @@ export default {
       pacienteId: null,
       folio: '',
       tipoEvaluacion: 'ingreso',
+      puestosEmpresa: [],
 
       // Campos del dictamen llenados por la IA y aún no editados por el médico
       camposSugeridos: [],
@@ -380,10 +384,12 @@ export default {
           id_empleado: laboral?.numero_empleado || '',
           empresa: laboral?.empresa_cliente?.razon_social || '',
           empresa_cliente_id: laboral?.empresa_cliente_id ?? null,
+          puesto_trabajo_id: laboral?.puesto_trabajo_id ?? null,
           // Sugerido: la empresa del paciente. El médico puede cambiarlo.
           remitido_por: this.form.datosGenerales.remitido_por || laboral?.empresa_cliente?.razon_social || '',
           prescrito_por: this.form.datosGenerales.prescrito_por || ''
         }
+        this.puestosEmpresa = laboral?.puesto_trabajo ? [laboral.puesto_trabajo] : []
       } catch (error) {
         console.error('Error al cargar el paciente:', error)
         await notificar('error', 'Error al cargar el expediente', error.response?.data?.message || error.message)
@@ -392,6 +398,8 @@ export default {
         this.cargando = false
       }
     },
+
+    
 
     async cargarValoracion(id) {
       this.cargando = true
@@ -403,6 +411,7 @@ export default {
         this.pacienteId = registro.paciente_id
         this.tipoEvaluacion = registro.tipo_evaluacion
         this.form = this.desdeRegistro(registro)
+        this.puestosEmpresa = registro.puesto ? [registro.puesto] : []
         this.camposSugeridos = []
         this.aptitudSugerida = ''
         this.dictamenPendiente = false
@@ -420,8 +429,15 @@ export default {
     desdeRegistro(r) {
       const f = formularioVacio()
 
-      const datosGenerales = { ...f.datosGenerales, nombre: r.nombre || '', empresa_cliente_id: r.empresa_cliente_id }
+      const datosGenerales = {
+        ...f.datosGenerales,
+        nombre: r.nombre || '',
+        empresa_cliente_id: r.empresa_cliente_id,
+        puesto_trabajo_id: r.puesto_trabajo_id ?? null,
+        empresa: r.empresa?.razon_social || ''
+      }
       CAMPOS_DATOS.forEach(c => {
+        if (c === 'empresa') return // es la relación cargada, no el texto del campo
         datosGenerales[c] = r[c] ?? datosGenerales[c]
       })
       CAMPOS_BOOLEANOS.forEach(c => { datosGenerales[c] = !!r[c] })
@@ -463,6 +479,7 @@ export default {
       Object.entries(MEJOR_A_COLUMNA).forEach(([mejor, columna]) => { payload[columna] = p[mejor] ?? null })
       CAMPOS_INTERPRETACION.forEach(c => { payload[c] = i[c] ?? null })
       payload.seguimiento_requerido = !!i.seguimiento_requerido
+      payload.puesto_trabajo_id = d.puesto_trabajo_id || null
 
       return payload
     },

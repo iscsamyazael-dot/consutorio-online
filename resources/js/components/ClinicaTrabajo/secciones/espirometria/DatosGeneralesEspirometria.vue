@@ -25,12 +25,19 @@
         </div>
 
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
                 <label class="font-weight-bold">Remitido por</label>
                 <input v-model="form.remitido_por" type="text" class="form-control"
                     placeholder="Empresa o institución que envía al paciente" />
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
+              <label class="font-weight-bold">Puesto evaluado</label>
+              <select v-model="form.puesto_trabajo_id" class="form-control" style="height: 38px;">
+                <option :value="null">Seleccionar puesto</option>
+                <option v-for="p in puestosDisponibles" :key="p.id" :value="p.id">{{ p.nombre }}</option>
+              </select>
+            </div>
+            <div class="col-md-4 mb-3">
                 <label class="font-weight-bold">Prescrito por</label>
                 <input v-model="form.prescrito_por" type="text" class="form-control"
                     placeholder="Médico que solicita la prueba" />
@@ -158,7 +165,8 @@
                   <div class="col-md-12" v-if="packYears !== null">
                     <label class="font-weight-bold small">Pack-Years Calculado</label>
                     <div class="bg-white border p-2 text-center font-weight-bold text-primary" style="height: 34px; display: flex; align-items: center; justify-content: center;">
-                      {{ packYears.toFixed(1) }} <span v-if="packYears >= 20" class="text-danger ml-2 small">(⚠️ Alto riesgo)</span><span v-else class="text-success ml-2 small">(Bajo riesgo)</span>
+                      {{ packYears.toFixed(1) }}
+                      <span v-if="packYears >= 20" class="text-warning ml-2 small">(Cumple criterio de tamizaje: ≥ 20 paquete-año)</span>
                     </div>
                   </div>
                 </div>
@@ -283,7 +291,8 @@
 export default {
   name: 'DatosGeneralesEspirometria',
   props: {
-    modelValue: { type: Object, required: true }
+    modelValue: { type: Object, required: true },
+    puestosDisponibles: { type: Array, default: () => [] }
   },
   emits: ['update:modelValue'],
   data() {

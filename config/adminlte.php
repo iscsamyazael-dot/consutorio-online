@@ -509,6 +509,11 @@ return [
                             'icon' => 'fas fa-fw fa-notes-medical',
                         ],
                         [
+                            'text' => 'Nueva Valoración',
+                            'icon' => 'fas fa-fw fa-briefcase-medical',
+                            'url'  => 'buscador-pacientes-clinicaTrabajo', 
+                        ],
+                        [
                             'text' => 'Valoración Ocupacional',
                             'icon' => 'fas fa-fw fa-briefcase-medical',
                             'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=ocupacional', 
