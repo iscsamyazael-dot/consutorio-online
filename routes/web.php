@@ -42,6 +42,7 @@ use App\Http\Controllers\ClinicaTrabajo\ValoracionNutricionController;
 use App\Http\Controllers\ClinicaTrabajo\ValoracionAudiologiaController;
 use App\Http\Controllers\ClinicaTrabajo\ValoracionErgonomicaController;
 use App\Http\Controllers\ClinicaTrabajo\ValoracionMedicinaController;
+use App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController;
 use App\Http\Controllers\ClinicaTrabajo\CatalogoController;
 use App\Http\Controllers\ClinicaTrabajo\AudiologiaDELLIController;
 use App\Http\Controllers\ClinicaTrabajo\AudiologiaTRController;
@@ -222,31 +223,8 @@ Route::middleware('auth')->group(function () {
             Route::get('riesgos-ergonomicos', [CatalogoController::class, 'riesgosErgonomicos'])->name('riesgos');
         });
 
-
         // Vista para el catálogo de empresas cliente
         Route::view('/clinica/empresas', 'clinica-trabajo.EmpresasCliente')->name('clinica.empresas.index');
-
-        // ESPIROMETRÍA API//
-        Route::prefix('api/clinica/espirometria')->name('api.espirometria.')->group(function () {
-            Route::get('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'index'])->name('index');
-            Route::get('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'show'])->name('show');
-            Route::post('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'store'])->name('store');
-            Route::put('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'update'])->name('update');
-            Route::delete('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'destroy'])->name('destroy');
-            Route::get('{id}/imprimir', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'imprimir'])->name('imprimir');
-        });
-
-        // Rutas sin /api/ para compatibilidad con ApiService (igual que psicologia, nutricion, ergonomia)
-        Route::prefix('clinica/espirometria')->name('espirometria.')->group(function () {
-            Route::get('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'index'])->name('index');
-            Route::get('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'show'])->name('show');
-            Route::post('/', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'store'])->name('store');
-            Route::put('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'update'])->name('update');
-            Route::delete('{id}', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'destroy'])->name('destroy');
-            Route::get('{id}/imprimir', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'imprimir'])->name('imprimir');
-            Route::post('importar', [App\Http\Controllers\ClinicaTrabajo\ValoracionEspirometriaController::class, 'importarArchivo'])->name('importar');
-        });
-
 
         // ========== TRIAGE CLINICA TRABAJO ==========
         Route::prefix('clinica/triage')->name('clinica.triage.')->group(function () {
@@ -534,6 +512,10 @@ Route::middleware('auth')->group(function () {
             Route::get('ActualizarPaciente/{id?}', [PacientesClinicaTrabajoController::class, 'create'])->name('clinica-trabajo.RegistroPaciente');
             Route::get('ExpedienteDetalleClinicaTrabajo/{id}', [PacientesClinicaTrabajoController::class, 'show'])->name('ExpedienteDetalleClinicaTrabajo');
             Route::get('PacientesDetalleClinicaTrabajo/{id}', [PacientesClinicaTrabajoController::class, 'show'])->name('PacientesDetalleClinicaTrabajo');
+            Route::resource('espirometria', ValoracionEspirometriaController::class)->parameters(['espirometria' => 'valoracion'])->except(['create', 'edit']);
+            Route::post('espirometria-importar', [ValoracionEspirometriaController::class, 'importarArchivo'])->name('espirometria.importar');
+            Route::get('espirometria-imprimir/{id}', [ValoracionEspirometriaController::class, 'imprimir'])->name('espirometria.imprimir');
+            Route::post('espirometria-consultarIA', [ValoracionEspirometriaController::class, 'consultarIA'])->name('espirometria.consultarIA');
             
             // =========================================================================
             // RUTAS PARA EL BUSCADOR INTELIGENTE DE PACIENTES (CLÍNICA DE TRABAJO)

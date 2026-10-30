@@ -17,8 +17,8 @@
             <div class="col-md-4">
               <div class="d-flex justify-content-between">
                 <span class="text-muted small">FEV1 / Predicho:</span>
-                <span class="font-weight-bold" :class="form.fev1_porcentaje_predicho >= 80 ? 'text-success' : 'text-danger'">
-                  {{ form.fev1_porcentaje_predicho || '—' }}%
+                <span class="font-weight-bold" :class="parametros.fev1_porcentaje_predicho >= 80 ? 'text-success' : 'text-danger'">
+                  {{ parametros.fev1_porcentaje_predicho || '—' }}%
                 </span>
               </div>
               <div class="d-flex justify-content-between mt-2">
@@ -29,24 +29,20 @@
             <div class="col-md-4">
               <div class="d-flex justify-content-between">
                 <span class="text-muted small">Relación FEV1/FVC:</span>
-                <span class="font-weight-bold" :class="form.fev1_fvc_ratio >= 0.70 ? 'text-success' : 'text-danger'">
-                  {{ form.fev1_fvc_ratio || '—' }}
+                <span class="font-weight-bold" :class="(parametros.fev1_fvc_lln == null || parametros.mejor_fev1_fvc >= parametros.fev1_fvc_lln) ? 'text-success' : 'text-danger'">
+                  {{ parametros.mejor_fev1_fvc || '—' }}
                 </span>
               </div>
               <div class="d-flex justify-content-between mt-2">
                 <span class="text-muted small">Patrón:</span>
-                <span :class="getPatronColorClass" class="badge badge-pill">{{ patronSugerido || '—' }}</span>
+                <span :class="getPatronColorClass" class="badge badge-pill">{{ form.interpretacion_sistema || '—' }}</span>
               </div>
             </div>
             <div class="col-md-4">
               <div class="d-flex justify-content-between">
-                <span class="text-muted small">Edad Pulmonar Estimada:</span>
-                <span class="font-weight-bold text-primary">{{ form.edad_pulmonar || '—' }} años</span>
-              </div>
-              <div class="d-flex justify-content-between mt-2">
                 <span class="text-muted small">FVC / Predicho:</span>
-                <span class="font-weight-bold" :class="form.fvc_porcentaje_predicho >= 80 ? 'text-success' : 'text-danger'">
-                  {{ form.fvc_porcentaje_predicho || '—' }}%
+                <span class="font-weight-bold" :class="parametros.fvc_porcentaje_predicho >= 80 ? 'text-success' : 'text-danger'">
+                  {{ parametros.fvc_porcentaje_predicho || '—' }}%
                 </span>
               </div>
             </div>
@@ -57,17 +53,21 @@
         <div class="row mb-4">
           <div class="col-md-6 mb-3">
             <label class="font-weight-bold">Calidad de la Sesión (ATS/ERS) <span class="text-danger">*</span></label>
+            <span v-if="esSugerido('calidad_sesion')" class="badge badge-warning ml-2">Sugerido por IA</span>
             <select v-model="form.calidad_sesion" class="form-control" style="height: 38px;">
               <option value="">Seleccionar Grado...</option>
               <option value="A">Grado A (Excelente) - Cumple todos los criterios</option>
               <option value="B">Grado B (Bueno) - Cumple la mayoría de criterios</option>
               <option value="C">Grado C (Aceptable) - Cumple mínimos, algunos criterios fallan</option>
               <option value="D">Grado D (Marginal) - No cumple mínimos, interpretación limitada</option>
+              <option value="E">Grado E (Limitado) - Calidad limitada según criterios ATS/ERS</option>
+              <option value="U">Grado U (Usable) - Utilizable con reservas</option>
               <option value="F">Grado F (No útil) - Prueba inválida, repetir</option>
             </select>
           </div>
           <div class="col-md-6 mb-3">
             <label class="font-weight-bold">Interpretación del Sistema / Patrón <span class="text-danger">*</span></label>
+            <span v-if="esSugerido('interpretacion_sistema')" class="badge badge-warning ml-2">Sugerido por IA</span>
             <select v-model="form.interpretacion_sistema" class="form-control" style="height: 38px;">
               <option value="Espirometría Normal">Espirometría Normal</option>
               <option value="Patrón Obstructivo">Patrón Obstructivo</option>
@@ -78,16 +78,27 @@
           </div>
         </div>
 
+        <!-- INTERPRETACIÓN DEL EQUIPO (informe importado, solo lectura) -->
+        <div v-if="form.interpretacion_equipo" class="alert alert-secondary mb-4">
+          <strong>Interpretación del equipo (informe importado):</strong>
+          <div class="mt-1">{{ form.interpretacion_equipo }}</div>
+        </div>
+
         <!-- DIAGNÓSTICO Y APTITUD -->
         <div class="row mb-4">
           <div class="col-md-6 mb-3">
             <label class="font-weight-bold">Diagnóstico Médico *</label>
+            <span v-if="esSugerido('diagnostico_medico')" class="badge badge-warning ml-2">Sugerido por IA</span>
             <textarea v-model="form.diagnostico_medico" rows="4" class="form-control"
               placeholder="Describir hallazgos espirométricos, patrón (obstructivo/restrictivo), gravedad y sugerencias..."
               style="height: 128px;"></textarea>
           </div>
           <div class="col-md-6 mb-3">
             <label class="font-weight-bold">Aptitud para el puesto <span class="text-danger">*</span></label>
+            <span v-if="esSugerido('aptitud')" class="badge badge-warning ml-2">Sugerido por IA</span>
+            <div v-if="aptitudSugerida && !form.aptitud" class="alert alert-warning small py-2 mb-2">
+              Sugerencia de la IA: <strong>{{ aptitudSugerida }}</strong>. Selecciónala solo si estás de acuerdo.
+            </div>
             <div class="row">
               <div v-for="opcion in aptitudOpciones" :key="opcion.value" class="col-12 mb-2">
                 <div class="border rounded p-3 text-center cursor-pointer transition-all"
@@ -115,9 +126,21 @@
         <!-- RECOMENDACIONES -->
         <div class="mb-4">
           <label class="font-weight-bold">Recomendaciones y Observaciones Finales</label>
+            <span v-if="esSugerido('recomendaciones')" class="badge badge-warning ml-2">Sugerido por IA</span>
           <textarea v-model="form.recomendaciones" rows="3" class="form-control"
             placeholder="Ej: Se recomienda control anual, cesación tabáquica, tratamiento de asma, ..."
             style="height: 96px;"></textarea>
+        </div>
+
+        <!-- CONFIRMACIÓN DEL MÉDICO -->
+        <div v-if="pendiente || confirmado" class="form-check mb-4 p-3 border rounded"
+          :class="confirmado ? 'bg-light border-success' : 'bg-white border-warning'">
+          <input type="checkbox" class="form-check-input" id="confirmoDictamen"
+            :checked="confirmado"
+            @change="$emit('confirmar-dictamen', $event.target.checked)" />
+          <label class="form-check-label font-weight-bold" for="confirmoDictamen">
+            Confirmo que revisé el dictamen sugerido por la IA y es correcto
+          </label>
         </div>
 
         <!-- RESUMEN DEL DICTAMEN FINAL -->
@@ -147,8 +170,8 @@
             <div class="col-md-3">
               <div class="d-flex justify-content-between">
                 <span class="text-muted small">FEV1%:</span>
-                <span class="font-weight-bold" :class="form.fev1_porcentaje_predicho >= 80 ? 'text-success' : 'text-danger'">
-                  {{ form.fev1_porcentaje_predicho || '—' }}%
+                <span class="font-weight-bold" :class="parametros.fev1_porcentaje_predicho >= 80 ? 'text-success' : 'text-danger'">
+                  {{ parametros.fev1_porcentaje_predicho || '—' }}%
                 </span>
               </div>
             </div>
@@ -195,9 +218,14 @@
 export default {
   name: 'InterpretacionEspirometria',
   props: {
-    modelValue: { type: Object, required: true }
+    modelValue: { type: Object, required: true },
+    parametros: { type: Object, default: () => ({}) },
+    sugeridos: { type: Array, default: () => [] },
+    aptitudSugerida: { type: String, default: '' },
+    pendiente: { type: Boolean, default: false },
+    confirmado: { type: Boolean, default: false }
   },
-  emits: ['update:modelValue'],
+  emits: ['update:modelValue', 'confirmar-dictamen'],
   data() {
     return {
       aptitudOpciones: [
@@ -240,7 +268,7 @@ export default {
       }
     },
     clasificacionFev1() {
-      const pct = this.form.fev1_porcentaje_predicho
+      const pct = this.parametros.fev1_porcentaje_predicho
       if (!pct) return '—'
       if (pct >= 80) return 'Normal'
       if (pct >= 70) return 'Límite inferior normal'
@@ -250,26 +278,14 @@ export default {
       return 'Muy severo'
     },
     getFev1BadgeClass() {
-      const pct = this.form.fev1_porcentaje_predicho
+      const pct = this.parametros.fev1_porcentaje_predicho
       if (!pct) return 'text-muted'
       if (pct >= 80) return 'badge-success'
       if (pct >= 70) return 'badge-warning'
       return 'badge-danger'
     },
-    patronSugerido() {
-      const ratio = this.form.fev1_fvc_ratio
-      const fev1Pct = this.form.fev1_porcentaje_predicho
-      const fvcPct = this.form.fvc_porcentaje_predicho
-      if (!ratio) return ''
-      if (ratio < 0.70) {
-        if (fvcPct < 80) return 'Patrón Mixto'
-        return 'Patrón Obstructivo'
-      }
-      if (fvcPct < 80) return 'Patrón Restrictivo'
-      return 'Patrón Normal'
-    },
     getPatronColorClass() {
-      const patron = this.patronSugerido
+      const patron = this.form.interpretacion_sistema || ''
       if (!patron) return 'text-muted'
       if (patron.includes('Normal')) return 'badge-success'
       if (patron.includes('Obstructivo')) return 'badge-warning'
@@ -279,6 +295,9 @@ export default {
     }
   },
   methods: {
+    esSugerido(campo) {
+      return this.sugeridos.includes(campo)
+    },
     updateField(key, value) {
       this.$emit('update:modelValue', { ...this.form, [key]: value })
     },
@@ -288,6 +307,8 @@ export default {
         'B': '(Bueno)',
         'C': '(Aceptable)',
         'D': '(Marginal)',
+        'E': '(Limitado)',
+        'U': '(Usable)',
         'F': '(No útil)'
       }
       return map[grado] || ''

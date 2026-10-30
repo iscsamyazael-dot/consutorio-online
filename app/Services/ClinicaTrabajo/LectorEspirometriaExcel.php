@@ -87,6 +87,8 @@ class LectorEspirometriaExcel
         $resultado += $this->leerCalidadEInterpretacion($filas);
         $resultado['maniobras'] = array_values($maniobras);
         $resultado['advertencias'] = $this->validar($valores, $maniobras, $resultado);
+        $resultado['fecha_prueba'] = $this->leerCampoEtiqueta($filas, 'Fecha del test');
+        $resultado['fumador_texto'] = $this->leerCampoEtiqueta($filas, 'Fumador');
 
         return $resultado;
     }
@@ -169,6 +171,17 @@ class LectorEspirometriaExcel
         }
 
         return $valores;
+    }
+
+    /** Valor de la columna C de la fila cuya primera celda coincide con la etiqueta. */
+    private function leerCampoEtiqueta(array $filas, string $etiqueta): mixed
+    {
+        foreach ($filas as $fila) {
+            if ($this->normalizarTexto($fila[0] ?? null) === $etiqueta) {
+                return $fila[2] ?? null;
+            }
+        }
+        return null;
     }
 
     /**
