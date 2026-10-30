@@ -714,7 +714,7 @@ export default {
   props: {
     modelValue: { type: Object, required: true }
   },
-  emits: ['update:modelValue', 'importar-interpretacion'],
+  emits: ['update:modelValue', 'importar-interpretacion', 'importar-datos-generales'],
   directives: {
     // Muestra el valor con los decimales del informe (ej. 3.90) sin perder el número.
     // No reescribe el campo mientras el usuario lo está escribiendo.
@@ -975,6 +975,7 @@ export default {
         // El backend devuelve las secciones del formulario; los valores ya vienen en porcentaje
         const datos = respuesta.data.parametrosFVL || {}
         const interpretacion = respuesta.data.interpretacion || {}
+        const datosGenerales = respuesta.data.datosGenerales || {}
         const numManiobras = Array.isArray(datos.maniobras) ? datos.maniobras.length : 0
 
         this.exitoIA = true
@@ -1011,6 +1012,9 @@ export default {
         this.emitChange()
 
         // La sección Interpretación vive en el padre
+        if (Object.keys(datosGenerales).length) {
+          this.$emit('importar-datos-generales', datosGenerales)
+        }
         this.$emit('importar-interpretacion', interpretacion)
       } catch (error) {
         console.error('Error al importar con IA:', error)
