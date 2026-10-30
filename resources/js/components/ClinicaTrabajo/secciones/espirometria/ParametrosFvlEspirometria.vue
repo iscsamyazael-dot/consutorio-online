@@ -462,6 +462,7 @@
 <script>
 import Chart from 'chart.js/auto'
 import { markRaw } from 'vue'
+import apiClient from '@/services/ApiServiceClinicaTrabajo'
 
 // ---------- Utilidades ----------
 
@@ -713,7 +714,7 @@ export default {
   props: {
     modelValue: { type: Object, required: true }
   },
-  emits: ['update:modelValue'],
+  emits: ['update:modelValue', 'importar-interpretacion', 'importar-datos-generales'],
   directives: {
     // Muestra el valor con los decimales del informe (ej. 3.90) sin perder el número.
     // No reescribe el campo mientras el usuario lo está escribiendo.
@@ -880,9 +881,6 @@ export default {
       )
     },
     calidadSesion() {
-      // Si el informe trae la calidad, se usa tal cual
-      if (this.localForm.calidad_sesion) return this.localForm.calidad_sesion
-
       const fev1Var = this.localForm.fev1_var_l
       const fvcVar = this.localForm.fvc_var_l
       if (fev1Var == null || fvcVar == null) return null
@@ -968,97 +966,63 @@ export default {
       formData.append('archivo', this.archivoSeleccionado)
 
       try {
-        const response = await axios.post('/clinica/espirometria/importar', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        const { data: respuesta } = await apiClient.post('/espirometria-importar', formData)
 
-        if (!response.data.success) {
-          throw new Error(response.data.message || 'Error desconocido al extraer datos')
+        if (!respuesta.success) {
+          throw new Error(respuesta.message || 'Error desconocido al extraer datos')
         }
 
-        const datos = response.data.data
+        // El backend devuelve las secciones del formulario; los valores ya vienen en porcentaje
+        const datos = respuesta.data.parametrosFVL || {}
+        const interpretacion = respuesta.data.interpretacion || {}
+        const datosGenerales = respuesta.data.datosGenerales || {}
         const numManiobras = Array.isArray(datos.maniobras) ? datos.maniobras.length : 0
 
         this.exitoIA = true
         this.mensajeIA = `¡Datos extraídos exitosamente! Se encontraron ${numManiobras} maniobras.`
-        this.advertencias = datos.advertencias ?? []
-        // Referencias (Pred / LLN)
-        this.localForm.fvc_pred = datos.fvc_pred ?? null
-        this.localForm.fvc_lln = datos.fvc_lln ?? null
-        this.localForm.fev1_pred = datos.fev1_pred ?? null
-        this.localForm.fev1_lln = datos.fev1_lln ?? null
-        this.localForm.fev1_fvc_pred = aPorcentaje(datos.fev1_fvc_pred)
-        this.localForm.fev1_fvc_lln = aPorcentaje(datos.fev1_fvc_lln)
-        this.localForm.fef25_75_pred = datos.fef25_75_pred ?? null
-        this.localForm.fef25_75_lln = datos.fef25_75_lln ?? null
-        this.localForm.pef_pred = datos.pef_pred ?? null
-        this.localForm.pef_lln = datos.pef_lln ?? null
+        this.advertencias = respuesta.advertencias ?? []
 
-        // Mejor maniobra y %Pred tal como vienen del informe
-        this.localForm.mejor_fvc = datos.mejor_fvc ?? null
-        this.localForm.mejor_fev1 = datos.mejor_fev1 ?? null
-        this.localForm.mejor_fev1_fvc = aPorcentaje(datos.mejor_fev1_fvc)
-        this.localForm.mejor_fef25_75 = datos.mejor_fef25_75 ?? null
-        this.localForm.mejor_pef = datos.mejor_pef ?? null
-        this.localForm.mejor_fivc = datos.mejor_fivc ?? null
-        this.localForm.mejor_pif = datos.mejor_pif ?? null
-        this.localForm.mejor_eotv = datos.mejor_eotv ?? null
-        this.localForm.mejor_fet = datos.mejor_fet ?? null
+        // Un import nuevo reemplaza los valores anteriores; lo que el informe no trae queda en null
+        const camposDelInforme = [
+          'fvc_pred', 'fvc_lln', 'fev1_pred', 'fev1_lln', 'fev1_fvc_pred', 'fev1_fvc_lln',
+          'fef25_75_pred', 'fef25_75_lln', 'pef_pred', 'pef_lln', 'fivc_pred', 'fivc_lln',
+          'pif_pred', 'pif_lln', 'eotv_pred', 'eotv_lln', 'bev_pred', 'bev_lln',
+          'mejor_fvc', 'mejor_fev1', 'mejor_fev1_fvc', 'mejor_fef25_75', 'mejor_pef',
+          'mejor_fivc', 'mejor_pif', 'mejor_eotv', 'mejor_bev', 'mejor_fet',
+          'fev1_var_l', 'fvc_var_l', 'calidad_fev1', 'calidad_fvc',
+          'fvc_porcentaje_predicho', 'fev1_porcentaje_predicho', 'fev1_fvc_porcentaje_predicho',
+          'fef25_75_porcentaje_predicho', 'pef_porcentaje_predicho', 'fivc_porcentaje_predicho',
+          'pif_porcentaje_predicho', 'fvc_z', 'fev1_z', 'fev1_fvc_z', 'fef25_75_z', 'pef_z', 'fivc_z'
+        ]
+        camposDelInforme.forEach(campo => {
+          this.localForm[campo] = datos[campo] ?? null
+        })
 
-        this.localForm.mejor_bev = datos.mejor_bev ?? null
-        this.localForm.pif_pred = datos.pif_pred ?? null
-        this.localForm.pif_lln = datos.pif_lln ?? null
-        this.localForm.eotv_pred = datos.eotv_pred ?? null
-        this.localForm.eotv_lln = datos.eotv_lln ?? null
-        this.localForm.bev_pred = datos.bev_pred ?? null
-        this.localForm.bev_lln = datos.bev_lln ?? null
-
-        this.localForm.fvc_porcentaje_predicho = datos.fvc_pct ?? null
-        this.localForm.fev1_porcentaje_predicho = datos.fev1_pct ?? null
-        this.localForm.fev1_fvc_porcentaje_predicho = datos.fev1_fvc_pct ?? null
-        this.localForm.fef25_75_porcentaje_predicho = datos.fef25_75_pct ?? null
-        this.localForm.pef_porcentaje_predicho = datos.pef_pct ?? null
-        this.localForm.fivc_porcentaje_predicho = datos.fivc_pct ?? null
-        this.localForm.pif_porcentaje_predicho = datos.pif_pct ?? null
-
-        // Calidad de sesión y varianzas del informe
-        this.localForm.calidad_sesion = datos.calidad_sesion ?? ''
-        this.localForm.calidad_fev1 = datos.calidad_fev1 ?? ''
-        this.localForm.calidad_fvc = datos.calidad_fvc ?? ''
-
-        // Puntuación Z (solo si el informe la trae; si no, queda vacía)
-        this.localForm.fvc_z = datos.fvc_z ?? null
-        this.localForm.fev1_z = datos.fev1_z ?? null
-        this.localForm.fev1_fvc_z = datos.fev1_fvc_z ?? null
-        this.localForm.fef25_75_z = datos.fef25_75_z ?? null
-        this.localForm.pef_z = datos.pef_z ?? null
-        this.localForm.fivc_z = datos.fivc_z ?? null
-        this.localForm.fev1_var_l = datos.fev1_var ?? null
-        this.localForm.fvc_var_l = datos.fvc_var ?? null
-        this.localForm.interpretacion_sistema = datos.interpretacion ?? ''
-
-        // Maniobras (con numero y las marcas de asterisco)
         if (numManiobras > 0) {
           this.localForm.maniobras = datos.maniobras.map((m, idx) => ({
             ...this.plantillaManiobra,
             ...m,
-            fev1_fvc_ratio: aPorcentaje(m.fev1_fvc_ratio),
             numero: m.numero ?? (idx + 1),
             marcados: { ...(m.marcados || {}) }
           }))
         }
 
-        // Recalcula solo lo que falte; no sobrescribe lo que vino del PDF
         this.recalcularTodo({ respetarImportado: true })
         this.programarGraficas()
-
         this.emitChange()
+
+        // La sección Interpretación vive en el padre
+        if (Object.keys(datosGenerales).length) {
+          this.$emit('importar-datos-generales', datosGenerales)
+        }
+        this.$emit('importar-interpretacion', interpretacion)
       } catch (error) {
         console.error('Error al importar con IA:', error)
         this.exitoIA = false
         this.mensajeIA = error.response?.data?.message
           || error.message
           || 'Ocurrió un error al procesar el archivo. Verifica que sea un informe legible.'
+        this.advertencias = error.response?.data?.advertencias ?? []
       } finally {
         this.procesandoIA = false
       }

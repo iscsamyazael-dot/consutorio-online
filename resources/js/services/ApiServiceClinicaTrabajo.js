@@ -97,14 +97,6 @@ export const clinicaTrabajo = {
     eliminar: (id) => apiClient.delete(`/clinica/ergonomia/${id}`),
     imprimir: (id) => apiClient.get(`/clinica/ergonomia/${id}/imprimir`),
   },
-  espirometria: {
-    lista: () => apiClient.get('/clinica/espirometria'),
-    obtener: (id) => apiClient.get(`/clinica/espirometria/${id}`),
-    crear: (data) => apiClient.post('/clinica/espirometria', data),
-    actualizar: (id, data) => apiClient.put(`/clinica/espirometria/${id}`, data),
-    eliminar: (id) => apiClient.delete(`/clinica/espirometria/${id}`),
-    imprimir: (id) => apiClient.get(`/clinica/espirometria/${id}/imprimir`),
-  },
   medicina: {
     lista: () => apiClient.get('/clinica/medicina'),
     obtener: (id) => apiClient.get(`/clinica/medicina/${id}`),

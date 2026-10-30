@@ -116,7 +116,7 @@ export default {
     submodulo: {
       type: String,
       required: true,
-      validator: v => ['medicina', 'psicologia', 'nutricion', 'audiologia', 'ergonomia', 'espirometria'].includes(v)
+      validator: v => ['medicina', 'psicologia', 'nutricion', 'audiologia', 'ergonomia'].includes(v)
     }
   },
   data() {
@@ -138,7 +138,6 @@ export default {
         nutricion: 'Nutricionales',
         audiologia: 'Audiológicas',
         ergonomia: 'Ergonómicas',
-        espirometria: 'Espirométricas',
       }
       return titulos[this.submodulo] || ''
     },
@@ -162,8 +161,7 @@ export default {
           psicologia: '/clinica/valoraciones-psicologicas',
           nutricion: '/clinica/valoraciones-nutricion',
           audiologia: '/clinica/valoraciones-audiologia',
-          ergonomia: '/clinica/ergonomia',        // ← Ruta del Grupo 2
-          espirometria: '/clinica/valoraciones-espirometria'
+          ergonomia: '/clinica/ergonomia'       // ← Ruta del Grupo 2
         }
         
         const endpoint = endpoints[this.submodulo]

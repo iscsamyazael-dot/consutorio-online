@@ -205,21 +205,67 @@
         <!-- 6. VALORACIÓN ESPIROMETRÍA -->
         <div v-if="tabActiva === 'espirometria'">
           <div class="section-title">
-            <h5><i class="fas fa-lungs text-danger me-2"></i>Valoración Espirometría</h5>
+            <h5><i class="fas fa-lungs text-danger me-2"></i>Historial de Espirometrías</h5>
             <small>Pruebas de función pulmonar (NOM-010-STPS).</small>
           </div>
           <div class="valoraciones-scroll">
             <div v-if="infoValoracionesEspirometria.length === 0" class="alert alert-light border text-center text-muted">
               <i class="fas fa-clipboard-check me-2"></i> No se encuentran espirometrías registradas.
             </div>
-            <div v-else v-for="val in infoValoracionesEspirometria" :key="val.id" class="timeline-card">
+            <div v-else v-for="(val, i) in infoValoracionesEspirometria" :key="val.id" class="timeline-card">
               <div class="timeline-dot bg-danger"></div>
-              <div class="flex-grow-1">
-                <h6 class="fw-bold mb-2"><i class="fas fa-calendar-alt text-danger me-2"></i>{{ formatearFecha(val.fecha) }}</h6>
-                <p class="mb-1"><strong>FEV1:</strong> {{ val.fev1 || 'N/D' }} | <strong>FVC:</strong> {{ val.fvc || 'N/D' }}</p>
-                <p class="text-muted small mb-2"><strong>Interpretación:</strong> {{ val.interpretacion || 'Normal' }}</p>
-                <button class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="fas fa-eye me-1"></i> Ver detalle</button>
-              </div>
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between flex-wrap gap-2">
+                    <h6 class="fw-bold mb-0">
+                      <i class="fas fa-calendar-alt text-danger me-2"></i>
+                      {{ formatearFecha(val.fecha_prueba || val.fecha_valoracion) }}
+                    </h6>
+                    <span class="badge rounded-pill px-3 py-2" :class="colorAptitudEspirometria(val.aptitud)">
+                      {{ val.aptitud || 'Sin aptitud' }}
+                    </span>
+                  </div>
+
+                  <p class="mt-2 mb-1">
+                    <strong>Folio:</strong> {{ val.folio }} &middot; <strong>Tipo:</strong> {{ val.tipo_evaluacion }}
+                    <span v-if="val.puesto"> &middot; <strong>Puesto:</strong> {{ val.puesto.nombre }}</span>
+                  </p>
+
+                  <p class="mb-1">
+                    <strong>FEV1:</strong> {{ val.fev1_l ?? 'N/D' }} L ({{ val.fev1_porcentaje_predicho ?? 'N/D' }}%)
+                    <span v-if="tendenciaEspirometria(i)" :class="tendenciaEspirometria(i).clase" class="small ms-1">
+                      {{ tendenciaEspirometria(i).texto }}
+                    </span>
+                    | <strong>FVC:</strong> {{ val.fvc_l ?? 'N/D' }} L ({{ val.fvc_porcentaje_predicho ?? 'N/D' }}%)
+                    | <strong>FEV1/FVC:</strong> {{ val.fev1_fvc_ratio ?? 'N/D' }}%
+                    <span :class="estadoRelacionEspirometria(val).clase" class="small ms-1">
+                      {{ estadoRelacionEspirometria(val).texto }}
+                    </span>
+                  </p>
+
+                  <p class="text-muted small mb-1">
+                    <strong>Z FEV1:</strong> {{ val.fev1_z ?? 'N/D' }} &middot;
+                    <strong>Z FEV1/FVC:</strong> {{ val.fev1_fvc_z ?? 'N/D' }} &middot;
+                    <strong>Interpretación:</strong> {{ val.interpretacion_sistema || 'Pendiente' }} &middot;
+                    <strong>Calidad:</strong> {{ val.calidad_sesion || 'N/D' }}
+                  </p>
+
+                  <p class="small mb-1" v-if="val.diagnostico_medico">
+                    <strong>Diagnóstico:</strong> {{ resumirTexto(val.diagnostico_medico) }}
+                  </p>
+
+                  <p class="small mb-2 text-warning" v-if="val.aptitud && val.aptitud !== 'Apto' && val.recomendaciones">
+                    <strong>Restricciones / recomendaciones:</strong> {{ resumirTexto(val.recomendaciones) }}
+                  </p>
+
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="abrirDetalleEspirometria(val)">
+                      <i class="fas fa-eye me-1"></i> Ver detalle
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @click="imprimirEspirometria(val)">
+                      <i class="fas fa-print me-1"></i> Imprimir
+                    </button>
+                  </div>
+                </div>
             </div>
           </div>
         </div>
@@ -371,6 +417,245 @@
       </div>
     </div>
 
+    <!-- MODAL DETALLE DE ESPIROMETRÍA -->
+    <div class="modal fade" id="modalDetalleEspirometria" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" v-if="espirometriaDetalle">
+
+          <!-- HEADER CON GRADIENTE -->
+          <div class="modal-header bg-gradient-medical text-white border-0 py-3">
+            <div class="d-flex align-items-center">
+              <div class="icon-circle bg-white bg-opacity-25 me-3">
+                <i class="fas fa-lungs fs-4"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-1">
+                  Espirometría
+                  <span class="badge bg-white bg-opacity-25 text-white ms-2 align-middle">
+                    #{{ espirometriaDetalle.folio }}
+                  </span>
+                </h5>
+                <small class="opacity-75">
+                  <i class="far fa-calendar-alt me-1"></i>
+                  {{ formatearFecha(espirometriaDetalle.fecha_prueba || espirometriaDetalle.fecha_valoracion) }}
+                  <span class="mx-1">•</span>
+                  <i class="fas fa-stethoscope me-1"></i>
+                  {{ espirometriaDetalle.tipo_evaluacion || 'Sin tipo' }}
+                </small>
+              </div>
+            </div>
+            <span class="badge rounded-pill px-3 py-2 ms-auto me-3 shadow-sm" :class="colorAptitudEspirometria(espirometriaDetalle.aptitud)">
+              <i class="fas fa-clipboard-check me-1"></i>
+              {{ espirometriaDetalle.aptitud || 'Sin aptitud' }}
+            </span>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+
+          <!-- BODY -->
+          <div class="modal-body bg-light-subtle">
+
+            <!-- TARJETAS DE INFORMACIÓN GENERAL -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-primary-soft text-primary">
+                    <i class="fas fa-briefcase-medical"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Puesto evaluado</small>
+                    <strong class="d-block text-dark">{{ espirometriaDetalle.puesto?.nombre || 'No registrado' }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-success-soft text-success">
+                    <i class="fas fa-user-md"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Remitido por</small>
+                    <strong class="d-block text-dark">{{ espirometriaDetalle.remitido_por || 'No registrado' }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-info-soft text-info">
+                    <i class="fas fa-chart-line"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Calidad de sesión</small>
+                    <strong class="d-block text-dark">
+                      {{ espirometriaDetalle.calidad_sesion || 'N/D' }}
+                      <span class="text-muted small">· {{ espirometriaDetalle.num_maniobras ?? 'N/D' }} maniobras</span>
+                    </strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-warning-soft text-warning">
+                    <i class="fas fa-file-medical-alt"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Interpretación</small>
+                    <strong class="d-block text-dark">{{ espirometriaDetalle.interpretacion_sistema || 'Pendiente' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TARJETA DE TABAQUISMO -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-danger">
+              <div class="card-body py-3">
+                <div class="d-flex align-items-center">
+                  <div class="info-card-icon bg-danger-soft text-danger me-3">
+                    <i class="fas fa-smoking"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <small class="text-muted text-uppercase fw-semibold d-block" style="font-size: 0.7rem;">
+                      Tabaquismo
+                    </small>
+                    <strong v-if="espirometriaDetalle.cigarrillos_dia || espirometriaDetalle.anos_fumador" class="text-dark">
+                      <i class="fas fa-smoke text-danger me-1"></i>
+                      {{ espirometriaDetalle.cigarrillos_dia ?? '?' }} cig/día
+                      <span class="text-muted">·</span>
+                      {{ espirometriaDetalle.anos_fumador ?? '?' }} años
+                      <span v-if="paquetesAnio(espirometriaDetalle)" class="badge bg-danger bg-opacity-10 text-danger ms-2">
+                        {{ paquetesAnio(espirometriaDetalle) }} paquete-año
+                      </span>
+                    </strong>
+                    <strong v-else class="text-muted fst-italic">No registrado</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN DE PARÁMETROS PRINCIPALES -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-2">
+                <div class="info-card-icon bg-primary-soft text-primary me-2" style="width: 32px; height: 32px;">
+                  <i class="fas fa-wave-square"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-primary">Parámetros principales</h6>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead>
+                      <tr class="bg-light">
+                        <th class="border-0 ps-3 text-uppercase small fw-bold text-muted">
+                          <i class="fas fa-vial me-1"></i> Parámetro
+                        </th>
+                        <th class="border-0 text-center text-uppercase small fw-bold text-muted">Valor</th>
+                        <th class="border-0 text-center text-uppercase small fw-bold text-muted">% predicho</th>
+                        <th class="border-0 text-center text-uppercase small fw-bold text-muted">LLN</th>
+                        <th class="border-0 text-center text-uppercase small fw-bold text-muted">Z</th>
+                        <th class="border-0 text-center text-uppercase small fw-bold text-muted pe-3">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="ps-3 fw-semibold">
+                          <span class="badge bg-primary bg-opacity-10 text-primary me-2">FVC</span>
+                          Capacidad vital forzada (L)
+                        </td>
+                        <td class="text-center fw-bold">{{ espirometriaDetalle.fvc_l ?? 'N/D' }}</td>
+                        <td class="text-center">{{ espirometriaDetalle.fvc_porcentaje_predicho ?? 'N/D' }}</td>
+                        <td class="text-center">{{ espirometriaDetalle.fvc_lln ?? 'N/D' }}</td>
+                        <td class="text-center">{{ espirometriaDetalle.fvc_z ?? 'N/D' }}</td>
+                        <td class="text-center pe-3">
+                          <span class="badge rounded-pill px-3 py-2" :class="estadoLLN(espirometriaDetalle.fvc_l, espirometriaDetalle.fvc_lln).clase">
+                            {{ estadoLLN(espirometriaDetalle.fvc_l, espirometriaDetalle.fvc_lln).texto }}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr class="bg-light bg-opacity-50">
+                        <td class="ps-3 fw-semibold">
+                          <span class="badge bg-info bg-opacity-10 text-info me-2">FEV1</span>
+                          Volumen espiratorio (L)
+                        </td>
+                        <td class="text-center fw-bold">{{ espirometriaDetalle.fev1_l ?? 'N/D' }}</td>
+                        <td class="text-center">{{ espirometriaDetalle.fev1_porcentaje_predicho ?? 'N/D' }}</td>
+                        <td class="text-center">{{ espirometriaDetalle.fev1_lln ?? 'N/D' }}</td>
+                        <td class="text-center">{{ espirometriaDetalle.fev1_z ?? 'N/D' }}</td>
+                        <td class="text-center pe-3">
+                          <span class="badge rounded-pill px-3 py-2" :class="estadoLLN(espirometriaDetalle.fev1_l, espirometriaDetalle.fev1_lln).clase">
+                            {{ estadoLLN(espirometriaDetalle.fev1_l, espirometriaDetalle.fev1_lln).texto }}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="ps-3 fw-semibold">
+                          <span class="badge bg-success bg-opacity-10 text-success me-2">FEV1/FVC</span>
+                          Relación / Ratio (%)
+                        </td>
+                        <td class="text-center fw-bold">{{ espirometriaDetalle.fev1_fvc_ratio ?? 'N/D' }}</td>
+                        <td class="text-center text-muted">—</td>
+                        <td class="text-center">{{ espirometriaDetalle.fev1_fvc_lln ?? 'N/D' }}</td>
+                        <td class="text-center">{{ espirometriaDetalle.fev1_fvc_z ?? 'N/D' }}</td>
+                        <td class="text-center pe-3">
+                          <span class="badge rounded-pill px-3 py-2" :class="estadoRelacionEspirometria(espirometriaDetalle).clase">
+                            {{ estadoRelacionEspirometria(espirometriaDetalle).texto.replace('· ', '') || 'N/D' }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- DIAGNÓSTICO -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-primary" v-if="espirometriaDetalle.diagnostico_medico">
+              <div class="card-body py-3">
+                <div class="d-flex align-items-start">
+                  <div class="info-card-icon bg-primary-soft text-primary me-3">
+                    <i class="fas fa-notes-medical"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="fw-bold text-primary mb-1">Diagnóstico</h6>
+                    <p class="mb-0 text-body">{{ espirometriaDetalle.diagnostico_medico }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RESTRICCIONES Y RECOMENDACIONES -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-warning bg-warning bg-opacity-10"
+                v-if="espirometriaDetalle.aptitud && espirometriaDetalle.aptitud !== 'Apto' && espirometriaDetalle.recomendaciones">
+              <div class="card-body py-3">
+                <div class="d-flex align-items-start">
+                  <div class="info-card-icon bg-warning text-white me-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="fw-bold text-warning mb-1">Restricciones y recomendaciones</h6>
+                    <p class="mb-0 text-body">{{ espirometriaDetalle.recomendaciones }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FOOTER -->
+          <div class="modal-footer bg-white border-top py-3">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+              <i class="fas fa-times me-1"></i> Cerrar
+            </button>
+            <div class="ms-auto d-flex gap-2">
+              <button type="button" class="btn btn-outline-primary rounded-pill px-4" @click="imprimirEspirometria(espirometriaDetalle)">
+                <i class="fas fa-print me-1"></i> Imprimir
+              </button>
+              <a :href="urlEditarEspirometria(espirometriaDetalle)" class="btn btn-danger rounded-pill px-4 shadow-sm">
+                <i class="fas fa-pen-to-square me-1"></i> Editar
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -463,6 +748,74 @@
   .custom-tabs .nav-link { padding: 10px 12px; font-size: 13px; }
   .timeline-card { flex-direction: column; }
 }
+
+  /* Gradiente del header */
+  .bg-gradient-medical {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 50%, #084298 100%);
+  }
+
+  /* Círculo con icono */
+  .icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Tarjetas de información */
+  .info-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .info-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .info-card-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Colores suaves para iconos */
+  .bg-primary-soft { background-color: rgba(13, 110, 253, 0.12) !important; }
+  .bg-success-soft { background-color: rgba(25, 135, 84, 0.12) !important; }
+  .bg-info-soft { background-color: rgba(13, 202, 240, 0.15) !important; }
+  .bg-warning-soft { background-color: rgba(255, 193, 7, 0.18) !important; }
+  .bg-danger-soft { background-color: rgba(220, 53, 69, 0.12) !important; }
+
+  /* Bordes laterales de colores */
+  .border-start-primary { border-left-width: 4px !important; }
+  .border-start-warning { border-left-width: 4px !important; }
+  .border-start-danger { border-left-width: 4px !important; }
+
+  /* Sombra grande para el modal */
+  .shadow-lg {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+  }
+
+  /* Badge de estados en la tabla */
+  .badge.bg-success { background-color: #198754 !important; }
+  .badge.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+  .badge.bg-danger { background-color: #dc3545 !important; }
 </style>
 
 <script>
@@ -481,6 +834,7 @@ export default {
       infoAudiologiaHistoria: [],
       infoAudiologiaAltoRiesgo: [],
       infoValoracionesEspirometria: [],
+      espirometriaDetalle: null,
       infoValoracionesErgonomicas: [],
       
       infoArchivos: [],
@@ -542,7 +896,9 @@ export default {
 
         // Cargamos datos que ya tienes funcionando:
         await this.obtenerArchivos()
-        await this.obtenerExpedienteClinico()
+        //await this.obtenerExpedienteClinico()
+        await this.obtenerEspirometrias()
+
         
         console.log('Datos laborales cargados exitosamente.')
       } catch (error) {
@@ -572,11 +928,90 @@ export default {
     //     console.error('Error al obtener el expediente clínico:', error)
     //   }
     // },
+    //Metodos para mostrar los datos de Espirometria//
+    async obtenerEspirometrias() {
+      try {
+        const response = await ApiServiceClinicaTrabajo.get('/espirometria', {
+          params: { paciente_id: this.pacienteId }
+        })
+        this.infoValoracionesEspirometria = response.data.data || []
+      } catch (error) {
+        console.error('Error al obtener espirometrías:', error)
+      }
+    },
+
+    colorAptitudEspirometria(aptitud) {
+      if (aptitud === 'Apto') return 'bg-success'
+      if (aptitud === 'Apto con restricciones') return 'bg-warning text-dark'
+      return 'bg-danger'
+    },
+
+    imprimirEspirometria(val) {
+      window.open(`/espirometria-imprimir/${val.id}`, '_blank')
+    },
+
+    resumirTexto(texto, maximo = 140) {
+      if (!texto) return ''
+      return texto.length > maximo ? texto.slice(0, maximo).trimEnd() + '…' : texto
+    },
+
+    // Compara FEV1/FVC contra su límite inferior (LLN): bajo, limítrofe o normal
+    estadoRelacionEspirometria(val) {
+      const ratio = Number(val.fev1_fvc_ratio)
+      const lln = Number(val.fev1_fvc_lln)
+      if (val.fev1_fvc_ratio == null || val.fev1_fvc_lln == null) return { texto: '', clase: '' }
+      if (ratio < lln) return { texto: '· Bajo LLN', clase: 'text-danger fw-bold' }
+      if (ratio - lln < 1) return { texto: '· Limítrofe (LLN ' + lln + ')', clase: 'text-warning fw-bold' }
+      return { texto: '· Normal (LLN ' + lln + ')', clase: 'text-success' }
+    },
+
+    // Cambio del FEV1 % predicho frente a la espirometría anterior del mismo paciente.
+    // El listado viene ordenado de más reciente a más antigua, así que la anterior es i + 1.
+    tendenciaEspirometria(i) {
+      const actual = this.infoValoracionesEspirometria[i]
+      const anterior = this.infoValoracionesEspirometria[i + 1]
+      if (!anterior || actual.fev1_porcentaje_predicho == null || anterior.fev1_porcentaje_predicho == null) return null
+
+      const delta = Number(actual.fev1_porcentaje_predicho) - Number(anterior.fev1_porcentaje_predicho)
+      const flecha = delta > 0 ? '↑' : delta < 0 ? '↓' : '='
+      return {
+        texto: `${flecha} ${Math.abs(delta)} pts vs. anterior`,
+        clase: delta <= -5 ? 'text-danger fw-bold' : delta < 0 ? 'text-warning' : 'text-success'
+      }
+    },
+
+    abrirDetalleEspirometria(val) {
+      this.espirometriaDetalle = val
+      const modalEl = document.getElementById('modalDetalleEspirometria')
+      const modal = new bootstrap.Modal(modalEl)
+      modal.show()
+    },
+
+    // Misma ruta que antes abría "Ver detalle": la ficha de edición de la valoración
+    urlEditarEspirometria(val) {
+      return `/ficha-espirometria/${val.paciente_id}?valoracion=${val.id}`
+    },
+
+    paquetesAnio(val) {
+      const cig = Number(val.cigarrillos_dia)
+      const anos = Number(val.anos_fumador)
+      if (!cig || !anos) return null
+      return ((cig * anos) / 20).toFixed(1)
+    },
+
+    estadoLLN(valor, lln) {
+      if (valor == null || lln == null) return { texto: 'N/D', clase: '' }
+      if (Number(valor) < Number(lln)) return { texto: 'Bajo LLN', clase: 'text-danger fw-bold' }
+      return { texto: 'Normal', clase: 'text-success' }
+    },
+
+    //Aqui terminan los metodos para ver los detalles de Espirometria//
 
     // --- UTILIDADES ---
     formatearFecha(fecha) {
       if (!fecha) return ''
-      const f = new Date(fecha)
+      // Las fechas sin hora (AAAA-MM-DD) se fijan al mediodía local para no recorrer el día
+      const f = new Date(String(fecha).length === 10 ? fecha + 'T12:00:00' : fecha)
       return f.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
     },
 
