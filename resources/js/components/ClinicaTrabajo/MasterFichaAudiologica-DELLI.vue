@@ -113,6 +113,11 @@
       </div>
     </div>
 
+     <!-- AVISOS DE LA IA -->
+    <div v-if="iaAdvertencias.length" class="alert alert-info small mb-3">
+      <i class="fas fa-info-circle mr-1"></i> {{ iaAdvertencias.join(' · ') }}
+    </div>
+
     <!-- TABS CONTENT -->
     <div class="tab-content">
       <!-- HOJA 1 -->
@@ -143,11 +148,14 @@
       <div id="hoja4" class="tab-pane fade" role="tabpanel">
         <hoja4-audiometria-delli
           :modelValue="form.hoja4"
+          :ia-campos="iaCampos"
+          :hoja2="form.hoja2"
+          :hoja3="form.hoja3"
           @update:modelValue="form.hoja4 = $event"
         ></hoja4-audiometria-delli>
       </div>
     </div>
-
+    
     <!-- BOTONES ACCIÓN -->
     <div class="card mt-4">
       <div class="card-footer bg-light">
@@ -170,7 +178,10 @@ import Hoja1DatosbasicosDelli from './secciones/audiologia/FichaAudiologicaDelli
 import Hoja2RiesgosototoxicosDelli from './secciones/audiologia/FichaAudiologicaDelli/riesgosototoxicos.vue'
 import Hoja3AntecedentessintomasDelli from './secciones/audiologia/FichaAudiologicaDelli/antecedentessintomas.vue'
 import Hoja4AudiometriaDelli from './secciones/audiologia/FichaAudiologicaDelli/audiometria.vue'
-import  clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
+import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
+
+const CAMPOS_IA = ['valoracion', 'interpretacion', 'tipo_hipoacusia', 'restricciones', 'aptitud']
+const FRECUENCIAS_AEREA = ['125', '250', '500', '1000', '2000', '3000', '4000', '6000', '8000']
 
 export default {
   name: 'MasterFichaAudiologicaDelli',
@@ -182,6 +193,15 @@ export default {
   },
   data() {
     return {
+      
+      iaCampos: {},
+      editadosPorMedico: {},
+      iaAdvertencias: [],
+      iaCargando: false,
+      iaTimer: null,
+      ultimaFirmaIA: null,
+      snapshotHoja4: null,
+
       pacienteId: null,               
       infoPacientes: null,            
       datosLaboralesActuales: null,
@@ -342,6 +362,13 @@ export default {
         return `AUD-${ano}-${random}`
       }
       return this.form.hoja1.folio
+    },
+    firmaAudiometria() {
+      const h4 = this.form.hoja4
+      return FRECUENCIAS_AEREA.flatMap(f => [h4[`audiometria_${f}_der`], h4[`audiometria_${f}_izq`]])
+    },
+    audiometriaCompleta() {
+      return this.firmaAudiometria.every(v => v !== null && v !== '' && v !== undefined)
     }
   },
 
@@ -369,6 +396,10 @@ export default {
         console.warn('No hay pacienteId para cargar el expediente')
         return
       }
+
+      this.iaCampos = {}
+      this.editadosPorMedico = {}
+      this.ultimaFirmaIA = null
 
       try {
         this.cargando = true
@@ -548,7 +579,7 @@ export default {
         }
 
         console.log('✅ Expediente cargado y mapeado correctamente:', this.form)
-
+        this.snapshotHoja4 = JSON.parse(JSON.stringify(this.form.hoja4))
       } catch (error) {
         console.error('❌ Error al obtener paciente:', error)
         alert('Error al cargar el expediente: ' + (error.response?.data?.message || error.message))
@@ -723,7 +754,7 @@ export default {
       this.mensajeActual = ''
 
       try {
-        const response = await clinicaTrabajo.consultarIA({
+        const response = await clinicaTrabajo.post('/DelliAudiologia-consultarIA', {
           mensaje: mensaje,
           paciente_id: this.trabajadorSeleccionado?.id,
           contexto: this.form
@@ -736,8 +767,9 @@ export default {
         })
 
         if (response.data.campos_completados) {
-          // Update form fields based on IA response
-          Object.assign(this.form, response.data.campos_completados)
+            Object.entries(response.data.campos_completados).forEach(([hoja, campos]) => {
+              this.form[hoja] = { ...this.form[hoja], ...campos }
+            })
         }
 
         this.$nextTick(() => {
@@ -780,16 +812,20 @@ export default {
         const payload = {
           ...this.form,
           folio: this.folioDelli,
-          tipo_evaluacion: 'delli_2026'
+          tipo_evaluacion: 'delli_2026',
+          paciente_id: Number(this.pacienteId),
+          empresa_cliente_id: this.datosLaboralesActuales?.empresa_cliente_id ?? null,
+          puesto_trabajo_id: this.datosLaboralesActuales?.puesto_trabajo_id ?? null,
+          ia_recomendado: Object.keys(this.iaCampos).filter(k => this.iaCampos[k] && !this.editadosPorMedico[k]),
         }
 
-        const response = await clinicaTrabajo.guardarFichaAudiologicaDelli(payload)
+        const response = await clinicaTrabajo.post('/DelliAudiologia',payload)
 
         if (response.data.success) {
           alert('✅ Evaluación Audiológica guardada correctamente')
           this.form.hoja1.folio = response.data.folio
           // Redirigir o recargar
-          window.location.href = `/clinica/audiologia/delli/${response.data.id}`
+          window.location.href = `/FichaDelliAudiologia/${response.data.id}`
         }
       } catch (error) {
         console.error('Error guardando:', error)
@@ -803,6 +839,50 @@ export default {
         window.location.href = '/clinica/audiologia'
       }
     },
+    
+    programarRecomendacionIA() {
+      clearTimeout(this.iaTimer)
+      this.iaTimer = setTimeout(() => this.recomendarConIA(), 2000)
+    },
+
+    async recomendarConIA() {
+      if (!this.audiometriaCompleta || this.iaCargando) return
+
+      const firma = JSON.stringify(this.firmaAudiometria)
+      if (firma === this.ultimaFirmaIA) return
+
+      this.iaCargando = true
+      try {
+        const response = await clinicaTrabajo.post('/DelliAudiologia-consultarIA', {
+          modo: 'recomendar',
+          paciente_id: this.pacienteId ? Number(this.pacienteId) : null,
+          contexto: this.form
+        })
+
+        const propuestos = response.data.campos_completados?.hoja4 || {}
+        const nuevoHoja4 = { ...this.form.hoja4 }
+
+        Object.entries(propuestos).forEach(([campo, valor]) => {
+          if (this.editadosPorMedico[campo]) return
+
+          const estaLlenado = nuevoHoja4[campo] !== '' && nuevoHoja4[campo] !== null && nuevoHoja4[campo] !== undefined
+          if (estaLlenado && !this.iaCampos[campo]) return
+
+          nuevoHoja4[campo] = valor
+          this.iaCampos[campo] = true
+        })
+
+        this.form.hoja4 = nuevoHoja4
+        this.snapshotHoja4 = JSON.parse(JSON.stringify(nuevoHoja4))
+        this.ultimaFirmaIA = firma
+        this.iaAdvertencias = response.data.advertencias || []
+      } catch (error) {
+        console.error('Error en recomendación IA:', error)
+      } finally {
+        this.iaCargando = false
+      }
+    },
+
     imprimir() {
       alert('🖨️ Funcionalidad de impresión en desarrollo')
       // TODO: Implementar impresión con HTML2PDF
@@ -861,11 +941,38 @@ export default {
     this.form.hoja3.patron = this.form.hoja3.patron || ''
 
     this.form.hoja4.valoracion = this.form.hoja4.valoracion || ''
+    this.snapshotHoja4 = JSON.parse(JSON.stringify(this.form.hoja4))
+  },
+
+  beforeUnmount() {
+    clearTimeout(this.iaTimer)
   },
 
   watch: {
-    // Reset conversation when switching tabs if needed
-  }
+    'form.hoja4': {
+      deep: true,
+      handler(nuevo) {
+        const anterior = this.snapshotHoja4 || {}
+        const cambiados = Object.keys(nuevo).filter(
+          k => JSON.stringify(nuevo[k]) !== JSON.stringify(anterior[k])
+        )
+
+        cambiados.forEach(k => {
+          if (CAMPOS_IA.includes(k)) {
+            this.editadosPorMedico[k] = true
+            delete this.iaCampos[k]
+          }
+        })
+
+        if (cambiados.some(k => k.startsWith('audiometria_'))) {
+          this.programarRecomendacionIA()
+        }
+
+        this.snapshotHoja4 = JSON.parse(JSON.stringify(nuevo))
+        console.log('[DEBUG] hoja2 en master:', nuevo.riesgo_auditivo, '|', nuevo.uso_proteccion, '|', nuevo.duracion_exposicion)
+      }
+    }
+  },
 }
 </script>
 

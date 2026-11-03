@@ -513,41 +513,41 @@ return [
                             'icon' => 'fas fa-fw fa-briefcase-medical',
                             'url'  => 'buscador-pacientes-clinicaTrabajo', 
                         ],
-                        [
-                            'text' => 'Valoración Ocupacional',
-                            'icon' => 'fas fa-fw fa-briefcase-medical',
-                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=ocupacional', 
-                        ],
-                        [
-                            'text' => 'Valoración Psicológica',
-                            'icon' => 'fas fa-fw fa-brain',
-                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=psicologia',
-                        ],
-                        [
-                            'text' => 'Valoración Nutricional',
-                            'icon' => 'fas fa-fw fa-apple-alt',
-                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=nutricion',
-                        ],
-                        [
-                            'text' => 'Valoración Audiológia - Historia Clinica',
-                            'icon' => 'fas fa-fw fa-assistive-listening-systems',
-                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=audiologia_hc',
-                        ],
-                        [
-                            'text' => 'Valoración Audiológia - Trabajo Alto Riesgo',
-                            'icon' => 'fas fa-fw fa-hard-hat',
-                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=audiologia_ar',
-                        ],
-                        [
-                            'text' => 'Valoración Ergonómica',
-                            'icon' => 'fas fa-fw fa-chair',
-                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=ergonomia',
-                        ],
-                        [
-                            'text' => 'Valoración Espirometría',
-                            'icon' => 'fas fa-fw fa-lungs',
-                            'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=espirometria',
-                        ],
+                        // [
+                        //     'text' => 'Valoración Ocupacional',
+                        //     'icon' => 'fas fa-fw fa-briefcase-medical',
+                        //     'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=ocupacional', 
+                        // ],
+                        // [
+                        //     'text' => 'Valoración Psicológica',
+                        //     'icon' => 'fas fa-fw fa-brain',
+                        //     'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=psicologia',
+                        // ],
+                        // [
+                        //     'text' => 'Valoración Nutricional',
+                        //     'icon' => 'fas fa-fw fa-apple-alt',
+                        //     'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=nutricion',
+                        // ],
+                        // [
+                        //     'text' => 'Valoración Audiológia - Historia Clinica',
+                        //     'icon' => 'fas fa-fw fa-assistive-listening-systems',
+                        //     'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=audiologia_hc',
+                        // ],
+                        // [
+                        //     'text' => 'Valoración Audiológia - Trabajo Alto Riesgo',
+                        //     'icon' => 'fas fa-fw fa-hard-hat',
+                        //     'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=audiologia_ar',
+                        // ],
+                        // [
+                        //     'text' => 'Valoración Ergonómica',
+                        //     'icon' => 'fas fa-fw fa-chair',
+                        //     'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=ergonomia',
+                        // ],
+                        // [
+                        //     'text' => 'Valoración Espirometría',
+                        //     'icon' => 'fas fa-fw fa-lungs',
+                        //     'url'  => 'buscador-pacientes-clinicaTrabajo?tipo=espirometria',
+                        // ],
                     ],
                 ],
                 // ------------------------------------------

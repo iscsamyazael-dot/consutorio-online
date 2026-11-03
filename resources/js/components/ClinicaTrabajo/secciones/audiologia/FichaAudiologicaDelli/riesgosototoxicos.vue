@@ -394,28 +394,28 @@ export default {
   },
   methods: {
     emitChange() {
-      const agentes = [
+       this.localData.agentes_ototoxicos = [
         ...this.disolventes_list,
         ...this.metales_list,
         ...this.gases_list,
         ...this.sales_list
       ]
 
-      this.localData.agentes_ototoxicos = agentes
+      //this.localData.agentes_ototoxicos = agentes
 
       this.$emit('update:modelValue', {
         ...this.localData,
-        farmacos_ototoxicos: this.farmacos_list,
+        farmacos_ototoxicos: this.farmacos_list
         // Nuevos campos de Hoja 2 según Excel
-        toxicomanias: this.toxicomanias,
-        antibioticos: this.antibioticos,
-        diureticos: this.diureticos,
-        salicilatos: this.salicilatos,
-        armas_fuego_caneria: this.armas_fuego_caneria,
-        niveles_altos_musica: this.niveles_altos_musica,
-        lugares_ruidosos_discoteca: this.lugares_ruidosos_discoteca,
-        automovilismo_motociclismo: this.automovilismo_motociclismo,
-        otros_pasatiempos_ruido: this.otros_pasatiempos_ruido
+        // toxicomanias: this.toxicomanias,
+        // antibioticos: this.antibioticos,
+        // diureticos: this.diureticos,
+        // salicilatos: this.salicilatos,
+        // armas_fuego_caneria: this.armas_fuego_caneria,
+        // niveles_altos_musica: this.niveles_altos_musica,
+        // lugares_ruidosos_discoteca: this.lugares_ruidosos_discoteca,
+        // automovilismo_motociclismo: this.automovilismo_motociclismo,
+        // otros_pasatiempos_ruido: this.otros_pasatiempos_ruido
       })
     },
     getGruposFarmacos() {
@@ -470,6 +470,33 @@ export default {
 
 .custom-checkbox input[type="checkbox"]:checked + .text-muted {
   color: #495057 !important;
+}
+
+.custom-control {
+  position: relative;
+  display: block;
+  min-height: 1.5rem;
+  padding-left: 1.5rem;
+}
+
+.custom-control-input {
+  position: absolute;
+  left: 0;
+  z-index: -1;
+  width: 1rem;
+  height: 1.25rem;
+  opacity: 0;
+}
+
+.custom-control-label {
+  position: relative;
+  margin-bottom: 0;
+  vertical-align: top;
+  cursor: pointer;
+}
+
+.custom-checkbox .custom-control-label::before {
+  border-radius: 0.25rem;
 }
 
 label {

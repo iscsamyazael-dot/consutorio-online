@@ -339,17 +339,48 @@
           </div>
 
           <!-- CLASIFICACIÓN -->
-          <div class="col-md-3 text-center">
-            <div :class="'alert ' + getAlertClass(localData.pta_promedio)">
-              <small class="d-block text-muted">CLASIFICACIÓN</small>
-              <h4 class="mb-0" style="font-size: 16px;">{{ localData.clasificacion || 'PENDIENTE' }}</h4>
-              <small class="text-muted">Según PTA Promedio</small>
+          <div class="col-md-2 text-center">
+            <div :class="'alert ' + getAlertClass(localData.pta_der)">
+              <small class="d-block text-muted">UMBRAL DERECHO</small>
+              <h4 class="mb-0" style="font-size: 16px;">
+                {{ localData.clasificacion_der || 'PENDIENTE' }}
+              </h4>
+              <small v-if="hallazgos.length" class="d-block font-weight-bold text-warning">con alerta de vigilancia</small>
+              <small class="text-muted">PTA 500–3000 Hz</small>
             </div>
           </div>
+
+          <div class="col-md-2 text-center">
+            <div :class="'alert ' + getAlertClass(localData.pta_izq)">
+              <small class="d-block text-muted">UMBRAL IZQUIERDO</small>
+              <h4 class="mb-0" style="font-size: 16px;">
+                {{ localData.clasificacion_izq || 'PENDIENTE' }}
+              </h4>
+              <small v-if="hallazgos.length" class="d-block font-weight-bold text-warning">con alerta de vigilancia</small>
+              <small class="text-muted">PTA 500–3000 Hz</small>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
-
+     <!-- ALERTAS DE VIGILANCIA -->
+     <!-- HALLAZGOS DE VIGILANCIA -->
+    <div v-if="hallazgos.length" class="card mb-3 border-warning">
+      <div class="card-header bg-warning">
+        <h5 class="mb-0">
+          <i class="fas fa-exclamation-triangle mr-2"></i> HALLAZGOS DE VIGILANCIA
+        </h5>
+      </div>
+      <div class="card-body">
+        <ul class="mb-2">
+          <li v-for="(hallazgo, i) in hallazgos" :key="i">{{ hallazgo }}</li>
+        </ul>
+        <small class="text-muted">
+          El umbral (PTA) y los hallazgos se evalúan por separado. La aptitud considera ambos.
+        </small>
+      </div>
+    </div>
     <!-- SECTION: VALORACIÓN -->
     <div class="card mb-3">
       <div class="card-header" style="background: linear-gradient(135deg, #5F6E7E 0%, #4A5568 100%); color: white;">
@@ -361,6 +392,7 @@
         <div class="row">
           <div class="col-md-12 mb-3">
             <label class="font-weight-bold">VALORACIÓN</label>
+            <span v-if="iaCampos.valoracion" class="badge badge-info ml-2">Recomendado por la IA</span>
             <textarea
               class="form-control"
               v-model="localData.valoracion"
@@ -385,6 +417,7 @@
         <div class="row">
           <div class="col-md-12 mb-3">
             <label class="font-weight-bold">INTERPRETACIÓN (Notas del Audiólogo)</label>
+            <span v-if="iaCampos.interpretacion" class="badge badge-info ml-2">Recomendado por la IA</span>
             <textarea
               class="form-control"
               v-model="localData.interpretacion"
@@ -397,6 +430,7 @@
 
           <div class="col-md-6 mb-3">
             <label class="font-weight-bold">TIPO DE HIPOACUSIA <span class="text-danger">*</span></label>
+            <span v-if="iaCampos.tipo_hipoacusia" class="badge badge-info ml-2">Recomendado por la IA</span>
             <select class="form-control" v-model="localData.tipo_hipoacusia" @change="emitChange" style="height: 38px;">
               <option value="">-- Seleccionar --</option>
               <option value="Normal">Normal</option>
@@ -408,6 +442,7 @@
 
           <div class="col-md-6 mb-3">
             <label class="font-weight-bold">RESTRICCIONES LABORALES</label>
+            <span v-if="iaCampos.restricciones" class="badge badge-info ml-2">Recomendado por la IA</span>
             <textarea
               class="form-control"
               v-model="localData.restricciones"
@@ -432,13 +467,27 @@
         <div class="row">
           <div class="col-md-4 mb-3">
             <label class="font-weight-bold">APTITUD <span class="text-danger">* OBLIGATORIA</span></label>
-            <select class="form-control" v-model="localData.aptitud" @change="emitChange" style="height: 38px; border: 2px solid #dc3545;">
-              <option value="">-- DEBE SELECCIONAR --</option>
+            <span v-if="iaCampos.aptitud" class="badge badge-info ml-2">Recomendado por la IA</span>
+            <select 
+                class="form-control" 
+                v-model="localData.aptitud" 
+                @change="emitChange"
+                :class="localData.aptitud ? 'is-valid' : 'is-invalid'"
+                style="height: auto; min-height: 38px; padding: 8px 12px;">
+              <option value="">-- SELECCIONAR --</option>
               <option value="Apto">✓ APTO</option>
               <option value="Apto con restricciones">⚠️ APTO CON RESTRICCIONES</option>
               <option value="No apto">✗ NO APTO</option>
             </select>
-            <small class="text-danger d-block mt-1">Este campo es REQUERIDO para guardar.</small>
+            <small v-if="!localData.aptitud" class="text-danger d-block mt-1">Este campo es REQUERIDO para guardar.</small>
+            <small v-if="hallazgos.length" class="d-block mt-1" :class="localData.aptitud === 'Apto' ? 'text-danger font-weight-bold' : 'text-muted'">
+              <template v-if="localData.aptitud === 'Apto'">
+                Hay hallazgos de vigilancia: revisa si "Apto" sin restricciones es adecuado.
+              </template>
+              <template v-else>
+                Motivo: {{ hallazgos.join(' · ') }}
+              </template>
+            </small>
           </div>
 
           <div class="col-md-8">
@@ -460,7 +509,7 @@
           <small>
             <strong>Tipo:</strong> {{ localData.tipo_audiometria || 'No especificado' }} |
             <strong>PTA Promedio:</strong> {{ localData.pta_promedio }} dB |
-            <strong>Clasificación:</strong> {{ localData.clasificacion || 'Pendiente' }} |
+            <strong>Clasificación:</strong> {{ localData.clasificacion || 'Pendiente' }}<span v-if="hallazgos.length" class="text-warning font-weight-bold"> · con alerta de vigilancia</span> |
             <strong>Aptitud:</strong> <span class="font-weight-bold" :class="localData.aptitud === 'No apto' ? 'text-danger' : 'text-success'">{{ localData.aptitud || 'NO SELECCIONADA' }}</span>
           </small>
         </div>
@@ -479,6 +528,18 @@ export default {
     modelValue: {
       type: Object,
       default: () => ({})
+    },
+    iaCampos: {
+      type: Object,
+      default: () => ({})
+    },
+    hoja2: {
+      type: Object,
+      default: () => ({})
+    },
+    hoja3: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
@@ -487,6 +548,7 @@ export default {
         // NUEVOS CAMPOS DE TRAZABILIDAD NOM-011
         tipo_audiometria: '',
         fecha_ultima_calibracion: '',
+
         
         exposicion_14horas: 'false',
         // VÍA AÉREA
@@ -539,6 +601,9 @@ export default {
         pta_izq: 0,
         pta_promedio: 0,
         clasificacion: '',
+        clasificacion_der: '',
+        clasificacion_izq: '',
+        alertas_sts: [],
         interpretacion: '',
         tipo_hipoacusia: '',
         restricciones: '',
@@ -566,6 +631,55 @@ export default {
       },
       deep: true,
       immediate: true
+    }
+  },
+  computed: {
+    alertasMuesca() {
+      const hayMuesca = (sufijo) => {
+        const umbral = (f) => {
+          const v = this.localData[`audiometria_${f}_${sufijo}`]
+          return v === null || v === undefined || v === '' ? null : Number(v)
+        }
+
+        const dos = umbral('2000')
+        const ocho = umbral('8000')
+        if (dos === null || ocho === null) return false
+
+        return ['3000', '4000', '6000'].some(f => {
+          const v = umbral(f)
+          return v !== null && v - dos >= 10 && v - ocho >= 10
+        })
+      }
+
+      const alertas = []
+      if (hayMuesca('der')) {
+        alertas.push('Patrón de muesca en oído derecho: caída en 3000, 4000 o 6000 Hz frente a 2000 y 8000 Hz.')
+      }
+      if (hayMuesca('izq')) {
+        alertas.push('Patrón de muesca en oído izquierdo: caída en 3000, 4000 o 6000 Hz frente a 2000 y 8000 Hz.')
+      }
+      return alertas
+    },
+
+    hallazgos() {
+      const lista = [...this.alertasMuesca, ...(this.localData.alertas_sts || [])]
+
+      const riesgo = this.hoja2?.riesgo_auditivo || ''
+      if (riesgo.includes('Muy Alto') || riesgo.includes('Crítico')) {
+        const duracion = this.hoja2?.duracion_exposicion ? `, ${this.hoja2.duracion_exposicion}` : ''
+        lista.push(`Exposición a ruido: ${riesgo}${duracion}.`)
+      }
+
+      if (this.hoja2?.uso_proteccion === 'Nunca') {
+        lista.push('Uso de protección auditiva: Nunca.')
+      }
+
+      const acufenos = this.hoja3?.acufenos === true || this.hoja3?.acufenos === 'true'
+      if (acufenos) {
+        lista.push('Acúfenos referidos por el trabajador.')
+      }
+
+      return lista
     }
   },
   methods: {
@@ -625,20 +739,21 @@ export default {
       this.clasificarHipoacusia()
     },
     clasificarHipoacusia() {
-      const pta = this.localData.pta_promedio
-      if (pta === 0 && !this.localData.audiometria_500_der) {
-        this.localData.clasificacion = ''
-      } else if (pta <= 20) {
-        this.localData.clasificacion = 'NORMAL'
-      } else if (pta <= 40) {
-        this.localData.clasificacion = 'HIPOACUSIA LEVE'
-      } else if (pta <= 60) {
-        this.localData.clasificacion = 'HIPOACUSIA MODERADA'
-      } else if (pta <= 90) {
-        this.localData.clasificacion = 'HIPOACUSIA SEVERA'
-      } else {
-        this.localData.clasificacion = 'HIPOACUSIA PROFUNDA'
+      const clasificar = (pta) => {
+        if (!pta) return ''
+        if (pta <= 20) return 'NORMAL'
+        if (pta <= 40) return 'HIPOACUSIA LEVE'
+        if (pta <= 60) return 'HIPOACUSIA MODERADA'
+        if (pta <= 90) return 'HIPOACUSIA SEVERA'
+        return 'HIPOACUSIA PROFUNDA'
       }
+
+      this.localData.clasificacion_der = clasificar(this.localData.pta_der)
+      this.localData.clasificacion_izq = clasificar(this.localData.pta_izq)
+
+      const orden = ['', 'NORMAL', 'HIPOACUSIA LEVE', 'HIPOACUSIA MODERADA', 'HIPOACUSIA SEVERA', 'HIPOACUSIA PROFUNDA']
+      const peor = Math.max(orden.indexOf(this.localData.clasificacion_der), orden.indexOf(this.localData.clasificacion_izq))
+      this.localData.clasificacion = orden[peor] || ''
     },
     getAlertClass(pta) {
       if (!pta) return 'alert-secondary'

@@ -231,20 +231,20 @@
                   >
                 </td>
                 <td>
-                  <select class="form-control form-control-sm" v-model="empresa.exposicion_ruido" @change="emitChange">
-                    <option value="">No</option>
+                  <select class="form-control form-control-sm" v-model="empresa.exposicion_ruido" @change="emitChange" style="height: 38px;">
+                    <option value="No">No</option>
                     <option value="Sí">Sí</option>
                   </select>
                 </td>
                 <td>
-                  <select class="form-control form-control-sm" v-model="empresa.exposicion_ototoxicos" @change="emitChange">
-                    <option value="">No</option>
+                  <select class="form-control form-control-sm" v-model="empresa.exposicion_ototoxicos" @change="emitChange" style="height: 38px;">
+                    <option value="No">No</option>
                     <option value="Sí">Sí</option>
                   </select>
                 </td>
                 <td>
-                  <select class="form-control form-control-sm" v-model="empresa.epp_auditivo" @change="emitChange">
-                    <option value="">No</option>
+                  <select class="form-control form-control-sm" v-model="empresa.epp_auditivo" @change="emitChange" style="height: 38px;">
+                    <option value="No">No</option>
                     <option value="Sí">Sí</option>
                   </select>
                 </td>
