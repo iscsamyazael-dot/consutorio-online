@@ -114,6 +114,22 @@ class IAServiceAudiologiaDelli
             $advertencias[] = 'Sin vía ósea: no se propone el tipo de hipoacusia.';
         }
 
+        // Banderas rojas: si la IA no las menciona, el servidor lo agrega
+        $sintomas = $contexto['hoja3']['sintomas'] ?? [];
+        $antecedentes = $contexto['hoja3']['antecedentes'] ?? [];
+
+        $tieneBandera = ($sintomas['otorrea_der'] ?? false) === true
+            || ($sintomas['otorrea_izq'] ?? false) === true
+            || ($sintomas['otorragia_der'] ?? false) === true
+            || ($sintomas['otorragia_izq'] ?? false) === true
+            || ($antecedentes['vertigo'] ?? false) === true;
+
+        if ($tieneBandera && isset($hoja4['valoracion'])
+            && !str_contains(mb_strtolower($hoja4['valoracion']), 'otorrinolaring')) {
+            $hoja4['valoracion'] .= ' Por la presencia de otorrea, otorragia o vértigo se recomienda valoración por otorrinolaringología.';
+            $advertencias[] = 'Se agregó la recomendación de otorrinolaringología por bandera roja.';
+        }
+
         $campos = $hoja4 ? ['hoja4' => $hoja4] : [];
 
         foreach ($this->numerosNoAnclados($hoja4, $contexto) as $numero) {
@@ -155,35 +171,35 @@ class IAServiceAudiologiaDelli
         $historialTexto = $this->bloqueHistorial($historial);
 
         return <<<TXT
-Eres el asistente del módulo de audiología DELLI de Medicina del Trabajo.
-Ayudas al médico a completar la Historia Clínica Audiológica.
+        Eres el asistente del módulo de audiología DELLI de Medicina del Trabajo.
+        Ayudas al médico a completar la Historia Clínica Audiológica.
 
-REGLAS
-- Solo propones valores de los campos permitidos listados abajo. Cualquier otro campo se descarta.
-- Solo propones lo que el médico dictó o escribió en este mensaje o en el historial. No inventes datos.
-- No calculas ni propones valores de audiometría (frecuencias, PTA, clasificación).
-- Si falta información necesaria, pídela en "respuesta".
-- "aptitud" debe ser exactamente Apto, Apto con restricciones o No apto.
-- "tipo_hipoacusia" debe ser exactamente Normal, Neurosensorial, Conductiva o Mixta.
-- Responde SOLO con JSON válido con esta forma:
-  {"respuesta": "texto para el médico", "campos": {"hoja2": {"riesgo_auditivo": "..."}}}
-- Si no hay campos que proponer, usa "campos": {}.
+        REGLAS
+        - Solo propones valores de los campos permitidos listados abajo. Cualquier otro campo se descarta.
+        - Solo propones lo que el médico dictó o escribió en este mensaje o en el historial. No inventes datos.
+        - No calculas ni propones valores de audiometría (frecuencias, PTA, clasificación).
+        - Si falta información necesaria, pídela en "respuesta".
+        - "aptitud" debe ser exactamente Apto, Apto con restricciones o No apto.
+        - "tipo_hipoacusia" debe ser exactamente Normal, Neurosensorial, Conductiva o Mixta.
+        - Responde SOLO con JSON válido con esta forma:
+        {"respuesta": "texto para el médico", "campos": {"hoja2": {"riesgo_auditivo": "..."}}}
+        - Si no hay campos que proponer, usa "campos": {}.
 
-CAMPOS PERMITIDOS
-{$camposPermitidos}
+        CAMPOS PERMITIDOS
+        {$camposPermitidos}
 
-DATOS DEL PACIENTE (solo referencia, no los modifiques)
-{$datosPaciente}
+        DATOS DEL PACIENTE (solo referencia, no los modifiques)
+        {$datosPaciente}
 
-FICHA ACTUAL (solo referencia)
-{$contextoJson}
+        FICHA ACTUAL (solo referencia)
+        {$contextoJson}
 
-HISTORIAL RECIENTE
-{$historialTexto}
+        HISTORIAL RECIENTE
+        {$historialTexto}
 
-MENSAJE DEL MÉDICO
-{$mensaje}
-TXT;
+        MENSAJE DEL MÉDICO
+        {$mensaje}
+        TXT;
     }
 
     private function construirPromptRecomendacion(array $contexto, ?PacientesClinicaTrabajo $paciente): string
@@ -196,16 +212,24 @@ TXT;
         Con la ficha audiológica de abajo, propón la valoración, la interpretación, el tipo de hipoacusia, las restricciones laborales y la aptitud para el médico.
 
         REGLAS
-        - Basa cada propuesta en los datos de la ficha. No inventes antecedentes, síntomas ni resultados.
+        - Usa las cuatro hojas como un solo cuadro clínico: datos laborales (hoja 1), exposición (hoja 2), antecedentes y síntomas (hoja 3) y audiometría (hoja 4).
+        - Basa cada propuesta en la ficha. No inventes antecedentes, síntomas, exposiciones ni resultados.
         - Analiza todas las frecuencias de vía aérea (125 a 8000 Hz), incluidas 125 y 250 Hz, aunque la clasificación use el PTA de 500 a 3000 Hz. Describe el patrón (descendente, con muesca o plano) y las frecuencias donde está la caída.
+        - Al describir la muesca, nombra solo las frecuencias donde está la caída (3000, 4000 y 6000 Hz) y usa 8000 Hz solo como referencia.
+        - Escribe las frecuencias en Hz (por ejemplo, 4000 Hz) y los umbrales en dB HL (por ejemplo, 35 dB HL). Nunca escribas umbrales en Hz ni frecuencias en kHz.
+        - En "interpretacion", lista cada frecuencia una sola vez, con el valor exacto de la ficha y asociada a su frecuencia correcta. No uses aclaraciones como "(sic)".
         - Si la ficha tiene vía ósea, compara cada frecuencia con la vía aérea. Una brecha aéreo-ósea significativa sugiere componente conductivo o mixto. Si no hay vía ósea, indícalo en la interpretación y no afirmes que la hipoacusia es neurosensorial.
         - No calcules PTA ni clasificación nuevos.
-        - No menciones exposición a ruido, uso de protección, acúfenos ni otros antecedentes si no aparecen en la ficha.
-        - En "valoracion", escribe como máximo tres frases. No repitas cifra por cifra los umbrales, porque ya están en la tabla; apóyate en los hallazgos de vigilancia.
-        - Si hay hallazgos de vigilancia, la aptitud no debe ser "Apto" sin restricciones.
-        - Si la ficha tiene hallazgos de vigilancia (muesca en agudos, cambio respecto a la audiometría inicial, exposición a ruido muy alto o protección auditiva "Nunca"), no propongas "Apto" sin restricciones.
-        - En "valoracion", explica la relación entre el umbral y los hallazgos, para que el médico vea por qué la aptitud no depende solo del PTA.
-        - En "restricciones", indica el motivo de la restricción usando esos hallazgos.
+        - Si hay hallazgos de vigilancia (muesca en agudos, exposición a ruido muy alto, protección "Nunca" o acúfenos referidos), no propongas "Apto" sin restricciones y explica cada hallazgo en la restricción.
+        - Si no hay hallazgos de vigilancia, no los menciones.
+        - Las restricciones laborales se basan en factores de trabajo. La exposición extralaboral (discotecas, automovilismo, armas de fuego, música alta) se menciona como recomendación de cuidado, no como restricción.
+        - Escribe siempre con acentos, tildes y la ñ del español correctamente.
+        - No menciones exposición, protección, acúfenos ni otros antecedentes si no aparecen en la ficha.
+        - En "valoracion", escribe como máximo tres frases. No repitas cifra por cifra los umbrales. Explica la relación entre el umbral y los hallazgos, para que el médico vea por qué la aptitud no depende solo del PTA.
+        - En "restricciones", indica el motivo usando esos hallazgos y, cuando corresponda, los datos de las hojas 1 a 3.
+        - Banderas rojas: si la ficha tiene vértigo, otorrea, otorragia, asimetría entre oídos, paperas o meningitis, o si el tiempo de evolución describe inicio súbito, menciónalo en "valoracion" y recomienda valoración por otorrinolaringología.
+        - Otodinia (dolor al manipular el conducto), sobre todo junto con otorrea, sugiere afección del conducto o del oído medio. Menciónala en la interpretación y sugiere revisar el conducto en la exploración; no la trates como bandera roja por sí sola.
+        - Contradicciones: si las hojas se contradicen (por ejemplo, "niega sintomatología" marcado junto con síntomas, o protección "Siempre" sin registro de medidas), señálalo en "valoracion" y no elijas una versión.
         - Cualquier número que cites debe aparecer en la ficha.
         - "tipo_hipoacusia" debe ser exactamente Normal, Neurosensorial, Conductiva o Mixta.
         - "aptitud" debe ser exactamente Apto, Apto con restricciones o No apto.
@@ -222,6 +246,7 @@ TXT;
 
     private function bloquePaciente(?PacientesClinicaTrabajo $paciente): string
     {
+        // TODO antes de producción: quitar el nombre y enviar solo datos no identificables.
         if (!$paciente) {
             return 'No disponible.';
         }

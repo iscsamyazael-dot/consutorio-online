@@ -66,7 +66,7 @@
           <!-- USO EPP -->
           <div class="col-md-6 mb-3">
             <label class="font-weight-bold">USO DE PROTECTOR AUDITIVO</label>
-            <select class="form-control" v-model="localData.uso_proteccion" @change="emitChange" style="height: 38px;">
+            <select class="form-control" v-model="localData.uso_proteccion" @change="emitChange" style="height: 40px;">
               <option value="">-- Seleccionar --</option>
               <option value="Siempre">Siempre</option>
               <option value="Usualmente">Usualmente (70-90%)</option>
@@ -78,7 +78,7 @@
           <!-- TIPO PROTECTOR -->
           <div class="col-md-6 mb-3">
             <label class="font-weight-bold">TIPO DE PROTECTOR AUDITIVO</label>
-            <select class="form-control" v-model="localData.tipo_protector" @change="emitChange" style="height: 38px;">
+            <select class="form-control" v-model="localData.tipo_protector" @change="emitChange" style="height: 40px;">
               <option value="">-- Seleccionar --</option>
               <option value="Tapones desechables">Tapones desechables (foam)</option>
               <option value="Tapones reutilizables">Tapones reutilizables</option>
@@ -162,7 +162,7 @@
       </div>
       <div class="card-body">
         <div class="alert alert-info" role="alert">
-          <small><i class="fas fa-info-circle mr-1"></i> Marque SI si está tomando o ha tomado el fármaco. Especifique dosis y duración.</small>
+          <small><i class="fas fa-info-circle mr-1"></i> Marque SI si está tomando o ha tomado el fármaco.</small>
         </div>
 
         <!-- Tabla de fármacos -->
@@ -170,20 +170,15 @@
           <table class="table table-sm table-bordered">
             <thead style="background: #ecf0f1;">
               <tr>
-                <th>Grupo Farmacológico</th>
-                <th>Medicamento</th>
-                <th>Uso Actual</th>
-                <th>Dosis / Duración</th>
+                <th style="width: 25%;">Grupo Farmacológico</th>
+                <th>Medicamentos (marque los que toma o ha tomado)</th>
               </tr>
             </thead>
             <tbody>
-              <!-- AMINOGLUCÓSIDOS -->
               <tr v-for="farmacos in getGruposFarmacos()" :key="farmacos.grupo">
-                <td v-if="farmacos.medicamentos[0]" rowspan="">
-                  <strong>{{ farmacos.grupo }}</strong>
-                </td>
-                <td v-for="(med, idx) in farmacos.medicamentos" :key="med">
-                  <label class="custom-checkbox mb-0">
+                <td><strong>{{ farmacos.grupo }}</strong></td>
+                <td>
+                  <label v-for="med in farmacos.medicamentos" :key="med" class="custom-checkbox d-inline-block mr-3 mb-1">
                     <input type="checkbox" v-model="farmacos_list" :value="med" @change="emitChange">
                     {{ med }}
                   </label>
@@ -387,6 +382,7 @@ export default {
       handler(newVal) {
         if (newVal && Object.keys(newVal).length > 0) {
           this.localData = { ...newVal }
+          this.cargarListas(newVal)
         }
       },
       deep: true
@@ -401,21 +397,9 @@ export default {
         ...this.sales_list
       ]
 
-      //this.localData.agentes_ototoxicos = agentes
-
       this.$emit('update:modelValue', {
         ...this.localData,
         farmacos_ototoxicos: this.farmacos_list
-        // Nuevos campos de Hoja 2 según Excel
-        // toxicomanias: this.toxicomanias,
-        // antibioticos: this.antibioticos,
-        // diureticos: this.diureticos,
-        // salicilatos: this.salicilatos,
-        // armas_fuego_caneria: this.armas_fuego_caneria,
-        // niveles_altos_musica: this.niveles_altos_musica,
-        // lugares_ruidosos_discoteca: this.lugares_ruidosos_discoteca,
-        // automovilismo_motociclismo: this.automovilismo_motociclismo,
-        // otros_pasatiempos_ruido: this.otros_pasatiempos_ruido
       })
     },
     getGruposFarmacos() {
@@ -423,11 +407,20 @@ export default {
         grupo,
         medicamentos: this.farmacos_grupos[grupo]
       }))
+    },
+    cargarListas(valor) {
+      const agentes = valor?.agentes_ototoxicos || []
+      this.disolventes_list = agentes.filter(a => ['Tolueno', 'Xileno', 'Estireno', 'Tricloroetileno'].includes(a))
+      this.metales_list = agentes.filter(a => ['Mercurio', 'Manganeso', 'Plomo', 'Arsénico'].includes(a))
+      this.gases_list = agentes.filter(a => ['Monóxido de Carbono', 'Cianuro de Hidrógeno'].includes(a))
+      this.sales_list = agentes.filter(a => ['Cianuros'].includes(a))
+      this.farmacos_list = valor?.farmacos_ototoxicos || []
     }
   },
   mounted() {
     if (this.modelValue && Object.keys(this.modelValue).length > 0) {
       this.localData = { ...this.modelValue }
+      this.cargarListas(this.modelValue)
     }
   }
 }
@@ -447,8 +440,9 @@ export default {
   border-radius: 4px;
   border: 1px solid #ced4da;
   font-size: 14px;
-  padding: 10px 12px;
-  height: 38px;
+  line-height: 1.5;
+  padding: 6px 12px;
+  height: auto;
 }
 
 .form-control:focus {

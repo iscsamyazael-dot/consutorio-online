@@ -182,6 +182,12 @@ import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 const CAMPOS_IA = ['valoracion', 'interpretacion', 'tipo_hipoacusia', 'restricciones', 'aptitud']
 const FRECUENCIAS_AEREA = ['125', '250', '500', '1000', '2000', '3000', '4000', '6000', '8000']
+const esSi = v => v === true || v === 'true'
+const sinVacios = obj => Object.fromEntries(
+  Object.entries(obj).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+)
+const booleanos = (fuente, claves) => Object.fromEntries(claves.map(c => [c, esSi(fuente[c])]))
+const listaMarcados = (fuente, claves) => claves.filter(c => esSi(fuente[c]))
 
 export default {
   name: 'MasterFichaAudiologicaDelli',
@@ -198,6 +204,7 @@ export default {
       editadosPorMedico: {},
       iaAdvertencias: [],
       iaCargando: false,
+      recomendacionPendiente: false,
       iaTimer: null,
       ultimaFirmaIA: null,
       snapshotHoja4: null,
@@ -369,6 +376,39 @@ export default {
     },
     audiometriaCompleta() {
       return this.firmaAudiometria.every(v => v !== null && v !== '' && v !== undefined)
+    },
+    firmaContextoIA() {
+      return JSON.stringify(this.construirContextoIA())
+    },
+    hallazgosVigilancia() {
+      const h2 = this.form.hoja2
+      const h3 = this.form.hoja3
+      const h4 = this.form.hoja4
+      const hallazgos = []
+      const valido = v => v !== null && v !== '' && v !== undefined
+
+      // Muesca: 3000, 4000 o 6000 Hz al menos 10 dB peor que 2000 y 8000 Hz (mismo oído).
+      // Misma regla que el componente de audiometría; si cambia allá, cambia aquí.
+      const oidosConMuesca = ['der', 'izq'].filter(oido => {
+        const a2000 = h4[`audiometria_2000_${oido}`]
+        const a8000 = h4[`audiometria_8000_${oido}`]
+        if (!valido(a2000) || !valido(a8000)) return false
+        return ['3000', '4000', '6000'].some(f => {
+          const v = h4[`audiometria_${f}_${oido}`]
+          return valido(v) && v - a2000 >= 10 && v - a8000 >= 10
+        })
+      })
+      if (oidosConMuesca.length) {
+        hallazgos.push(`Muesca en agudos (${oidosConMuesca.map(o => (o === 'der' ? 'oído derecho' : 'oído izquierdo')).join(' y ')}).`)
+      }
+
+      if (['Muy Alto', 'Crítico'].some(t => (h2.riesgo_auditivo || '').includes(t))) {
+        hallazgos.push(`Exposición a ruido: ${h2.riesgo_auditivo}${h2.duracion_exposicion ? ', ' + h2.duracion_exposicion : ''}.`)
+      }
+      if (h2.uso_proteccion === 'Nunca') hallazgos.push('Uso de protección auditiva: Nunca.')
+      if (esSi(h3.acufenos)) hallazgos.push('Acúfenos referidos por el trabajador.')
+
+      return hallazgos
     }
   },
 
@@ -391,7 +431,7 @@ export default {
       }
     },
 
-   async obtenerPacientes() {
+    async obtenerPacientes() {
       if (!this.pacienteId) {
         console.warn('No hay pacienteId para cargar el expediente')
         return
@@ -472,7 +512,7 @@ export default {
         // HOJA 2: Riesgos y Ototóxicos
         this.form.hoja2 = {
           ...this.form.hoja2,
-          riesgo_auditivo: laboral?.puesto_trabajo?.riesgo_ruido ? 'Medio (82-84.9 dB)' : '', // Inferencia básica
+          riesgo_auditivo: '', // El médico lo captura en la hoja 2
           duracion_exposicion: '',
           medidas_control: '',
           uso_proteccion: '',
@@ -757,7 +797,7 @@ export default {
         const response = await clinicaTrabajo.post('/DelliAudiologia-consultarIA', {
           mensaje: mensaje,
           paciente_id: this.trabajadorSeleccionado?.id,
-          contexto: this.form
+          contexto: this.construirContextoIA()
         })
 
         this.conversacion.push({
@@ -782,6 +822,88 @@ export default {
           text: 'Disculpa, hubo un error al procesar tu solicitud.',
           timestamp: new Date()
         })
+      }
+    },
+
+    construirContextoIA() {
+      const { hoja1, hoja2, hoja3, hoja4 } = this.form
+
+      // Solo audiometría, vía ósea, enmascarado y PTA; sin valoración ni aptitud (son salidas de la IA)
+      const audiometria = sinVacios(Object.fromEntries(
+        Object.entries(hoja4).filter(([k]) => /^(audiometria|via_osea|enmascarado)_/.test(k))
+      ))
+
+      return {
+        hoja1: {
+          edad: hoja1.edad,
+          puesto: hoja1.puesto,
+          antiguedad_empresa_anos: hoja1.antiguedad_empresa_anos,
+          antiguedad_empresa_meses: hoja1.antiguedad_empresa_meses,
+          antiguedad_puesto_anos: hoja1.antiguedad_puesto_anos,
+          antiguedad_puesto_meses: hoja1.antiguedad_puesto_meses,
+          empresas_anteriores: hoja1.empresas_anteriores,
+        },
+        hoja2: {
+          riesgo_auditivo: hoja2.riesgo_auditivo,
+          duracion_exposicion: hoja2.duracion_exposicion,
+          medidas_control: hoja2.medidas_control,
+          uso_proteccion: hoja2.uso_proteccion,
+          tipo_protector: hoja2.tipo_protector,
+          agentes_ototoxicos: hoja2.agentes_ototoxicos,
+          farmacos_ototoxicos: hoja2.farmacos_ototoxicos,
+          tabaquismo: esSi(hoja2.tabaquismo),
+          cigarrillos_dia: hoja2.cigarrillos_dia,
+          exposicion_extralaboral: listaMarcados(hoja2, [
+            'armas_fuego_caneria', 'niveles_altos_musica', 'lugares_ruidosos_discoteca',
+            'automovilismo_motociclismo', 'otros_pasatiempos_ruido',
+          ]),
+          antecedentes_ototoxicos: listaMarcados(hoja2, [
+            'toxicomanias', 'antibioticos', 'diureticos', 'salicilatos',
+          ]),
+        },
+        hoja3: {
+          antecedentes: {
+            ...booleanos(hoja3, [
+              'historia_familiar_perdida', 'covid19', 'resfriado', 'otitis', 'sarampion',
+              'paperas', 'meningitis', 'hipertension', 'diabetes', 'uso_aparat', 'vertigo',
+              'paracusias_willis', 'paracusias_weber', 'paracusias_negado', 'paracusias_hipo',
+              'paracusias_hiper', 'fatiga', 'sensibilidad',
+            ]),
+            parentesco: hoja3.parentesco,
+            observaciones_familia: hoja3.observaciones_familia,
+            covid19_obs: hoja3.covid19_obs,
+            resfriado_obs: hoja3.resfriado_obs,
+            otitis_obs: hoja3.otitis_obs,
+          },
+          sintomas: {
+            ...booleanos(hoja3, [
+              'niega_sintomatologia', 'otalgia_der', 'otalgia_izq', 'otorrea_der', 'otorrea_izq',
+              'prurito_der', 'prurito_izq', 'otodinia_der', 'otodinia_izq', 'otorragia_der',
+              'otorragia_izq', 'autofonia_der', 'autofonia_izq', 'acufenos', 'congestion', 'algiacusia',
+            ]),
+            descripcion_hipoacusia: hoja3.descripcion_hipoacusia,
+            tiempo_evolucion: hoja3.tiempo_evolucion,
+          },
+          otoscopia: {
+            conducto_auditivo_der: hoja3.conducto_auditivo_der,
+            conducto_hallazgos_der: hoja3.conducto_hallazgos_der,
+            conducto_auditivo_izq: hoja3.conducto_auditivo_izq,
+            conducto_hallazgos_izq: hoja3.conducto_hallazgos_izq,
+            oido_medio_der: hoja3.oido_medio_der,
+            oido_medio_hallazgos_der: hoja3.oido_medio_hallazgos_der,
+            oido_medio_izq: hoja3.oido_medio_izq,
+            oido_medio_hallazgos_izq: hoja3.oido_medio_hallazgos_izq,
+          },
+        },
+        hoja4: {
+          exposicion_14horas: esSi(hoja4.exposicion_14horas),
+          pta_der: hoja4.pta_der,
+          pta_izq: hoja4.pta_izq,
+          pta_promedio: hoja4.pta_promedio,
+          clasificacion: hoja4.clasificacion,
+          ...audiometria,
+        },
+        hallazgos_vigilancia: this.hallazgosVigilancia,
       }
     },
 
@@ -846,9 +968,15 @@ export default {
     },
 
     async recomendarConIA() {
-      if (!this.audiometriaCompleta || this.iaCargando) return
+      if (!this.audiometriaCompleta) return
 
-      const firma = JSON.stringify(this.firmaAudiometria)
+      // Si llega un cambio mientras la IA responde, se recalcula al terminar
+      if (this.iaCargando) {
+        this.recomendacionPendiente = true
+        return
+      }
+
+      const firma = this.firmaContextoIA
       if (firma === this.ultimaFirmaIA) return
 
       this.iaCargando = true
@@ -856,7 +984,7 @@ export default {
         const response = await clinicaTrabajo.post('/DelliAudiologia-consultarIA', {
           modo: 'recomendar',
           paciente_id: this.pacienteId ? Number(this.pacienteId) : null,
-          contexto: this.form
+          contexto: this.construirContextoIA()
         })
 
         const propuestos = response.data.campos_completados?.hoja4 || {}
@@ -880,6 +1008,10 @@ export default {
         console.error('Error en recomendación IA:', error)
       } finally {
         this.iaCargando = false
+        if (this.recomendacionPendiente) {
+          this.recomendacionPendiente = false
+          this.programarRecomendacionIA()
+        }
       }
     },
 
@@ -949,6 +1081,9 @@ export default {
   },
 
   watch: {
+    firmaContextoIA(nueva) {
+      if (nueva !== this.ultimaFirmaIA) this.programarRecomendacionIA()
+    },
     'form.hoja4': {
       deep: true,
       handler(nuevo) {
@@ -964,12 +1099,7 @@ export default {
           }
         })
 
-        if (cambiados.some(k => k.startsWith('audiometria_'))) {
-          this.programarRecomendacionIA()
-        }
-
         this.snapshotHoja4 = JSON.parse(JSON.stringify(nuevo))
-        console.log('[DEBUG] hoja2 en master:', nuevo.riesgo_auditivo, '|', nuevo.uso_proteccion, '|', nuevo.duracion_exposicion)
       }
     }
   },
