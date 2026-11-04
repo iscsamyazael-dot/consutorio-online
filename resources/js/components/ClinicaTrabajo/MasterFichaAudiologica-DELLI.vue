@@ -1000,6 +1000,12 @@ export default {
           this.iaCampos[campo] = true
         })
 
+         // Si la IA ya no propone el tipo (por ejemplo, se quitó la vía ósea), borra el que ella había puesto
+        if (!propuestos.tipo_hipoacusia && this.iaCampos.tipo_hipoacusia && !this.editadosPorMedico.tipo_hipoacusia) {
+          nuevoHoja4.tipo_hipoacusia = ''
+          this.iaCampos.tipo_hipoacusia = false
+        }
+
         this.form.hoja4 = nuevoHoja4
         this.snapshotHoja4 = JSON.parse(JSON.stringify(nuevoHoja4))
         this.ultimaFirmaIA = firma

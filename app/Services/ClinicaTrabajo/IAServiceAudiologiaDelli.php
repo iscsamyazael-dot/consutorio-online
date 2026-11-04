@@ -58,6 +58,15 @@ class IAServiceAudiologiaDelli
         'valoracion', 'interpretacion', 'tipo_hipoacusia', 'restricciones', 'aptitud',
     ];
 
+    /** Frecuencias donde se evalúa la vía ósea. */
+    private const FRECUENCIAS_OSEA = [250, 500, 1000, 2000, 3000, 4000];
+
+    /** Frecuencias válidas de la tabla de audiometría. */
+    private const FRECUENCIAS_VALIDAS = [125, 250, 500, 1000, 2000, 3000, 4000, 6000, 8000];
+
+    /** PTA del oído peor por encima de este valor (dB HL) es el mínimo para proponer "No apto". */
+    private const PTA_MINIMO_NO_APTO = 40;
+
     /**
      * @return array{respuesta: string, campos_completados: array, advertencias: array}
      */
@@ -96,7 +105,8 @@ class IAServiceAudiologiaDelli
     {
         set_time_limit(300);
 
-        $prompt = $this->construirPromptRecomendacion($contexto, $paciente);
+        $hallazgos = $this->calcularHallazgos($contexto);
+        $prompt = $this->construirPromptRecomendacion($contexto, $paciente, $hallazgos);
         $data = $this->llamarGemini($prompt);
 
         if ($data === null) {
@@ -109,10 +119,18 @@ class IAServiceAudiologiaDelli
         $hoja4 = array_intersect_key($campos['hoja4'] ?? [], array_flip(self::CAMPOS_RECOMENDACION));
 
         // Sin vía ósea no se puede separar conductiva de neurosensorial
-        if (!$this->tieneViaOsea($contexto)) {
+        if ($hallazgos['tipo_hipoacusia'] !== null) {
+            if (isset($hoja4['tipo_hipoacusia']) && $hoja4['tipo_hipoacusia'] !== $hallazgos['tipo_hipoacusia']) {
+                $advertencias[] = "Tipo de hipoacusia corregido a {$hallazgos['tipo_hipoacusia']} según el cálculo.";
+            }
+            $hoja4['tipo_hipoacusia'] = $hallazgos['tipo_hipoacusia'];
+        } else {
             unset($hoja4['tipo_hipoacusia']);
-            $advertencias[] = 'Sin vía ósea: no se propone el tipo de hipoacusia.';
+            $advertencias[] = 'Sin vía ósea suficiente: no se propone el tipo de hipoacusia.';
         }
+
+        $this->validarAptitud($hoja4, $contexto, $advertencias);
+        $this->validarMuesca($hoja4, $hallazgos, $advertencias);
 
         // Banderas rojas: si la IA no las menciona, el servidor lo agrega
         $sintomas = $contexto['hoja3']['sintomas'] ?? [];
@@ -127,13 +145,17 @@ class IAServiceAudiologiaDelli
         if ($tieneBandera && isset($hoja4['valoracion'])
             && !str_contains(mb_strtolower($hoja4['valoracion']), 'otorrinolaring')) {
             $hoja4['valoracion'] .= ' Por la presencia de otorrea, otorragia o vértigo se recomienda valoración por otorrinolaringología.';
-            $advertencias[] = 'Se agregó la recomendación de otorrinolaringología por bandera roja.';
+            $advertencias[] = 'Hay bandera roja (otorrea, otorragia o vértigo): revisa que la valoración incluya la recomendación de otorrinolaringología.';
         }
 
         $campos = $hoja4 ? ['hoja4' => $hoja4] : [];
 
         foreach ($this->numerosNoAnclados($hoja4, $contexto) as $numero) {
             $advertencias[] = "Revisa el número {$numero}: no aparece en la ficha.";
+        }
+
+        foreach ($this->frecuenciasInvalidas($hoja4) as $f) {
+            $advertencias[] = "Frecuencia {$f} Hz no existe en la tabla: revisa el texto.";
         }
 
         return [
@@ -143,15 +165,178 @@ class IAServiceAudiologiaDelli
         ];
     }
 
-    private function tieneViaOsea(array $contexto): bool
+    /**
+     * Calcula en PHP los hechos audiométricos por oído: muesca, brecha aéreo-ósea,
+     * vía ósea elevada y tipo de hipoacusia. La IA los recibe como dato, no los deduce.
+     *
+     * Criterios:
+     * - Muesca: 3000, 4000 o 6000 Hz al menos 10 dB peor que 2000 Hz y que 8000 Hz (mismo oído).
+     * - Brecha significativa: 15 dB o más en al menos dos frecuencias contiguas de vía ósea.
+     * - Vía ósea elevada: algún valor de vía ósea mayor de 20 dB HL.
+     * - Tipo: brecha con vía ósea normal = Conductiva; brecha con vía ósea elevada = Mixta;
+     *   sin brecha, PTA mayor de 20 dB = Neurosensorial; sin brecha, PTA de 20 dB o menos = Normal.
+     *
+     * @return array{oidos: array, tipo_hipoacusia: ?string}
+     */
+    private function calcularHallazgos(array $contexto): array
     {
-        foreach (($contexto['hoja4'] ?? []) as $campo => $valor) {
-            if (str_starts_with($campo, 'via_osea_') && $valor !== null && $valor !== '') {
+        $h4 = $contexto['hoja4'] ?? [];
+        $oidos = [];
+        $tipos = [];
+
+        foreach (['der', 'izq'] as $oido) {
+            $aerea = fn (int $f) => $this->valorNumerico($h4, "audiometria_{$f}_{$oido}");
+            $osea = fn (int $f) => $this->valorNumerico($h4, "via_osea_{$f}_{$oido}");
+
+            $muesca = [];
+            $a2000 = $aerea(2000);
+            $a8000 = $aerea(8000);
+            if ($a2000 !== null && $a8000 !== null) {
+                foreach ([3000, 4000, 6000] as $f) {
+                    $v = $aerea($f);
+                    if ($v !== null && $v - $a2000 >= 10 && $v - $a8000 >= 10) {
+                        $muesca[] = $f;
+                    }
+                }
+            }
+
+            $brecha = [];
+            $oseaElevada = false;
+            $tieneOsea = false;
+            foreach (self::FRECUENCIAS_OSEA as $f) {
+                $o = $osea($f);
+                if ($o === null) {
+                    continue;
+                }
+                $tieneOsea = true;
+                if ($o > 20) {
+                    $oseaElevada = true;
+                }
+                $a = $aerea($f);
+                if ($a !== null && $a - $o >= 15) {
+                    $brecha[] = $f;
+                }
+            }
+            $brechaSignificativa = $this->hayFrecuenciasContiguas($brecha);
+
+            $pta = $this->valorNumerico($h4, "pta_{$oido}");
+            $tipo = null;
+            if ($tieneOsea) {
+                if ($brechaSignificativa) {
+                    $tipo = $oseaElevada ? 'Mixta' : 'Conductiva';
+                } elseif ($pta !== null) {
+                    $tipo = $pta > 20 ? 'Neurosensorial' : 'Normal';
+                }
+            }
+
+            $oidos[$oido] = [
+                'muesca_frecuencias' => $muesca,
+                'brecha_frecuencias' => $brecha,
+                'via_osea_elevada' => $oseaElevada,
+                'tipo' => $tipo,
+            ];
+
+            if ($tipo !== null) {
+                $tipos[] = $tipo;
+            }
+        }
+
+        $unicos = array_unique($tipos);
+        if (!$unicos) {
+            $tipoGeneral = null;
+        } elseif (in_array('Mixta', $unicos, true)
+            || (in_array('Conductiva', $unicos, true) && in_array('Neurosensorial', $unicos, true))) {
+            $tipoGeneral = 'Mixta';
+        } elseif (in_array('Neurosensorial', $unicos, true)) {
+            $tipoGeneral = 'Neurosensorial';
+        } elseif (in_array('Conductiva', $unicos, true)) {
+            $tipoGeneral = 'Conductiva';
+        } else {
+            $tipoGeneral = 'Normal';
+        }
+
+        return ['oidos' => $oidos, 'tipo_hipoacusia' => $tipoGeneral];
+    }
+
+    private function valorNumerico(array $h4, string $clave): ?float
+    {
+        $valor = $h4[$clave] ?? null;
+
+        return ($valor === null || $valor === '' || !is_numeric($valor)) ? null : (float) $valor;
+    }
+
+    /** Verdadero si hay al menos dos frecuencias seguidas en la tabla de vía ósea. */
+    private function hayFrecuenciasContiguas(array $frecuencias): bool
+    {
+        $indices = array_map(fn ($f) => array_search($f, self::FRECUENCIAS_OSEA, true), $frecuencias);
+        sort($indices);
+
+        for ($i = 1; $i < count($indices); $i++) {
+            if ($indices[$i] - $indices[$i - 1] === 1) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /** "No apto" solo si el PTA del oído peor supera el mínimo; si no, Apto con restricciones. */
+    private function validarAptitud(array &$hoja4, array $contexto, array &$advertencias): void
+    {
+        if (($hoja4['aptitud'] ?? null) !== 'No apto') {
+            return;
+        }
+
+        $h4 = $contexto['hoja4'] ?? [];
+        $der = $this->valorNumerico($h4, 'pta_der');
+        $izq = $this->valorNumerico($h4, 'pta_izq');
+
+        if ($der === null || $izq === null) {
+            $hoja4['aptitud'] = 'Apto con restricciones';
+            $advertencias[] = 'No apto no se acepta sin PTA de ambos oídos; se propone Apto con restricciones.';
+        } elseif (max($der, $izq) <= self::PTA_MINIMO_NO_APTO) {
+            $hoja4['aptitud'] = 'Apto con restricciones';
+            $advertencias[] = 'No apto requiere PTA mayor de 40 dB; se propone Apto con restricciones.';
+        }
+    }
+
+    /** Si el texto menciona muesca pero el cálculo no la confirma, lo avisa. No borra el texto. */
+    private function validarMuesca(array $hoja4, array $hallazgos, array &$advertencias): void
+    {
+        foreach ($hallazgos['oidos'] as $datos) {
+            if (!empty($datos['muesca_frecuencias'])) {
+                return;
+            }
+        }
+
+        $texto = mb_strtolower(implode(' ', array_filter(
+            [$hoja4['valoracion'] ?? '', $hoja4['interpretacion'] ?? '', $hoja4['restricciones'] ?? ''],
+            'is_string'
+        )));
+
+        if (str_contains($texto, 'muesca')) {
+            $advertencias[] = 'La IA mencionó muesca, pero el cálculo no la confirma. Revísalo antes de guardar.';
+        }
+    }
+    
+    /** Frecuencias escritas en el texto (seguidas de "Hz") que no existen en la tabla. */
+    private function frecuenciasInvalidas(array $hoja4): array
+    {
+        $texto = implode(' ', array_filter(
+            [$hoja4['valoracion'] ?? '', $hoja4['interpretacion'] ?? '', $hoja4['restricciones'] ?? ''],
+            'is_string'
+        ));
+
+        preg_match_all('/(\d+)\s*Hz/u', $texto, $coincidencias);
+
+        $invalidas = [];
+        foreach (array_unique($coincidencias[1]) as $f) {
+            if (!in_array((int) $f, self::FRECUENCIAS_VALIDAS, true)) {
+                $invalidas[] = $f;
+            }
+        }
+
+        return $invalidas;
     }
 
     private function respuestaFallida(): array
@@ -202,9 +387,10 @@ class IAServiceAudiologiaDelli
         TXT;
     }
 
-    private function construirPromptRecomendacion(array $contexto, ?PacientesClinicaTrabajo $paciente): string
+    private function construirPromptRecomendacion(array $contexto, ?PacientesClinicaTrabajo $paciente, array $hallazgos): string
     {
         $contextoJson = mb_substr(json_encode($contexto, JSON_UNESCAPED_UNICODE) ?: '{}', 0, 12000);
+        $hallazgosJson = json_encode($hallazgos, JSON_UNESCAPED_UNICODE) ?: '{}';
         $datosPaciente = $this->bloquePaciente($paciente);
 
         return <<<TXT
@@ -217,12 +403,17 @@ class IAServiceAudiologiaDelli
         - Analiza todas las frecuencias de vía aérea (125 a 8000 Hz), incluidas 125 y 250 Hz, aunque la clasificación use el PTA de 500 a 3000 Hz. Describe el patrón (descendente, con muesca o plano) y las frecuencias donde está la caída.
         - Al describir la muesca, nombra solo las frecuencias donde está la caída (3000, 4000 y 6000 Hz) y usa 8000 Hz solo como referencia.
         - Escribe las frecuencias en Hz (por ejemplo, 4000 Hz) y los umbrales en dB HL (por ejemplo, 35 dB HL). Nunca escribas umbrales en Hz ni frecuencias en kHz.
+        - Las únicas frecuencias válidas son 125, 250, 500, 1000, 2000, 3000, 4000, 6000 y 8000 Hz. Nunca escribas otra frecuencia.
         - En "interpretacion", lista cada frecuencia una sola vez, con el valor exacto de la ficha y asociada a su frecuencia correcta. No uses aclaraciones como "(sic)".
-        - Si la ficha tiene vía ósea, compara cada frecuencia con la vía aérea. Una brecha aéreo-ósea significativa sugiere componente conductivo o mixto. Si no hay vía ósea, indícalo en la interpretación y no afirmes que la hipoacusia es neurosensorial.
+        - La muesca, la brecha aéreo-ósea, la vía ósea elevada y el tipo de hipoacusia ya están calculados en HALLAZGOS CALCULADOS. Describe lo que indican; no los recalcules ni los contradigas.
+        - Menciona muesca solo si HALLAZGOS CALCULADOS la registra en algún oído. Si la lista está vacía, no la menciones.
+        - "tipo_hipoacusia" debe ser exactamente el valor de HALLAZGOS CALCULADOS (tipo_hipoacusia). Si es null, no lo propongas.
         - No calcules PTA ni clasificación nuevos.
         - Si hay hallazgos de vigilancia (muesca en agudos, exposición a ruido muy alto, protección "Nunca" o acúfenos referidos), no propongas "Apto" sin restricciones y explica cada hallazgo en la restricción.
         - Si no hay hallazgos de vigilancia, no los menciones.
         - Las restricciones laborales se basan en factores de trabajo. La exposición extralaboral (discotecas, automovilismo, armas de fuego, música alta) se menciona como recomendación de cuidado, no como restricción.
+        - Si el riesgo auditivo de la hoja 2 es Bajo, no hay hallazgos de vigilancia y no hay otorrea, otorragia ni vértigo, no propongas restricción de exposición a áreas de ruido. Menciona la protección y las medidas de control como recomendación.
+        - Propón restricción temporal de exposición a ruido y agentes ototóxicos solo si el riesgo auditivo es Medio o Alto, si hay hallazgos de vigilancia, o si hay otorrea, otorragia o vértigo. La restricción dura hasta la valoración por otorrinolaringología.
         - Escribe siempre con acentos, tildes y la ñ del español correctamente.
         - No menciones exposición, protección, acúfenos ni otros antecedentes si no aparecen en la ficha.
         - En "valoracion", escribe como máximo tres frases. No repitas cifra por cifra los umbrales. Explica la relación entre el umbral y los hallazgos, para que el médico vea por qué la aptitud no depende solo del PTA.
@@ -233,8 +424,12 @@ class IAServiceAudiologiaDelli
         - Cualquier número que cites debe aparecer en la ficha.
         - "tipo_hipoacusia" debe ser exactamente Normal, Neurosensorial, Conductiva o Mixta.
         - "aptitud" debe ser exactamente Apto, Apto con restricciones o No apto.
+        - No propongas "No apto" salvo que el PTA del oído peor sea mayor de 40 dB. En los demás casos usa "Apto con restricciones".
         - Responde SOLO con JSON válido con esta forma:
         {"campos": {"hoja4": {"valoracion": "...", "interpretacion": "...", "tipo_hipoacusia": "...", "restricciones": "...", "aptitud": "..."}}}
+
+        HALLAZGOS CALCULADOS (no los modifiques)
+        {$hallazgosJson}
 
         DATOS DEL PACIENTE (referencia)
         {$datosPaciente}
