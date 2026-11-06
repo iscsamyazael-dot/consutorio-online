@@ -312,7 +312,7 @@
       <div class="card-body">
         <div class="row">
           <!-- PTA DERECHO -->
-          <div class="col-md-3 text-center">
+          <div class="col-md text-center">
             <div class="alert alert-primary">
               <small class="d-block text-muted">PTA DERECHO</small>
               <h4 class="mb-0">{{ localData.pta_der }} dB</h4>
@@ -321,7 +321,7 @@
           </div>
 
           <!-- PTA IZQUIERDO -->
-          <div class="col-md-3 text-center">
+          <div class="col-md text-center">
             <div class="alert alert-warning">
               <small class="d-block text-muted">PTA IZQUIERDO</small>
               <h4 class="mb-0">{{ localData.pta_izq }} dB</h4>
@@ -330,7 +330,7 @@
           </div>
 
           <!-- PTA PROMEDIO -->
-          <div class="col-md-3 text-center">
+          <div class="col-md text-center">
             <div class="alert alert-info">
               <small class="d-block text-muted">PTA PROMEDIO</small>
               <h4 class="mb-0">{{ localData.pta_promedio }} dB</h4>
@@ -339,7 +339,7 @@
           </div>
 
           <!-- CLASIFICACIÓN -->
-          <div class="col-md-2 text-center">
+          <div class="col-md text-center">
             <div :class="'alert ' + getAlertClass(localData.pta_der)">
               <small class="d-block text-muted">UMBRAL DERECHO</small>
               <h4 class="mb-0" style="font-size: 16px;">
@@ -350,7 +350,7 @@
             </div>
           </div>
 
-          <div class="col-md-2 text-center">
+          <div class="col-md text-center">
             <div :class="'alert ' + getAlertClass(localData.pta_izq)">
               <small class="d-block text-muted">UMBRAL IZQUIERDO</small>
               <h4 class="mb-0" style="font-size: 16px;">
@@ -481,7 +481,7 @@
               <option value="No apto">✗ NO APTO</option>
             </select>
             <small v-if="!localData.aptitud" class="text-danger d-block mt-1">Este campo es REQUERIDO para guardar.</small>
-            <small v-if="hallazgos.length" class="d-block mt-1" :class="localData.aptitud === 'Apto' ? 'text-danger font-weight-bold' : 'text-muted'">
+            <small v-if="hallazgos.length && localData.clasificacion !== 'NORMAL'"  class="d-block mt-1" :class="localData.aptitud === 'Apto' ? 'text-danger font-weight-bold' : 'text-muted'">
               <template v-if="localData.aptitud === 'Apto'">
                 Hay hallazgos de vigilancia: revisa si "Apto" sin restricciones es adecuado.
               </template>
