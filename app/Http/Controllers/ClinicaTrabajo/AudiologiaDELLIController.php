@@ -309,6 +309,14 @@ class AudiologiaDELLIController extends Controller
     {
         $h4 = $this->recalcularHoja4($payload['hoja4'] ?? []);
         $h4['alertas_sts'] = $this->calcularAlertasSts($h4, $pacienteId, $fichaId);
+
+        // Regla dura al guardar: audiometría normal => Apto sin restricciones
+        if (($h4['clasificacion'] ?? null) === 'NORMAL') {
+            $h4['aptitud'] = 'Apto';
+            $h4['restricciones'] = '';
+            $h4['tipo_hipoacusia'] = 'Normal';
+        }
+
         $payload['hoja4'] = $h4;
 
         return $payload;

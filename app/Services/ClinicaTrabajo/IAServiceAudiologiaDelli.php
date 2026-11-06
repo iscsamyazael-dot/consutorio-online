@@ -134,9 +134,16 @@ class IAServiceAudiologiaDelli
             $hoja4['tipo_hipoacusia'] = $hallazgos['tipo_hipoacusia'];
         } else {
             unset($hoja4['tipo_hipoacusia']);
-            $advertencias[] = 'Sin vía ósea suficiente: no se propone el tipo de hipoacusia.';
+            if (($contexto['hoja4']['clasificacion'] ?? null) !== 'NORMAL') {
+                $advertencias[] = 'Sin vía ósea suficiente: no se propone el tipo de hipoacusia.';
+            }
         }
-
+        // Regla dura: audiometría normal => Apto sin restricciones
+        if (($contexto['hoja4']['clasificacion'] ?? null) === 'NORMAL') {
+            $hoja4['aptitud'] = 'Apto';
+            $hoja4['restricciones'] = '';
+            $hoja4['tipo_hipoacusia'] = 'Normal';
+        }
         $this->validarAptitud($hoja4, $contexto, $advertencias);
         $this->validarMuesca($hoja4, $hallazgos, $advertencias);
 
@@ -410,11 +417,14 @@ class IAServiceAudiologiaDelli
         - No te limites a un catálogo. Propón lo que corresponda al caso. Cada recomendación debe ser una acción concreta y verificable: qué hacer, quién, y en qué plazo si aplica.
         - No repitas lo que ya está en las restricciones ni en las recomendaciones fijas (protección auditiva en exposición ≥85 dB(A) y audiometría de control anual).
         - Si hay bandera roja (otorrea, otorragia, vértigo) o asimetría audiométrica relevante, incluye valoración por otorrinolaringología, salvo que ya esté en las restricciones.
-        - No inventes datos. Si falta información necesaria para recomendar algo (por ejemplo, mediciones de ruido en el área o vía ósea), propón completar ese dato como recomendación.
+        - Analiza las frecuencias de vía aérea (125 a 8000 Hz), incluidas 125 y 250 Hz, para describir el patrón (plano, descendente o con muesca). Nombra frecuencias solo cuando haya una caída relevante. Nunca listes umbrales frecuencia por frecuencia.
         - Usa lenguaje clínico claro, sin términos internos del sistema como "hallazgos calculados".
         - Ordena las recomendaciones por prioridad. El médico especialista las validará, editará o eliminará.
+        - Si la clasificación global es NORMAL, la aptitud es "Apto", "restricciones" va vacío y la valoración no habla de aptitud condicionada, aunque existan antecedentes o hallazgos de vigilancia; esos factores se mencionan solo como recomendación.
+        - Proporcionalidad: si la clasificación global es NORMAL, las recomendaciones son de prevención primaria y salud general (protección auditiva en exposición, hábitos de protección extralaboral, audiometría de control de rutina). No propongas medidas correctivas, seguimiento clínico estrecho ni lenguaje punitivo u obligatorio. Si hay hipoacusia, la gravedad de las recomendaciones debe corresponder al grado detectado.
 
         REGLAS
+        - En "interpretacion", redacta un párrafo clínico en prosa que describa el estado auditivo bilateral, la simetría y las tendencias (por ejemplo: "umbrales dentro de la normalidad bilateral" o "conservación de frecuencias agudas"). No listes los decibeles de cada frecuencia ni por oído: esos datos ya están en la tabla.
         - Usa las cuatro hojas como un solo cuadro clínico: datos laborales (hoja 1), exposición (hoja 2), antecedentes y síntomas (hoja 3) y audiometría (hoja 4).
         - Basa cada propuesta en la ficha. No inventes antecedentes, síntomas, exposiciones ni resultados.
         - Analiza todas las frecuencias de vía aérea (125 a 8000 Hz), incluidas 125 y 250 Hz, aunque la clasificación use el PTA de 500 a 3000 Hz. Describe el patrón (descendente, con muesca o plano) y las frecuencias donde está la caída.
