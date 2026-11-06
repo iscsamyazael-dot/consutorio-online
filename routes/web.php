@@ -516,6 +516,9 @@ Route::middleware('auth')->group(function () {
             Route::post('espirometria-importar', [ValoracionEspirometriaController::class, 'importarArchivo'])->name('espirometria.importar');
             Route::get('espirometria-imprimir/{id}', [ValoracionEspirometriaController::class, 'imprimir'])->name('espirometria.imprimir');
             Route::post('espirometria-consultarIA', [ValoracionEspirometriaController::class, 'consultarIA'])->name('espirometria.consultarIA');
+            Route::resource('DelliAudiologia', AudiologiaDELLIController::class);
+            Route::get('DelliAudiologia-imprimir/{id}', [AudiologiaDELLIController::class, 'imprimir'])->name('DelliAudiologia.imprimir');
+            Route::post('DelliAudiologia-consultarIA', [AudiologiaDELLIController::class, 'consultarIA'])->name('DelliAudiologia.consultarIA');
             
             // =========================================================================
             // RUTAS PARA EL BUSCADOR INTELIGENTE DE PACIENTES (CLÍNICA DE TRABAJO)

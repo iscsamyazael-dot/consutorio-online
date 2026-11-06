@@ -65,16 +65,6 @@ export const clinicaTrabajo = {
     eliminar: (id) => apiClient.delete(`/clinica/audiologia/${id}`),
     imprimir: (id) => apiClient.get(`/clinica/audiologia/${id}/imprimir`),
 
-    // ============ AUDIOLOGÍA DELLI 2026 ============
-    // Rutas concentradas en web.php (SIN /api/)
-    generarFolioDelli: () => apiClient.get('/clinica/audiologia/delli/generar-folio'),
-    guardarFichaAudiologicaDelli: (data) => apiClient.post('/clinica/audiologia/delli/guardar', data),
-    obtenerFichaAudiologicaDelli: (id) => apiClient.get(`/clinica/audiologia/delli/${id}`),
-    actualizarFichaAudiologicaDelli: (id, data) => apiClient.put(`/clinica/audiologia/delli/${id}`, data),
-    eliminarFichaAudiologicaDelli: (id) => apiClient.delete(`/clinica/audiologia/delli/${id}`),
-    listarFichasAudiologicaDelli: (filtro = '') => apiClient.get('/clinica/audiologia/delli/', { params: { filtro } }),
-    exportarFichaDELLIaPDF: (id) => apiClient.get(`/clinica/audiologia/delli/${id}/pdf`),
-
     // ============ AUDIOLOGÍA EXAMEN_TR ============
     // Rutas concentradas en web.php (SIN /api/)
     guardarExamenTrabajoTr: (data) => apiClient.post('/clinica/audiologia/tr/guardar', data),

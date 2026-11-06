@@ -1,7 +1,6 @@
 <template>
   <div class="col-lg-9">
     <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
-
       <!-- HEADER TABS ORGANIZADAS PARA CLÍNICA LABORAL -->
       <div class="card-header bg-white border-0 pt-3 pb-0">
         <ul class="nav nav-tabs custom-tabs border-0 flex-wrap gap-2">
@@ -140,26 +139,171 @@
         <!-- 4. AUDIOLOGÍA - HISTORIA CLÍNICA -->
         <div v-if="tabActiva === 'audiologiaHistoria'">
           <div class="section-title">
-            <h5><i class="fas fa-stethoscope text-warning me-2"></i>Audiología - Historia Clínica</h5>
-            <small>Antecedentes de hipoacusia, exposición a ruido y evaluaciones audiométricas previas.</small>
+            <h5><i class="fas fa-stethoscope text-warning me-2"></i>Historial de Audiometrías (Historia Clínica)</h5>
+            <small>Evaluaciones de historia clínica audiológica (NOM-011-STPS).</small>
           </div>
           <div class="valoraciones-scroll">
             <div v-if="infoAudiologiaHistoria.length === 0" class="alert alert-light border text-center text-muted">
               <i class="fas fa-clipboard-check me-2"></i> No se encuentran registros de historia clínica audiológica.
             </div>
-            <div v-else v-for="val in infoAudiologiaHistoria" :key="val.id" class="timeline-card">
-              <div class="timeline-dot bg-warning"></div>
-              <div class="flex-grow-1">
-                <div class="d-flex justify-content-between flex-wrap gap-2">
-                  <h6 class="fw-bold mb-0"><i class="fas fa-calendar-alt text-warning me-2"></i>{{ formatearFecha(val.fecha) }}</h6>
-                  <span class="badge rounded-pill px-3 py-2 bg-warning text-dark">{{ val.tipo || 'Evaluación' }}</span>
+            <div v-else v-for="(val, i) in infoAudiologiaHistoria" :key="val.id" class="audio-card-v2">
+
+              <!-- Header con badge flotante -->
+              <div class="audio-card-header">
+                <div class="audio-header-left">
+                  <div class="audio-fecha">
+                    <i class="fas fa-calendar-alt text-secondary me-1"></i>
+                    {{ formatearFecha(val.created_at?.slice(0, 10)) }}
+                  </div>
+                  <div class="audio-folio">
+                    <span class="audio-folio-item">
+                      <i class="fas fa-file-invoice me-1"></i>
+                      Folio {{ val.folio }}
+                    </span>
+                    <span class="audio-separador">·</span>
+                    <span class="audio-folio-item">
+                      <i class="fas fa-clipboard-list me-1"></i>
+                      {{ val.audiometria?.tipo_audiometria || 'Evaluación' }}
+                    </span>
+                    <span class="audio-separador">·</span>
+                    <span v-if="val.puesto" class="audio-separador">·</span>
+                    <span v-if="val.puesto" class="audio-folio-item">
+                      <i class="fas fa-briefcase me-1"></i>
+                      {{ val.puesto?.nombre || 'No especificado' }}
+                    </span>
+                  </div>
                 </div>
-                <p class="mt-2 mb-1"><strong>Antecedentes:</strong> {{ val.antecedentes || 'Sin antecedentes registrados' }}</p>
-                <p class="text-muted small mb-2"><strong>Exposición a ruido:</strong> {{ val.exposicion_ruido || 'No especificada' }}</p>
-                <button class="btn btn-sm btn-outline-warning rounded-pill px-3" @click="verDetalleAudiologia(val)">
-                  <i class="fas fa-eye me-1"></i> Ver detalle completo
+                <span class="badge-aptitud" :class="getBadgeAptitudClass(val.aptitud)">
+                  <i class="fas fa-exclamation-triangle me-1" v-if="val.aptitud === 'Apto con restricciones'"></i>
+                  {{ val.aptitud || 'Sin aptitud' }}
+                </span>
+              </div>
+
+              <!-- Grid de Métricas -->
+              <div class="audio-metricas-grid">
+                
+                <!-- Riesgo Auditivo -->
+                <div class="audio-metrica-card riesgo">
+                  <div class="audio-metrica-icono">
+                    <i class="fas fa-volume-up"></i>
+                  </div>
+                  <div class="audio-metrica-content">
+                    <div class="audio-metrica-label">RIESGO AUDITIVO</div>
+                    <div class="audio-metrica-valor">
+                      {{ separarRiesgoAuditivo(val.riesgo_auditivo).titulo }}
+                    </div>
+                    <div
+                      v-if="separarRiesgoAuditivo(val.riesgo_auditivo).subtitulo"  
+                      class="audio-metrica-subtexto riesgo-texto">
+                      {{ separarRiesgoAuditivo(val.riesgo_auditivo).subtitulo }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- EPP Auditivo -->
+                <div class="audio-metrica-card info">
+                  <div class="audio-metrica-icono">
+                    <i class="fas fa-headphones"></i>
+                  </div>
+                  <div class="audio-metrica-content">
+                    <div class="audio-metrica-label">EPP AUDITIVO</div>
+                    <div class="audio-metrica-valor text-left">
+                      {{ val.epp_auditivo || 'N/D' }}
+                    </div>
+                    <!-- ✅ Dinámico: solo se muestra si el riesgo es Alto o Muy Alto -->
+                    <div 
+                      v-if="esEppObligatorio(val.riesgo_auditivo)" 
+                      class="audio-metrica-subtexto info-text"
+                    >
+                      USO OBLIGATORIO
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PTA Derecho -->
+                <div class="audio-metrica-card" :class="getClasePTA(val.pta_der)">
+                  <div class="audio-metrica-icono">
+                    <i class="fas fa-deaf"></i>
+                  </div>
+                  <div class="audio-metrica-content">
+                    <div class="audio-metrica-label">PTA DERECHO</div>
+                    <div class="audio-metrica-valor">
+                      {{ dB(val.pta_der) }}
+                    </div>
+                    <div class="audio-metrica-texto" :class="getTextoClasificacionClass(val.clasificacion_der)">
+                      {{ val.clasificacion_der || 'N/D' }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PTA Izquierdo -->
+                <div class="audio-metrica-card" :class="getClasePTA(val.pta_izq)">
+                  <div class="audio-metrica-icono">
+                    <i class="fas fa-deaf"></i>
+                  </div>
+                  <div class="audio-metrica-content">
+                    <div class="audio-metrica-label">PTA IZQUIERDO</div>
+                    <div class="audio-metrica-valor">
+                      {{ dB(val.pta_izq) }}
+                    </div>
+                    <div class="audio-metrica-texto" :class="getTextoClasificacionClass(val.clasificacion_izq)">
+                      {{ val.clasificacion_izq || 'N/D' }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PTA Promedio -->
+                <div class="audio-metrica-card" :class="getClasePTAPromedio(val.pta_promedio)">
+                  <div class="audio-metrica-icono">
+                    <i class="fas fa-chart-line"></i>
+                  </div>
+                  <div class="audio-metrica-content">
+                    <div class="audio-metrica-label">PTA PROMEDIO</div>
+                    <div class="audio-metrica-valor">
+                      {{ dB(val.pta_promedio) }}
+                    </div>
+                    <!-- ✅ Dinámico: usa la clasificación real de la API -->
+                    <div 
+                      class="audio-metrica-texto" 
+                      :class="getTextoClasificacionClass(val.clasificacion)"
+                    >
+                      {{ getTextoClasificacionPromedio(val.clasificacion) }}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Valoración -->
+              <div class="audio-valoracion-box" v-if="val.valoracion">
+                <div class="audio-valoracion-icono">
+                  <i class="fas fa-stethoscope"></i>
+                </div>
+                <div class="audio-valoracion-content">
+                  <strong>Valoración:</strong> {{ resumirTexto(val.valoracion, 220) }}
+                </div>
+              </div>
+
+              <!-- Restricciones -->
+              <div class="audio-restricciones-box" v-if="val.restricciones">
+                <div class="audio-restricciones-icono">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="audio-restricciones-content">
+                  <strong>Restricciones:</strong> {{ resumirTexto(val.restricciones, 220) }}
+                </div>
+              </div>
+
+              <!-- Acciones -->
+              <div class="audio-acciones">
+                <button class="btn-audio" @click="abrirDetalleAudiologia(val)">
+                  <i class="fas fa-eye me-1"></i> Ver detalle
+                </button>
+                <button class="btn-audio btn-audio-primary" @click="imprimirAudiologia(val)">
+                  <i class="fas fa-print me-1"></i> Imprimir
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -202,7 +346,7 @@
           </div>
         </div>
 
-        <!-- 6. VALORACIÓN ESPIROMETRÍA -->
+     <!-- 6. VALORACIÓN ESPIROMETRÍA -->
         <div v-if="tabActiva === 'espirometria'">
           <div class="section-title">
             <h5><i class="fas fa-lungs text-danger me-2"></i>Historial de Espirometrías</h5>
@@ -212,60 +356,138 @@
             <div v-if="infoValoracionesEspirometria.length === 0" class="alert alert-light border text-center text-muted">
               <i class="fas fa-clipboard-check me-2"></i> No se encuentran espirometrías registradas.
             </div>
-            <div v-else v-for="(val, i) in infoValoracionesEspirometria" :key="val.id" class="timeline-card">
-              <div class="timeline-dot bg-danger"></div>
-                <div class="flex-grow-1">
-                  <div class="d-flex justify-content-between flex-wrap gap-2">
-                    <h6 class="fw-bold mb-0">
-                      <i class="fas fa-calendar-alt text-danger me-2"></i>
-                      {{ formatearFecha(val.fecha_prueba || val.fecha_valoracion) }}
-                    </h6>
-                    <span class="badge rounded-pill px-3 py-2" :class="colorAptitudEspirometria(val.aptitud)">
-                      {{ val.aptitud || 'Sin aptitud' }}
-                    </span>
+
+            <div v-else v-for="(val, i) in infoValoracionesEspirometria" :key="val.id" class="espiro-card">
+
+              <!-- Header -->
+              <div class="espiro-card-header">
+                <div>
+                  <div class="espiro-fecha">
+                    <i class="fas fa-calendar-alt text-secondary me-1"></i>
+                    {{ formatearFecha(val.fecha_prueba || val.fecha_valoracion) }}
                   </div>
-
-                  <p class="mt-2 mb-1">
-                    <strong>Folio:</strong> {{ val.folio }} &middot; <strong>Tipo:</strong> {{ val.tipo_evaluacion }}
-                    <span v-if="val.puesto"> &middot; <strong>Puesto:</strong> {{ val.puesto.nombre }}</span>
-                  </p>
-
-                  <p class="mb-1">
-                    <strong>FEV1:</strong> {{ val.fev1_l ?? 'N/D' }} L ({{ val.fev1_porcentaje_predicho ?? 'N/D' }}%)
-                    <span v-if="tendenciaEspirometria(i)" :class="tendenciaEspirometria(i).clase" class="small ms-1">
-                      {{ tendenciaEspirometria(i).texto }}
+                  <div class="espiro-folio">
+                    <span class="espiro-folio-item">
+                      <i class="fas fa-file-invoice me-1"></i>
+                      Folio {{ val.folio }}
                     </span>
-                    | <strong>FVC:</strong> {{ val.fvc_l ?? 'N/D' }} L ({{ val.fvc_porcentaje_predicho ?? 'N/D' }}%)
-                    | <strong>FEV1/FVC:</strong> {{ val.fev1_fvc_ratio ?? 'N/D' }}%
-                    <span :class="estadoRelacionEspirometria(val).clase" class="small ms-1">
-                      {{ estadoRelacionEspirometria(val).texto }}
+                    <span class="espiro-separador">·</span>
+                    <span class="espiro-folio-item">
+                      <i class="fas fa-clipboard-list me-1"></i>
+                      {{ val.tipo_evaluacion || 'Sin tipo' }}
                     </span>
-                  </p>
-
-                  <p class="text-muted small mb-1">
-                    <strong>Z FEV1:</strong> {{ val.fev1_z ?? 'N/D' }} &middot;
-                    <strong>Z FEV1/FVC:</strong> {{ val.fev1_fvc_z ?? 'N/D' }} &middot;
-                    <strong>Interpretación:</strong> {{ val.interpretacion_sistema || 'Pendiente' }} &middot;
-                    <strong>Calidad:</strong> {{ val.calidad_sesion || 'N/D' }}
-                  </p>
-
-                  <p class="small mb-1" v-if="val.diagnostico_medico">
-                    <strong>Diagnóstico:</strong> {{ resumirTexto(val.diagnostico_medico) }}
-                  </p>
-
-                  <p class="small mb-2 text-warning" v-if="val.aptitud && val.aptitud !== 'Apto' && val.recomendaciones">
-                    <strong>Restricciones / recomendaciones:</strong> {{ resumirTexto(val.recomendaciones) }}
-                  </p>
-
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="abrirDetalleEspirometria(val)">
-                      <i class="fas fa-eye me-1"></i> Ver detalle
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @click="imprimirEspirometria(val)">
-                      <i class="fas fa-print me-1"></i> Imprimir
-                    </button>
+                    <span v-if="val.puesto">
+                      <span class="espiro-separador">·</span>
+                      <span class="espiro-folio-item">
+                        <i class="fas fa-briefcase me-1"></i>
+                        {{ val.puesto.nombre }}
+                      </span>
+                    </span>
                   </div>
                 </div>
+                <span class="badge rounded-pill px-3 py-2" :class="colorAptitudEspirometria(val.aptitud)">
+                  {{ val.aptitud || 'Sin aptitud' }}
+                </span>
+              </div>
+
+              <!-- Grid de Métricas -->
+              <div class="espiro-metricas-grid">
+                
+                <!-- FEV1 -->
+                <div class="espiro-metrica" :class="getClaseMetrica(val.fev1_porcentaje_predicho)">
+                  <div class="espiro-metrica-icono">
+                    <i class="fas fa-lungs"></i>
+                    <span class="espiro-metrica-label">FEV1</span>
+                  </div>
+                  <div class="espiro-metrica-valor">
+                    {{ val.fev1_l ?? 'N/D' }} L
+                  </div>
+                  <div class="espiro-metrica-porcentaje" :class="getClaseTexto(val.fev1_porcentaje_predicho)">
+                    {{ val.fev1_porcentaje_predicho ?? 'N/D' }}%
+                    <span v-if="tendenciaEspirometria(i)" class="espiro-tendencia" :class="tendenciaEspirometria(i).clase">
+                      {{ tendenciaEspirometria(i).texto }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- FVC -->
+                <div class="espiro-metrica" :class="getClaseMetrica(val.fvc_porcentaje_predicho)">
+                  <div class="espiro-metrica-icono">
+                    <i class="fas fa-wind"></i>
+                    <span class="espiro-metrica-label">FVC</span>
+                  </div>
+                  <div class="espiro-metrica-valor">
+                    {{ val.fvc_l ?? 'N/D' }} L
+                  </div>
+                  <div class="espiro-metrica-porcentaje" :class="getClaseTexto(val.fvc_porcentaje_predicho)">
+                    {{ val.fvc_porcentaje_predicho ?? 'N/D' }}%
+                  </div>
+                </div>
+
+                <!-- FEV1/FVC -->
+                <div class="espiro-metrica" :class="getClaseMetricaRatio(val.fev1_fvc_ratio)">
+                  <div class="espiro-metrica-icono">
+                    <i class="fas fa-percentage"></i>
+                    <span class="espiro-metrica-label">FEV1/FVC</span>
+                  </div>
+                  <div class="espiro-metrica-valor">
+                    {{ val.fev1_fvc_ratio ?? 'N/D' }}%
+                  </div>
+                  <div class="espiro-metrica-lln">
+                    <span class="audio-clas" :class="estadoRelacionEspirometria(val).clase">
+                      {{ estadoRelacionEspirometria(val).texto.replace('· ', '') }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Z FEV1 / Z Ratio -->
+                <div class="espiro-metrica espiro-metrica-info">
+                  <div class="espiro-metrica-icono">
+                    <i class="fas fa-chart-bar"></i>
+                    <span class="espiro-metrica-label">Z FEV1 / Z FEV1/FVC</span>
+                  </div>
+                  <div class="espiro-metrica-valor espiro-metrica-valor-sm">
+                    {{ val.fev1_z ?? 'N/D' }} / {{ val.fev1_fvc_z ?? 'N/D' }}
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Interpretación -->
+              <div class="espiro-interpretacion">
+                <i class="fas fa-stethoscope me-2"></i>
+                <strong>Interpretación:</strong>
+                <span class="espiro-interpretacion-texto">{{ val.interpretacion_sistema || 'Pendiente' }}</span>
+                <span class="espiro-separador-vertical"></span>
+                <strong>Calidad:</strong>
+                <span class="espiro-calidad-badge">{{ val.calidad_sesion || 'N/D' }}</span>
+              </div>
+
+              <!-- Diagnóstico -->
+              <div class="espiro-diagnostico" v-if="val.diagnostico_medico">
+                <i class="fas fa-file-medical-alt me-2"></i>
+                <strong>Diagnóstico:</strong>
+                <span class="espiro-diagnostico-texto">{{ resumirTexto(val.diagnostico_medico, 220) }}</span>
+              </div>
+             <!-- Recomendaciones y Observaciones Finales -->
+              <div class="espiro-recomendaciones" v-if="val.recomendaciones">
+                <i class="fas fa-clipboard-check me-2"></i>
+                <strong>Recomendaciones y Observaciones Finales:</strong>
+                <div class="espiro-recomendaciones-texto">
+                  {{ val.recomendaciones }}
+                </div>
+              </div>
+
+              <!-- Acciones -->
+              <div class="espiro-acciones">
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="abrirDetalleEspirometria(val)">
+                  <i class="fas fa-eye me-1"></i> Ver detalle
+                </button>
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @click="imprimirEspirometria(val)">
+                  <i class="fas fa-print me-1"></i> Imprimir
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
@@ -448,7 +670,7 @@
               <i class="fas fa-clipboard-check me-1"></i>
               {{ espirometriaDetalle.aptitud || 'Sin aptitud' }}
             </span>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            <button type="button" class="btn-close btn-close-white" @click="cerrarModal('modalDetalleEspirometria')" aria-label="Cerrar"></button>
           </div>
 
           <!-- BODY -->
@@ -623,7 +845,7 @@
 
             <!-- RESTRICCIONES Y RECOMENDACIONES -->
             <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-warning bg-warning bg-opacity-10"
-                v-if="espirometriaDetalle.aptitud && espirometriaDetalle.aptitud !== 'Apto' && espirometriaDetalle.recomendaciones">
+                v-if="espirometriaDetalle.recomendaciones">
               <div class="card-body py-3">
                 <div class="d-flex align-items-start">
                   <div class="info-card-icon bg-warning text-white me-3">
@@ -641,7 +863,7 @@
 
           <!-- FOOTER -->
           <div class="modal-footer bg-white border-top py-3">
-            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4"  @click="cerrarModal('modalDetalleEspirometria')">
               <i class="fas fa-times me-1"></i> Cerrar
             </button>
             <div class="ms-auto d-flex gap-2">
@@ -656,10 +878,526 @@
         </div>
       </div>
     </div>
+    <!-- AQUI TERMINA EL MODAL DETALLE ESPIROMETRIA -->
+
+    <!-- MODAL DETALLE DE AUDIOLOGÍA - HISTORIA CLÍNICA -->
+    <div class="modal fade" id="modalDetalleAudiologia" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" v-if="audiologiaDetalle">
+
+          <!-- HEADER CON GRADIENTE -->
+          <div class="modal-header bg-gradient-medical text-white border-0 py-3">
+            <div class="d-flex align-items-center">
+              <div class="icon-circle bg-white bg-opacity-25 me-3">
+                <i class="fas fa-stethoscope fs-4"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-1">
+                  Audiología - Historia Clínica
+                  <span class="badge bg-white bg-opacity-25 text-white ms-2 align-middle">
+                    #{{ audiologiaDetalle.folio }}
+                  </span>
+                </h5>
+                <small class="opacity-75">
+                  <i class="far fa-calendar-alt me-1"></i>
+                  {{ formatearFecha(audiologiaDetalle.created_at?.slice(0, 10)) }}
+                  <span class="mx-1">•</span>
+                  <i class="fas fa-clipboard-list me-1"></i>
+                  {{ audiologiaDetalle.audiometria?.tipo_audiometria || 'Evaluación' }}
+                </small>
+              </div>
+            </div>
+            <span class="badge rounded-pill px-3 py-2 ms-auto me-3 shadow-sm" :class="colorAptitudAudiologia(audiologiaDetalle.aptitud)">
+              <i class="fas fa-clipboard-check me-1"></i>
+              {{ audiologiaDetalle.aptitud || 'Sin aptitud' }}
+            </span>
+            <button type="button" class="btn-close btn-close-white" @click="cerrarModal('modalDetalleAudiologia')" aria-label="Cerrar"></button>
+          </div>
+
+          <!-- BODY -->
+          <div class="modal-body bg-light-subtle">
+
+            <!-- TARJETAS DE INFORMACIÓN GENERAL -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-danger-soft text-danger">
+                    <i class="fas fa-volume-up"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Riesgo auditivo</small>
+                    <strong class="d-block text-dark">{{ audiologiaDetalle.riesgo_auditivo || 'No registrado' }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-info-soft text-info">
+                    <i class="fas fa-headphones"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">EPP auditivo</small>
+                    <strong class="d-block text-dark">{{ audiologiaDetalle.epp_auditivo || 'No registrado' }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-success-soft text-success">
+                    <i class="fas fa-building"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Antigüedad en la empresa</small>
+                    <strong class="d-block text-dark">
+                      {{ audiologiaDetalle.anos_empresa != null ? audiologiaDetalle.anos_empresa + ' años' : 'No registrado' }}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-primary-soft text-primary">
+                    <i class="fas fa-chart-line"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">PTA promedio</small>
+                    <strong class="d-block text-dark">
+                      {{ audiologiaDetalle.audiometria?.pta_promedio != null ? audiologiaDetalle.audiometria.pta_promedio + ' dB' : 'N/D' }}
+                      <span class="text-muted small">· {{ audiologiaDetalle.audiometria?.clasificacion || 'N/D' }}</span>
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECCIÓN DE AUDIOMETRÍA POR OÍDO -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-2">
+                <div class="info-card-icon bg-primary-soft text-primary me-2" style="width: 32px; height: 32px;">
+                  <i class="fas fa-deaf"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-primary">Audiometría por oído</h6>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead>
+                      <tr class="bg-light">
+                        <th class="border-0 ps-3 text-uppercase small fw-bold text-muted">
+                          <i class="fas fa-ear-listen me-1"></i> Oído
+                        </th>
+                        <th class="border-0 text-center text-uppercase small fw-bold text-muted">PTA (dB)</th>
+                        <th class="border-0 text-center text-uppercase small fw-bold text-muted pe-3">Clasificación</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="ps-3 fw-semibold">
+                          <span class="badge bg-primary bg-opacity-10 text-primary me-2">DER</span>
+                          Oído derecho
+                        </td>
+                        <td class="text-center fw-bold">{{ audiologiaDetalle.audiometria?.pta_der ?? 'N/D' }}</td>
+                        <td class="text-center pe-3">
+                          <span class="badge rounded-pill px-3 py-2" :class="getBadgeBootstrapClass(audiologiaDetalle.audiometria?.clasificacion_der)">
+                            {{ audiologiaDetalle.audiometria?.clasificacion_der }}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr class="bg-light bg-opacity-50">
+                        <td class="ps-3 fw-semibold">
+                          <span class="badge bg-info bg-opacity-10 text-info me-2">IZQ</span>
+                          Oído izquierdo
+                        </td>
+                        <td class="text-center fw-bold">{{ audiologiaDetalle.audiometria?.pta_izq ?? 'N/D' }}</td>
+                        <td class="text-center pe-3">
+                          <span class="badge rounded-pill px-3 py-2" :class="getBadgeBootstrapClass(audiologiaDetalle.audiometria?.clasificacion_izq)">
+                            {{ audiologiaDetalle.audiometria?.clasificacion_izq || 'N/D' }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="small text-muted px-3 py-2 mb-0">
+                  <strong>Tipo de hipoacusia:</strong> {{ audiologiaDetalle.audiometria?.tipo_hipoacusia || 'No determinado' }}
+                </p>
+              </div>
+            </div>
+
+            <!-- VALORACIÓN -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-primary" v-if="audiologiaDetalle.audiometria?.valoracion">
+              <div class="card-body py-3">
+                <div class="d-flex align-items-start">
+                  <div class="info-card-icon bg-primary-soft text-primary me-3">
+                    <i class="fas fa-stethoscope"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="fw-bold text-primary mb-1">Valoración</h6>
+                    <p class="mb-0 text-body" style="white-space: pre-line;">{{ audiologiaDetalle.audiometria.valoracion }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RESTRICCIONES -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-warning bg-warning bg-opacity-10" v-if="audiologiaDetalle.audiometria?.restricciones">
+              <div class="card-body py-3">
+                <div class="d-flex align-items-start">
+                  <div class="info-card-icon bg-warning-soft text-warning me-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="fw-bold text-warning mb-1">Restricciones</h6>
+                    <p class="mb-0 text-body" style="white-space: pre-line;">{{ audiologiaDetalle.audiometria.restricciones }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RECOMENDACIONES -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-primary"
+                v-if="Array.isArray(audiologiaDetalle.audiometria?.recomendaciones) && audiologiaDetalle.audiometria.recomendaciones.length">
+              <div class="card-body py-3">
+                <div class="d-flex align-items-start">
+                  <div class="info-card-icon bg-primary-soft text-primary me-3">
+                    <i class="fas fa-clipboard-check"></i>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h6 class="fw-bold text-primary mb-2">Recomendaciones</h6>
+                    <ol class="mb-0 ps-3">
+                      <li v-for="(rec, i) in audiologiaDetalle.audiometria.recomendaciones" :key="i" class="mb-1">{{ rec }}</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FOOTER -->
+          <div class="modal-footer bg-white border-top py-3">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4"  @click="cerrarModal('modalDetalleAudiologia')">
+              <i class="fas fa-times me-1"></i> Cerrar
+            </button>
+            <div class="ms-auto d-flex gap-2">
+              <button type="button" class="btn btn-outline-primary rounded-pill px-4" @click="imprimirAudiologia(audiologiaDetalle)">
+                <i class="fas fa-print me-1"></i> Imprimir
+              </button>
+              <a :href="urlEditarAudiologia(audiologiaDetalle)" class="btn btn-warning rounded-pill px-4 shadow-sm">
+                <i class="fas fa-pen-to-square me-1"></i> Editar
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- AQUI TERMINA EL MODAL DETALLE DE AUDIOLOGÍA - HISTORIA CLÍNICA -->
   </div>
 </template>
 
 <style scoped>
+
+/* Card principal */
+/* Card principal */
+.espiro-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* Header */
+.espiro-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.espiro-fecha {
+  font-size: 16px;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 6px;
+}
+
+.espiro-folio {
+  font-size: 12px;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.espiro-folio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.espiro-folio-item i {
+  font-size: 11px;
+  color: #adb5bd;
+}
+
+.espiro-separador {
+  color: #ced4da;
+  margin: 0 2px;
+}
+
+/* Grid de métricas */
+.espiro-metricas-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* Cada métrica */
+.espiro-metrica {
+  background: #f8f9fa;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.espiro-metrica:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Estados de color */
+.espiro-metrica.normal {
+  border-color: #28a745;
+  background: #f8f9fa;
+}
+
+.espiro-metrica.alerta {
+  border-color: #ffc107;
+  background: #fff8e1;
+}
+
+.espiro-metrica.peligro {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+
+.espiro-metrica-info {
+  border-color: #6c757d;
+  background: #f8f9fa;
+}
+
+/* Icono y label */
+.espiro-metrica-icono {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.espiro-metrica-icono i {
+  font-size: 18px;
+  color: #495057;
+}
+
+.espiro-metrica.normal .espiro-metrica-icono i {
+  color: #28a745;
+}
+
+.espiro-metrica.alerta .espiro-metrica-icono i {
+  color: #856404;
+}
+
+.espiro-metrica.peligro .espiro-metrica-icono i {
+  color: #dc3545;
+}
+
+.espiro-metrica-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Valor */
+.espiro-metrica-valor {
+  font-size: 24px;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 4px;
+}
+
+.espiro-metrica-valor-sm {
+  font-size: 20px;
+}
+
+/* Porcentaje */
+.espiro-metrica-porcentaje {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+/* Recomendaciones */
+.espiro-recomendaciones {
+  background: #f0f9ff;
+  border-left: 4px solid #0d6efd;
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #212529;
+  line-height: 1.6;
+  display: flex;
+  align-items: flex-start;
+}
+
+.espiro-recomendaciones i {
+  color: #0d6efd;
+  font-size: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.espiro-recomendaciones-texto {
+  margin-left: 4px;
+  white-space: pre-line;
+}
+
+.espiro-metrica-porcentaje.normal {
+  color: #28a745;
+}
+
+.espiro-metrica-porcentaje.alerta {
+  color: #856404;
+}
+
+.espiro-metrica-porcentaje.peligro {
+  color: #dc3545;
+}
+
+.espiro-tendencia {
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+/* LLN */
+.espiro-metrica-lln {
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Interpretación */
+.espiro-interpretacion {
+  background: #e7f3ff;
+  border-left: 4px solid #0d6efd;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #212529;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.espiro-interpretacion i {
+  color: #0d6efd;
+  font-size: 16px;
+}
+
+.espiro-interpretacion-texto {
+  margin-left: 4px;
+}
+
+.espiro-separador-vertical {
+  width: 1px;
+  height: 16px;
+  background: #0d6efd;
+  opacity: 0.3;
+  margin: 0 4px;
+}
+
+.espiro-calidad-badge {
+  background: #0d6efd;
+  color: white;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Diagnóstico */
+.espiro-diagnostico {
+  background: #fff9e6;
+  border-left: 4px solid #ffc107;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #856404;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+}
+
+.espiro-diagnostico i {
+  color: #856404;
+  font-size: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.espiro-diagnostico-texto {
+  margin-left: 4px;
+}
+
+/* Restricciones */
+.espiro-restricciones {
+  background: #fff5f5;
+  border-left: 4px solid #dc3545;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #721c24;
+  line-height: 1.5;
+}
+
+.espiro-restricciones i {
+  color: #dc3545;
+}
+
+/* Acciones */
+.espiro-acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .espiro-metricas-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .espiro-metricas-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .rounded-4 { border-radius: 24px !important; }
 
 .custom-tabs .nav-link {
@@ -816,10 +1554,386 @@
   .badge.bg-success { background-color: #198754 !important; }
   .badge.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
   .badge.bg-danger { background-color: #dc3545 !important; }
+
+    /* =========================================
+   AUDIOLOGÍA - PROPUESTA A (CORREGIDA FINAL)
+   ========================================= */
+  .audio-card-v2 {
+    background: white;
+    border: 1px solid #e5e9f0;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    position: relative;
+  }
+
+  .audio-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #edf0f4;
+  }
+
+  .audio-header-left {
+    flex: 1;
+  }
+
+  .audio-fecha {
+    font-size: 16px;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 6px;
+  }
+
+  .audio-folio {
+    font-size: 12px;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .audio-folio-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .audio-folio-item i {
+    font-size: 12px;
+    color: #adb5bd;
+  }
+
+  .audio-separador {
+    color: #ced4da;
+  }
+
+  /* Badge de aptitud */
+  .badge-aptitud {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .badge-aptitud.apto {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .badge-aptitud.restricciones {
+    background: #ffc107;
+    color: #212529;
+  }
+
+  .badge-aptitud.no-apto {
+    background: #dc3545;
+    color: white;
+  }
+
+  /* Grid de métricas */
+  .audio-metricas-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .audio-metrica-card {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .audio-metrica-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Estados de color */
+  .audio-metrica-card.normal {
+    border-color: #28a745;
+    background: #f8f9fa;
+  }
+
+  .audio-metrica-card.alerta {
+    border-color: #ffc107;
+    background: #fff8e1;
+  }
+
+  .audio-metrica-card.peligro {
+    border-color: #dc3545;
+    background: #fff5f5;
+  }
+
+  .audio-metrica-card.info {
+    border-color: #0d6efd;
+    background: #e7f3ff;
+  }
+
+  .audio-metrica-card.riesgo {
+    border-color: #dc3545;
+    background: #fff5f5;
+  }
+
+  /* Icono pequeño */
+  .audio-metrica-icono {
+    flex-shrink: 0;
+  }
+
+  .audio-metrica-icono i {
+    font-size: 20px;
+    color: #6c757d;
+  }
+
+  .audio-metrica-card.normal .audio-metrica-icono i {
+    color: #28a745;
+  }
+
+  .audio-metrica-card.alerta .audio-metrica-icono i {
+    color: #856404;
+  }
+
+  .audio-metrica-card.peligro .audio-metrica-icono i {
+    color: #dc3545;
+  }
+
+  .audio-metrica-card.info .audio-metrica-icono i {
+    color: #0d6efd;
+  }
+
+  .audio-metrica-card.riesgo .audio-metrica-icono i {
+    color: #dc3545;
+  }
+
+  .riesgo-subtexto {
+    color: #dc3545 !important;
+    font-weight: 600;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  /* Contenido de la métrica */
+  .audio-metrica-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Label */
+  .audio-metrica-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+  }
+
+  /* Valor */
+  .audio-metrica-valor {
+    font-size: 18px;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+
+  .audio-metrica-valor.text-left {
+    text-align: left;
+  }
+
+  /* Subtexto */
+  .audio-metrica-subtexto {
+    font-size: 11px;
+    color: #6c757d;
+    font-weight: 500;
+  }
+
+  .audio-metrica-subtexto.info-text {
+    color: #0d6efd;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  .audio-metrica-subtexto.riesgo-texto {
+    color: #dc3545;
+    font-weight: 600;
+  }
+
+  /* Texto de clasificación (NO badge) */
+  .audio-metrica-texto {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  .audio-metrica-texto.normal-texto {
+    color: #28a745;
+  }
+
+  .audio-metrica-texto.alerta-texto {
+    color: #856404;
+  }
+
+  .audio-metrica-texto.peligro-texto {
+    color: #dc3545;
+  }
+
+  /* Valoración */
+  .audio-valoracion-box {
+    background: #e7f3ff;
+    border-left: 4px solid #0d6efd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .audio-valoracion-icono {
+    color: #0d6efd;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .audio-valoracion-content {
+    font-size: 13px;
+    color: #212529;
+    line-height: 1.5;
+  }
+
+  /* Restricciones */
+  .audio-restricciones-box {
+    background: #fff5f5;
+    border-left: 4px solid #dc3545;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .audio-restricciones-icono {
+    color: #dc3545;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .audio-restricciones-content {
+    font-size: 13px;
+    color: #721c24;
+    line-height: 1.5;
+  }
+
+  /* Acciones */
+  .audio-acciones {
+    display: flex;
+    gap: 10px;
+    padding-top: 16px;
+    border-top: 1px solid #edf0f4;
+  }
+
+  .btn-audio {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1.5px solid #dee2e6;
+    background: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-audio:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+  }
+
+  .btn-audio-primary {
+    border-color: #0d6efd;
+    color: #0d6efd;
+  }
+
+  .btn-audio-primary:hover {
+    background: #e7f3ff;
+  }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .audio-metricas-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .audio-metricas-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .audio-card-header {
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .badge-aptitud {
+      align-self: flex-start;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .audio-metricas-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .audio-metrica-card {
+      padding: 12px;
+    }
+    
+    .audio-metrica-valor {
+      font-size: 16px;
+    }
+    
+    .audio-metrica-icono i {
+      font-size: 18px;
+    }
+  }
 </style>
 
 <script>
 import ApiServiceClinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
+import Swal from 'sweetalert2'
+
+//Declaracion de las variables para SweetAlert//
+const escapar = (texto) => String(texto ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+const notificar = (icon, title, texto = '') => Swal.fire({
+  icon,
+  title,
+  html: escapar(texto).replace(/\n/g, '<br>'),
+  confirmButtonText: 'Entendido',
+  confirmButtonColor: '#1E88E5'
+})
 
 export default {
   name: 'ExpedienteTabsClinicaLaboral',
@@ -835,8 +1949,9 @@ export default {
       infoAudiologiaAltoRiesgo: [],
       infoValoracionesEspirometria: [],
       espirometriaDetalle: null,
+
       infoValoracionesErgonomicas: [],
-      
+      audiologiaDetalle: null,
       infoArchivos: [],
       archivoSeleccionado: '',
       archivoExtension: '',
@@ -877,6 +1992,19 @@ export default {
     hayAlergiaMedicamentos() {
       const valor = this.infoPacienteCompleto?.alergia_medicamentos
       return !!(valor && valor.trim() && valor.trim().toLowerCase() !== 'ninguna')
+    },
+    hoja4Detalle() {
+      return this.audiologiaDetalle?.datos?.hoja4 || {}
+    },
+    tarjetasDetalleAudiologia() {
+      const d = this.audiologiaDetalle
+      if (!d) return []
+      return [
+        { etiqueta: 'Riesgo auditivo', valor: d.riesgo_auditivo || 'No registrado', icono: 'fas fa-volume-up', color: 'warning' },
+        { etiqueta: 'EPP auditivo', valor: d.epp_auditivo || 'No registrado', icono: 'fas fa-headphones', color: 'info' },
+        { etiqueta: 'Antigüedad en la empresa', valor: d.anos_empresa != null ? `${d.anos_empresa} años` : 'No registrado', icono: 'fas fa-building', color: 'success' },
+        { etiqueta: 'PTA promedio', valor: d.pta_promedio != null ? `${d.pta_promedio} dB · ${d.clasificacion || 'N/D'}` : 'N/D', icono: 'fas fa-chart-line', color: 'primary' }
+      ]
     }
   },
 
@@ -884,22 +2012,10 @@ export default {
     // --- ORQUESTADOR DE CARGA DE DATOS ---
     async cargarDatosLaborales() {
       try {
-        // DESCOMENTA Y AJUSTA ESTAS LÍNEAS CON TUS ENDPOINTS REALES DE BACKEND:
-        // const respOcupacional = await ApiServiceClinicaTrabajo.get('/clinica-laboral/ocupacional/' + this.pacienteId)
-        // this.infoValoracionesOcupacionales = respOcupacional.data || []
-        
-        // const respAudioHC = await ApiServiceClinicaTrabajo.get('/clinica-laboral/audiologia-hc/' + this.pacienteId)
-        // this.infoAudiologiaHistoria = respAudioHC.data || []
-
-        // const respAudioAR = await ApiServiceClinicaTrabajo.get('/clinica-laboral/audiologia-riesgo/' + this.pacienteId)
-        // this.infoAudiologiaAltoRiesgo = respAudioAR.data || []
-
-        // Cargamos datos que ya tienes funcionando:
         await this.obtenerArchivos()
         //await this.obtenerExpedienteClinico()
         await this.obtenerEspirometrias()
-
-        
+        await this.obtenerAudiologiaHistoria()
         console.log('Datos laborales cargados exitosamente.')
       } catch (error) {
         console.error("Error al cargar datos laborales:", error)
@@ -959,10 +2075,10 @@ export default {
     estadoRelacionEspirometria(val) {
       const ratio = Number(val.fev1_fvc_ratio)
       const lln = Number(val.fev1_fvc_lln)
-      if (val.fev1_fvc_ratio == null || val.fev1_fvc_lln == null) return { texto: '', clase: '' }
-      if (ratio < lln) return { texto: '· Bajo LLN', clase: 'text-danger fw-bold' }
-      if (ratio - lln < 1) return { texto: '· Limítrofe (LLN ' + lln + ')', clase: 'text-warning fw-bold' }
-      return { texto: '· Normal (LLN ' + lln + ')', clase: 'text-success' }
+      if (val.fev1_fvc_ratio == null || val.fev1_fvc_lln == null) return { texto: '', clase: 'audio-clas-na' }
+      if (ratio < lln) return { texto: '· Bajo LLN', clase: 'audio-clas-grave' }
+      if (ratio - lln < 1) return { texto: '· Limítrofe (LLN ' + lln + ')', clase: 'audio-clas-leve' }
+      return { texto: '· Normal (LLN ' + lln + ')', clase: 'audio-clas-normal' }
     },
 
     // Cambio del FEV1 % predicho frente a la espirometría anterior del mismo paciente.
@@ -976,15 +2092,14 @@ export default {
       const flecha = delta > 0 ? '↑' : delta < 0 ? '↓' : '='
       return {
         texto: `${flecha} ${Math.abs(delta)} pts vs. anterior`,
-        clase: delta <= -5 ? 'text-danger fw-bold' : delta < 0 ? 'text-warning' : 'text-success'
+        clase: delta <= -5 ? 'audio-cambio-malo' : delta < 0 ? 'audio-cambio-leve' : 'audio-cambio-bueno'
       }
     },
 
-    abrirDetalleEspirometria(val) {
+    async abrirDetalleEspirometria(val) {
       this.espirometriaDetalle = val
-      const modalEl = document.getElementById('modalDetalleEspirometria')
-      const modal = new bootstrap.Modal(modalEl)
-      modal.show()
+      await this.$nextTick()
+      this.abrirModal('modalDetalleEspirometria')
     },
 
     // Misma ruta que antes abría "Ver detalle": la ficha de edición de la valoración
@@ -1004,8 +2119,225 @@ export default {
       if (Number(valor) < Number(lln)) return { texto: 'Bajo LLN', clase: 'text-danger fw-bold' }
       return { texto: 'Normal', clase: 'text-success' }
     },
+    // Nuevos métodos para el diseño
+    getClaseMetrica(porcentaje) {
+      if (!porcentaje) return '';
+      if (porcentaje >= 80) return 'normal';
+      if (porcentaje >= 70) return 'alerta';
+      return 'peligro';
+    },
 
+    getClaseMetricaRatio(ratio) {
+      if (!ratio) return '';
+      // Ajusta estos valores según tus criterios clínicos
+      if (ratio >= 75) return 'normal';
+      if (ratio >= 70) return 'alerta';
+      return 'peligro';
+    },
+
+    getClaseTexto(porcentaje) {
+      if (!porcentaje) return '';
+      if (porcentaje >= 80) return 'normal';
+      if (porcentaje >= 70) return 'alerta';
+      return 'peligro';
+    },
     //Aqui terminan los metodos para ver los detalles de Espirometria//
+
+    //Metodo para traer los datos del Historial la ficha Audiologia Historia Clinica//
+    async obtenerAudiologiaHistoria() {
+      try {
+        const response = await ApiServiceClinicaTrabajo.get('/DelliAudiologia', {
+          params: { paciente_id: this.pacienteId }
+        })
+
+         console.log('📡 Datos Historia Clinica Auidiologia:', response)
+        this.infoAudiologiaHistoria = (response.data.data || []).map(f => {
+          const h4 = f.audiometria || {}
+          return {
+            ...f,
+            pta_der: h4.pta_der ?? null,
+            pta_izq: h4.pta_izq ?? null,
+            clasificacion_der: h4.clasificacion_der ?? null,
+            clasificacion_izq: h4.clasificacion_izq ?? null,
+            tipo_hipoacusia: h4.tipo_hipoacusia ?? null,
+            valoracion: h4.valoracion ?? null,
+            restricciones: h4.restricciones ?? null,
+            recomendaciones: Array.isArray(h4.recomendaciones) ? h4.recomendaciones : []
+          }
+        })
+      } catch (error) {
+        console.error('Error al obtener historia clínica audiológica:', error)
+      }
+    },
+
+    colorAptitudAudiologia(aptitud) {
+      if (aptitud === 'Apto') return 'bg-success'
+      if (aptitud === 'Apto con restricciones') return 'bg-warning text-dark'
+      return 'bg-danger'
+    },
+
+    colorClasificacionAudiologia(clasificacion) {
+      if (clasificacion === 'NORMAL') return 'audio-clas-normal'
+      if (clasificacion === 'HIPOACUSIA LEVE') return 'audio-clas-leve'
+      if (clasificacion) return 'audio-clas-grave'
+      return 'audio-clas-na'
+    },
+
+    tendenciaAudiologia(i) {
+      const actual = this.infoAudiologiaHistoria[i]
+      const anterior = this.infoAudiologiaHistoria[i + 1]
+      if (!anterior || actual.pta_promedio == null || anterior.pta_promedio == null) return null
+
+      const delta = Math.round(Number(actual.pta_promedio) - Number(anterior.pta_promedio))
+      const flecha = delta > 0 ? '↑' : delta < 0 ? '↓' : '='
+      return {
+        texto: `${flecha} ${Math.abs(delta)} dB vs. anterior`,
+        clase: delta >= 10 ? 'audio-cambio-malo' : delta > 0 ? 'audio-cambio-leve' : 'audio-cambio-bueno'
+      }
+    },
+
+    // Determina si el EPP es obligatorio basado en el riesgo auditivo
+    esEppObligatorio(riesgoAuditivo) {
+      if (!riesgoAuditivo) return false
+      const riesgo = riesgoAuditivo.toLowerCase()
+      return riesgo.includes('alto') || riesgo.includes('muy alto')
+    },
+    
+    dB(valor) {
+      return valor == null || valor === '' ? 'N/D' : Math.round(Number(valor)) + ' dB'
+    },
+
+    // Nuevos métodos para el diseño de audiología
+    getClaseRiesgoAuditivo(riesgo) {
+      if (!riesgo) return 'info';
+      const riesgoLower = riesgo.toLowerCase();
+      if (riesgoLower.includes('muy alto') || riesgoLower.includes('alto')) return 'riesgo';
+      if (riesgoLower.includes('medio')) return 'alerta';
+      return 'normal';
+    },
+    
+    // Métodos para audiología//
+    getBadgeAptitudClass(aptitud) {
+      if (aptitud === 'Apto') return 'apto';
+      if (aptitud === 'Apto con restricciones') return 'restricciones';
+      return 'no-apto';
+    },
+    getClasePTA(pta) {
+      if (!pta) return 'normal';
+      const valor = Number(pta);
+      if (valor >= 40) return 'peligro';
+      if (valor >= 25) return 'alerta';
+      return 'normal';
+    },
+
+    getClasePTAPromedio(pta) {
+      if (!pta) return 'normal';
+      const valor = Number(pta);
+      if (valor >= 40) return 'peligro';
+      if (valor >= 25) return 'alerta';
+      return 'normal';
+    },
+
+    getBadgeClasificacionClass(clasificacion) {
+      if (!clasificacion) return 'normal';
+      const clasifLower = clasificacion.toLowerCase();
+      if (clasifLower === 'normal') return 'normal';
+      if (clasifLower.includes('leve')) return 'alerta';
+      return 'peligro';
+    },
+
+    getBadgeBootstrapClass(clasificacion) {
+      if (!clasificacion) return 'bg-secondary text-white';
+      
+      const clasifLower = clasificacion.toLowerCase();
+      
+      if (clasifLower === 'normal') return 'bg-success text-white';
+      if (clasifLower.includes('leve')) return 'bg-warning text-dark';
+      if (clasifLower.includes('moderada')) return 'bg-warning text-dark';
+      if (clasifLower.includes('severa')) return 'bg-danger text-white';
+      if (clasifLower.includes('profunda')) return 'bg-danger text-white';
+      
+      return 'bg-secondary text-white';
+    },
+
+    getTextoClasificacionClass(clasificacion) {
+      if (!clasificacion) return ''
+      
+      const clasifLower = clasificacion.toLowerCase()
+      
+      // ✅ NORMAL → Verde
+      if (clasifLower === 'normal') return 'normal-texto'
+      
+      // ✅ LEVE y MODERADA → Amarillo/Marrón (alerta)
+      if (clasifLower.includes('leve') || clasifLower.includes('moderada')) {
+        return 'alerta-texto'
+      }
+      
+      // ✅ SEVERA y PROFUNDA → Rojo (peligro)
+      if (clasifLower.includes('severa') || clasifLower.includes('profunda')) {
+        return 'peligro-texto'
+      }
+      
+      return ''
+    },
+
+    // Obtiene el texto descriptivo de la clasificación del PTA promedio
+    getTextoClasificacionPromedio(clasificacion) {
+      if (!clasificacion) return 'Sin datos'
+      
+      const clasifLower = clasificacion.toLowerCase()
+      
+      if (clasifLower === 'normal') return 'Normal'
+      if (clasifLower.includes('leve')) return 'Leve alteración'
+      if (clasifLower.includes('moderada')) return 'Alteración moderada'
+      if (clasifLower.includes('severa')) return 'Alteración severa'
+      if (clasifLower.includes('profunda')) return 'Alteración profunda'
+      
+      return clasificacion
+    },
+
+    // Separa "Muy Alto (>85 dB)" en { titulo: "Muy Alto", subtitulo: ">85 dB" }
+    separarRiesgoAuditivo(texto) {
+      if (!texto) return { titulo: 'N/D', subtitulo: null }
+      
+      // Busca el paréntesis de apertura
+      const match = texto.match(/^(.+?)\s*\((.+)\)$/)
+      
+      if (match) {
+        return {
+          titulo: match[1].trim(),      // "Muy Alto"
+          subtitulo: match[2].trim()    // ">85 dB"
+        }
+      }
+      
+      // Si no hay paréntesis, devuelve todo como título
+      return { titulo: texto, subtitulo: null }
+    },
+
+    
+
+    async abrirDetalleAudiologia(val) {
+      try {
+        const { data } = await ApiServiceClinicaTrabajo.get(`/DelliAudiologia/${val.id}`)
+        this.audiologiaDetalle = { ...data.data }
+        await this.$nextTick()
+        this.abrirModal('modalDetalleAudiologia')
+      } catch (error) {
+        await notificar('error', 'Error al cargar la evaluación', error.response?.data?.message || error.message)
+      }
+    },
+
+    //Aqui terminan los metodos para ver los detalles de Audiologia Historia Clinica//
+
+    imprimirAudiologia(val) {
+      window.open(`/DelliAudiologia-imprimir/${val.id}`, '_blank')
+    },
+
+    urlEditarAudiologia(val) {
+      return `/FichaDelliAudiologia/${val.paciente_id}?ficha=${val.id}`
+    },
+
+    
 
     // --- UTILIDADES ---
     formatearFecha(fecha) {
@@ -1027,9 +2359,7 @@ export default {
       let ruta = documentos.archivo_url.startsWith('/') ? documentos.archivo_url : '/' + documentos.archivo_url;
       this.archivoSeleccionado = base + ruta;
       
-      const modalEl = document.getElementById('modalArchivo');
-      const modal = new bootstrap.Modal(modalEl);
-      modal.show();
+     this.abrirModal('modalArchivo')
     },
 
     esImagen() { return ['jpg','jpeg','png','gif','webp'].includes(this.archivoExtension) },
@@ -1080,6 +2410,13 @@ export default {
       } catch (error) {
         console.error('Error al marcar como revisado:', error)
       }
+    },
+    abrirModal(id) {
+      window.$('#' + id).modal('show')
+    },
+
+    cerrarModal(id) {
+      window.$('#' + id).modal('hide')
     }
   },
 

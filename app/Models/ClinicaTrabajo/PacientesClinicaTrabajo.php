@@ -120,6 +120,14 @@ class PacientesClinicaTrabajo extends Model
     }
 
     /**
+    * Relación con fichas de audiología (historia clínica DELLI)
+    */
+    public function fichasAudiologiaDelli(): HasMany
+    {
+        return $this->hasMany(FichaAudiologiaDelli::class, 'paciente_id');
+    }
+
+    /**
      * Boot the model - generate folio and qr_token automatically
      */
     protected static function boot()
