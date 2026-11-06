@@ -517,7 +517,7 @@ Route::middleware('auth')->group(function () {
             Route::get('espirometria-imprimir/{id}', [ValoracionEspirometriaController::class, 'imprimir'])->name('espirometria.imprimir');
             Route::post('espirometria-consultarIA', [ValoracionEspirometriaController::class, 'consultarIA'])->name('espirometria.consultarIA');
             Route::resource('DelliAudiologia', AudiologiaDELLIController::class);
-            Route::get('delli-imprimir/{id}', [AudiologiaDELLIController::class, 'imprimir'])->name('delli.imprimir');
+            Route::get('DelliAudiologia-imprimir/{id}', [AudiologiaDELLIController::class, 'imprimir'])->name('DelliAudiologia.imprimir');
             Route::post('DelliAudiologia-consultarIA', [AudiologiaDELLIController::class, 'consultarIA'])->name('DelliAudiologia.consultarIA');
             
             // =========================================================================

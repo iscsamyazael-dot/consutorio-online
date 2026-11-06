@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\ClinicaTrabajo;
 
 use App\Http\Controllers\Controller;
+use App\Services\ClinicaTrabajo\GraficasAudiologia;
 use App\Models\ClinicaTrabajo\FichaAudiologiaDelli;
 use App\Models\ClinicaTrabajo\PuestoTrabajo;
 use App\Models\Medico;
+use App\Models\Empresa;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -37,21 +40,23 @@ class AudiologiaDELLIController extends Controller
         'paracusias_hiper', 'congestion', 'descripcion_hipoacusia', 'tiempo_evolucion',
     ];
 
+    /** Relaciones que se cargan en las respuestas (igual que espirometría). */
+    private const RELACIONES = [
+        'paciente', 'puestoTrabajo', 'medico'
+    ];
+
     /** GET /clinica/audiologia/delli */
     public function index(Request $request): JsonResponse
     {
-        $filtro = $request->input('filtro', '');
-
         $fichas = FichaAudiologiaDelli::query()
-            ->when($filtro, fn ($q) => $q->where('folio', 'like', "%{$filtro}%"))
+            ->when($request->filled('paciente_id'), fn ($q) => $q->where('paciente_id', $request->input('paciente_id')))
+            ->when($request->filled('filtro'), fn ($q) => $q->where('folio', 'like', '%' . $request->input('filtro') . '%'))
+            ->with(['paciente', 'empresa', 'puesto', 'medico']) // ✅ CARGA LAS RELACIONES
             ->orderByDesc('created_at')
-            ->get();
+            ->paginate(15); // ✅ PAGINACIÓN (igual que espirometría)
 
-        return response()->json([
-            'success' => true,
-            'data' => $fichas,
-            'total' => $fichas->count(),
-        ]);
+        // Laravel formatea esto automáticamente como: { current_page, data: [...], links: [...] }
+        return response()->json($fichas);
     }
 
     /** GET /clinica/audiologia/delli/create: folio sugerido para el formulario nuevo. */
@@ -167,17 +172,45 @@ class AudiologiaDELLIController extends Controller
         ]);
     }
 
-    /** Función extra. GET /clinica/audiologia/delli-imprimir/{id} */
-    public function imprimir(string $id): JsonResponse
+   
+    /**
+    * GET /DelliAudiologia-imprimir/{id}
+    */
+    public function imprimir(string $id, GraficasAudiologia $graficas)
     {
-        FichaAudiologiaDelli::findOrFail($id);
+        $ficha = FichaAudiologiaDelli::findOrFail($id);
 
-        // TODO: exportación a PDF (fase siguiente)
-        return response()->json([
-            'success' => true,
-            'message' => 'Funcionalidad de impresión en desarrollo',
-            'url' => '#',
-        ]);
+        $datos = json_decode($ficha->datos_json ?? '{}', true) ?: [];
+        $audio = $ficha->audiometria ?? [];
+
+        $umbrales = $this->umbralesAudiometria($audio);
+        $columnas = $this->columnasTabla($umbrales);
+
+        // La ficha guarda user_id, no medico_id
+        $medico = Medico::with(['usuario', 'configuraciones.ubicacion'])
+            ->where('user_id', $ficha->user_id)
+            ->first();
+        $consultorio = $this->datosConsultorio($medico);
+
+        $pdf = Pdf::loadView('pdf.ClinicaTrabajo.Audiologia.reporteaudiologiahistoriaclinica', [
+            'ficha' => $ficha,
+            'datos' => $datos,
+            'columnas' => $columnas,
+            'tabla' => $this->filasTabla($umbrales, $columnas),
+            'pta' => [
+                'derecho' => $audio['pta_der'] ?? null,
+                'izquierdo' => $audio['pta_izq'] ?? null,
+            ],
+            'graficas' => [
+                'audiograma' => $graficas->audiograma($umbrales),
+            ],
+            'medico' => $medico?->usuario,
+            'cedula' => $medico?->cedula_profesional,
+            'ubicacion' => $consultorio['ubicacion'],
+            'logoPath' => $consultorio['logoPath'],
+        ])->setPaper('letter');
+
+        return $pdf->stream('audiometria-' . $ficha->folio . '.pdf');
     }
 
     // ===== PRIVADOS =====
@@ -462,5 +495,136 @@ class AudiologiaDELLIController extends Controller
         $b = $this->promedioAgudos($basal, $sufijo);
 
         return ($a === null || $b === null) ? null : round($a - $b, 1);
+    }
+
+  
+   
+    /**
+    * Convierte el arreglo plano de `audiometria` al formato de GraficasAudiologia y de la tabla.
+    * audiometria_{f}_{der|izq}  -> aérea (125 a 8000 Hz)
+    * via_osea_{f}_{der|izq}     -> ósea (250 a 4000 Hz)
+    * enmascarado_{f}_{der|izq}  -> enmascarado (250 a 4000 Hz)
+    */
+    private function umbralesAudiometria(array $audiometria): array
+    {
+        $umbrales = [];
+
+        foreach (['der' => 'derecho', 'izq' => 'izquierdo'] as $sufijo => $oido) {
+            $umbrales[$oido] = ['aerea' => [], 'osea' => [], 'enmascarado' => []];
+
+            foreach ([125, 250, 500, 1000, 2000, 3000, 4000, 6000, 8000] as $f) {
+                $umbrales[$oido]['aerea'][$f] = $audiometria["audiometria_{$f}_{$sufijo}"] ?? null;
+            }
+            foreach ([250, 500, 1000, 2000, 3000, 4000] as $f) {
+                $umbrales[$oido]['osea'][$f] = $audiometria["via_osea_{$f}_{$sufijo}"] ?? null;
+                $umbrales[$oido]['enmascarado'][$f] = $audiometria["enmascarado_{$f}_{$sufijo}"] ?? null;
+            }
+        }
+
+        return $umbrales;
+    }
+
+    /** true si el arreglo tiene al menos un valor no vacío. */
+    private function hayValores(array $valores): bool
+    {
+        foreach ($valores as $valor) {
+            if ($valor !== null && $valor !== '') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+    * Columnas de la tabla. Aérea siempre; ósea y enmascarado solo si hay datos en algún oído.
+    * El orden agrupa por oído: Derecho (aérea, ósea, enmascarado) e Izquierdo (lo mismo).
+    */
+    private function columnasTabla(array $umbrales): array
+    {
+        $mostrar = [
+            'aerea' => true,
+            'osea' => $this->hayValores(array_merge($umbrales['derecho']['osea'], $umbrales['izquierdo']['osea'])),
+            'enmascarado' => $this->hayValores(array_merge($umbrales['derecho']['enmascarado'], $umbrales['izquierdo']['enmascarado'])),
+        ];
+
+        $vias = [
+            'aerea' => ['etiqueta' => 'aérea', 'simbolo' => ['derecho' => 'O', 'izquierdo' => 'X']],
+            'osea' => ['etiqueta' => 'ósea', 'simbolo' => ['derecho' => '<', 'izquierdo' => '>']],
+            'enmascarado' => ['etiqueta' => 'enmascarado', 'simbolo' => ['derecho' => 'Δ', 'izquierdo' => '□']],
+        ];
+
+        $columnas = [];
+        foreach (['derecho' => 'Derecho', 'izquierdo' => 'Izquierdo'] as $oido => $nombre) {
+            foreach ($vias as $via => $config) {
+                if (!$mostrar[$via]) {
+                    continue;
+                }
+                $columnas[] = [
+                    'clave' => $oido . '_' . $via,
+                    'oido' => $oido,
+                    'titulo' => $nombre . ' ' . $config['etiqueta'] . ' (' . $config['simbolo'][$oido] . ')',
+                ];
+            }
+        }
+
+        return $columnas;
+    }
+
+    /** Filas de la tabla de umbrales, una por frecuencia. */
+    private function filasTabla(array $umbrales, array $columnas): array
+    {
+        $filas = [];
+        foreach ([125, 250, 500, 1000, 2000, 3000, 4000, 6000, 8000] as $frecuencia) {
+            $valores = [];
+            foreach ($columnas as $columna) {
+                [$oido, $via] = explode('_', $columna['clave']);
+                $valores[$columna['clave']] = $umbrales[$oido][$via][$frecuencia] ?? null;
+            }
+            $filas[] = ['frecuencia' => $frecuencia, 'valores' => $valores];
+        }
+        return $filas;
+    }
+
+    /**
+     * Datos del consultorio: sucursal del médico, o empresa si no hay sucursal,
+     * y logo (igual que espirometría).
+     */
+    private function datosConsultorio(?Medico $medico): array
+    {
+        $ubicacion = null;
+        if ($medico) {
+            $medico->load('configuraciones.ubicacion');
+            $ubicacion = $medico->configuraciones->first()?->ubicacion;
+        }
+
+        if (!$ubicacion) {
+            $empresa = Empresa::first();
+            if ($empresa) {
+                $ubicacion = (object) [
+                    'nombre' => $empresa->nombre_empresa,
+                    'direccion' => $empresa->direccion,
+                    'telefono' => $empresa->telefono,
+                    'imagen' => $empresa->logo_url,
+                ];
+            }
+        }
+
+        $logoRelativo = Empresa::first()?->logo_url ?: $ubicacion?->imagen;
+
+        $logoPath = null;
+        if (!empty($logoRelativo)) {
+            $valor = ltrim($logoRelativo, '/');
+            $candidata = str_starts_with($valor, 'personalisarperfil/')
+                ? public_path($valor)
+                : public_path('personalisarperfil/' . $valor);
+            $logoPath = file_exists($candidata) ? $candidata : null;
+        }
+
+        if (!$logoPath) {
+            $generico = public_path('images/logo.png');
+            $logoPath = file_exists($generico) ? $generico : null;
+        }
+
+        return ['ubicacion' => $ubicacion, 'logoPath' => $logoPath];
     }
 }

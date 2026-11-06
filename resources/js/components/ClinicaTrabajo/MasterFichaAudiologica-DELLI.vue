@@ -179,8 +179,35 @@ import Hoja2RiesgosototoxicosDelli from './secciones/audiologia/FichaAudiologica
 import Hoja3AntecedentessintomasDelli from './secciones/audiologia/FichaAudiologicaDelli/antecedentessintomas.vue'
 import Hoja4AudiometriaDelli from './secciones/audiologia/FichaAudiologicaDelli/audiometria.vue'
 import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
+import Swal from 'sweetalert2'
 
-const CAMPOS_IA = ['valoracion', 'interpretacion', 'tipo_hipoacusia', 'restricciones', 'aptitud']
+//Declaracion de las variables para SweetAlert//
+const escapar = (texto) => String(texto ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+const notificar = (icon, title, texto = '') => Swal.fire({
+  icon,
+  title,
+  html: escapar(texto).replace(/\n/g, '<br>'),
+  confirmButtonText: 'Entendido',
+  confirmButtonColor: '#1E88E5'
+})
+
+const confirmarAccion = async ({ title, texto, confirmText, cancelText }) => {
+  const r = await Swal.fire({
+    icon: 'warning',
+    title,
+    html: escapar(texto),
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d'
+  })
+  return r.isConfirmed
+}
+
+const CAMPOS_IA = ['valoracion', 'interpretacion', 'tipo_hipoacusia', 'restricciones', 'aptitud','recomendaciones']
 const FRECUENCIAS_AEREA = ['125', '250', '500', '1000', '2000', '3000', '4000', '6000', '8000']
 const esSi = v => v === true || v === 'true'
 const sinVacios = obj => Object.fromEntries(
@@ -209,7 +236,8 @@ export default {
       ultimaFirmaIA: null,
       snapshotHoja4: null,
 
-      pacienteId: null,               
+      pacienteId: null,
+      fichaId: null,               
       infoPacientes: null,            
       datosLaboralesActuales: null,
 
@@ -352,7 +380,7 @@ export default {
           aptitud: '',
           tipo_hipoacusia: '',
           restricciones: '',
-          recomendaciones: '',
+          recomendaciones: [],
           // Nuevo campo de Hoja 4 según Excel
           valoracion: ''
         }
@@ -607,7 +635,7 @@ export default {
           
           pta_der: 0, pta_izq: 0, pta_promedio: 0,
           clasificacion: '', interpretacion: '', tipo_hipoacusia: '',
-          restricciones: '', aptitud: '', valoracion: ''
+          restricciones: '', aptitud: '', valoracion: '', recomendaciones: []
         }
 
         // Sincronizar trabajador seleccionado para el Chat IA
@@ -622,7 +650,7 @@ export default {
         this.snapshotHoja4 = JSON.parse(JSON.stringify(this.form.hoja4))
       } catch (error) {
         console.error('❌ Error al obtener paciente:', error)
-        alert('Error al cargar el expediente: ' + (error.response?.data?.message || error.message))
+        await notificar('error', 'Error al cargar el expediente', error.response?.data?.message || error.message)
       } finally {
         this.cargando = false
       }
@@ -774,7 +802,7 @@ export default {
           aptitud: '',
           tipo_hipoacusia: '',
           restricciones: '',
-          recomendaciones: '',
+          recomendaciones: [],
           // Nuevo campo de Hoja 4 según Excel
           valoracion: ''
         }
@@ -917,20 +945,15 @@ export default {
     },
 
     async guardar() {
+      if (!this.form.hoja1.nombre) {
+        return notificar('warning', 'Falta el nombre', 'Ingresa el nombre del paciente en la Hoja 1.')
+      }
+      if (!this.form.hoja4.aptitud) {
+        return notificar('warning', 'Falta la aptitud', 'Selecciona la aptitud en la Hoja 4 para poder guardar.')
+      }
+
+      this.cargando = true
       try {
-        this.cargando = true
-
-        // Validar datos críticos
-        if (!this.form.hoja1.nombre) {
-          alert('Por favor ingrese el nombre del paciente')
-          return
-        }
-
-        if (!this.form.hoja4.aptitud) {
-          alert('Por favor seleccione la APTITUD en la Hoja 4 (Requerida)')
-          return
-        }
-
         const payload = {
           ...this.form,
           folio: this.folioDelli,
@@ -941,25 +964,48 @@ export default {
           ia_recomendado: Object.keys(this.iaCampos).filter(k => this.iaCampos[k] && !this.editadosPorMedico[k]),
         }
 
-        const response = await clinicaTrabajo.post('/DelliAudiologia',payload)
+        const response = this.fichaId
+          ? await clinicaTrabajo.put(`/DelliAudiologia/${this.fichaId}`, payload)
+          : await clinicaTrabajo.post('/DelliAudiologia', payload)
 
-        if (response.data.success) {
-          alert('✅ Evaluación Audiológica guardada correctamente')
-          this.form.hoja1.folio = response.data.folio
-          // Redirigir o recargar
-          window.location.href = `/FichaDelliAudiologia/${response.data.id}`
+        const idGuardado = this.fichaId || response.data.id
+        if (!this.fichaId) this.form.hoja1.folio = response.data.folio
+
+        const decision = await Swal.fire({
+          icon: 'success',
+          title: this.fichaId ? 'Evaluación actualizada' : 'Evaluación guardada',
+          text: 'La evaluación se guardó correctamente. ¿Deseas imprimir el reporte?',
+          showCancelButton: true,
+          confirmButtonText: 'Imprimir reporte',
+          cancelButtonText: 'Continuar',
+          confirmButtonColor: '#1E88E5',
+          cancelButtonColor: '#6c757d'
+        })
+
+        // El clic en el modal cuenta como acción del usuario, así que el navegador no bloquea la pestaña
+        if (decision.isConfirmed) {
+          window.open(`/DelliAudiologia-imprimir/${idGuardado}`, '_blank')
+        }
+
+        if (!this.fichaId) {
+          window.location.href = `/FichaDelliAudiologia/${this.pacienteId}?ficha=${idGuardado}`
         }
       } catch (error) {
         console.error('Error guardando:', error)
-        alert('❌ Error al guardar la evaluación: ' + error.message)
+        await notificar('error', 'Error al guardar la evaluación', error.response?.data?.message || error.message)
       } finally {
         this.cargando = false
       }
     },
-    cancelar() {
-      if (confirm('¿Está seguro de que desea cancelar? Se perderán los cambios.')) {
-        window.location.href = '/clinica/audiologia'
-      }
+
+    async cancelar() {
+      const ok = await confirmarAccion({
+        title: '¿Cancelar la evaluación?',
+        texto: 'Se perderán los cambios no guardados.',
+        confirmText: 'Sí, cancelar',
+        cancelText: 'Seguir editando'
+      })
+      if (ok) window.location.href = '/clinica/audiologia'
     },
     
     programarRecomendacionIA() {
@@ -992,8 +1038,8 @@ export default {
 
         Object.entries(propuestos).forEach(([campo, valor]) => {
           if (this.editadosPorMedico[campo]) return
-
-          const estaLlenado = nuevoHoja4[campo] !== '' && nuevoHoja4[campo] !== null && nuevoHoja4[campo] !== undefined
+          const vacio = v => v === '' || v === null || v === undefined || (Array.isArray(v) && v.length === 0)
+          const estaLlenado = !vacio(nuevoHoja4[campo])
           if (estaLlenado && !this.iaCampos[campo]) return
 
           nuevoHoja4[campo] = valor
@@ -1021,26 +1067,67 @@ export default {
       }
     },
 
+    async cargarFicha(id) {
+      this.cargando = true
+      try {
+        const response = await clinicaTrabajo.get(`/DelliAudiologia/${id}`)
+        const registro = response.data.data
+        const datos = registro.datos || {}
+
+        this.fichaId = registro.id
+        this.pacienteId = registro.paciente_id
+        this.form.hoja1 = { ...this.form.hoja1, ...(datos.hoja1 || {}) }
+        this.form.hoja2 = { ...this.form.hoja2, ...(datos.hoja2 || {}) }
+        this.form.hoja3 = { ...this.form.hoja3, ...(datos.hoja3 || {}) }
+        this.form.hoja4 = { ...this.form.hoja4, ...(datos.hoja4 || {}) }
+        // Si la ficha es antigua y trae texto o null, lo convierte a lista vacía
+        this.form.hoja4.recomendaciones = Array.isArray(this.form.hoja4.recomendaciones)
+          ? this.form.hoja4.recomendaciones
+          : []
+        this.form.hoja1.folio = registro.folio
+
+        // Lo guardado no cuenta como edición del médico ni como propuesta de la IA
+        this.snapshotHoja4 = JSON.parse(JSON.stringify(this.form.hoja4))
+        this.$nextTick(() => {
+          this.ultimaFirmaIA = this.firmaContextoIA
+        })
+      } catch (error) {
+        console.error('Error al cargar la ficha:', error)
+        await notificar('error', 'Error al cargar la ficha', error.response?.data?.message || error.message)
+        window.location.href = '/FichaDelliAudiologia'
+      } finally {
+        this.cargando = false
+      }
+    },
+
     imprimir() {
-      alert('🖨️ Funcionalidad de impresión en desarrollo')
-      // TODO: Implementar impresión con HTML2PDF
+      if (!this.fichaId) {
+        return notificar('warning', 'Guarda primero', 'El reporte se genera a partir de una evaluación guardada.')
+      }
+      window.open(`/DelliAudiologia-imprimir/${this.fichaId}`, '_blank')
     }
   },
 
-  mounted() {
+  async mounted() {
     // 1. OBTENER EL ID DE LA URL AUTOMÁTICAMENTE
     // Intenta tomarlo de Vue Router, si no, lo extrae de la URL del navegador (ej: "/FichaDelliAudiologia/4" -> "4")
     this.pacienteId = this.$route?.params?.id || window.location.pathname.split('/').pop();
 
     // 2. SI HAY UN ID, CARGAMOS LOS DATOS DEL PACIENTE
     if (this.pacienteId && this.pacienteId !== 'FichaDelliAudiologia') {
-      this.obtenerPacientes();
+      await this.obtenerPacientes();
     } else {
       // 3. SI NO HAY ID, ES UN REGISTRO NUEVO (Generar folio)
       if (!this.form.hoja1.folio) {
         this.form.hoja1.folio = this.folioDelli;
       }
     }
+    
+    // ESTA PARTE SIRVE COMO PARTE DONDE SE CARGAN LOS DATOS DE LA FICHA AUDIOLOGIA HISTORIA CLINICA///
+    const fichaParam = new URLSearchParams(window.location.search).get('ficha')
+      if (fichaParam) {
+        await this.cargarFicha(fichaParam)
+      }
 
     // Auto-generar folio si es nuevo
     if (!this.form.hoja1.folio) {

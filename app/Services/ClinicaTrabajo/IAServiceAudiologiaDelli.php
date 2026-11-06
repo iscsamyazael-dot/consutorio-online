@@ -55,7 +55,7 @@ class IAServiceAudiologiaDelli
 
     /** Campos de hoja 4 que genera el modo recomendar. */
     private const CAMPOS_RECOMENDACION = [
-        'valoracion', 'interpretacion', 'tipo_hipoacusia', 'restricciones', 'aptitud',
+        'valoracion', 'interpretacion', 'tipo_hipoacusia', 'restricciones', 'aptitud', 'recomendaciones',
     ];
 
     /** Frecuencias donde se evalúa la vía ósea. */
@@ -117,6 +117,14 @@ class IAServiceAudiologiaDelli
         $campos = $this->sanitizarCampos($data['campos'] ?? [], $advertencias);
 
         $hoja4 = array_intersect_key($campos['hoja4'] ?? [], array_flip(self::CAMPOS_RECOMENDACION));
+
+        $hoja4['recomendaciones'] = $this->normalizarRecomendaciones(
+            $hoja4['recomendaciones'] ?? [],
+            $hoja4['restricciones'] ?? null
+        );
+        if (!$hoja4['recomendaciones']) {
+            unset($hoja4['recomendaciones']);
+        }
 
         // Sin vía ósea no se puede separar conductiva de neurosensorial
         if ($hallazgos['tipo_hipoacusia'] !== null) {
@@ -395,7 +403,16 @@ class IAServiceAudiologiaDelli
 
         return <<<TXT
         Eres el asistente del módulo de audiología DELLI de Medicina del Trabajo.
-        Con la ficha audiológica de abajo, propón la valoración, la interpretación, el tipo de hipoacusia, las restricciones laborales y la aptitud para el médico.
+        Con la ficha audiológica de abajo, propón la valoración, la interpretación, el tipo de hipoacusia, las restricciones laborales y la aptitud para el médico y las recomendaciones.
+        
+        RECOMENDACIONES:
+        - Propón en "recomendaciones" las recomendaciones clínicas y de seguridad y salud en el trabajo que este caso necesite. Basa cada una solo en los hallazgos de la ficha: audiometría, hoja 2, hoja 3 y las restricciones propuestas.
+        - No te limites a un catálogo. Propón lo que corresponda al caso. Cada recomendación debe ser una acción concreta y verificable: qué hacer, quién, y en qué plazo si aplica.
+        - No repitas lo que ya está en las restricciones ni en las recomendaciones fijas (protección auditiva en exposición ≥85 dB(A) y audiometría de control anual).
+        - Si hay bandera roja (otorrea, otorragia, vértigo) o asimetría audiométrica relevante, incluye valoración por otorrinolaringología, salvo que ya esté en las restricciones.
+        - No inventes datos. Si falta información necesaria para recomendar algo (por ejemplo, mediciones de ruido en el área o vía ósea), propón completar ese dato como recomendación.
+        - Usa lenguaje clínico claro, sin términos internos del sistema como "hallazgos calculados".
+        - Ordena las recomendaciones por prioridad. El médico especialista las validará, editará o eliminará.
 
         REGLAS
         - Usa las cuatro hojas como un solo cuadro clínico: datos laborales (hoja 1), exposición (hoja 2), antecedentes y síntomas (hoja 3) y audiometría (hoja 4).
@@ -426,7 +443,7 @@ class IAServiceAudiologiaDelli
         - "aptitud" debe ser exactamente Apto, Apto con restricciones o No apto.
         - No propongas "No apto" salvo que el PTA del oído peor sea mayor de 40 dB. En los demás casos usa "Apto con restricciones".
         - Responde SOLO con JSON válido con esta forma:
-        {"campos": {"hoja4": {"valoracion": "...", "interpretacion": "...", "tipo_hipoacusia": "...", "restricciones": "...", "aptitud": "..."}}}
+        {"campos": {"hoja4": {"valoracion": "...", "interpretacion": "...", "tipo_hipoacusia": "...", "restricciones": "...", "aptitud": "...","recomendaciones": ["...", "..."]}}}
 
         HALLAZGOS CALCULADOS (no los modifiques)
         {$hallazgosJson}
@@ -601,5 +618,33 @@ class IAServiceAudiologiaDelli
         }
 
         return $noEncontrados;
+    }
+
+    /**
+    * Convierte la propuesta en una lista de textos limpios.
+    * Si las restricciones ya mencionan otorrinolaringología, quita esa recomendación para no repetirla.
+    */
+    private function normalizarRecomendaciones(mixed $valor, mixed $restricciones): array
+    {
+        $lista = is_string($valor) ? [$valor] : (is_array($valor) ? $valor : []);
+        $orlEnRestricciones = is_string($restricciones)
+            && str_contains(mb_strtolower($restricciones), 'otorrinolaring');
+
+        $limpias = [];
+        foreach ($lista as $texto) {
+            if (!is_string($texto)) {
+                continue;
+            }
+            $texto = trim($texto);
+            if ($texto === '') {
+                continue;
+            }
+            if ($orlEnRestricciones && str_contains(mb_strtolower($texto), 'otorrinolaring')) {
+                continue;
+            }
+            $limpias[] = $texto;
+        }
+
+        return $limpias;
     }
 }

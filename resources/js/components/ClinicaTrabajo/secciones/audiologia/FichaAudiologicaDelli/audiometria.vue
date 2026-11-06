@@ -444,12 +444,13 @@
             <label class="font-weight-bold">RESTRICCIONES LABORALES</label>
             <span v-if="iaCampos.restricciones" class="badge badge-info ml-2">Recomendado por la IA</span>
             <textarea
-              class="form-control"
+              class="form-control auto-ajuste"
               v-model="localData.restricciones"
               @change="emitChange"
+              @input="ajustarAltura($event.target)"
               placeholder="Si aplica (ej: evitar exposición a ruido >80dB)"
-              rows="2"
-              style="border-radius: 4px; padding: 10px 12px;"
+              rows="3"
+              style="border-radius: 4px; padding: 10px 12px; resize: none; overflow: hidden;"
             ></textarea>
           </div>
         </div>
@@ -490,7 +491,7 @@
             </small>
           </div>
 
-          <div class="col-md-8">
+          <div class="col-md-4">
             <label class="font-weight-bold">RECOMENDACIONES FIJAS</label>
             <div class="alert alert-success">
               <ul class="mb-0 pl-3">
@@ -500,6 +501,35 @@
                 <li>✓ Informar al trabajador de resultados y recomendaciones</li>
               </ul>
             </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="font-weight-bold">RECOMENDACIONES</span>
+              <span v-if="iaCampos.recomendaciones" class="badge badge-info">Propuesta IA</span>
+            </div>
+
+            <div v-for="(rec, i) in localData.recomendaciones" :key="i" class="d-flex align-items-start mb-2">
+              <span class="text-muted mr-2 mt-2" style="min-width: 18px;">{{ i + 1 }}.</span>
+              <textarea
+                class="form-control auto-ajuste"
+                :value="rec"
+                @input="editarRecomendacion(i, $event.target.value); ajustarAltura($event.target)"
+                @change="emitChange"
+                rows="2"
+                style="resize: none; overflow: hidden;"
+              ></textarea>
+              <button type="button" class="btn btn-link text-danger ml-1 p-1" @click="eliminarRecomendacion(i)" title="Eliminar">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-light border w-100" @click="agregarRecomendacion">
+              <i class="fas fa-plus mr-1"></i> Agregar recomendación
+            </button>
+            <small v-if="!localData.recomendaciones.length" class="text-muted d-block mt-2">
+              Sin recomendaciones. Agrega una o espera la propuesta de la IA.
+            </small>
           </div>
         </div>
 
@@ -608,6 +638,8 @@ export default {
         tipo_hipoacusia: '',
         restricciones: '',
         aptitud: '',
+        recomendaciones:[],
+        recomendaciones_opciones: [],
         valoracion: ''
       },
       chartDerechoInstance: null,
@@ -625,6 +657,7 @@ export default {
 
         this.localData = { ...this.localData, ...newVal }
         this.$nextTick(() => {
+          this.ajustarTodosLosTextareas()
           this.calcularPTA()
           this.actualizarGrafica()
         })
@@ -960,17 +993,43 @@ export default {
         }
       }))
     },
+    ajustarAltura(el) {
+      if (!el) return
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    },
+    ajustarTodosLosTextareas() {
+      this.$nextTick(() => {
+        document.querySelectorAll('textarea.auto-ajuste').forEach(t => this.ajustarAltura(t))
+      })
+    },
+    editarRecomendacion(i, texto) {
+      const lista = [...this.localData.recomendaciones]
+      lista[i] = texto
+      this.localData.recomendaciones = lista
+    },
+    agregarRecomendacion() {
+      this.localData.recomendaciones = [...this.localData.recomendaciones, '']
+    },
+    eliminarRecomendacion(i) {
+      this.localData.recomendaciones = this.localData.recomendaciones.filter((_, j) => j !== i)
+      this.emitChange()
+    },
     emitChange() {
       this.$emit('update:modelValue', { ...this.localData })
     }
   },
   mounted() {
+    this._observadorTamano = new ResizeObserver(() => this.ajustarTodosLosTextareas())
+    this._observadorTamano.observe(this.$el)
     this.$nextTick(() => {
       this.calcularPTA()
       this.actualizarGrafica()
+      this.ajustarTodosLosTextareas()
     })
   },
   beforeUnmount() {
+    if (this._observadorTamano) this._observadorTamano.disconnect()
     if (this.chartDerechoInstance) this.chartDerechoInstance.destroy()
     if (this.chartIzquierdoInstance) this.chartIzquierdoInstance.destroy()
   }
