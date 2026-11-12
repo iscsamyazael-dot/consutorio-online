@@ -112,7 +112,9 @@
         </ul>
       </div>
     </div>
-
+    <div v-if="iaAdvertencias.length" class="alert alert-info small mb-3">
+      <i class="fas fa-info-circle mr-1"></i> {{ iaAdvertencias.join(' · ') }}
+    </div>
     <!-- TABS CONTENT -->
     <div class="tab-content">
       <!-- HOJA 1 -->
@@ -143,6 +145,8 @@
       <div id="hoja4" class="tab-pane fade" role="tabpanel">
         <hoja4-paraclinicodiagnosticos-tr
           :modelValue="form.hoja4"
+          :ia-campos="iaCampos"
+          :ia-diags-propuestos="iaDiagsPropuestos"
           @update:modelValue="form.hoja4 = $event"
         ></hoja4-paraclinicodiagnosticos-tr>
       </div>
@@ -171,6 +175,7 @@ import Hoja2AntecedentessaludTr from './secciones/audiologia/ExamenTrabajoTR/ant
 import Hoja3ExploracionfisicaTr from './secciones/audiologia/ExamenTrabajoTR/exploracionfisica.vue'
 import Hoja4ParaclinicodiagnosticosTr from './secciones/audiologia/ExamenTrabajoTR/paraclinicodiagnosticos.vue'
 import  clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
+import Swal from 'sweetalert2'
 
 export default {
   name: 'MasterExamenTrabajoTr',
@@ -182,7 +187,17 @@ export default {
   },
   data() {
     return {
-      
+      fichaId: null,
+      iaAdvertencias: [],
+      iaCargando: false,
+      iaCampos: {},
+      iaDiagsPropuestos: [],
+      editadosPorMedico: {},
+      iaTimer: null,
+      ultimaFirmaIA: null,
+      snapshotHoja4: null,
+      recomendacionPendiente: false,
+  
       pacienteId: null,               
       infoPacientes: null,            
       datosLaboralesActuales: null,   
@@ -200,6 +215,7 @@ export default {
 
       form: {
         hoja1: {
+          folio:'',
           nombre: '',
           puesto: '',
           fecha_nacimiento: '',
@@ -283,35 +299,60 @@ export default {
           presion_sistolica: 0,
           presion_diastolica: 0,
           frecuencia_cardiaca: 0,
-          cabeza: { estado: 'Normal', hallazgos: '' },
-          ojos: { estado: 'Normal', hallazgos: '' },
-          oidos: { estado: 'Normal', hallazgos: '' },
-          nariz: { estado: 'Normal', hallazgos: '' },
-          boca: { estado: 'Normal', hallazgos: '' },
-          cuello: { estado: 'Normal', hallazgos: '' },
-          cardiovascular: { estado: 'Normal', hallazgos: '' },
-          pulmonar: { estado: 'Normal', hallazgos: '' },
-          abdomen: { estado: 'Normal', hallazgos: '' },
-          genitourinario: { estado: 'Normal', hallazgos: '' },
-          osteomuscular: { estado: 'Normal', hallazgs: '' },
-          neurologico: { estado: 'Normal', hallazgos: '' },
-          tegumentos: { estado: 'Normal', hallazgos: '' }
+          cabeza: { estado: 'Normal', observaciones: '' },
+          ojos: { estado: 'Normal', observaciones: '' },
+          oidos: { estado: 'Normal', observaciones: '' },
+          nariz: { estado: 'Normal', observaciones: '' },
+          boca: { estado: 'Normal', observaciones: '' },
+          cuello: { estado: 'Normal', observaciones: '' },
+          cardiovascular: { estado: 'Normal', observaciones: '' },
+          pulmonar: { estado: 'Normal', observaciones: '' },
+          abdomen: { estado: 'Normal', observaciones: '' },
+          genitourinario: { estado: 'Normal', observaciones: '' },
+          osteomuscular: { estado: 'Normal', observaciones: '' },
+          neurologico: { estado: 'Normal', observaciones: '' },
+          tegumentos: { estado: 'Normal', observaciones: '' }
         },
         hoja4: {
           ecg: { realizado: false, fecha: '', resultado: 'Normal', reporte: '' },
           rx_torax: { realizado: false, fecha: '', resultado: 'Normal', reporte: '' },
           evaluacion_visual: { realizado: false, fecha: '', resultado: 'Normal', od: '', oi: '', reporte: '' },
-          audiometria: { realizado: false, fecha: '', resultado: 'Normal', frecuencias: [], reporte: '' },
+          audiometria: { 
+            realizado: false, 
+            fecha: '', 
+            resultado: 'Normal', 
+            frecuencias: {
+              derecho: { 125: null, 250: null, 500: null, 1000: null, 2000: null, 3000: null, 4000: null, 6000: null, 8000: null },
+              izquierdo: { 125: null, 250: null, 500: null, 1000: null, 2000: null, 3000: null, 4000: null, 6000: null, 8000: null }
+            },
+            reporte: '' 
+          },
           espirometria: { realizado: false, fecha: '', resultado: 'Normal', reporte: '' },
-          diagnosticos: ['', '', '', '', ''],
+          diagnosticos: ['', '', '', '', '','', '', '', '', ''],
           enfermedad_profesional: false,
-          enfermedad_profesional_detalle: ''
+          enfermedad_profesional_detalle: '',
+          diagnostico_principal: '',
+          aptitud: '',
+          observaciones: '',
+          recomendaciones: []
         }
       },
       cargando: false
     }
   },
-
+  computed: {
+    folioTR() {
+      if (!this.form.hoja1.folio) {
+        const ano = new Date().getFullYear()
+        const random = String(Math.floor(Math.random() * 9000) + 1000)
+        return `TR-${ano}-${random}`
+      }
+      return this.form.hoja1.folio
+    },
+    firmaContextoIA() {
+      return JSON.stringify(this.construirContextoIA())
+    }
+  },
   methods: {
    async obtenerPacientes() {
       if (!this.pacienteId) {
@@ -457,6 +498,10 @@ export default {
           empresa: '',
           numero_empleado: '',
           departamento: '',
+          antiguedad_empresa_anos: 0,
+          antiguedad_empresa_meses: 0,
+          antiguedad_puesto_anos: 0,
+          antiguedad_puesto_meses: 0,
           tipo_trabajo_riesgo: {
             altura: false,
             espacio_confinado: false,
@@ -469,7 +514,7 @@ export default {
           }
         },
         hoja2: {
-          // Reset all boolean fields to false and strings to empty
+          // PATOLOGÍA CORONARIA
           marcapaso: false,
           valvulopatias: false,
           protesis_valvulares: false,
@@ -479,6 +524,7 @@ export default {
           bradicardia: false,
           arritmias: false,
           insuficiencia_cardiaca: false,
+          // PATOLOGÍA NEUROLÓGICA
           insomnio: false,
           convulsion: false,
           evc: false,
@@ -493,6 +539,7 @@ export default {
           hiperestesia: false,
           paresia: false,
           parestesia: false,
+          // PATOLOGÍA VISUAL
           catarata: false,
           discromatopsia: false,
           glaucoma: false,
@@ -505,10 +552,12 @@ export default {
           campimetria_anormal: false,
           nistagmo: false,
           movimientos_oculares: false,
+          // PATOLOGÍA GENITOURINARIA
           enf_renal_cronica: false,
           pielonefritis: false,
           litiasis_renal: false,
           incontinencia_severa: false,
+          // PATOLOGÍA DIGESTIVA
           gastroparesia_severa: false,
           erge_sii_severo: false,
           ulcera_peptica: false,
@@ -522,29 +571,46 @@ export default {
           presion_sistolica: 0,
           presion_diastolica: 0,
           frecuencia_cardiaca: 0,
-          cabeza: { estado: 'Normal', hallazgos: '' },
-          ojos: { estado: 'Normal', hallazgos: '' },
-          oidos: { estado: 'Normal', hallazgos: '' },
-          nariz: { estado: 'Normal', hallazgos: '' },
-          boca: { estado: 'Normal', hallazgos: '' },
-          cuello: { estado: 'Normal', hallazgos: '' },
-          cardiovascular: { estado: 'Normal', hallazgos: '' },
-          pulmonar: { estado: 'Normal', hallazgos: '' },
-          abdomen: { estado: 'Normal', hallazgos: '' },
-          genitourinario: { estado: 'Normal', hallazgos: '' },
-          osteomuscular: { estado: 'Normal', hallazgos: '' },
-          neurologico: { estado: 'Normal', hallazgos: '' },
-          tegumentos: { estado: 'Normal', hallazgos: '' }
+          frecuencia_respiratoria: 0, // ✅ AGREGADO
+          score: '',                  // ✅ AGREGADO
+          cabeza: { estado: 'Normal', observaciones: '' },          // ✅ CORREGIDO: hallazgos -> observaciones
+          ojos: { estado: 'Normal', observaciones: '' },            // ✅ CORREGIDO
+          oidos: { estado: 'Normal', observaciones: '' },           // ✅ CORREGIDO
+          nariz: { estado: 'Normal', observaciones: '' },           // ✅ CORREGIDO
+          boca: { estado: 'Normal', observaciones: '' },            // ✅ CORREGIDO
+          cuello: { estado: 'Normal', observaciones: '' },          // ✅ CORREGIDO
+          cardiovascular: { estado: 'Normal', observaciones: '' },  // ✅ CORREGIDO
+          pulmonar: { estado: 'Normal', observaciones: '' },        // ✅ CORREGIDO
+          abdomen: { estado: 'Normal', observaciones: '' },         // ✅ CORREGIDO
+          genitourinario: { estado: 'Normal', observaciones: '' },  // ✅ CORREGIDO
+          osteomuscular: { estado: 'Normal', observaciones: '' },   // ✅ CORREGIDO
+          neurologico: { estado: 'Normal', observaciones: '' },     // ✅ CORREGIDO
+          tegumentos: { estado: 'Normal', observaciones: '' }       // ✅ CORREGIDO
         },
         hoja4: {
           ecg: { realizado: false, fecha: '', resultado: 'Normal', reporte: '' },
           rx_torax: { realizado: false, fecha: '', resultado: 'Normal', reporte: '' },
           evaluacion_visual: { realizado: false, fecha: '', resultado: 'Normal', od: '', oi: '', reporte: '' },
-          audiometria: { realizado: false, fecha: '', resultado: 'Normal', frecuencias: [], reporte: '' },
+          audiometria: { 
+            realizado: false, 
+            fecha: '', 
+            resultado: 'Normal', 
+            // ✅ CORREGIDO: Estructura anidada correcta para las frecuencias (evita el error undefined)
+            frecuencias: {
+              derecho: { 125: null, 250: null, 500: null, 1000: null, 2000: null, 3000: null, 4000: null, 6000: null, 8000: null },
+              izquierdo: { 125: null, 250: null, 500: null, 1000: null, 2000: null, 3000: null, 4000: null, 6000: null, 8000: null }
+            }, 
+            reporte: '' 
+          },
           espirometria: { realizado: false, fecha: '', resultado: 'Normal', reporte: '' },
-          diagnosticos: ['', '', '', '', ''],
+          // ✅ CORREGIDO: 10 espacios para diagnósticos (coincide con el componente hijo)
+          diagnosticos: ['', '', '', '', '', '', '', '', '', ''],
           enfermedad_profesional: false,
-          enfermedad_profesional_detalle: ''
+          enfermedad_profesional_detalle: '',
+          diagnostico_principal: '',
+          aptitud: '',
+          observaciones: '',
+          recomendaciones: []
         }
       }
     },
@@ -560,14 +626,21 @@ export default {
 
       const mensaje = this.mensajeActual
       this.mensajeActual = ''
+      this.iaCargando = true
 
       try {
-        const response = await clinicaTrabajo.consultarIA({
+        console.log(' CONTEXTO ENVIADO A IA:', this.construirContextoIA())
+        const response = await clinicaTrabajo.post('/AudiologiaTrabajoAltoRiesgo-consultarIA', {
+          modo: 'chat',
           mensaje: mensaje,
-          paciente_id: this.trabajadorSeleccionado?.id,
-          contexto: this.form
+          paciente_id: this.pacienteId ? Number(this.pacienteId) : null,
+          contexto: this.construirContextoIA(),
+          historial: this.conversacion.slice(-10)
         })
-
+        
+        console.log('✅ RESPUESTA DE LA IA:', response.data)
+        console.log('📋 CAMPOS COMPLETADOS:', response.data.campos_completados)
+        
         this.conversacion.push({
           sender: 'ia',
           text: response.data.respuesta || 'No pude procesar tu solicitud.',
@@ -575,9 +648,15 @@ export default {
         })
 
         if (response.data.campos_completados) {
-          // Update form fields based on IA response
-          Object.assign(this.form, response.data.campos_completados)
+          Object.entries(response.data.campos_completados).forEach(([hoja, campos]) => {
+            console.log(`🔄 Actualizando ${hoja}:`, campos)
+            if (this.form[hoja]) {
+              this.form[hoja] = { ...this.form[hoja], ...campos }
+            }
+          })
         }
+
+        this.iaAdvertencias = response.data.advertencias || []
 
         this.$nextTick(() => {
           this.$refs.chatContainer.scrollTop = this.$refs.chatContainer.scrollHeight
@@ -589,8 +668,12 @@ export default {
           text: 'Disculpa, hubo un error al procesar tu solicitud.',
           timestamp: new Date()
         })
+      } finally {
+        this.iaCargando = false
       }
     },
+
+
 
     seleccionarArchivo(event) {
       this.archivoSeleccionado = event.target.files[0]
@@ -602,37 +685,56 @@ export default {
     },
 
     async guardar() {
+      if (!this.form.hoja1.nombre) {
+        return Swal.fire({ icon: 'warning', title: 'Falta el nombre', text: 'Ingresa el nombre en la Hoja 1.' })
+      }
+      if (!this.form.hoja4.aptitud) {
+        return Swal.fire({ icon: 'warning', title: 'Falta la aptitud', text: 'Selecciona la aptitud en la Hoja 4.' })
+      }
+
+      this.guardando = true
       try {
-        this.cargando = true
-
-        // Validar datos críticos
-        if (!this.form.hoja1.nombre) {
-          alert('Por favor ingrese el nombre del paciente')
-          return
-        }
-
-        if (!this.form.hoja1.empresa) {
-          alert('Por favor ingrese la empresa')
-          return
-        }
-
         const payload = {
           ...this.form,
-          tipo_evaluacion: 'examen_tr'
+          folio: this.folioTR,
+          tipo_evaluacion: 'examen_tr_2026',
+          paciente_id: Number(this.pacienteId),
+          empresa_cliente_id: this.datosLaboralesActuales?.empresa_cliente_id ?? null,
+          puesto_trabajo_id: this.datosLaboralesActuales?.puesto_trabajo_id ?? null,
         }
 
-        const response = await clinicaTrabajo.guardarExamenTrabajoTr(payload)
+        const response = this.fichaId
+          ? await clinicaTrabajo.put(`/AudiologiaTrabajoAltoRiesgo/${this.fichaId}`, payload)
+          : await clinicaTrabajo.post('/AudiologiaTrabajoAltoRiesgo', payload)
 
-        if (response.data.success) {
-          alert('✅ Examen Médico guardado correctamente')
-          // Redirigir o recargar
-          window.location.href = `/clinica/audiologia/tr/${response.data.id}`
+        const idGuardado = this.fichaId || response.data.id
+        if (!this.fichaId) {
+          this.form.hoja1.folio = response.data.folio
+          this.fichaId = idGuardado
+        }
+
+        const decision = await Swal.fire({
+          icon: 'success',
+          title: this.fichaId ? 'Examen actualizado' : 'Examen guardado',
+          text: '¿Deseas imprimir el reporte?',
+          showCancelButton: true,
+          confirmButtonText: 'Imprimir reporte',
+          cancelButtonText: 'Continuar',
+          confirmButtonColor: '#1E88E5',
+        })
+
+        if (decision.isConfirmed) {
+          window.open(`/AudiologiaTrabajoAltoRiesgo-imprimir/${idGuardado}`, '_blank')
+        }
+
+        if (!this.fichaId) {
+          window.location.href = `/AudiologiaTrabajoAltoRiesgo/${this.pacienteId}?ficha=${idGuardado}`
         }
       } catch (error) {
         console.error('Error guardando:', error)
-        alert('❌ Error al guardar el examen: ' + error.message)
+        Swal.fire({ icon: 'error', title: 'Error', text: error.response?.data?.message || error.message })
       } finally {
-        this.cargando = false
+        this.guardando = false
       }
     },
     cancelar() {
@@ -641,12 +743,193 @@ export default {
       }
     },
     imprimir() {
-      alert('🖨️ Funcionalidad de impresión en desarrollo')
-      // TODO: Implementar impresión con HTML2PDF
-    }
+      if (!this.fichaId) {
+        return Swal.fire({ icon: 'warning', title: 'Guarda primero', text: 'El reporte se genera a partir de un examen guardado.' })
+      }
+      window.open(`/AudiologiaTrabajoAltoRiesgo-imprimir/${this.fichaId}`, '_blank')
+    },
+    // AGREGAR ESTOS MÉTODOS:
+
+    construirContextoIA() {
+      const { hoja1, hoja2, hoja3, hoja4 } = this.form
+      
+      const patologiasActivas = []
+      Object.entries(hoja2).forEach(([key, val]) => {
+        if (typeof val === 'boolean' && val) patologiasActivas.push(key)
+        else if (val && typeof val === 'object' && val.activo) patologiasActivas.push(key)
+      })
+
+      const sistemasAnormales = Object.entries(hoja3)
+        .filter(([k, v]) => ['cabeza','ojos','oidos','nariz','boca','cuello','cardiovascular','pulmonar','abdomen','genitourinario','osteomuscular','neurologico','tegumentos'].includes(k) && v.estado !== 'Normal')
+        .map(([k, v]) => `${k}: ${v.estado}${v.observaciones ? ' - ' + v.observaciones : ''}`)
+
+      const riesgosSeleccionados = Object.entries(hoja1.tipo_trabajo_riesgo || {})
+        .filter(([_, v]) => v)
+        .map(([k]) => k)
+
+      return {
+        hoja1: {
+          edad: hoja1.edad,
+          genero: hoja1.genero,
+          puesto: hoja1.puesto,
+          empresa: hoja1.empresa,
+          antiguedad_empresa_anos: hoja1.antiguedad_empresa_anos,
+          riesgos_trabajo: riesgosSeleccionados
+        },
+        hoja2: {
+          patologias_activas: patologiasActivas
+        },
+        hoja3: {
+          peso_kg: hoja3.peso_kg,
+          estatura_m: hoja3.estatura_m,
+          imc: hoja3.imc,
+          presion_arterial: `${hoja3.presion_sistolica}/${hoja3.presion_diastolica}`,
+          frecuencia_cardiaca: hoja3.frecuencia_cardiaca,
+          frecuencia_respiratoria: hoja3.frecuencia_respiratoria,
+          sistemas_anormales: sistemasAnormales
+        },
+        hoja4: {
+          ecg: hoja4.ecg,
+          rx_torax: hoja4.rx_torax,
+          evaluacion_visual: hoja4.evaluacion_visual,
+          audiometria: hoja4.audiometria,
+          espirometria: hoja4.espirometria,
+          diagnosticos: hoja4.diagnosticos.filter(d => d && d.trim()),
+          enfermedad_profesional: hoja4.enfermedad_profesional
+        }
+      }
+    },
+
+    programarRecomendacionIA() {
+      clearTimeout(this.iaTimer)
+      // Validar que haya datos mínimos antes de disparar la IA
+      if (!this.tieneDatosSuficientes()) {
+        console.log('⏳ IA en espera: datos insuficientes para recomendar')
+        return
+      }
+      this.iaTimer = setTimeout(() => this.recomendarConIA(), 2000)
+    },
+
+    tieneDatosSuficientes() {
+      const h1 = this.form.hoja1
+      const h2 = this.form.hoja2
+      const h3 = this.form.hoja3
+      const h4 = this.form.hoja4
+      
+      // Hoja 1: debe tener al menos nombre y empresa
+      const hoja1Lista = h1.nombre && h1.nombre.trim().length > 0
+                      && h1.empresa && h1.empresa.trim().length > 0
+      
+      // Hoja 2: debe tener al menos 1 patología marcada
+      const patologiasActivas = Object.values(h2).filter(v => {
+        if (typeof v === 'boolean') return v
+        if (typeof v === 'object' && v !== null) return v.activo === true
+        return false
+      }).length
+      const hoja2Lista = patologiasActivas > 0
+      
+      // Hoja 3: debe tener peso Y estatura (para IMC) o al menos presión arterial
+      const hoja3Lista = (h3.peso_kg > 0 && h3.estatura_m > 0)
+                      || (h3.presion_sistolica > 0 && h3.presion_diastolica > 0)
+      
+      // Hoja 4: debe tener al menos 1 paraclínico realizado o 1 diagnóstico
+      const paraclinicosRealizados = [h4.ecg, h4.rx_torax, h4.evaluacion_visual, h4.audiometria, h4.espirometria]
+        .some(p => p.realizado === true || p.realizado === 'true')
+      const diagnosticosLlenos = h4.diagnosticos.some(d => d && d.trim().length > 0)
+      const hoja4Lista = paraclinicosRealizados || diagnosticosLlenos
+      
+      // Regla: al menos Hoja 1 + Hoja 3 (signos vitales) para recomendar
+      const tieneMinimo = hoja1Lista && hoja3Lista
+      
+      return tieneMinimo
+    },
+
+    async recomendarConIA() {
+      if (this.iaCargando) {
+        this.recomendacionPendiente = true
+        return
+      }
+
+      const firma = this.firmaContextoIA
+      if (firma === this.ultimaFirmaIA) return
+
+      this.iaCargando = true
+      try {
+        const response = await clinicaTrabajo.post('/AudiologiaTrabajoAltoRiesgo-consultarIA', {
+          modo: 'recomendar',
+          paciente_id: this.pacienteId ? Number(this.pacienteId) : null,
+          contexto: this.construirContextoIA()
+        })
+
+        const propuestos = response.data.campos_completados?.hoja4 || {}
+        const nuevoHoja4 = { ...this.form.hoja4 }
+
+        Object.entries(propuestos).forEach(([campo, valor]) => {
+          if (this.editadosPorMedico[campo]) return
+          const vacio = v => v === '' || v === null || v === undefined || (Array.isArray(v) && v.length === 0)
+          const estaLlenado = !vacio(nuevoHoja4[campo])
+          if (estaLlenado && !this.iaCampos[campo]) return
+
+          // Si es el campo 'diagnosticos', inyectar en el array
+          if (campo === 'diagnosticos' && Array.isArray(valor)) {
+            valor.forEach((diag, idx) => {
+              if (idx < nuevoHoja4.diagnosticos.length) {
+                nuevoHoja4.diagnosticos[idx] = diag
+                this.iaDiagsPropuestos.push(idx)
+              }
+            })
+            this.iaCampos['diagnosticos'] = true
+          } else {
+            nuevoHoja4[campo] = valor
+            this.iaCampos[campo] = true
+          }
+        })
+
+        this.form.hoja4 = nuevoHoja4
+        this.snapshotHoja4 = JSON.parse(JSON.stringify(nuevoHoja4))
+        this.ultimaFirmaIA = firma
+        this.iaAdvertencias = response.data.advertencias || []
+      } catch (error) {
+        console.error('Error en recomendación IA:', error)
+      } finally {
+        this.iaCargando = false
+        if (this.recomendacionPendiente) {
+          this.recomendacionPendiente = false
+          this.programarRecomendacionIA()
+        }
+      }
+    },
+
+    async cargarFicha(id) {
+      this.cargando = true
+      try {
+        const response = await clinicaTrabajo.get(`/AudiologiaTrabajoAltoRiesgo/${id}`)
+        const registro = response.data.data
+        const datos = registro.datos || {}
+
+        this.fichaId = registro.id
+        this.pacienteId = registro.paciente_id
+        this.form.hoja1 = { ...this.form.hoja1, ...(datos.hoja1 || {}) }
+        this.form.hoja2 = { ...this.form.hoja2, ...(datos.hoja2 || {}) }
+        this.form.hoja3 = { ...this.form.hoja3, ...(datos.hoja3 || {}) }
+        this.form.hoja4 = { ...this.form.hoja4, ...(datos.hoja4 || {}) }
+        this.form.hoja1.folio = registro.folio
+
+        this.snapshotHoja4 = JSON.parse(JSON.stringify(this.form.hoja4))
+        this.$nextTick(() => {
+          this.ultimaFirmaIA = this.firmaContextoIA
+        })
+      } catch (error) {
+        console.error('Error al cargar la ficha:', error)
+        Swal.fire({ icon: 'error', title: 'Error', text: error.response?.data?.message || error.message })
+        window.location.href = '/AudiologiaTrabajoAltoRiesgo'
+      } finally {
+        this.cargando = false
+      }
+    },
   },
 
-  mounted() {
+ async mounted() {
     // 1. OBTENER EL ID DE LA URL AUTOMÁTICAMENTE
     // Intenta tomarlo de Vue Router, si no, lo extrae de la URL del navegador
     this.pacienteId = this.$route?.params?.id || window.location.pathname.split('/').pop();
@@ -656,11 +939,53 @@ export default {
     if (this.pacienteId && !isNaN(this.pacienteId) && this.pacienteId !== 'tr') {
       this.obtenerPacientes();
     }
+
+    const fichaParam = new URLSearchParams(window.location.search).get('ficha')
+    if (fichaParam) {
+      await this.cargarFicha(fichaParam)
+    }
+
+    if (!this.form.hoja1.folio) {
+      this.form.hoja1.folio = this.folioTR
+    }
+
+    this.snapshotHoja4 = JSON.parse(JSON.stringify(this.form.hoja4))
   },
 
+  // AGREGAR ESTOS WATCHERS:
   watch: {
-    // Reset conversation when switching tabs if needed
-  }
+    firmaContextoIA(nueva) {
+      if (nueva !== this.ultimaFirmaIA) this.programarRecomendacionIA()
+    },
+    'form.hoja4': {
+      deep: true,
+      handler(nuevo) {
+        const anterior = this.snapshotHoja4 || {}
+        const cambiados = Object.keys(nuevo).filter(
+          k => JSON.stringify(nuevo[k]) !== JSON.stringify(anterior[k])
+        )
+        
+        cambiados.forEach(k => {
+          // Agregamos 'diagnosticos' a la lista de campos vigilados
+          if (['aptitud', 'diagnostico_principal', 'observaciones', 'recomendaciones', 'diagnosticos'].includes(k)) {
+            this.editadosPorMedico[k] = true
+            delete this.iaCampos[k]
+            
+            // Si el campo modificado es el array de diagnósticos, limpiamos los índices propuestos
+            if (k === 'diagnosticos') {
+              this.iaDiagsPropuestos = []
+            }
+          }
+        })
+        
+        this.snapshotHoja4 = JSON.parse(JSON.stringify(nuevo))
+      }
+    }
+  },
+  beforeUnmount() {
+    clearTimeout(this.iaTimer)
+  },
+
 }
 </script>
 

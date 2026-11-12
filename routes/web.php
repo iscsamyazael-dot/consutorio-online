@@ -519,6 +519,9 @@ Route::middleware('auth')->group(function () {
             Route::resource('DelliAudiologia', AudiologiaDELLIController::class);
             Route::get('DelliAudiologia-imprimir/{id}', [AudiologiaDELLIController::class, 'imprimir'])->name('DelliAudiologia.imprimir');
             Route::post('DelliAudiologia-consultarIA', [AudiologiaDELLIController::class, 'consultarIA'])->name('DelliAudiologia.consultarIA');
+            Route::resource('AudiologiaTrabajoAltoRiesgo', AudiologiaTRController::class);
+            Route::get('AudiologiaTrabajoAltoRiesgo-imprimir/{id}', [AudiologiaTRController::class, 'imprimir'])->name('clinica.audiologia.tr.imprimir');
+            Route::post('AudiologiaTrabajoAltoRiesgo-consultarIA', [AudiologiaTRController::class, 'consultarIA'])->name('clinica.audiologia.tr.consultarIA');
             
             // =========================================================================
             // RUTAS PARA EL BUSCADOR INTELIGENTE DE PACIENTES (CLÍNICA DE TRABAJO)

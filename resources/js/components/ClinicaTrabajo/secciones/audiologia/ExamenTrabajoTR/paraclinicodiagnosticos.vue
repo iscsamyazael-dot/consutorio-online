@@ -268,28 +268,30 @@
                       </tr>
                     </thead>
                     <tbody>
+                      <!-- OÍDO DERECHO -->
                       <tr>
                         <td class="font-weight-bold">Derecho</td>
                         <td v-for="freq in frecuencias" :key="'der-' + freq">
                           <input 
                             type="number" 
                             class="form-control form-control-sm" 
-                            v-model.number="localData.audiometria.frecuencias.derecho[freq]" 
-                            @change="emitChange"
+                            :value="getFrecuenciaValue('derecho', freq)"
+                            @input="setFrecuenciaValue('derecho', freq, $event.target.value)"
                             style="width: 60px;"
                             min="0"
                             max="120"
                           >
                         </td>
                       </tr>
+                      <!-- OÍDO IZQUIERDO -->
                       <tr>
                         <td class="font-weight-bold">Izquierdo</td>
                         <td v-for="freq in frecuencias" :key="'izq-' + freq">
                           <input 
                             type="number" 
                             class="form-control form-control-sm" 
-                            v-model.number="localData.audiometria.frecuencias.izquierdo[freq]" 
-                            @change="emitChange"
+                            :value="getFrecuenciaValue('izquierdo', freq)"
+                            @input="setFrecuenciaValue('izquierdo', freq, $event.target.value)"
                             style="width: 60px;"
                             min="0"
                             max="120"
@@ -382,18 +384,23 @@
       <div class="card-header" style="background: linear-gradient(135deg, #0c5460 0%, #063c48 100%); color: white;">
         <h5 class="mb-0">
           <i class="fas fa-stethoscope mr-2"></i> DIAGNÓSTICOS FINALES (hasta 10)
+          <span v-if="diagnosticosIAPropuestos" class="badge badge-info ml-2">
+            <i class="fas fa-robot mr-1"></i> Propuestos por IA
+          </span>
         </h5>
       </div>
       <div class="card-body">
         <div class="alert alert-secondary" style="font-size: 12px;">
           <i class="fas fa-info-circle mr-2"></i> Ingrese hasta 10 diagnósticos. El primero (principal) es obligatorio.
         </div>
-
         <div v-for="(diag, idx) in localData.diagnosticos" :key="'diag-' + idx" class="row mb-2">
           <div class="col-md-12">
             <label class="font-weight-bold">
               DIAGNÓSTICO {{ idx + 1 }} 
               <span v-if="idx === 0" class="text-danger">*</span>
+              <span v-if="esPropuestoIA(idx)" class="badge badge-info ml-2" style="font-size: 10px;">
+                IA
+              </span>
             </label>
             <textarea 
               class="form-control" 
@@ -442,6 +449,75 @@
         </div>
       </div>
     </div>
+    <!-- AGREGAR ESTA NUEVA SECCIÓN -->
+    <div class="card mt-3">
+      <div class="card-header" style="background: linear-gradient(135deg, #0c5460 0%, #063c48 100%); color: white;">
+        <h5 class="mb-0">
+          <i class="fas fa-clipboard-check mr-2"></i> DIAGNÓSTICO FINAL Y APTITUD
+        </h5>
+      </div>
+      <div class="card-body">
+        <!-- DIAGNÓSTICO PRINCIPAL -->
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <label class="font-weight-bold">DIAGNÓSTICO PRINCIPAL <span class="text-danger">*</span></label>
+            <span v-if="iaPropusoDiagnostico" class="badge badge-info ml-2">Recomendado por IA</span>
+            <textarea 
+              class="form-control" 
+              v-model="localData.diagnostico_principal"
+              @change="emitChange"
+              placeholder="Resumen del diagnóstico principal"
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+        <!-- APTITUD -->
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="font-weight-bold">APTITUD <span class="text-danger">*</span></label>
+            <span v-if="iaPropusoAptitud" class="badge badge-info ml-2">Recomendado por IA</span>
+            <select class="form-control" v-model="localData.aptitud" @change="emitChange">
+              <option value="">-- Seleccionar --</option>
+              <option value="Apto">✓ APTO</option>
+              <option value="Apto con restricciones">⚠️ APTO CON RESTRICCIONES</option>
+              <option value="No apto">✗ NO APTO</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="font-weight-bold">OBSERVACIONES</label>
+            <textarea 
+              class="form-control" 
+              v-model="localData.observaciones"
+              @change="emitChange"
+              placeholder="Observaciones generales"
+              rows="2"
+            ></textarea>
+          </div>
+      </div>
+      <!-- RECOMENDACIONES -->
+      <div class="row">
+        <div class="col-md-12">
+          <label class="font-weight-bold">RECOMENDACIONES</label>
+          <div v-for="(rec, i) in localData.recomendaciones" :key="i" class="d-flex align-items-start mb-2">
+            <span class="text-muted mr-2 mt-2">{{ i + 1 }}.</span>
+            <textarea 
+              class="form-control" 
+              :value="rec"
+              @input="editarRecomendacion(i, $event.target.value)"
+              @change="emitChange"
+              rows="2"
+            ></textarea>
+            <button type="button" class="btn btn-link text-danger ml-1" @click="eliminarRecomendacion(i)">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <button type="button" class="btn btn-sm btn-light border w-100" @click="agregarRecomendacion">
+            <i class="fas fa-plus mr-1"></i> Agregar recomendación
+          </button>
+        </div>
+      </div>
+    </div>
+</div>
   </div>
 </template>
 
@@ -452,6 +528,14 @@ export default {
     modelValue: {
       type: Object,
       default: () => ({})
+    },
+    iaCampos: {          
+      type: Object,
+      default: () => ({})
+    },
+    iaDiagsPropuestos: {  
+      type: Array,
+      default: () => []
     }
   },
   data() {
@@ -502,7 +586,27 @@ export default {
           reporte: '' 
         },
         diagnosticos: ['', '', '', '', '', '', '', '', '', ''],
-        enfermedad_profesional: 'false'
+        enfermedad_profesional: 'false',
+        diagnostico_principal: '',
+        aptitud: '',
+        observaciones: '',
+        recomendaciones: []
+      }
+    }
+  },
+  computed: {
+    iaPropusoDiagnostico() {
+      return this.iaCampos?.diagnostico_principal || false
+    },
+    iaPropusoAptitud() {
+      return this.iaCampos?.aptitud || false
+    },
+    diagnosticosIAPropuestos() {
+      return this.iaCampos?.diagnosticos || false
+    },
+    esPropuestoIA() {
+      return (idx) => {
+        return this.iaDiagsPropuestos.includes(idx)
       }
     }
   },
@@ -517,6 +621,41 @@ export default {
     }
   },
   methods: {
+    editarRecomendacion(i, texto) {
+      const lista = [...this.localData.recomendaciones]
+      lista[i] = texto
+      this.localData.recomendaciones = lista
+    },
+    agregarRecomendacion() {
+      this.localData.recomendaciones = [...this.localData.recomendaciones, '']
+    },
+    eliminarRecomendacion(i) {
+      this.localData.recomendaciones = this.localData.recomendaciones.filter((_, j) => j !== i)
+      this.emitChange()
+    },
+    
+    getFrecuenciaValue(oido, frecuencia) {
+      // Acceso seguro con optional chaining para evitar el error "Cannot read properties of undefined"
+      const valor = this.localData?.audiometria?.frecuencias?.[oido]?.[frecuencia];
+      return valor !== undefined && valor !== null ? valor : '';
+    },
+
+    setFrecuenciaValue(oido, frecuencia, valor) {
+      // Asegurar que la estructura exista antes de asignar
+      if (!this.localData.audiometria.frecuencias) {
+        this.localData.audiometria.frecuencias = { derecho: {}, izquierdo: {} };
+      }
+      if (!this.localData.audiometria.frecuencias[oido]) {
+        this.localData.audiometria.frecuencias[oido] = {};
+      }
+      
+      // Guardar como número o null si está vacío
+      this.localData.audiometria.frecuencias[oido][frecuencia] = valor === '' ? null : Number(valor);
+      
+      // Emitir el cambio al padre
+      this.emitChange();
+    },
+
     emitChange() {
       this.$emit('update:modelValue', JSON.parse(JSON.stringify(this.localData)))
     }

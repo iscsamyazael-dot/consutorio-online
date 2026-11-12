@@ -9,8 +9,20 @@
       </div>
       <div class="card-body">
         <div class="row">
+         <div class="col-md-4 mb-3">
+            <label class="font-weight-bold">FOLIO</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              :value="localData.folio" 
+              disabled 
+              style="height: 38px;"
+            >
+            <small class="text-muted">Auto-generado: TR-YYYY-NNNN</small>
+          </div>
+
           <!-- NOMBRE COMPLETO -->
-          <div class="col-md-6 mb-3">
+          <div class="col-md-4 mb-3">
             <label class="font-weight-bold">NOMBRE COMPLETO <span class="text-danger">*</span></label>
             <input
               type="text"
@@ -23,7 +35,7 @@
           </div>
 
           <!-- PUESTO -->
-          <div class="col-md-6 mb-3">
+          <div class="col-md-4 mb-3">
             <label class="font-weight-bold">PUESTO <span class="text-danger">*</span></label>
             <input
               type="text"
@@ -192,69 +204,71 @@
         </div>
         
         <div v-for="(empleo, idx) in localData.antecedentes_laborales" :key="'empleo-' + idx" class="border p-3 mb-3 rounded">
-          <div class="row">
-            <div class="col-md-6 mb-2">
-              <label class="font-weight-bold">EMPRESA</label>
-              <input 
-                type="text" 
-                class="form-control form-control-sm" 
-                v-model="empleo.empresa"
-                @change="emitChange"
-                placeholder="Nombre de la empresa"
-              >
+            <div class="row">
+              <div class="col-md-6 mb-2">
+                <label class="font-weight-bold">EMPRESA</label>
+                <input 
+                  type="text" 
+                  class="form-control form-control-sm" 
+                  v-model="empleo.empresa"
+                  @change="emitChange"
+                  placeholder="Nombre de la empresa"
+                >
+              </div>
+              <div class="col-md-3 mb-2">
+                <label class="font-weight-bold">PUESTO</label>
+                <input 
+                  type="text" 
+                  class="form-control form-control-sm" 
+                  v-model="empleo.puesto"
+                  @change="emitChange"
+                  placeholder="Puesto desempeñado"
+                >
+              </div>
+              <div class="col-md-3 mb-2">
+                <label class="font-weight-bold">TIEMPO LABORADO</label>
+                <input 
+                  type="text" 
+                  class="form-control form-control-sm" 
+                  v-model="empleo.tiempo"
+                  @change="emitChange"
+                  placeholder="Ej: 2 años"
+                >
+              </div>
             </div>
-            <div class="col-md-3 mb-2">
-              <label class="font-weight-bold">PUESTO</label>
-              <input 
-                type="text" 
-                class="form-control form-control-sm" 
-                v-model="empleo.puesto"
-                @change="emitChange"
-                placeholder="Puesto desempeñado"
-              >
+            <div class="row">
+              <div class="col-md-4 mb-2">
+                <label class="font-weight-bold">EXPOSICIÓN A RUIDO</label>
+                <select class="form-control form-control-sm" v-model="empleo.exposicion_ruido" @change="emitChange">
+                  <option value="">-- Seleccionar --</option>
+                  <option value="Bajo">Bajo</option>
+                  <option value="Medio">Medio</option>
+                  <option value="Muy alto">Muy alto</option>
+                  <option value="Crítico">Crítico</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-2">
+                <label class="font-weight-bold">AGENTES OTOTÓXICOS</label>
+                <select class="form-control form-control-sm" v-model="empleo.agentes_ototoxicos" @change="emitChange">
+                  <option value="">-- Seleccionar --</option>
+                  <option value="Disolventes">Disolventes</option>
+                  <option value="Gases">Gases</option>
+                  <option value="Metales Sales">Metales Sales</option>
+                  <option value="Varios">Varios</option>
+                  <option value="Ninguno">Ninguno</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-2">
+                <label class="font-weight-bold">USO EPP AUDITIVO</label>
+                <select class="form-control form-control-sm" v-model="empleo.uso_epp" @change="emitChange">
+                  <option value="">-- Seleccionar --</option>
+                  <option value="Siempre">Siempre</option>
+                  <option value="Usualmente">Usualmente</option>
+                  <option value="Ocasionalmente">Ocasionalmente</option>
+                  <option value="Nunca">Nunca</option>
+                </select>
+              </div>
             </div>
-            <div class="col-md-3 mb-2">
-              <label class="font-weight-bold">TIEMPO LABORADO</label>
-              <input 
-                type="text" 
-                class="form-control form-control-sm" 
-                v-model="empleo.tiempo"
-                @change="emitChange"
-                placeholder="Ej: 2 años"
-              >
-            </div>
-            <div class="col-md-3 mb-2">
-              <label class="font-weight-bold">EXPOSICIÓN A RUIDO</label>
-              <select class="form-control form-control-sm" v-model="empleo.exposicion_ruido" @change="emitChange">
-                <option value="">-- Seleccionar --</option>
-                <option value="Bajo">Bajo</option>
-                <option value="Medio">Medio</option>
-                <option value="Muy alto">Muy alto</option>
-                <option value="Crítico">Crítico</option>
-              </select>
-            </div>
-            <div class="col-md-3 mb-2">
-              <label class="font-weight-bold">AGENTES OTOTÓXICOS</label>
-              <select class="form-control form-control-sm" v-model="empleo.agentes_ototoxicos" @change="emitChange">
-                <option value="">-- Seleccionar --</option>
-                <option value="Disolventes">Disolventes</option>
-                <option value="Gases">Gases</option>
-                <option value="Metales Sales">Metales Sales</option>
-                <option value="Varios">Varios</option>
-                <option value="Ninguno">Ninguno</option>
-              </select>
-            </div>
-            <div class="col-md-3 mb-2">
-              <label class="font-weight-bold">USO EPP AUDITIVO</label>
-              <select class="form-control form-control-sm" v-model="empleo.uso_epp" @change="emitChange">
-                <option value="">-- Seleccionar --</option>
-                <option value="Siempre">Siempre</option>
-                <option value="Usualmente">Usualmente</option>
-                <option value="Ocasionalmente">Ocasionalmente</option>
-                <option value="Nunca">Nunca</option>
-              </select>
-            </div>
-          </div>
           <button 
             v-if="localData.antecedentes_laborales.length > 1"
             type="button" 
@@ -396,6 +410,7 @@ export default {
   data() {
     return {
       localData: {
+        folio:'',
         nombre: '',
         fecha_nacimiento: '',
         edad: 0,
@@ -557,4 +572,43 @@ label {
 small {
   font-size: 12px;
 }
+
+select.form-control,
+select.form-control-sm {
+  padding: 6px 30px 6px 12px !important;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+select.form-control-sm {
+  padding: 4px 28px 4px 10px !important;
+  font-size: 12px;
+}
+
+/* Asegurar que las opciones se vean correctamente */
+select.form-control option,
+select.form-control-sm option {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* Hover y focus para mejor UX */
+select.form-control:hover,
+select.form-control-sm:hover {
+  border-color: #0c5460;
+}
+
+select.form-control:focus,
+select.form-control-sm:focus {
+  border-color: #0c5460;
+  box-shadow: 0 0 0 0.2rem rgba(12, 84, 96, 0.25);
+  outline: none;
+}
+
 </style>
