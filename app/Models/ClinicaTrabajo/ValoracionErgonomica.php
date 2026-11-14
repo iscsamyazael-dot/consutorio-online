@@ -5,12 +5,8 @@ namespace App\Models\ClinicaTrabajo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Builder;
-use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo as Paciente;
 use App\Models\Medico;
-use App\Models\EmpresaCliente;
-use App\Models\PuestoTrabajo;
 
 class ValoracionErgonomica extends Model
 {
@@ -21,36 +17,46 @@ class ValoracionErgonomica extends Model
     protected $guarded = [];
 
     protected $casts = [
+        // Fechas
         'fecha_valoracion' => 'date',
         'fecha_evaluacion_puesto' => 'date',
         'plazo_proximo_seguimiento' => 'date',
+
+        // Enums y textos
         'tipo_evaluacion' => 'string',
-        'aptitud' => 'string',
         'instrumento_utilizado' => 'string',
-
-        'rula_puntuacion' => 'int',
+        'aptitud' => 'string',
         'rula_nivel_riesgo' => 'string',
-
-        'reba_puntuacion' => 'int',
         'reba_nivel_accion' => 'string',
 
+        // Puntuaciones
+        'rula_puntuacion' => 'integer',
+        'reba_puntuacion' => 'integer',
         'niosh_indice_levantamiento' => 'decimal:2',
-        'niosh_es_seguro' => 'boolean',
         'niosh_peso_real_kg' => 'decimal:2',
         'niosh_peso_recomendado_kg' => 'decimal:2',
+        'carga_maxima_manipulada_kg' => 'decimal:2',
 
+        // Booleanos
+        'niosh_es_seguro' => 'boolean',
         'posturas_forzadas' => 'boolean',
         'movimientos_repetitivos' => 'boolean',
         'manipulacion_cargas' => 'boolean',
-        'carga_maxima_manipulada_kg' => 'decimal:2',
-
         'examen_medico_realizado' => 'boolean',
         'seguimiento_requerido' => 'boolean',
+
+        'user_id' => 'integer',
     ];
+
+    // datos_json no se castea: los controladores lo leen con json_decode (igual que DELLI)
+
+    // ---------------------------------------------------------------
+    // Relaciones
+    // ---------------------------------------------------------------
 
     public function paciente(): BelongsTo
     {
-        return $this->belongsTo(Paciente::class, 'paciente_id');
+        return $this->belongsTo(PacientesClinicaTrabajo::class, 'paciente_id');
     }
 
     public function empresa(): BelongsTo
@@ -63,33 +69,32 @@ class ValoracionErgonomica extends Model
         return $this->belongsTo(PuestoTrabajo::class, 'puesto_trabajo_id');
     }
 
-    public function ergonomo(): BelongsTo
+    public function medico(): BelongsTo
     {
-        return $this->belongsTo(Medico::class, 'ergonomo_id');
+        // medico_id apunta a medicos.id (el ergónomo que firma)
+        return $this->belongsTo(Medico::class, 'medico_id');
     }
 
-    public function riesgosErgonomicos(): BelongsToMany
-    {
-        return $this->belongsToMany(
-            CatalogoRiesgoErgonomico::class,
-            'valoracion_riesgos_ergonomicos',
-            'valoracion_id',
-            'riesgo_id'
-        )->withPivot('presente', 'medida_control')
-         ->withTimestamps();
-    }
+    // ---------------------------------------------------------------
+    // Scopes
+    // ---------------------------------------------------------------
 
-    public function scopeConRiesgoAlto(Builder $query)
+    public function scopeConRiesgoAlto(Builder $query): Builder
     {
-        return $query->where(function($q) {
+        return $query->where(function ($q) {
             $q->where('rula_nivel_riesgo', 'alto')
               ->orWhere('reba_nivel_accion', 'cambios_inmediatos')
               ->orWhere('niosh_es_seguro', false);
         });
     }
 
-    public function scopePorInstrumento(Builder $query, $instrumento)
+    public function scopePorInstrumento(Builder $query, string $instrumento): Builder
     {
         return $query->where('instrumento_utilizado', $instrumento);
+    }
+
+    public function scopePorAptitud(Builder $query, string $aptitud): Builder
+    {
+        return $query->where('aptitud', $aptitud);
     }
 }

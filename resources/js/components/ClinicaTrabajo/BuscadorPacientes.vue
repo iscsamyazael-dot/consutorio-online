@@ -230,7 +230,7 @@ export default {
       
       tiposEvaluacion: [
         { value: 'nutricion', label: 'Nutrición', icono: 'fas fa-apple-alt', ruta: '/ficha-nutricion' },
-        { value: 'ergonomia', label: 'Ergonomía', icono: 'fas fa-chair', ruta: '/clinica/ergonomia/nueva' },
+        { value: 'ergonomia', label: 'Ergonomía', icono: 'fas fa-chair', ruta: '/ficha-ergonomia' },
         { value: 'psicologia', label: 'Psicología', icono: 'fas fa-brain', ruta: '/ficha-psicologia' },
         { value: 'audiologia_hc', label: 'Audio. Historia Clínica', icono: 'fas fa-file-medical', ruta: '/FichaDelliAudiologia' },
         { value: 'audiologia_ar', label: 'Audio. Alto Riesgo', icono: 'fas fa-exclamation-triangle', ruta: '/FichaTrabajoAltoRiesgo' },

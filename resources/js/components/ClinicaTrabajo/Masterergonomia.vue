@@ -1,13 +1,7 @@
 <template>
   <div class="master-ergonomia">
-    <!-- LISTADO (Si no es nueva ni edición) -->
-    <listado-valoraciones
-      v-if="!esNuevo && !esEdicion"
-      submodulo="ergonomia"
-    ></listado-valoraciones>
-
     <!-- FORMULARIO DE EVALUACIÓN (Si es nueva o edición) -->
-    <div v-else class="container-fluid p-0">
+    <div class="container-fluid p-0">
 
       <!-- 1. CHAT IA / TRANSCRIPCIÓN EN VIVO -->
       <div class="row mb-4">
@@ -111,6 +105,9 @@
             <i class="fas fa-chair mr-2"></i>
             Valoración Ergonómica Ocupacional
             <span class="badge badge-light text-success ml-2">{{ folioErgonomia }}</span>
+            <small v-if="esNuevo && folioErgonomia" class="ml-2 text-white-50">
+              Folio sugerido, se asignará al guardar
+            </small>
           </h4>
         </div>
         <div class="card-body p-0">
@@ -256,6 +253,46 @@ import AptitudDictamenErgonomia from './secciones/ergonomia/AptitudDictamen.vue'
 
 // 3. Servicio API
 import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
+import Swal from 'sweetalert2'
+
+// Escapa el texto para que el HTML del mensaje no se interprete
+const escapar = (texto) => String(texto ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// Aviso simple con un solo botón. Devuelve una promesa: await espera a que el usuario lo cierre
+const notificar = (icon, title, texto = '') => Swal.fire({
+  icon,
+  title,
+  html: escapar(texto).replace(/\n/g, '<br>'),
+  confirmButtonText: 'Entendido',
+  confirmButtonColor: '#1E88E5'
+})
+
+// Pregunta de sí/no. Devuelve true solo si el usuario confirma
+const confirmarAccion = async ({ title, texto, confirmText, cancelText }) => {
+  const r = await Swal.fire({
+    icon: 'warning',
+    title,
+    html: escapar(texto),
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d'
+  })
+  return r.isConfirmed
+}
+
+const CAMPOS_INSTRUMENTO = [
+  'rula_puntuacion', 'rula_nivel_riesgo', 'rula_areas_evaluadas',
+  'reba_puntuacion', 'reba_nivel_accion', 'reba_areas_evaluadas',
+  'niosh_indice_levantamiento', 'niosh_es_seguro', 'niosh_peso_real_kg',
+  'niosh_peso_recomendado_kg', 'niosh_variables_evaluadas', 'justificacion_instrumento'
+]
+
+const BOOLEANOS_HALLAZGOS = ['posturas_forzadas', 'movimientos_repetitivos', 'manipulacion_cargas']
+
+const VACIO_A_NULL = (valor) => (valor === '' || valor === undefined ? null : valor)
 
 export default {
   name: 'MasterErgonomia',
@@ -283,6 +320,10 @@ export default {
       mensajeActual: '',
       archivoSeleccionado: null,
       conversacion: [],
+      valoracionId: null,
+      sessionUuid: null,
+      usaIA: false,
+      confirmaDictamenIA: false,
 
       // Estado centralizado del formulario dividido por secciones lógicas
       form: {
@@ -415,14 +456,14 @@ export default {
       const pathname = window.location.pathname
 
       // Detecta /ergonomia/nueva o /ergonomia (sin ID)
-      if (pathname.includes('/ergonomia/nueva') ||
+      if (pathname.includes('/ficha-ergonomia') ||
           pathname === '/ergonomia' ||
           pathname.endsWith('/ergonomia')) {
         this.esNuevo = true
         this.esEdicion = false
       }
       // Detecta /ergonomia/{id} para edición
-      else if (/\/ergonomia\/\d+/.test(pathname)) {
+      else if (/\/ficha-ergonomia\/\d+/.test(pathname)) {
         this.esNuevo = false
         this.esEdicion = true
         this.cargarDatosExistentes()
@@ -451,52 +492,67 @@ export default {
     },
 
     async enviarMensaje() {
-      if (!this.mensajeActual.trim() && !this.archivoSeleccionado) return
+      const textoEnviar = this.mensajeActual.trim()
+      if (!textoEnviar) return
 
-      const textoEnviar = this.mensajeActual
       this.conversacion.push({
         sender: 'user',
-        text: this.archivoSeleccionado ? `[Archivo: ${this.archivoSeleccionado.name}] ${textoEnviar}` : textoEnviar,
+        text: textoEnviar,
         timestamp: new Date()
       })
       this.mensajeActual = ''
       this.scrollearChat()
 
       try {
-        const response = await clinicaTrabajo.consultarIAErgonomia({
-          mensaje: textoEnviar,
-          archivo: this.archivoSeleccionado,
-          contexto_actual: this.form
-        })
+        const { data } = await clinicaTrabajo.post('/ergonomia-consultarIA', {
+        modo: 'chat',
+        mensaje: textoEnviar,
+        contexto: this.contextoIA(),
+        historial: this.conversacion.slice(0, -1).map(m => ({ sender: m.sender, text: m.text })),
+        session_uuid: this.sessionUuid,
+        valoracion_id: this.valoracionId
+      })
 
         this.conversacion.push({
           sender: 'ia',
-          text: response.data.respuesta || 'Procesando información...',
+          text: data.respuesta || 'Sin respuesta.',
           timestamp: new Date()
         })
 
-        if (response.data.campos_completados) {
-          this.fusionarDatosIA(response.data.campos_completados)
+        if (data.campos_completados) {
+          this.fusionarDatosIA(data.campos_completados)
         }
 
-        this.quitarArchivo()
+        if (data.advertencias?.length) {
+          console.warn('Advertencias de la IA:', data.advertencias)
+        }
+
         this.scrollearChat()
       } catch (error) {
         console.error('Error enviando mensaje a IA:', error)
         this.conversacion.push({
           sender: 'ia',
-          text: ' Disculpa, hubo un error al procesar tu solicitud o el archivo.',
+          text: 'Disculpa, hubo un error al procesar tu solicitud.',
           timestamp: new Date()
         })
+        this.scrollearChat()
       }
     },
 
-    fusionarDatosIA(nuevosDatos) {
-      for (const seccion in nuevosDatos) {
-        if (this.form[seccion]) {
-          this.form[seccion] = { ...this.form[seccion], ...nuevosDatos[seccion] }
+    fusionarDatosIA(campos) {
+      const fusionar = (destino, origen) => {
+        for (const clave in origen) {
+          const valor = origen[clave];
+          if (valor === null || valor === undefined || valor === '') continue;
+          if (typeof valor === 'object' && !Array.isArray(valor)) {
+            destino[clave] = { ...(destino[clave] || {}) };
+            fusionar(destino[clave], valor);
+          } else {
+            destino[clave] = valor;
+          }
         }
-      }
+      };
+      fusionar(this.form, campos);
     },
 
     seleccionarArchivo(event) {
@@ -516,189 +572,158 @@ export default {
       })
     },
 
+    // Campos planos que valida store()/update(); los nombres son las columnas de la tabla
+    construirPayload() {
+      const b = this.form.datosBasicos
+      const ex = this.form.examenMedico
+      const h = this.form.hallazgos
+
+      const instrumento = {}
+      CAMPOS_INSTRUMENTO.forEach(c => { instrumento[c] = VACIO_A_NULL(this.form[c] ?? h[c]) })
+
+      const booleanos = {}
+      BOOLEANOS_HALLAZGOS.forEach(c => { booleanos[c] = !!h[c] })
+
+      return {
+        ...instrumento,
+        ...booleanos,
+        paciente_id: b.paciente_id,
+        empresa_cliente_id: b.empresa_cliente_id,
+        puesto_trabajo_id: b.puesto_trabajo_id,
+        tipo_evaluacion: VACIO_A_NULL(b.tipo_evaluacion),
+        fecha_valoracion: VACIO_A_NULL(b.fecha_valoracion),
+        hora_valoracion: VACIO_A_NULL(b.hora_valoracion),
+        instrumento_utilizado: VACIO_A_NULL(this.form.instrumento_utilizado),
+        aptitud: VACIO_A_NULL(this.form.aptitud),
+        restricciones_descripcion: VACIO_A_NULL(this.form.restricciones),
+        recomendaciones_puesto: VACIO_A_NULL(this.form.recomendaciones),
+        seguimiento_requerido: !!this.form.seguimiento_requerido,
+        plazo_proximo_seguimiento: VACIO_A_NULL(this.form.plazo_proximo_seguimiento),
+        examen_medico_realizado: !!ex.examen_medico_realizado,
+        exploracion_osteomuscular_hallazgos: VACIO_A_NULL(ex.observaciones_examen),
+        diagnostico_relacionado: VACIO_A_NULL(ex.diagnostico_ergonomico),
+        acciones_recomendadas: VACIO_A_NULL(ex.recomendaciones_examen),
+        restricciones_laborales: VACIO_A_NULL(ex.restricciones_laborales),
+        derivacion_especialista: VACIO_A_NULL(ex.derivacion_especialista)
+      }
+    },
+
+    // Contexto para la IA: campos planos (criterios) más secciones anidadas (hallazgos por región)
+    contextoIA() {
+      return { ...this.form, ...this.construirPayload() }
+    },
+
     async guardar() {
-      if (!this.form.datosBasicos.paciente_id) {
-        return alert('⚠️ Por favor selecciona un paciente en la Hoja 1.')
-      }
-      if (!this.form.datosBasicos.empresa_cliente_id) {
-        return alert('⚠️ Por favor selecciona una empresa en la Hoja 1.')
-      }
-      if (!this.form.aptitud) {
-        return alert('⚠️ Es obligatorio seleccionar la APTITUD en la Hoja 5 para poder guardar.')
-      }
+      const b = this.form.datosBasicos
+      if (!b.paciente_id) return notificar('warning', 'Falta el paciente', 'Selecciona un paciente en la Hoja 1.')
+      if (!b.empresa_cliente_id) return notificar('warning', 'Sin empresa', 'Selecciona una empresa en la Hoja 1.')
+      if (!b.tipo_evaluacion) return notificar('warning', 'Falta el tipo de evaluación', 'Selecciona el tipo de evaluación en la Hoja 1.')
+      if (!this.form.instrumento_utilizado) return notificar('warning', 'Falta el instrumento', 'Selecciona el instrumento en la Hoja 5.')
+      if (!this.form.aptitud) return notificar('warning', 'Falta la aptitud', 'Selecciona la aptitud en la Hoja 5 para poder guardar.')
 
       this.guardando = true
       try {
         const payload = {
           ...this.form,
-          folio: this.folioErgonomia,
-          tipo_evaluacion: this.form.datosBasicos.tipo_evaluacion || 'ergonomia'
+          ...this.construirPayload(),
+          usa_ia: this.usaIA,
+          confirma_dictamen_ia: this.confirmaDictamenIA,
+          session_uuid: this.sessionUuid
         }
 
-        const response = await clinicaTrabajo.ergonomia.crear(payload)
+        const { data } = this.valoracionId
+          ? await clinicaTrabajo.put(`/ergonomia/${this.valoracionId}`, payload)
+          : await clinicaTrabajo.post('/ergonomia', payload)
 
-        if (response.data.success) {
-          alert('✅ Valoración Ergonómica guardada correctamente.')
-          window.location.href = `/clinica/ergonomia/${response.data.id}`
+        if (data.success) {
+          const idGuardado = this.valoracionId || data.id
+
+          const decision = await Swal.fire({
+            icon: 'success',
+            title: this.valoracionId ? 'Valoración actualizada' : 'Valoración guardada',
+            text: 'La valoración se guardó correctamente. ¿Deseas imprimir el reporte?',
+            showCancelButton: true,
+            confirmButtonText: 'Imprimir reporte',
+            cancelButtonText: 'Continuar',
+            confirmButtonColor: '#1E88E5',
+            cancelButtonColor: '#6c757d'
+          })
+
+          // El clic en el modal cuenta como acción del usuario, así que el navegador no bloquea la pestaña
+          if (decision.isConfirmed) {
+            window.open(`/ergonomia-imprimir/${idGuardado}`, '_blank')
+          }
+
+          // Igual que DELLI: solo redirige al crear; al editar se queda en la misma pantalla
+          if (!this.valoracionId) {
+            window.location.href = `/ficha-ergonomia/${idGuardado}`
+          }
         }
       } catch (error) {
         console.error('Error guardando:', error)
-        alert('❌ Error al guardar: ' + (error.response?.data?.message || error.message))
+        const errores = error.response?.data?.errors
+          ? Object.values(error.response.data.errors).flat().join('\n')
+          : (error.response?.data?.message || error.message)
+        await notificar('error', 'Error al guardar', errores)
       } finally {
         this.guardando = false
       }
     },
-
-    cancelar() {
-      if (confirm('¿Está seguro de que desea cancelar? Se perderán los datos no guardados.')) {
-        window.location.href = '/clinica/ergonomia'
+    imprimir() {
+      if (!this.valoracionId) {
+        return notificar('warning', 'Guarda primero', 'El reporte se genera a partir de una valoración guardada.')
       }
+      window.open(`/ergonomia-imprimir/${this.valoracionId}`, '_blank')
     },
 
-    imprimir() {
-      alert('🖨️ Generando vista previa para impresión en PDF...')
+    async cancelar() {
+      const ok = await confirmarAccion({
+        title: '¿Cancelar la valoración?',
+        texto: 'Se perderán los datos no guardados.',
+        confirmText: 'Sí, cancelar',
+        cancelText: 'Seguir editando'
+      })
+      if (ok) window.location.href = '/clinica/ergonomia'
     },
 
     async cargarDatosExistentes() {
-      const pathname = window.location.pathname;
-      const valoracionId = pathname.split('/').pop();
-
-      if (!valoracionId || isNaN(valoracionId)) {
-        console.warn('No se encontró un ID válido en la URL');
-        return;
+      const id = window.location.pathname.match(/\/ficha-ergonomia\/(\d+)\/?$/)?.[1]
+      if (!id) {
+        console.warn('No se encontró un ID válido en la URL')
+        return
       }
 
+      this.cargando = true
       try {
-        this.cargando = true;
+        const response = await clinicaTrabajo.get(`/ergonomia/${id}`)
+        const registro = response.data.data
 
-        // ✅ CORREGIDO: Usar endpoint de valoraciones ergonómicas
-        const response = await clinicaTrabajo.get(`/clinica/ergonomia/${valoracionId}`);
-        const data = response.data.data || response.data;
-
-        // Mapear los datos de la valoración existente al formulario
+        this.valoracionId = registro.id
         this.form = {
           ...this.form,
+          ...(registro.datos || {}),
           datosBasicos: {
-            folio: data.folio || this.folioErgonomia,
-            tipo_evaluacion: data.tipo_evaluacion || '',
-            fecha_valoracion: data.fecha_valoracion || new Date().toISOString().split('T')[0],
-            hora_valoracion: data.hora_valoracion || '',
-            paciente_id: data.paciente_id,
-            nombre_paciente: data.paciente?.nombre || '',
-            empresa_cliente_id: data.empresa_cliente_id,
-            nombre_empresa: data.empresa_cliente?.razon_social || '',
-            puesto_trabajo_id: data.puesto_trabajo_id,
-            nombre_puesto: data.puesto_trabajo?.nombre || '',
-            ergonomo_id: data.ergonomo_id || data.medico_id,
-            paciente: data.paciente || null
-          },
-          antecedentes: {
-            ...this.form.antecedentes,
-            hf_obesidad: data.hf_obesidad || 'no',
-            hf_diabetes: data.hf_diabetes || 'no',
-            hf_hipertension: data.hf_hipertension || 'no',
-            hf_cancer: data.hf_cancer || 'no',
-            hf_nefropatia: data.hf_nefropatia || 'no',
-            hf_otros: data.hf_otros || 'no',
-            am_obesidad: data.am_obesidad || 'no',
-            am_diabetes: data.am_diabetes || 'no',
-            am_hipertension: data.am_hipertension || 'no',
-            am_dislipidemias: data.am_dislipidemias || 'no',
-            am_cardiovasculares: data.am_cardiovasculares || 'no',
-            am_renales: data.am_renales || 'no',
-            am_hepaticos: data.am_hepaticos || 'no',
-            am_musculo_esqueleticos: data.am_musculo_esqueleticos || 'no',
-            am_urologicos: data.am_urologicos || 'no',
-            am_infecciosos: data.am_infecciosos || 'no',
-            menarca_anos: data.menarca_anos || null,
-            ciclos: data.ciclos || '',
-            fum: data.fum || '',
-            metodo_planificacion: data.metodo_planificacion || '',
-            cirugias: data.cirugias || 'no',
-            cirugias_especifique: data.cirugias_especifique || '',
-            consumo_medicamentos: data.consumo_medicamentos || '',
-            alergias: data.alergias || '',
-            am_otros: data.am_otros || ''
-          },
-          habitos: {
-            ...this.form.habitos,
-            tabaquismo: data.tabaquismo || false,
-            alcoholismo: data.alcoholismo || false,
-            varia_consumo_estres: data.varia_consumo_estres || false,
-            varia_consumo_tristeza: data.varia_consumo_tristeza || false,
-            escala_fagerstrm: data.escala_fagerstrm || 0,
-            escala_audit: data.escala_audit || 0,
-            frecuencia_consumo_alcohol: data.frecuencia_consumo_alcohol || '',
-            refiere_diarrea: data.refiere_diarrea || false,
-            refiere_estrenimiento: data.refiere_estrenimiento || false,
-            refiere_gastritis: data.refiere_gastritis || false,
-            refiere_ulcera: data.refiere_ulcera || false,
-            refiere_nauseas: data.refiere_nauseas || false,
-            refiere_reflujo: data.refiere_reflujo || false,
-            refiere_vomitos: data.refiere_vomitos || false,
-            refiere_colitis: data.refiere_colitis || false
-          },
-          factoresLaborales: {
-            ...this.form.factoresLaborales,
-            tension_emocional: data.tension_emocional || 'no',
-            alta_responsabilidad: data.alta_responsabilidad || 'no',
-            carga_excesiva_trabajo: data.carga_excesiva_trabajo || 'no',
-            turno_rotativo: data.turno_rotativo || 'no',
-            turno_nocturno: data.turno_nocturno || 'no',
-            trabajo_repetitivo: data.trabajo_repetitivo || 'no',
-            condiciones_entorno: data.condiciones_entorno || 'no',
-            carga_trabajo: data.carga_trabajo || 'no',
-            falta_control_trabajo: data.falta_control_trabajo || 'no',
-            jornadas_trabajo: data.jornadas_trabajo || 'no',
-            interferencia_trabajo_familia: data.interferencia_trabajo_familia || 'no',
-            relaciones_interpersonales: data.relaciones_interpersonales || 'no',
-            violencia_laboral: data.violencia_laboral || 'no',
-            acontecimientos_traumaticos: data.acontecimientos_traumaticos || 'no'
-          },
-          examenMedico: {
-            ...this.form.examenMedico,
-            examen_medico_realizado: data.examen_medico_realizado || false,
-            seguimiento_requerido: data.seguimiento_requerido || false,
-            plazo_proximo_seguimiento: data.plazo_proximo_seguimiento || null,
-            diagnostico_ergonomico: data.diagnostico_ergonomico || '',
-            observaciones_examen: data.observaciones_examen || '',
-            recomendaciones_examen: data.recomendaciones_examen || '',
-            restricciones_laborales: data.restricciones_laborales || '',
-            derivacion_especialista: data.derivacion_especialista || '',
-            derivacion_especialista_otro: data.derivacion_especialista_otro || '',
-            hallazgos: data.hallazgos || {}
-          },
-          hallazgos: {
-            ...this.form.hallazgos,
-            rula_puntuacion: data.rula_puntuacion || null,
-            rula_nivel_riesgo: data.rula_nivel_riesgo || '',
-            reba_puntuacion: data.reba_puntuacion || null,
-            reba_nivel_accion: data.reba_nivel_accion || '',
-            niosh_indice_levantamiento: data.niosh_indice_levantamiento || null,
-            niosh_es_seguro: data.niosh_es_seguro || false,
-            posturas_forzadas: data.posturas_forzadas || false,
-            movimientos_repetitivos: data.movimientos_repetitivos || false,
-            manipulacion_cargas: data.manipulacion_cargas || false,
-            carga_maxima_manipulada_kg: data.carga_maxima_manipulada_kg || null
-          },
-          instrumento_utilizado: data.instrumento_utilizado || '',
-          otro_descripcion: data.otro_descripcion || '',
-          otro_puntuacion: data.otro_puntuacion || null,
-          aptitud: data.aptitud || '',
-          restricciones: data.restricciones || '',
-          recomendaciones: data.recomendaciones || '',
-          seguimiento_requerido: data.seguimiento_requerido || false,
-          plazo_proximo_seguimiento: data.plazo_proximo_seguimiento || null
-        };
-
-        console.log('✅ Valoración ergonómica cargada correctamente:', this.form);
-
+            ...this.form.datosBasicos,
+            ...(registro.datos?.datosBasicos || {}),
+            folio: registro.folio,
+            paciente_id: registro.paciente_id,
+            empresa_cliente_id: registro.empresa_cliente_id,
+            puesto_trabajo_id: registro.puesto_trabajo_id,
+            tipo_evaluacion: registro.tipo_evaluacion,
+            fecha_valoracion: registro.fecha_valoracion ? registro.fecha_valoracion.slice(0, 10) : '',
+            hora_valoracion: registro.hora_valoracion ? registro.hora_valoracion.slice(0, 5) : '',
+            paciente: registro.paciente || null,
+            nombre_paciente: registro.paciente?.nombre || '',
+            nombre_empresa: registro.empresa?.razon_social || '',
+            nombre_puesto: registro.puesto?.nombre || ''
+          }
+        }
       } catch (error) {
-        console.error('❌ Error al cargar valoración ergonómica:', error);
-        alert('Error al cargar la valoración: ' + (error.response?.data?.message || error.message));
-        window.location.href = '/clinica/ergonomia';
+        console.error('Error al cargar la valoración ergonómica:', error)
+        await notificar('error', 'Error al cargar la valoración', error.response?.data?.message || error.message)
+        window.location.href = '/clinica/ergonomia'
       } finally {
-        this.cargando = false;
+        this.cargando = false
       }
     },
 
@@ -732,14 +757,14 @@ export default {
         
         // ✅ CORREGIDO: Usar am_otros en lugar de patologicos.otros
         if (data.antecedentes_medicos && data.antecedentes_medicos !== 'Ninguno') {
-          this.$set(this.form.antecedentes, 'am_otros', data.antecedentes_medicos);
+            this.form.antecedentes.am_otros = data.antecedentes_medicos;
         }
 
         console.log('✅ Datos del paciente prellenados correctamente:', this.form.datosBasicos);
 
       } catch (error) {
         console.error('❌ Error al cargar datos del paciente:', error);
-        alert('No se pudieron cargar los datos del paciente.');
+        await notificar('error', 'Error al cargar el paciente', 'No se pudieron cargar los datos del paciente.')
       } finally {
         this.cargando = false;
       }
