@@ -32,7 +32,7 @@
                 type="radio"
                 name="grupoInstrumento"
                 :value="instrumento.key"
-                v-model="form.instrumento_utilizado"
+                :checked="form.instrumento_utilizado === instrumento.key"
                 @change="onInstrumentoSeleccionado(instrumento.key)"
                 style="position: absolute; opacity: 0;"
               />

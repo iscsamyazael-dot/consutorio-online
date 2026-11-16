@@ -9,12 +9,10 @@
       <label class="block text-sm">Nivel de Acción</label>
       <select v-model="form.reba_nivel_accion" class="input-field w-full">
         <option value="">Seleccionar...</option>
-        <option value="insignificante">Insignificante</option>
-        <option value="bajo">Bajo</option>
-        <option value="medio">Medio</option>
-        <option value="alto">Alto</option>
-        <option value="muy_alto">Muy Alto</option>
-        <option value="cambios_inmediatos">Cambios Inmediatos</option>
+        <option value="aceptable">Aceptable</option>
+        <option value="investigar">Investigar</option>
+        <option value="cambios_pronto">Cambios pronto</option>
+        <option value="cambios_inmediatos">Cambios inmediatos</option>
       </select>
     </div>
   </div>

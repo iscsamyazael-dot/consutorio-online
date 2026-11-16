@@ -10,14 +10,11 @@
       <input v-model="form.niosh_es_seguro" type="checkbox" class="w-4 h-4" />
     </div>
     <div class="grid grid-cols-2 gap-4 mt-4">
-      <label class="block text-sm">Peso Real (kg)</label>
-      <input v-model.number="form.niosh_peso_real_kg" type="number" min="0" step="0.1" class="input-field w-full" />
       <label class="block text-sm">Peso Recomendado (kg)</label>
-      <input v-model.number="form.niosh_peso_recomendado_kg" type="number" min="0" step="0.1" class="input-field w-full" />
+      <div class="input-field w-full bg-light">{{ pesoRecomendadoTexto }}</div>
     </div>
   </div>
 </template>
-
 <script>
 export default {
   name: 'NIOSHForm',
@@ -29,6 +26,12 @@ export default {
     form: {
       get() { return this.modelValue },
       set(v) { this.$emit('update:modelValue', v) }
+    },
+    pesoRecomendadoTexto() {
+      const indice = this.form.niosh_indice_levantamiento
+      const peso = this.form.peso_manipulado_kg
+      if (!indice || indice <= 0 || !peso) return '—'
+      return Math.max(5, 25 / indice).toFixed(1)
     }
   }
 }

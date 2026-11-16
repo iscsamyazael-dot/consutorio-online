@@ -12,22 +12,22 @@
           Registro de factores de riesgo ergonómicos observados durante la evaluación. Cada factor tiene una puntuación de riesgo.
         </p>
 
-        <!-- Fila 1: Puntuaciones de instrumentos principales -->
+        <!-- Fila 1: Puntuaciones de instrumentos (se capturan en la hoja 5) -->
         <div class="row mb-4">
           <div class="col-md-4 mb-3">
-            <label class="font-weight-bold d-block mb-1">RULA Puntuación (1-7)</label>
-            <input v-model.number="form.rula_puntuacion" type="number" min="1" max="7" class="form-control" />
+            <label class="font-weight-bold d-block mb-1">RULA Puntuación</label>
+            <div class="form-control bg-light">{{ instrumento.rula_puntuacion ?? '—' }}</div>
             <small class="text-muted">Nivel: {{ getRulaNivel }}</small>
           </div>
           <div class="col-md-4 mb-3">
-            <label class="font-weight-bold d-block mb-1">REBA Puntuación (1-15)</label>
-            <input v-model.number="form.reba_puntuacion" type="number" min="1" max="15" class="form-control" />
+            <label class="font-weight-bold d-block mb-1">REBA Puntuación</label>
+            <div class="form-control bg-light">{{ instrumento.reba_puntuacion ?? '—' }}</div>
             <small class="text-muted">Nivel: {{ getRebaNivel }}</small>
           </div>
           <div class="col-md-4 mb-3">
-            <label class="font-weight-bold d-block mb-1">NIOSH Índice (0-10)</label>
-            <input v-model.number="form.niosh_indice_levantamiento" type="number" min="0" max="10" step="0.1" class="form-control" />
-            <small class="text-muted">Seguro: {{ form.niosh_es_seguro ? 'Sí' : 'No' }}</small>
+            <label class="font-weight-bold d-block mb-1">NIOSH Índice</label>
+            <div class="form-control bg-light">{{ instrumento.niosh_indice_levantamiento ?? '—' }}</div>
+            <small class="text-muted">Seguro: {{ instrumento.niosh_es_seguro ? 'Sí' : 'No' }}</small>
           </div>
         </div>
 
@@ -177,7 +177,8 @@
 export default {
   name: 'HallazgosErgonomia',
   props: {
-    modelValue: { type: Object, required: true }
+    modelValue: { type: Object, required: true },
+    instrumento: { type: Object, default: () => ({}) }
   },
   emits: ['update:modelValue'],
   data() {
@@ -199,26 +200,26 @@ export default {
       set(val) { this.$emit('update:modelValue', val) }
     },
     getRulaNivel() {
-      if (!this.form.rula_puntuacion) return 'Sin valorar'
-      const puntuacion = this.form.rula_puntuacion
-      if (puntuacion <= 2) return 'Insignificante'
+      const puntuacion = this.instrumento.rula_puntuacion
+      if (!puntuacion) return 'Sin valorar'
+      if (puntuacion <= 2) return 'Negligible'
       if (puntuacion <= 4) return 'Bajo'
-      if (puntuacion <= 6) return 'Medio'
+      if (puntuacion <= 6) return 'Moderado'
       return 'Alto'
     },
     getRebaNivel() {
-      if (!this.form.reba_puntuacion) return 'Sin valorar'
-      const puntuacion = this.form.reba_puntuacion
-      if (puntuacion <= 3) return 'Insignificante'
-      if (puntuacion <= 6) return 'Bajo'
-      if (puntuacion <= 9) return 'Medio'
-      if (puntuacion <= 12) return 'Alto'
+      const puntuacion = this.instrumento.reba_puntuacion
+      if (!puntuacion) return 'Sin valorar'
+      if (puntuacion <= 1) return 'Negligible'
+      if (puntuacion <= 3) return 'Bajo'
+      if (puntuacion <= 7) return 'Moderado'
+      if (puntuacion <= 10) return 'Alto'
       return 'Muy Alto'
     },
     nivelRiesgoTotal() {
-      const rula = this.form.rula_puntuacion || 0
-      const reba = this.form.reba_puntuacion || 0
-      const niosh = this.form.niosh_indice_levantamiento || 0
+      const rula = this.instrumento.rula_puntuacion || 0
+      const reba = this.instrumento.reba_puntuacion || 0
+      const niosh = this.instrumento.niosh_indice_levantamiento || 0
 
       let riesgoScore = 0
       if (rula >= 6) riesgoScore += 3
@@ -262,9 +263,9 @@ export default {
       }
     },
     pesoRecomendado() {
-      if (!this.form.niosh_indice_levantamiento) return 'N/A'
-      const indice = this.form.niosh_indice_levantamiento
-      if (indice <= 0) return 0
+      if (!this.instrumento.niosh_indice_levantamiento) return 'N/A'
+      const indice = this.instrumento.niosh_indice_levantamiento
+      if (indice <= 0) return 0.0
       return Math.max(5, 25 / indice).toFixed(1)
     },
     calcularAlturaIdeal() {

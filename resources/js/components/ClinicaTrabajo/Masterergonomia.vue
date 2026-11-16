@@ -187,11 +187,18 @@
         <div id="hoja4" class="tab-pane fade" role="tabpanel">
           <examen-medico-ergonomia
             :modelValue="form.examenMedico"
+            :sugerencias="sugerenciasIA?.examenMedico || {}"
             @update:modelValue="form.examenMedico = $event"
           ></examen-medico-ergonomia>
 
           <hallazgos-ergonomia
             :modelValue="form.hallazgos"
+            :instrumento="{
+              rula_puntuacion: form.rula_puntuacion,
+              reba_puntuacion: form.reba_puntuacion,
+              niosh_indice_levantamiento: form.niosh_indice_levantamiento,
+              niosh_es_seguro: form.niosh_es_seguro
+            }"
             @update:modelValue="form.hallazgos = $event"
           ></hallazgos-ergonomia>
         </div>
@@ -203,14 +210,14 @@
             @update:modelValue="form = $event"
           ></selector-instrumento-ergonomia>
 
-          <instrumento-especifico-ergonomia
-            :modelValue="form"
-            @update:modelValue="form = $event"
-          ></instrumento-especifico-ergonomia>
-
           <aptitud-dictamen-ergonomia
             :modelValue="form"
             @update:modelValue="form = $event"
+            :sugerencias="sugerenciasIA || {}"
+            :confirmado="confirmaDictamenIA"
+            :cargandoIA="cargandoIA"
+            @update:confirmado="confirmaDictamenIA = $event"
+            @proponer="solicitarDictamen"
           ></aptitud-dictamen-ergonomia>
         </div>
       </div>
@@ -286,11 +293,21 @@ const confirmarAccion = async ({ title, texto, confirmText, cancelText }) => {
 const CAMPOS_INSTRUMENTO = [
   'rula_puntuacion', 'rula_nivel_riesgo', 'rula_areas_evaluadas',
   'reba_puntuacion', 'reba_nivel_accion', 'reba_areas_evaluadas',
-  'niosh_indice_levantamiento', 'niosh_es_seguro', 'niosh_peso_real_kg',
-  'niosh_peso_recomendado_kg', 'niosh_variables_evaluadas', 'justificacion_instrumento'
+  'niosh_indice_levantamiento', 'niosh_es_seguro', 'niosh_variables_evaluadas',
+  'otro_descripcion', 'otro_puntuacion',
+  'justificacion_instrumento'
 ]
 
-const BOOLEANOS_HALLAZGOS = ['posturas_forzadas', 'movimientos_repetitivos', 'manipulacion_cargas']
+const BOOLEANOS_HALLAZGOS = [
+  'posturas_forzadas', 'movimientos_repetitivos', 'manipulacion_cargas',
+  'cargas_maximas_manipuladas', 'exposicion_calor', 'exposicion_vibraciones',
+  'iluminacion_insuficiente'
+]
+
+const CAMPOS_HALLAZGOS = [
+  'peso_manipulado_kg', 'altura_trabajador_cm', 'frecuencia_levantamiento',
+  'postura_cuello', 'postura_hombros', 'postura_muneca'
+]
 
 const VACIO_A_NULL = (valor) => (valor === '' || valor === undefined ? null : valor)
 
@@ -324,13 +341,15 @@ export default {
       sessionUuid: null,
       usaIA: false,
       confirmaDictamenIA: false,
+      sugerenciasIA: null,
+      cargandoIA: false,
 
       // Estado centralizado del formulario dividido por secciones lógicas
       form: {
         datosBasicos: {
           folio: '',
           tipo_evaluacion: '',
-          fecha_valoracion: new Date().toISOString().split('T')[0],
+          fecha_valoracion: new Date().toLocaleDateString('en-CA'),
           hora_valoracion: '',
           paciente_id: null,
           nombre_paciente: '',
@@ -338,7 +357,7 @@ export default {
           nombre_empresa: '',
           puesto_trabajo_id: null,
           nombre_puesto: '',
-          ergonomo_id: null,
+          //ergonomo_id: null,
           paciente: null
         },
         antecedentes: {
@@ -366,7 +385,9 @@ export default {
           cirugias_especifique: '',
           consumo_medicamentos: '',
           alergias: '',
-          // ✅ CORREGIDO: Agregar am_otros para antecedentes médicos
+          alergias_especifique: '',
+          consumo_medicamentos: '',
+          medicamentos_especifique: '',
           am_otros: ''
         },
         habitos: {
@@ -406,6 +427,7 @@ export default {
           examen_medico_realizado: false,
           seguimiento_requerido: false,
           plazo_proximo_seguimiento: null,
+          tipo_seguimiento: '',
           diagnostico_ergonomico: '',
           observaciones_examen: '',
           recomendaciones_examen: '',
@@ -433,45 +455,52 @@ export default {
         // Campos de aptitud y dictamen
         aptitud: '',
         restricciones: '',
-        recomendaciones: '',
-        seguimiento_requerido: false,
-        plazo_proximo_seguimiento: null
+        recomendaciones: ''
+        // seguimiento_requerido: false,
+        // plazo_proximo_seguimiento: null
       }
     }
   },
 
   computed: {
     folioErgonomia() {
-      if (!this.form.datosBasicos.folio || this.form.datosBasicos.folio.includes('****')) {
-        const ano = new Date().getFullYear()
-        const random = String(Math.floor(Math.random() * 9000) + 1000)
-        return `ERG-${ano}-${random}`
-      }
-      return this.form.datosBasicos.folio
+      return this.form.datosBasicos.folio || ''
     }
   },
 
   methods: {
     detectarRuta() {
-      const pathname = window.location.pathname
+      const pathname = window.location.pathname.replace(/\/$/, '')
+      const coincide = pathname.match(/^\/ficha-ergonomia\/(\d+)$/)
 
-      // Detecta /ergonomia/nueva o /ergonomia (sin ID)
-      if (pathname.includes('/ficha-ergonomia') ||
-          pathname === '/ergonomia' ||
-          pathname.endsWith('/ergonomia')) {
-        this.esNuevo = true
+      if (!coincide) {
+        this.esNuevo = false
         this.esEdicion = false
+        return
       }
-      // Detecta /ergonomia/{id} para edición
-      else if (/\/ficha-ergonomia\/\d+/.test(pathname)) {
+
+      const pacienteId = Number(coincide[1])
+      const valoracionId = new URLSearchParams(window.location.search).get('valoracion')
+
+      if (valoracionId) {
         this.esNuevo = false
         this.esEdicion = true
-        this.cargarDatosExistentes()
-      }
-      // Cualquier otra ruta muestra el listado
-      else {
-        this.esNuevo = false
+        this.cargarDatosExistentes(valoracionId)
+      } else {
+        this.esNuevo = true
         this.esEdicion = false
+        this.obtenerFolioSugerido()
+        this.cargarDatosPaciente(pacienteId)
+        this.sessionUuid = this.sessionUuid || crypto.randomUUID()
+      }
+    },
+
+    async obtenerFolioSugerido() {
+      try {
+        const { data } = await clinicaTrabajo.get('/ergonomia/create')
+        this.form.datosBasicos.folio = data.folio
+      } catch (error) {
+        console.error('No se pudo obtener el folio sugerido:', error)
       }
     },
 
@@ -584,9 +613,17 @@ export default {
       const booleanos = {}
       BOOLEANOS_HALLAZGOS.forEach(c => { booleanos[c] = !!h[c] })
 
+      const hallazgos = {}
+      CAMPOS_HALLAZGOS.forEach(c => { hallazgos[c] = VACIO_A_NULL(h[c]) })
+
       return {
         ...instrumento,
         ...booleanos,
+        ...hallazgos,
+        niosh_peso_real_kg: VACIO_A_NULL(h.peso_manipulado_kg),
+        niosh_peso_recomendado_kg: (this.form.niosh_indice_levantamiento > 0 && h.peso_manipulado_kg)
+          ? Number(Math.max(5, 25 / this.form.niosh_indice_levantamiento).toFixed(1))
+          : null,
         paciente_id: b.paciente_id,
         empresa_cliente_id: b.empresa_cliente_id,
         puesto_trabajo_id: b.puesto_trabajo_id,
@@ -597,8 +634,8 @@ export default {
         aptitud: VACIO_A_NULL(this.form.aptitud),
         restricciones_descripcion: VACIO_A_NULL(this.form.restricciones),
         recomendaciones_puesto: VACIO_A_NULL(this.form.recomendaciones),
-        seguimiento_requerido: !!this.form.seguimiento_requerido,
-        plazo_proximo_seguimiento: VACIO_A_NULL(this.form.plazo_proximo_seguimiento),
+        seguimiento_requerido: !!ex.seguimiento_requerido,
+        plazo_proximo_seguimiento: VACIO_A_NULL(ex.plazo_proximo_seguimiento),
         examen_medico_realizado: !!ex.examen_medico_realizado,
         exploracion_osteomuscular_hallazgos: VACIO_A_NULL(ex.observaciones_examen),
         diagnostico_relacionado: VACIO_A_NULL(ex.diagnostico_ergonomico),
@@ -620,6 +657,10 @@ export default {
       if (!b.tipo_evaluacion) return notificar('warning', 'Falta el tipo de evaluación', 'Selecciona el tipo de evaluación en la Hoja 1.')
       if (!this.form.instrumento_utilizado) return notificar('warning', 'Falta el instrumento', 'Selecciona el instrumento en la Hoja 5.')
       if (!this.form.aptitud) return notificar('warning', 'Falta la aptitud', 'Selecciona la aptitud en la Hoja 5 para poder guardar.')
+
+      if (this.sugerenciasIA && !this.confirmaDictamenIA) {
+        return notificar('warning', 'Dictamen sin confirmar', 'Revisa el dictamen sugerido por la IA y marca "Confirmo" en la Hoja 5 antes de guardar.')
+      }
 
       this.guardando = true
       try {
@@ -669,6 +710,58 @@ export default {
         this.guardando = false
       }
     },
+
+   async solicitarDictamen() {
+      this.cargandoIA = true
+      try {
+        const { data } = await clinicaTrabajo.post('/ergonomia-consultarIA', {
+          modo: 'recomendar',
+          contexto: this.contextoIA(),
+          session_uuid: this.sessionUuid,
+          valoracion_id: this.valoracionId
+        })
+        this.sugerenciasIA = data.campos_completados || {}
+        this.usaIA = true
+
+        // La IA devuelve el seguimiento a nivel superior; lo movemos a examenMedico
+        const campos = { ...(data.campos_completados || {}) }
+        campos.examenMedico = {
+          ...(campos.examenMedico || {}),
+          seguimiento_requerido: campos.seguimiento_requerido,
+          plazo_proximo_seguimiento: campos.plazo_proximo_seguimiento
+        }
+        delete campos.seguimiento_requerido
+        delete campos.plazo_proximo_seguimiento
+
+        this.completarDictamen(campos)
+
+        if (data.advertencias?.length) console.warn('Advertencias de la IA:', data.advertencias)
+      } catch (error) {
+        console.error('Error al proponer dictamen:', error)
+        await notificar('error', 'No se pudo proponer el dictamen', error.response?.data?.message || error.message)
+      } finally {
+        this.cargandoIA = false
+      }
+    },
+    
+    completarDictamen(campos) {
+      const rellenar = (destino, origen) => {
+        for (const clave in origen) {
+          const valor = origen[clave]
+          if (valor === null || valor === undefined || valor === '') continue
+          if (typeof valor === 'object' && !Array.isArray(valor)) {
+            destino[clave] = destino[clave] || {}
+            rellenar(destino[clave], valor)
+          } else if (destino[clave] === null || destino[clave] === undefined || destino[clave] === '' || destino[clave] === false) {
+            destino[clave] = valor
+          }
+        }
+      }
+      const { aptitud, ...resto } = campos
+      rellenar(this.form, resto)
+    },
+
+
     imprimir() {
       if (!this.valoracionId) {
         return notificar('warning', 'Guarda primero', 'El reporte se genera a partir de una valoración guardada.')
@@ -686,13 +779,8 @@ export default {
       if (ok) window.location.href = '/clinica/ergonomia'
     },
 
-    async cargarDatosExistentes() {
-      const id = window.location.pathname.match(/\/ficha-ergonomia\/(\d+)\/?$/)?.[1]
-      if (!id) {
-        console.warn('No se encontró un ID válido en la URL')
-        return
-      }
-
+    async cargarDatosExistentes(id) {
+      
       this.cargando = true
       try {
         const response = await clinicaTrabajo.get(`/ergonomia/${id}`)
@@ -747,12 +835,13 @@ export default {
           nombre_empresa: laboral.empresa_cliente?.razon_social || '',
           puesto_trabajo_id: laboral.puesto_trabajo_id || null,
           nombre_puesto: laboral.puesto_trabajo?.nombre || '',
-          folio: this.folioErgonomia
+          
         };
 
         // ✅ CORREGIDO: Usar propiedades que sí existen
         if (data.alergias) {
-          this.form.antecedentes.alergias = data.alergias;
+          this.form.antecedentes.alergias = 'si'
+          this.form.antecedentes.alergias_especifique = data.alergias
         }
         
         // ✅ CORREGIDO: Usar am_otros en lugar de patologicos.otros
@@ -773,26 +862,6 @@ export default {
 
   mounted() {
     this.detectarRuta();
-
-    // Inicializar folio si es nuevo
-    if (this.esNuevo && !this.form.datosBasicos.folio) {
-      this.form.datosBasicos.folio = this.folioErgonomia;
-    }
-
-    // ✅ EXTRAER ID DIRECTAMENTE DE LA URL
-    const pathname = window.location.pathname;
-    // La URL es: /clinica/ergonomia/nueva/4
-    // Queremos extraer el "4" del final
-    const partes = pathname.split('/');
-    const ultimoSegmento = partes[partes.length - 1];
-    const pacienteId = !isNaN(ultimoSegmento) ? parseInt(ultimoSegmento) : null;
-
-    if (pacienteId && this.esNuevo) {
-      console.log('🔍 ID detectado en URL:', pacienteId);
-      this.cargarDatosPaciente(pacienteId);
-    } else {
-      console.log('ℹ️ No se detectó ID válido en la URL o no es modo nuevo');
-    }
   }
 }
 </script>

@@ -12,74 +12,19 @@
           Indique si el paciente está expuesto a los siguientes factores de riesgo en su entorno laboral.
         </p>
 
-        <!-- Fila 1: Factores principales -->
+       
+        <!-- Factores laborales: todos en una sola cuadrícula -->
         <div class="row mb-4">
-          <div v-for="(factor, index) in factoresLaborales.slice(0, 4)"
-               :key="factor.key"
-               class="col-md-3">
-            <div class="border rounded p-3 hover:bg-light transition">
-              <label class="font-weight-bold d-block mb-2">
-                {{ factor.label }}
-              </label>
+          <div v-for="factor in factoresLaborales" :key="factor.key" class="col-md-3 mb-3">
+            <div class="border rounded p-3">
+              <label class="font-weight-bold d-block mb-2">{{ factor.label }}</label>
               <div class="btn-group-toggle" data-toggle="buttons">
-                <label v-for="opcion in opcionesSI_NO"
-                       :key="opcion.value"
-                       class="btn btn-outline-secondary btn-sm m-1 rounded-pill"
-                       :class="[form[factor.key] === opcion.value ? 'active' : '']">
-                  <input type="radio"
-                         :name="factor.key"
-                         :value="opcion.value"
-                         :checked="form[factor.key] === opcion.value"
-                         @change="updateField(factor.key, opcion.value)"
-                         class="position-static">
-                  {{ opcion.label }}
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Fila 2: Factores restantes -->
-        <div class="row mb-4">
-          <div v-for="(factor, index) in factoresLaborales.slice(4, 8)"
-               :key="factor.key"
-               class="col-md-3">
-            <div class="border rounded p-3 hover:bg-light transition">
-              <label class="font-weight-bold d-block mb-2">
-                {{ factor.label }}
-              </label>
-              <div class="btn-group-toggle" data-toggle="buttons">
-                <label v-for="opcion in opcionesSI_NO"
-                       :key="opcion.value"
-                       class="btn btn-outline-secondary btn-sm m-1 rounded-pill"
-                       :class="[form[factor.key] === opcion.value ? 'active' : '']">
-                  <input type="radio"
-                         :name="factor.key"
-                         :value="opcion.value"
-                         :checked="form[factor.key] === opcion.value"
-                         @change="updateField(factor.key, opcion.value)"
-                         class="position-static">
-                  {{ opcion.label }}
-                </label>
-              </div>
-            </div>
-          </div>
-          <div v-if="factoresLaborales.length > 8" :key="'otros'" class="col-md-3">
-            <div class="border rounded p-3 hover:bg-light transition">
-              <label class="font-weight-bold d-block mb-2">
-                Otros
-              </label>
-              <div class="btn-group-toggle" data-toggle="buttons">
-                <label v-for="opcion in opcionesSI_NO"
-                       :key="opcion.value"
-                       class="btn btn-outline-secondary btn-sm m-1 rounded-pill"
-                       :class="[form.ocurrencias_traumaticos === opcion.value ? 'active' : '']">
-                  <input type="radio"
-                         name="ocurrencias_traumaticos"
-                         :value="opcion.value"
-                         :checked="form.ocurrencias_traumaticos === opcion.value"
-                         @change="updateField('ocurrencias_traumaticos', opcion.value)"
-                         class="position-static">
+                <label v-for="opcion in opcionesSI_NO" :key="opcion.value"
+                      class="btn btn-outline-secondary btn-sm m-1 rounded-pill"
+                      :class="[form[factor.key] === opcion.value ? 'active' : '']">
+                  <input type="radio" :name="factor.key" :value="opcion.value"
+                        :checked="form[factor.key] === opcion.value"
+                        @change="updateField(factor.key, opcion.value)" class="position-static">
                   {{ opcion.label }}
                 </label>
               </div>
@@ -97,60 +42,13 @@
           <div class="card-body">
             <div class="row">
               <!-- Fila de condiciones de entorno -->
-              <div v-for="(condicion, index) in condicionesEntorno.slice(0, 3)"
-                   :key="condicion.key"
-                   class="col-md-4 mb-3">
+              <div v-for="condicion in condicionesEntorno" :key="condicion.key" class="col-md-4 mb-3">
                 <div class="border rounded p-2">
-                  <label class="font-weight-bold d-block mb-1">
-                    {{ condicion.label }}
-                  </label>
+                  <label class="font-weight-bold d-block mb-1">{{ condicion.label }}</label>
                   <div class="form-check">
-                    <input type="checkbox"
-                           class="form-check-input"
-                           :id="condicion.key"
-                           v-model="form[condicion.key]"
-                    >
-                    <label class="form-check-label" :for="condicion.key">
-                      {{ condicion.label }}
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div v-for="(condicion, index) in condicionesEntorno.slice(3, 6)"
-                   :key="condicion.key"
-                   class="col-md-4 mb-3">
-                <div class="border rounded p-2">
-                  <label class="font-weight-bold d-block mb-1">
-                    {{ condicion.label }}
-                  </label>
-                  <div class="form-check">
-                    <input type="checkbox"
-                           class="form-check-input"
-                           :id="condicion.key"
-                           v-model="form[condicion.key]"
-                    >
-                    <label class="form-check-label" :for="condicion.key">
-                      {{ condicion.label }}
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div v-for="(condicion, index) in condicionesEntorno.slice(6, 9)"
-                   :key="condicion.key"
-                   class="col-md-4 mb-3">
-                <div class="border rounded p-2">
-                  <label class="font-weight-bold d-block mb-1">
-                    {{ condicion.label }}
-                  </label>
-                  <div class="form-check">
-                    <input type="checkbox"
-                           class="form-check-input"
-                           :id="condicion.key"
-                           v-model="form[condicion.key]"
-                    >
-                    <label class="form-check-label" :for="condicion.key">
-                      {{ condicion.label }}
-                    </label>
+                    <input type="checkbox" class="form-check-input" :id="condicion.key"
+                          v-model="form[condicion.key]">
+                    <label class="form-check-label" :for="condicion.key">{{ condicion.label }}</label>
                   </div>
                 </div>
               </div>
@@ -159,7 +57,7 @@
         </div>
 
         <!-- RESUMEN DE FACTORES DE RIESGO -->
-        <div v-if="[form.tension_emocional, form.alta_responsabilidad, form.carga_excesiva_trabajo, form.turno_rotativo, form.turno_nocturno, form.trabajo_repetitivo, form.condiciones_entorno, form.carga_trabajo, form.falta_control_trabajo, form.jornadas_trabajo, form.interferencia_trabajo_familia, form.relaciones_interpersonales, form.violencia_laboral, form.ocurrencias_traumaticos].includes('si')" class="mt-4 p-3 bg-light border border-left border-success">
+        <div v-if="[form.tension_emocional, form.alta_responsabilidad, form.carga_excesiva_trabajo, form.turno_rotativo, form.turno_nocturno, form.trabajo_repetitivo, form.condiciones_entorno, form.carga_trabajo, form.falta_control_trabajo, form.jornadas_trabajo, form.interferencia_trabajo_familia, form.relaciones_interpersonales, form.violencia_laboral, form.acontecimientos_traumaticos].includes('si')" class="mt-4 p-3 bg-light border border-left border-success">
           <h5 class="font-weight-bold text-success mb-3 flex items-center gap-2">
             <i class="fas fa-info-circle mr-2"></i>
             Factores de Riesgo Laboral Identificados
@@ -180,7 +78,7 @@
             <span v-if="form.interferencia_trabajo_familia === 'si'" class="badge badge-pill badge-success p-2">Interferencia trabajo-familia</span>
             <span v-if="form.relaciones_interpersonales === 'si'" class="badge badge-pill badge-success p-2">Relaciones interpersonales</span>
             <span v-if="form.violencia_laboral === 'si'" class="badge badge-pill badge-success p-2">Violencia laboral</span>
-            <span v-if="form.ocurrencias_traumaticos === 'si'" class="badge badge-pill badge-success p-2">Acontecimientos traumáticos</span>
+            <span v-if="form.acontecimientos_traumaticos === 'si'" class="badge badge-pill badge-success p-2">Acontecimientos traumáticos</span>
           </div>
         </div>
       </div>
@@ -214,7 +112,7 @@ export default {
         { key: 'interferencia_trabajo_familia', label: 'Interferencia trabajo-familia' },
         { key: 'relaciones_interpersonales', label: 'Problemas de relaciones interpersonales' },
         { key: 'violencia_laboral', label: 'Violencia laboral' },
-        { key: 'ocurrencias_traumaticos', label: 'Acontecimientos traumáticos laborales' }
+        { key: 'acontecimientos_traumaticos', label: 'Acontecimientos traumáticos laborales' }
       ],
       opcionesSI_NO: [
         { value: 'si', label: 'SÍ' },

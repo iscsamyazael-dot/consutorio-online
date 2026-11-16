@@ -8,6 +8,15 @@
         </h3>
       </div>
       <div class="card-body">
+        <div class="d-flex justify-content-end mb-3">
+            <button type="button" class="btn btn-outline-success" :disabled="cargandoIA" @click="$emit('proponer')">
+              <i class="fas fa-robot mr-1"></i>
+              {{ cargandoIA ? 'Consultando IA...' : 'Proponer dictamen con IA' }}
+            </button>
+        </div>
+        <div v-if="sugerencias.aptitud" class="alert alert-info">
+          Sugerencia de la IA: <strong>{{ sugerencias.aptitud }}</strong>. Selecciónala solo si estás de acuerdo.
+        </div>
         <!-- Aptitud (REQUERIDO) -->
         <div class="mb-4">
           <label class="font-weight-bold d-block mb-2">
@@ -21,12 +30,13 @@
                        [opcion.colorClass]: true
                      }"
                      style="cursor: pointer; transition: all 0.2s;">
-                <input type="radio" :value="opcion.value" v-model="form.aptitud"
-                       @change="updateField('aptitud', opcion.value)"
-                       style="position: absolute; opacity: 0;" required />
+                <input type="radio" :value="opcion.value" :checked="form.aptitud === opcion.value"
+                  @change="updateField('aptitud', opcion.value)"
+                  style="position: absolute; opacity: 0;" required />
                 <div class="text-3xl mb-1" style="font-size: 2rem;">{{ opcion.icon }}</div>
                 <div class="font-weight-bold">{{ opcion.label }}</div>
                 <div class="text-muted small mt-1">{{ opcion.descripcion }}</div>
+                <span v-if="opcion.value === sugerencias.aptitud" class="badge badge-info mt-2">Sugerido por IA</span>
               </label>
             </div>
           </div>
@@ -35,12 +45,18 @@
         <!-- Fila 1: Restricciones y Recomendaciones -->
         <div class="row mb-4">
           <div class="col-md-6 mb-3">
-            <label class="font-weight-bold d-block mb-1">Restricciones / Limitaciones Ergonómicas</label>
+            <label class="font-weight-bold d-block mb-1">
+              Restricciones / Limitaciones Ergonómicas
+              <span v-if="sugerencias.restricciones && form.restricciones === sugerencias.restricciones" class="badge badge-info ml-2">Sugerido por IA</span>
+            </label>
             <textarea v-model="form.restricciones" rows="3" class="form-control"
                       placeholder="Restricciones de postura, fuerza, ..."></textarea>
           </div>
           <div class="col-md-6 mb-3">
-            <label class="font-weight-bold d-block mb-1">Recomendaciones</label>
+            <label class="font-weight-bold d-block mb-1">
+              Recomendaciones
+              <span v-if="sugerencias.recomendaciones && form.recomendaciones === sugerencias.recomendaciones" class="badge badge-info ml-2">Sugerido por IA</span>
+            </label>
             <textarea v-model="form.recomendaciones" rows="3" class="form-control"
                       placeholder="Recomendaciones de ergonomía, cambios de puesto, etc."></textarea>
           </div>
@@ -48,33 +64,21 @@
 
         <!-- Fila 2: Plan de Seguimiento -->
         <div class="mt-4 pt-3 border-top mb-4">
-          <h4 class="font-weight-bold mb-3">
-            <i class="fas fa-calendar mr-2"></i>
-            Plan de Seguimiento Ergonómico
-          </h4>
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <label class="d-flex align-items-center gap-2">
-                <input v-model="form.seguimiento_requerido" type="checkbox"
-                       style="width: 18px; height: 18px; margin-right: 8px;" />
-                <span class="font-weight-bold mb-0">Requiere seguimiento</span>
-              </label>
-            </div>
-            <div v-if="form.seguimiento_requerido" class="col-md-4 mb-3">
-              <label class="font-weight-bold d-block mb-1">Próximo Control *</label>
-              <input v-model="form.plazo_proximo_seguimiento" type="date"
-                     class="form-control" :min="fechaHoy" required />
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="font-weight-bold d-block mb-1">Tipo de Seguimiento</label>
-              <select v-model="form.tipo_seguimiento" class="form-control">
-                <option value="">Seleccionar...</option>
-                <option value="telefonico">Telefónico</option>
-                <option value="presencial">Presencial</option>
-                <option value="telemedicina">Telemedicina</option>
-              </select>
-            </div>
-          </div>
+          <h4 class="font-weight-bold mb-2">Seguimiento</h4>
+          <p class="mb-0">
+            Requiere seguimiento: <strong>{{ form.examenMedico?.seguimiento_requerido ? 'Sí' : 'No' }}</strong>
+            · Próximo control: <strong>{{ form.examenMedico?.plazo_proximo_seguimiento || '—' }}</strong>
+            · Tipo: <strong>{{ form.examenMedico?.tipo_seguimiento || '—' }}</strong>
+          </p>
+          <small class="text-muted">Se define en la hoja 4, Examen Médico.</small>
+        </div>
+
+        <div v-if="hayPropuestaIA" class="mt-4 p-3 border rounded">
+          <label class="d-flex align-items-center mb-0">
+            <input type="checkbox" class="mr-2" :checked="confirmado"
+                   @change="$emit('update:confirmado', $event.target.checked)" />
+            <span class="font-weight-bold">Confirmo que revisé el dictamen sugerido por la IA.</span>
+          </label>
         </div>
 
         <!-- Resumen del dictamen -->
@@ -87,15 +91,15 @@
             </div>
             <div class="col-md-3">
               <span class="font-weight-bold">Seguimiento: </span>
-              {{ form.seguimiento_requerido ? 'Sí' : 'No' }}
+              {{ form.examenMedico?.seguimiento_requerido ? 'Sí' : 'No' }}
             </div>
             <div class="col-md-3">
               <span class="font-weight-bold">Próximo control: </span>
-              {{ form.plazo_proximo_seguimiento || '—' }}
+              {{ form.examenMedico?.plazo_proximo_seguimiento || '—' }}
             </div>
             <div class="col-md-3">
               <span class="font-weight-bold">Tipo: </span>
-              {{ form.tipo_seguimiento || '—' }}
+              {{ form.examenMedico?.tipo_seguimiento || '—' }}
             </div>
           </div>
         </div>
@@ -117,16 +121,18 @@
 export default {
   name: 'AptitudDictamenErgonomia',
   props: {
-    modelValue: { type: Object, required: true }
+    modelValue: { type: Object, required: true },
+    sugerencias: { type: Object, default: () => ({}) },
+    confirmado: { type: Boolean, default: false },
+    cargandoIA: { type: Boolean, default: false }
   },
-  emits: ['update:modelValue'],
+  emits: ['update:modelValue', 'update:confirmado', 'proponer'],
   data() {
     return {
-      fechaHoy: new Date().toISOString().split('T')[0],
       aptitudOpciones: [
-        { value: 'apto', label: 'APTO', icon: '✅', descripcion: 'Sin limitaciones ergonomicas', colorClass: 'bg-green-50' },
-        { value: 'apto_con_restricciones', label: 'APTO CON RESTRICCIONES', icon: '⚠️', descripcion: 'Apto con adaptaciones', colorClass: 'bg-yellow-50' },
-        { value: 'no_apto', label: 'NO APTO', icon: '❌', descripcion: 'No apto por ergonomía severa', colorClass: 'bg-red-50' }
+        { value: 'Apto', label: 'APTO', icon: '✅', descripcion: 'Sin limitaciones ergonómicas', colorClass: 'bg-green-50' },
+        { value: 'Apto con restricciones', label: 'APTO CON RESTRICCIONES', icon: '⚠️', descripcion: 'Apto con adaptaciones', colorClass: 'bg-yellow-50' },
+        { value: 'No apto', label: 'NO APTO', icon: '❌', descripcion: 'No apto por ergonomía severa', colorClass: 'bg-red-50' }
       ]
     }
   },
@@ -141,11 +147,14 @@ export default {
     },
     aptitudBadgeClass() {
       const clases = {
-        apto: 'badge badge-success',
-        apto_con_restricciones: 'badge badge-warning',
-        no_apto: 'badge badge-danger'
+        'Apto': 'badge badge-success',
+        'Apto con restricciones': 'badge badge-warning',
+        'No apto': 'badge badge-danger'
       }
       return clases[this.form.aptitud] || 'badge badge-secondary'
+    },
+    hayPropuestaIA() {
+      return Object.keys(this.sugerencias || {}).length > 0
     }
   },
   methods: {
@@ -198,6 +207,7 @@ export default {
 .badge-warning { background: #fef3c7; color: #92400e; }
 .badge-danger { background: #fee2e2; color: #991b1b; }
 .badge-secondary { background: #f3f4f6; color: #374151; }
+.badge-info { background: #dbeafe; color: #1e40af; }
 
 .form-control {
   border-radius: 4px;

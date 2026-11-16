@@ -188,15 +188,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('comparar-audiometrias', [AudiologiaDELLIController::class, 'compararAudiometrias'])->name('comparar');
             });
         });
-        Route::prefix('clinica/ergonomia')->name('ergonomia.')->group(function () {
-            Route::get('/', [ValoracionErgonomicaController::class, 'index'])->name('index');
-            Route::get('{id}', [ValoracionErgonomicaController::class, 'show'])->name('show');
-            Route::post('/', [ValoracionErgonomicaController::class, 'store'])->name('store');
-            Route::put('{id}', [ValoracionErgonomicaController::class, 'update'])->name('update');
-            Route::delete('{id}', [ValoracionErgonomicaController::class, 'destroy'])->name('destroy');
-            Route::get('{id}/imprimir', [ValoracionErgonomicaController::class, 'imprimir'])->name('imprimir');
-        });
-
+        
         // MEDICINA / ENFERMERÍA (NUEVO)
         // RUTA PARA VER LA VISTA BLADE (Medicina.blade.php)
         Route::get('/clinica/medicina', [ValoracionMedicinaController::class, 'vista'])->name('clinica.medicina.index');

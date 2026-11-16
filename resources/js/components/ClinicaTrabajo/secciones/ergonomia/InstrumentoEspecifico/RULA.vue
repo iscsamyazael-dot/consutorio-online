@@ -9,9 +9,9 @@
       <label class="block text-sm">Nivel de Riesgo</label>
       <select v-model="form.rula_nivel_riesgo" class="input-field w-full">
         <option value="">Seleccionar...</option>
-        <option value="insignificante">Insignificante</option>
+        <option value="negligible">Negligible</option>
         <option value="bajo">Bajo</option>
-        <option value="medio">Medio</option>
+        <option value="moderado">Moderado</option>
         <option value="alto">Alto</option>
       </select>
     </div>

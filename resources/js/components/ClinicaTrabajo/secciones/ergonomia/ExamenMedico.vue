@@ -12,6 +12,10 @@
           Registro de hallazgos clínicos relevantes (dolor, lesiones, etc.) y la decisión sobre seguimiento.
         </p>
 
+        <div v-if="hayHallazgosIA" class="alert alert-info">
+          La IA marcó hallazgos por región. Revísalos y desmarca los que no apliquen.
+        </div>
+
         <!-- Fila 1: Examen médico realizado, Seguimiento requerido, Próximo control -->
         <div class="row mb-4">
           <div class="col-md-4 mb-3">
@@ -65,6 +69,11 @@
                   style="width: 16px; height: 16px; margin-right: 8px;"
                 />
                 <span class="text-sm">{{ region.label }}</span>
+                
+                <span v-if="sugerencias.hallazgos?.[region.key] && form.hallazgos?.[region.key]"
+                  class="badge badge-info ml-2">Sugerido por IA
+                </span>
+
               </label>
             </div>
           </div>
@@ -78,7 +87,12 @@
           </h4>
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label class="font-weight-bold d-block mb-1">Diagnóstico Ergonómico / Clínico</label>
+              <label class="font-weight-bold d-block mb-1">
+                 Diagnóstico Ergonómico / Clínico
+                <span v-if="sugerencias.diagnostico_ergonomico && form.diagnostico_ergonomico === sugerencias.diagnostico_ergonomico"
+                    class="badge badge-info ml-2">Sugerido por IA
+                </span>
+              </label>
               <textarea
                 v-model="form.diagnostico_ergonomico"
                 rows="3"
@@ -106,7 +120,20 @@
           </h4>
           <div class="row">
             <div class="col-md-4 mb-3">
-              <label class="font-weight-bold d-block mb-1">Recomendaciones</label>
+              <label class="font-weight-bold d-block mb-1">Tipo de Seguimiento</label>
+              <select v-model="form.tipo_seguimiento" class="form-control">
+                <option value="">Seleccionar...</option>
+                <option value="telefonico">Telefónico</option>
+                <option value="presencial">Presencial</option>
+                <option value="telemedicina">Telemedicina</option>
+              </select>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="font-weight-bold d-block mb-1">Recomendaciones
+                <span v-if="sugerencias.recomendaciones_examen && form.recomendaciones_examen === sugerencias.recomendaciones_examen"
+                    class="badge badge-info ml-2">Sugerido por IA
+                </span>
+              </label>
               <textarea
                 v-model="form.recomendaciones_examen"
                 rows="3"
@@ -115,7 +142,11 @@
               ></textarea>
             </div>
             <div class="col-md-4 mb-3">
-              <label class="font-weight-bold d-block mb-1">Restricciones Laborales</label>
+              <label class="font-weight-bold d-block mb-1">Restricciones Laborales
+                <span v-if="sugerencias.restricciones_laborales && form.restricciones_laborales === sugerencias.restricciones_laborales"
+                    class="badge badge-info ml-2">Sugerido por IA
+                </span>
+              </label>
               <textarea
                 v-model="form.restricciones_laborales"
                 rows="3"
@@ -153,12 +184,13 @@
 export default {
   name: 'ExamenMedicoErgonomia',
   props: {
-    modelValue: { type: Object, required: true }
+    modelValue: { type: Object, required: true },
+    sugerencias: { type: Object, default: () => ({}) }
   },
   emits: ['update:modelValue'],
   data() {
     return {
-      fechaHoy: new Date().toISOString().split('T')[0],
+      fechaHoy: new Date().toLocaleDateString('en-CA'),
       regionesAnatomicas: [
         { key: 'hallazgo_cervical', label: 'Cervical' },
         { key: 'hallazgo_hombro_derecho', label: 'Hombro Derecho' },
@@ -182,6 +214,9 @@ export default {
     form: {
       get() { return this.modelValue },
       set(val) { this.$emit('update:modelValue', val) }
+    },
+    hayHallazgosIA() {
+      return Object.values(this.sugerencias.hallazgos || {}).some(Boolean)
     }
   },
   methods: {
@@ -192,18 +227,9 @@ export default {
       return this.form.hallazgos[key] || false
     },
     setHallazgo(key, value) {
-      if (!this.form.hallazgos) {
-        this.$emit('update:modelValue', {
-          ...this.form,
-          hallazgos: {}
-        })
-      }
       this.$emit('update:modelValue', {
         ...this.form,
-        hallazgos: {
-          ...this.form.hallazgos,
-          [key]: value
-        }
+        hallazgos: { ...(this.form.hallazgos || {}), [key]: value }
       })
     }
   }
@@ -214,6 +240,8 @@ export default {
 .seccion-examen-medico-ergonomia {
   background: #f8f9fa;
 }
+
+.badge-info { background: #dbeafe; color: #1e40af; }
 
 .card {
   border: 1px solid #dee2e6;

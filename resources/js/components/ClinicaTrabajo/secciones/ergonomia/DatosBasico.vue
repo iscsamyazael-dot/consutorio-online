@@ -55,40 +55,19 @@
           </div>
         </div>
         
-        <!-- Fila 2: Paciente, Empresa, Puesto de trabajo, Ergónomo -->
+         <!-- Fila 2: Paciente, Empresa y Puesto de trabajo (solo lectura, vienen del expediente) -->
         <div class="row mb-4">
-          <div class="col-md-3 mb-3">
+          <div class="col-md-4 mb-3">
             <label class="font-weight-bold d-block mb-1">Paciente *</label>
-            <input 
-              type="text" 
-              :value="form.nombre_paciente" 
-              class="form-control" 
-            />
+            <input type="text" :value="form.nombre_paciente" class="form-control" readonly />
           </div>
-          <div class="col-md-3 mb-3">
+          <div class="col-md-4 mb-3">
             <label class="font-weight-bold d-block mb-1">Empresa *</label>
-            <input 
-              type="text" 
-              :value="form.nombre_empresa" 
-              class="form-control" 
-            />
+            <input type="text" :value="form.nombre_empresa" class="form-control" readonly />
           </div>
-          <div class="col-md-3 mb-3">
+          <div class="col-md-4 mb-3">
             <label class="font-weight-bold d-block mb-1">Puesto de Trabajo *</label>
-            <input 
-              type="text" 
-              :value="form.nombre_puesto" 
-              class="form-control" 
-            />
-          </div>
-          <div class="col-md-3 mb-3">
-            <label class="font-weight-bold d-block mb-1">Ergónomo *</label>
-            <select :value="form.ergonomo_id" @change="updateField('ergonomo_id', $event.target.value)" class="form-control" required>
-              <option value="">Seleccionar ergónomo...</option>
-              <option v-for="m in medicos" :key="m.id" :value="m.id">
-                {{ m.nombre }} {{ m.apellido_paterno }}
-              </option>
-            </select>
+            <input type="text" :value="form.nombre_puesto" class="form-control" readonly />
           </div>
         </div>
 
@@ -112,7 +91,6 @@
 </template>
 
 <script>
-import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 export default {
   name: 'DatosBasicoErgonomia',
@@ -125,8 +103,7 @@ export default {
   emits: ['update:modelValue'],
   data() {
     return {
-      medicos: [],
-      fechaHoy: new Date().toISOString().split('T')[0]
+      fechaHoy: new Date().toLocaleDateString('en-CA')
     }
   },
   computed: {
@@ -138,23 +115,9 @@ export default {
     updateField(key, value) {
       this.$emit('update:modelValue', { ...this.form, [key]: value })
     },
-    async cargarMedicos() {
-      try {
-        const response = await clinicaTrabajo.get('medicos');
-        this.medicos = response.data || response
-      } catch (error) {
-        console.error('Error cargando médicos:', error)
-      }
-    }
   },
   mounted() {
-    this.cargarMedicos()
-    
-    // Generar folio de forma reactiva si no existe
-    if (!this.form.folio) {
-      const año = new Date().getFullYear()
-      this.updateField('folio', `ERG-${año}-****`)
-    }
+  
   },
   // watch: {
   //   'form.paciente_id'(newVal) {

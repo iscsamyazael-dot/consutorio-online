@@ -12,79 +12,32 @@
           Indique si el paciente presenta actualmente o ha tenido en el pasado las siguientes condiciones.
         </p>
 
-        <!-- Fila 1: Condiciones principales -->
+        <!-- Antecedentes personales: todos en una sola cuadrícula -->
         <div class="row mb-4">
-          <div v-for="(antecedente, index) in antecedentesMedicos.slice(0, 4)"
-               :key="antecedente.key"
-               class="col-md-3">
-            <div class="border rounded p-3 hover:bg-light transition">
-              <label class="font-weight-bold d-block mb-2">
-                {{ antecedente.label }}
-              </label>
+          <div v-for="antecedente in antecedentesMedicos" :key="antecedente.key" class="col-md-3 mb-3">
+            <div class="border rounded p-3">
+              <label class="font-weight-bold d-block mb-2">{{ antecedente.label }}</label>
               <div class="btn-group-toggle" data-toggle="buttons">
-                <label v-for="opcion in opcionesSI_NO"
-                       :key="opcion.value"
-                       class="btn btn-outline-secondary btn-sm m-1 rounded-pill"
-                       :class="[form[antecedente.key] === opcion.value ? 'active' : '']">
-                  <input type="radio"
-                         :name="antecedente.key"
-                         :value="opcion.value"
-                         :checked="form[antecedente.key] === opcion.value"
-                         @change="updateField(antecedente.key, opcion.value)"
-                         class="position-static">
+                <label v-for="opcion in opcionesSI_NO" :key="opcion.value"
+                      class="btn btn-outline-secondary btn-sm m-1 rounded-pill"
+                      :class="[form[antecedente.key] === opcion.value ? 'active' : '']">
+                  <input type="radio" :name="antecedente.key" :value="opcion.value"
+                        :checked="form[antecedente.key] === opcion.value"
+                        @change="updateField(antecedente.key, opcion.value)" class="position-static">
                   {{ opcion.label }}
                 </label>
               </div>
             </div>
           </div>
         </div>
-
-        <!-- Fila 2: Condiciones restantes -->
-        <div class="row mb-4">
-          <div v-for="(antecedente, index) in antecedentesMedicos.slice(4, 8)"
-               :key="antecedente.key"
-               class="col-md-3">
-            <div class="border rounded p-3 hover:bg-light transition">
-              <label class="font-weight-bold d-block mb-2">
-                {{ antecedente.label }}
-              </label>
-              <div class="btn-group-toggle" data-toggle="buttons">
-                <label v-for="opcion in opcionesSI_NO"
-                       :key="opcion.value"
-                       class="btn btn-outline-secondary btn-sm m-1 rounded-pill"
-                       :class="[form[antecedente.key] === opcion.value ? 'active' : '']">
-                  <input type="radio"
-                         :name="antecedente.key"
-                         :value="opcion.value"
-                         :checked="form[antecedente.key] === opcion.value"
-                         @change="updateField(antecedente.key, opcion.value)"
-                         class="position-static">
-                  {{ opcion.label }}
-                </label>
-              </div>
-            </div>
-          </div>
-          <div v-if="antecedentesMedicos.length > 8" :key="'otros'" class="col-md-3">
-            <div class="border rounded p-3 hover:bg-light transition">
-              <label class="font-weight-bold d-block mb-2">
-                Otros
-              </label>
-              <div class="btn-group-toggle" data-toggle="buttons">
-                <label v-for="opcion in opcionesSI_NO"
-                       :key="opcion.value"
-                       class="btn btn-outline-secondary btn-sm m-1 rounded-pill"
-                       :class="[form.am_infecciosos === opcion.value ? 'active' : '']">
-                  <input type="radio"
-                         name="am_infecciosos"
-                         :value="opcion.value"
-                         :checked="form.am_infecciosos === opcion.value"
-                         @change="updateField('am_infecciosos', opcion.value)"
-                         class="position-static">
-                  {{ opcion.label }}
-                </label>
-              </div>
-            </div>
-          </div>
+        
+        <div class="mb-3">
+          <label class="font-weight-bold d-block mb-2">Otros antecedentes personales</label>
+          <textarea 
+            :value="form.am_otros" 
+            @input="updateField('am_otros', $event.target.value)"
+            rows="2" class="form-control">
+          </textarea>
         </div>
 
         <!-- RESUMEN DE ANTECEDENTES POSITIVOS -->
