@@ -498,18 +498,124 @@
             <h5><i class="fas fa-chair text-secondary me-2"></i>Valoración Ergonómica</h5>
             <small>Evaluación de puestos de trabajo y factores de riesgo ergonómico.</small>
           </div>
+
           <div class="valoraciones-scroll">
             <div v-if="infoValoracionesErgonomicas.length === 0" class="alert alert-light border text-center text-muted">
               <i class="fas fa-clipboard-check me-2"></i> No se encuentran evaluaciones ergonómicas registradas.
             </div>
-            <div v-else v-for="val in infoValoracionesErgonomicas" :key="val.id" class="timeline-card">
-              <div class="timeline-dot bg-secondary"></div>
-              <div class="flex-grow-1">
-                <h6 class="fw-bold mb-2"><i class="fas fa-calendar-alt text-secondary me-2"></i>{{ formatearFecha(val.fecha) }}</h6>
-                <p class="mb-1"><strong>Método:</strong> {{ val.metodo || 'REBA/RULA/OCRA' }}</p>
-                <p class="text-muted small mb-2"><strong>Nivel de riesgo:</strong> {{ val.nivel_riesgo || 'Bajo' }}</p>
-                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3"><i class="fas fa-eye me-1"></i> Ver detalle</button>
+
+            <div v-else v-for="val in infoValoracionesErgonomicas" :key="val.id" class="espiro-card">
+
+              <!-- Header -->
+              <div class="espiro-card-header">
+                <div>
+                  <div class="espiro-fecha">
+                    <i class="fas fa-calendar-alt text-secondary me-1"></i>
+                    {{ formatearFecha(val.fecha_valoracion) }}
+                  </div>
+                  <div class="espiro-folio">
+                    <span class="espiro-folio-item">
+                      <i class="fas fa-file-invoice me-1"></i> Folio {{ val.folio }}
+                    </span>
+                    <span class="espiro-separador">·</span>
+                    <span class="espiro-folio-item">
+                      <i class="fas fa-clipboard-list me-1"></i> {{ val.tipo_evaluacion || 'Sin tipo' }}
+                    </span>
+                    <span v-if="val.puesto">
+                      <span class="espiro-separador">·</span>
+                      <span class="espiro-folio-item">
+                        <i class="fas fa-briefcase me-1"></i> {{ val.puesto.nombre }}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+                <span class="badge rounded-pill px-3 py-2" :class="'bg-' + colorAptitudErgonomia(val)">
+                  {{ val.aptitud || 'Sin aptitud' }}
+                </span>
               </div>
+
+              <!-- Grid de Métricas -->
+              <div class="espiro-metricas-grid">
+
+                <!-- Instrumento -->
+                <div class="espiro-metrica primaria">
+                  <div class="espiro-metrica-icono">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="espiro-metrica-label">Instrumento</span>
+                  </div>
+                  <div class="espiro-metrica-valor">{{ val.instrumento_utilizado || '—' }}</div>
+                  <div class="espiro-metrica-porcentaje info">Método de evaluación</div>
+                </div>
+
+                <!-- Puntuación -->
+                <div class="espiro-metrica" :class="claseErgo(val)">
+                  <div class="espiro-metrica-icono">
+                    <i class="fas fa-calculator"></i>
+                    <span class="espiro-metrica-label">Puntuación</span>
+                  </div>
+                  <div class="espiro-metrica-valor">{{ puntuacionErgonomia(val) }}</div>
+                  <div class="espiro-metrica-porcentaje" :class="claseErgo(val)">Puntaje del instrumento</div>
+                </div>
+
+                <!-- Nivel de riesgo -->
+                <div class="espiro-metrica" :class="claseErgo(val)">
+                  <div class="espiro-metrica-icono">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span class="espiro-metrica-label">Nivel de riesgo</span>
+                  </div>
+                  <div class="espiro-metrica-valor text-capitalize">{{ nivelErgonomia(val).replace(/_/g, ' ') }}</div>
+                  <div class="espiro-metrica-porcentaje" :class="claseErgo(val)">Riesgo del puesto</div>
+                </div>
+
+                <!-- Seguimiento -->
+                <div class="espiro-metrica" :class="val.seguimiento_requerido ? 'alerta' : 'normal'">
+                  <div class="espiro-metrica-icono">
+                    <i class="fas fa-calendar-check"></i>
+                    <span class="espiro-metrica-label">Seguimiento</span>
+                  </div>
+                  <div class="espiro-metrica-valor">{{ val.seguimiento_requerido ? 'Sí' : 'No' }}</div>
+                  <div class="espiro-metrica-porcentaje" :class="val.seguimiento_requerido ? 'alerta' : 'normal'">
+                    {{ val.seguimiento_requerido ? (val.plazo_proximo_seguimiento || 'Sin plazo') : 'Sin seguimiento' }}
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Interpretación -->
+              <div class="espiro-interpretacion">
+                <i class="fas fa-stethoscope me-2"></i>
+                <strong>Interpretación:</strong>
+                <span class="espiro-interpretacion-texto">Nivel de riesgo {{ nivelErgonomia(val).replace(/_/g, ' ') }}</span>
+                <span class="espiro-separador-vertical"></span>
+                <strong>Instrumento:</strong>
+                <span class="espiro-interpretacion-texto">{{ val.instrumento_utilizado || '—' }}</span>
+              </div>
+
+              <!-- Diagnóstico -->
+              <div class="espiro-diagnostico" v-if="val.diagnostico_relacionado">
+                <i class="fas fa-file-medical-alt me-2"></i>
+                <strong>Diagnóstico:</strong>
+                <span class="espiro-diagnostico-texto">{{ resumirTexto(val.diagnostico_relacionado, 220) }}</span>
+              </div>
+
+              <!-- Recomendaciones -->
+              <div class="espiro-recomendaciones" v-if="val.acciones_recomendadas">
+                <i class="fas fa-clipboard-check me-2"></i>
+                <strong>Recomendaciones:</strong>
+                <div class="espiro-recomendaciones-texto">{{ val.acciones_recomendadas }}</div>
+              </div>
+
+              <!-- Acciones -->
+              <div class="espiro-acciones">
+                <a :href="`/ergonomia-imprimir/${val.id}`" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  <i class="fas fa-print me-1"></i> Imprimir
+                </a>
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4"
+                        @click="abrirDetalleErgonomia(val)">
+                  <i class="fas fa-eye me-1"></i> Ver detalle
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
@@ -1092,6 +1198,213 @@
       </div>
     </div>
     <!-- AQUI TERMINA EL MODAL DETALLE DE AUDIOLOGÍA - HISTORIA CLÍNICA -->
+    
+    <!-- INICIA EL MODAL PARA VER LOS DETALLES DE ERGONOMIA -->
+     <!-- MODAL DETALLE DE VALORACIÓN ERGONÓMICA -->
+    <div class="modal fade" id="modalDetalleErgonomia" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" v-if="ergonomiaDetalle">
+
+          <!-- HEADER -->
+          <div class="modal-header bg-gradient-medical text-white border-0 py-3">
+            <div class="d-flex align-items-center">
+              <div class="icon-circle bg-white bg-opacity-25 me-3">
+                <i class="fas fa-chair fs-4"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-1">
+                  Valoración Ergonómica
+                  <span class="badge bg-white bg-opacity-25 text-white ms-2 align-middle">
+                    #{{ ergonomiaDetalle.folio }}
+                  </span>
+                </h5>
+                <small class="opacity-75">
+                  <i class="far fa-calendar-alt me-1"></i>
+                  {{ formatearFecha(ergonomiaDetalle.fecha_valoracion) }}
+                  <span class="mx-1">•</span>
+                  <i class="far fa-clock me-1"></i>{{ horaErgonomiaDetalle || '—' }}
+                  <span class="mx-1">•</span>
+                  <i class="fas fa-clipboard-list me-1"></i>
+                  {{ ergonomiaDetalle.tipo_evaluacion || 'Evaluación' }}
+                </small>
+              </div>
+            </div>
+            <span class="badge rounded-pill px-3 py-2 ms-auto me-3 shadow-sm" :class="'bg-' + colorAptitudErgonomia(ergonomiaDetalle)">
+              <i class="fas fa-clipboard-check me-1"></i>
+              {{ ergonomiaDetalle.aptitud || 'Sin aptitud' }}
+            </span>
+            <button type="button" class="btn-close btn-close-white" @click="cerrarModal('modalDetalleErgonomia')" aria-label="Cerrar"></button>
+          </div>
+
+          <!-- BODY -->
+          <div class="modal-body bg-light-subtle">
+
+            <!-- TARJETAS DE INFORMACIÓN GENERAL -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-primary-soft text-primary">
+                    <i class="fas fa-clipboard-check"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Instrumento</small>
+                    <strong class="d-block text-dark">{{ ergonomiaDetalle.instrumento_utilizado || 'No registrado' }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-info-soft text-info">
+                    <i class="fas fa-calculator"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Puntuación</small>
+                    <strong class="d-block text-dark">{{ puntuacionErgonomia(ergonomiaDetalle) }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-danger-soft text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Nivel de riesgo</small>
+                    <strong class="d-block text-dark text-capitalize">{{ nivelErgonomia(ergonomiaDetalle).replace(/_/g, ' ') }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card h-100 border-0 shadow-sm">
+                  <div class="info-card-icon bg-success-soft text-success">
+                    <i class="fas fa-calendar-check"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Seguimiento</small>
+                    <strong class="d-block text-dark">
+                      {{ ergonomiaDetalle.seguimiento_requerido ? 'Sí' : 'No' }}
+                      <span v-if="ergonomiaDetalle.seguimiento_requerido" class="text-muted small">
+                        · {{ ergonomiaDetalle.plazo_proximo_seguimiento || 'Sin plazo' }}
+                      </span>
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- DATOS DEL TRABAJADOR Y PUESTO -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-2">
+                <div class="info-card-icon bg-primary-soft text-primary me-2" style="width: 32px; height: 32px;">
+                  <i class="fas fa-user"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-primary">Trabajador y puesto</h6>
+              </div>
+              <div class="card-body small">
+                <div class="row g-2">
+                  <div class="col-md-6"><strong>Trabajador:</strong> {{ ergonomiaDetalle.paciente?.nombre || '—' }}</div>
+                  <div class="col-md-6"><strong>Empresa:</strong> {{ ergonomiaDetalle.empresa?.razon_social || '—' }}</div>
+                  <div class="col-md-6"><strong>Puesto:</strong> {{ ergonomiaDetalle.puesto?.nombre || '—' }}</div>
+                  <div class="col-md-6"><strong>Departamento:</strong> {{ ergonomiaDetalle.puesto?.departamento || '—' }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- DIAGNÓSTICO Y EXAMEN -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-warning">
+              <div class="card-body py-3">
+                <h6 class="fw-bold text-warning mb-2">Diagnóstico y examen médico</h6>
+                <p class="small mb-2"><strong>Hallazgos:</strong>
+                  {{ datosErgonomiaDetalle.examenMedico?.exploracion_osteomuscular_hallazgos || '—' }}</p>
+                <p class="small mb-2"><strong>Diagnóstico relacionado:</strong> {{ ergonomiaDetalle.diagnostico_relacionado || '—' }}</p>
+                <p class="small mb-0"><strong>Regiones con hallazgo:</strong>
+                  <span v-if="regionesErgonomiaDetalle.length">{{ regionesErgonomiaDetalle.join(', ') }}</span>
+                  <span v-else>Ninguna</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- EVALUACIÓN CON INSTRUMENTO -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-2">
+                <div class="info-card-icon bg-primary-soft text-primary me-2" style="width: 32px; height: 32px;">
+                  <i class="fas fa-ruler-combined"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-primary">Evaluación con instrumento</h6>
+              </div>
+              <div class="card-body small">
+                <div class="row g-2 mb-2">
+                  <div class="col-md-4"><strong>Instrumento:</strong> {{ ergonomiaDetalle.instrumento_utilizado || '—' }}</div>
+                  <div class="col-md-4"><strong>Puntuación:</strong> {{ puntuacionErgonomia(ergonomiaDetalle) }}</div>
+                  <div class="col-md-4"><strong>Nivel:</strong> {{ nivelErgonomia(ergonomiaDetalle).replace(/_/g, ' ') }}</div>
+                </div>
+                <p class="mb-2" style="white-space: pre-line;"><strong>Áreas evaluadas:</strong> {{ areasErgonomiaDetalle(ergonomiaDetalle) }}</p>
+                <p class="mb-0" style="white-space: pre-line;"><strong>Justificación del instrumento:</strong> {{ ergonomiaDetalle.justificacion_instrumento || '—' }}</p>
+              </div>
+            </div>
+
+            <!-- RESTRICCIONES -->
+            <div v-if="ergonomiaDetalle.restricciones_laborales" class="card border-0 shadow-sm mb-3 border-start border-4 border-start-warning bg-warning bg-opacity-10">
+              <div class="card-body py-3">
+                <h6 class="fw-bold text-warning mb-1">Restricciones laborales</h6>
+                <p class="mb-0 text-body" style="white-space: pre-line;">{{ ergonomiaDetalle.restricciones_descripcion || 'Sí' }}</p>
+              </div>
+            </div>
+
+            <!-- RECOMENDACIONES -->
+            <div v-if="ergonomiaDetalle.acciones_recomendadas || ergonomiaDetalle.recomendaciones_puesto"
+                class="card border-0 shadow-sm mb-3 border-start border-4 border-start-primary">
+              <div class="card-body py-3">
+                <h6 class="fw-bold text-primary mb-2">Recomendaciones</h6>
+                <p v-if="ergonomiaDetalle.acciones_recomendadas" class="mb-2" style="white-space: pre-line;">
+                  {{ ergonomiaDetalle.acciones_recomendadas }}
+                </p>
+                <p v-if="ergonomiaDetalle.recomendaciones_puesto" class="mb-0 small" style="white-space: pre-line;">
+                  <strong>Para el puesto:</strong> {{ ergonomiaDetalle.recomendaciones_puesto }}
+                </p>
+              </div>
+            </div>
+
+            <!-- SEGUIMIENTO Y OBSERVACIONES -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-primary">
+              <div class="card-body py-3 small">
+                <h6 class="fw-bold text-primary mb-2">Seguimiento y observaciones</h6>
+                <p class="mb-1"><strong>Tipo de seguimiento:</strong> {{ datosErgonomiaDetalle.examenMedico?.tipo_seguimiento || '—' }}</p>
+                <p class="mb-1"><strong>Plazo:</strong> {{ ergonomiaDetalle.plazo_proximo_seguimiento || '—' }}</p>
+                <p class="mb-0" style="white-space: pre-line;"><strong>Notas del ergónomo:</strong> {{ ergonomiaDetalle.notas_ergonomo || '—' }}</p>
+              </div>
+            </div>
+
+            <!-- FIRMA -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-body small text-center">
+                <div class="border-top border-dark mx-auto mb-2" style="width: 260px;"></div>
+                <div class="fw-bold">{{ ergonomiaDetalle.medico?.name || '—' }}</div>
+                <div class="text-muted">Cédula profesional: {{ ergonomiaDetalle.medico?.cedula || '—' }}</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FOOTER -->
+          <div class="modal-footer bg-white border-top py-3">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" @click="cerrarModal('modalDetalleErgonomia')">
+              <i class="fas fa-times me-1"></i> Cerrar
+            </button>
+            <div class="ms-auto d-flex gap-2">
+              <a :href="`/ergonomia-imprimir/${ergonomiaDetalle.id}`" target="_blank" class="btn btn-outline-primary rounded-pill px-4">
+                <i class="fas fa-print me-1"></i> Imprimir
+              </a>
+              <a :href="urlEditarErgonomia(ergonomiaDetalle)" class="btn btn-warning rounded-pill px-4 shadow-sm">
+                <i class="fas fa-pen-to-square me-1"></i> Editar
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!-- AQUI TERMINA EL MODAL DETALLE DE ERGONOMIA-->
   </div>
 </template>
 
@@ -1282,6 +1595,15 @@
 .espiro-metrica-porcentaje.peligro {
   color: #dc3545;
 }
+
+/* Variante azul (Instrumento) */
+.espiro-metrica.primaria { border-color: #0d6efd; }
+.espiro-metrica.primaria .espiro-metrica-icono i { color: #0d6efd; }
+.espiro-metrica-porcentaje.info { color: #0d6efd; }
+
+/* Variante gris neutra (sin datos) */
+.espiro-metrica.info { border-color: #6c757d; }
+.espiro-metrica.info .espiro-metrica-icono i { color: #6c757d; }
 
 .espiro-tendencia {
   font-size: 11px;
@@ -1949,6 +2271,7 @@ export default {
       infoAudiologiaAltoRiesgo: [],
       infoValoracionesEspirometria: [],
       espirometriaDetalle: null,
+      ergonomiaDetalle: null,
 
       infoValoracionesErgonomicas: [],
       audiologiaDetalle: null,
@@ -2005,7 +2328,19 @@ export default {
         { etiqueta: 'Antigüedad en la empresa', valor: d.anos_empresa != null ? `${d.anos_empresa} años` : 'No registrado', icono: 'fas fa-building', color: 'success' },
         { etiqueta: 'PTA promedio', valor: d.pta_promedio != null ? `${d.pta_promedio} dB · ${d.clasificacion || 'N/D'}` : 'N/D', icono: 'fas fa-chart-line', color: 'primary' }
       ]
-    }
+    },
+    datosErgonomiaDetalle() {
+      const d = this.ergonomiaDetalle?.datos_json
+      if (!d) return {}
+      return typeof d === 'string' ? JSON.parse(d) : d
+    },
+    regionesErgonomiaDetalle() {
+      const h = this.datosErgonomiaDetalle?.examenMedico?.hallazgos || {}
+      return Object.keys(h).filter(k => h[k] === true)
+    },
+    horaErgonomiaDetalle() {
+      return (this.ergonomiaDetalle?.hora_valoracion || '').slice(0, 5)
+    },
   },
 
   methods: {
@@ -2016,6 +2351,7 @@ export default {
         //await this.obtenerExpedienteClinico()
         await this.obtenerEspirometrias()
         await this.obtenerAudiologiaHistoria()
+        await this.obtenerErgonomicas()
         console.log('Datos laborales cargados exitosamente.')
       } catch (error) {
         console.error("Error al cargar datos laborales:", error)
@@ -2337,7 +2673,76 @@ export default {
       return `/FichaDelliAudiologia/${val.paciente_id}?ficha=${val.id}`
     },
 
-    
+    async obtenerErgonomicas() {
+      try {
+        const response = await ApiServiceClinicaTrabajo.get('/ergonomia', {
+          params: { paciente_id: this.pacienteId }
+        })
+        this.infoValoracionesErgonomicas = response.data.data || []
+      } catch (error) {
+        console.error('Error al cargar valoraciones ergonómicas:', error)
+        this.infoValoracionesErgonomicas = []
+      }
+    },
+    puntuacionErgonomia(val) {
+      if (val.instrumento_utilizado === 'RULA') return val.rula_puntuacion ?? '—'
+      if (val.instrumento_utilizado === 'REBA') return val.reba_puntuacion ?? '—'
+      return '—'
+    },
+    nivelErgonomia(val) {
+      if (val.instrumento_utilizado === 'RULA') return val.rula_nivel_riesgo || '—'
+      if (val.instrumento_utilizado === 'REBA') return val.reba_nivel_accion || '—'
+      return '—'
+    },
+    colorNivelErgonomia(val) {
+      const nivel = this.nivelErgonomia(val)
+      if (['negligible', 'bajo', 'aceptable'].includes(nivel)) return 'success'
+      if (['moderado', 'investigar'].includes(nivel)) return 'warning'
+      if (nivel === '—') return 'secondary'
+      return 'danger'
+    },
+    colorAptitudErgonomia(val) {
+      const a = (val.aptitud || '').toLowerCase()
+      if (a === 'apto') return 'success'
+      if (a.includes('restricciones') || a.includes('condicionado')) return 'warning'
+      if (a.includes('no apto')) return 'danger'
+      return 'secondary'
+    },
+    // Mapea el color Bootstrap del nivel de riesgo a las clases de estado de espiro-metrica
+    claseErgo(val) {
+      const mapa = { success: 'normal', warning: 'alerta', danger: 'peligro', secondary: 'info' }
+      return mapa[this.colorNivelErgonomia(val)] || 'info'
+    },
+    async abrirDetalleErgonomia(val) {
+      try {
+        const response = await ApiServiceClinicaTrabajo.get(`/ergonomia/${val.id}`)
+        this.ergonomiaDetalle = response.data.data || response.data
+      } catch (error) {
+        console.error('Error al cargar detalle ergonómico:', error)
+        this.ergonomiaDetalle = val
+      }
+      this.$nextTick(() => {
+        const el = document.getElementById('modalDetalleErgonomia')
+        if (window.jQuery && window.jQuery.fn.modal) {
+          window.jQuery(el).modal('show')
+        } else if (window.bootstrap?.Modal) {
+          new window.bootstrap.Modal(el).show()
+        } else {
+          console.error('No se encontró Bootstrap ni jQuery para abrir el modal')
+        }
+      })
+    },
+    areasErgonomiaDetalle(val) {
+      if (!val) return '—'
+      if (val.instrumento_utilizado === 'RULA') return val.rula_areas_evaluadas || '—'
+      if (val.instrumento_utilizado === 'REBA') return val.reba_areas_evaluadas || '—'
+      if (val.instrumento_utilizado === 'NIOSH') return val.niosh_variables_evaluadas || '—'
+      return '—'
+    },
+    urlEditarErgonomia(val) {
+      return `/ficha-ergonomia/${val.paciente_id}?valoracion=${val.id}`
+    },
+
 
     // --- UTILIDADES ---
     formatearFecha(fecha) {

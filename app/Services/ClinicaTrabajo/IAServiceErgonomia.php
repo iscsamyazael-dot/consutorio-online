@@ -166,6 +166,33 @@ class IAServiceErgonomia
         ];
     }
 
+    /**
+     * Propone solo los campos del examen médico (hoja 4). No requiere instrumento.
+     * No propone aptitud, restricciones de puesto ni recomendaciones de puesto.
+     */
+    public function proponerExamen(array $valoracion, array $datos): array
+    {
+        set_time_limit(300);
+
+        $data = $this->llamarGemini($this->construirPromptExamen($valoracion, $datos), 'examen');
+
+        if ($data === null) {
+            return [
+                'respuesta' => 'No pude generar la propuesta del examen. Intenta de nuevo.',
+                'campos_completados' => [],
+                'advertencias' => [],
+            ];
+        }
+
+        $campos = $this->sanitizarCampos(is_array($data['campos'] ?? null) ? $data['campos'] : []);
+
+        return [
+            'respuesta' => $this->texto($data['respuesta'] ?? null) ?? 'Propuesta del examen lista para tu revisión.',
+            'campos_completados' => $this->armarCamposExamen($campos),
+            'advertencias' => array_values(array_unique($this->sanitizarAdvertencias($data['advertencias'] ?? []))),
+        ];
+    }
+
     // =========================================================
     // CHAT
     // =========================================================
@@ -422,49 +449,111 @@ TXT;
         $derivacionesJson = json_encode(array_merge([''], self::DERIVACIONES), JSON_UNESCAPED_UNICODE);
 
         return <<<PROMPT
-Eres asistente de un médico del trabajo. Redactas la propuesta de los campos de una valoración de ergonomía ocupacional. El médico revisará, modificará o completará todo antes de guardar.
+            Eres asistente de un médico del trabajo. Redactas la propuesta de los campos de una valoración de ergonomía ocupacional. El médico revisará, modificará o completará todo antes de guardar.
 
-Reglas generales:
-- La aptitud ya fue decidida por criterios objetivos. No la cambies ni la presentes como decisión tuya.
-- No inventes datos. Usa solo lo que aparece en la valoración, los criterios y el formulario. Si falta información importante, indícalo en "advertencias".
-- Redacta en español, tono clínico, sin prometer resultados.
-- observaciones_examen es texto escrito por el médico. No lo devuelvas ni lo reescribas.
+            Reglas generales:
+            - La aptitud ya fue decidida por criterios objetivos. No la cambies ni la presentes como decisión tuya.
+            - No inventes datos. Usa solo lo que aparece en la valoración, los criterios y el formulario. Si falta información importante, indícalo en "advertencias".
+            - Redacta en español, tono clínico, sin prometer resultados.
+            - observaciones_examen es texto escrito por el médico. No lo devuelvas ni lo reescribas.
 
-Reglas por campo:
-- examen_medico_realizado: true si observaciones_examen o los hallazgos describen una exploración. false si no hay nada.
-- hallazgos_propuestos: solo regiones de esta lista: {$regionesJson}. Inclúyelas únicamente si observaciones_examen describe un hallazgo en esa región. Nunca las deduzcas de RULA, REBA o NIOSH.
-- diagnostico_ergonomico: solo si observaciones_examen describe hallazgos. Usa lenguaje de sospecha ("compatible con", "sugestivo de"). Nunca un diagnóstico definitivo. Si no hay hallazgos, null.
-- restricciones: si la aptitud es "Apto", null. Si es "Apto con restricciones" o "No apto", describe restricciones concretas ligadas a los motivos de los criterios.
-- recomendaciones: medidas ergonómicas ligadas a los instrumentos y a los motivos (ajustes de altura de trabajo, pausas, ayudas mecánicas, rotación). Evita recomendaciones genéricas.
-- restricciones_laborales: limitaciones de carga, postura o movimientos ligadas a la aptitud. null si la aptitud es "Apto".
-- recomendaciones_examen: acciones clínicas o de seguimiento. No repitas textualmente recomendaciones.
-- derivacion_especialista: uno de estos valores: {$derivacionesJson}. Usa "" si no hay motivo para derivar.
+            Reglas por campo:
+            - examen_medico_realizado: true si observaciones_examen o los hallazgos describen una exploración. false si no hay nada.
+            - hallazgos_propuestos: solo regiones de esta lista: {$regionesJson}. Inclúyelas únicamente si observaciones_examen describe un hallazgo en esa región. Nunca las deduzcas de RULA, REBA o NIOSH.
+            - diagnostico_ergonomico: solo si observaciones_examen describe hallazgos. Usa lenguaje de sospecha ("compatible con", "sugestivo de"). Nunca un diagnóstico definitivo. Si no hay hallazgos, null.
+            - restricciones: si la aptitud es "Apto", null. Si es "Apto con restricciones" o "No apto", describe restricciones concretas ligadas a los motivos de los criterios.
+            - recomendaciones: medidas ergonómicas ligadas a los instrumentos y a los motivos (ajustes de altura de trabajo, pausas, ayudas mecánicas, rotación). Evita recomendaciones genéricas.
+            - restricciones_laborales: limitaciones de carga, postura o movimientos ligadas a la aptitud. null si la aptitud es "Apto".
+            - recomendaciones_examen: acciones clínicas o de seguimiento. No repitas textualmente recomendaciones.
+            - derivacion_especialista: uno de estos valores: {$derivacionesJson}. Usa "" si no hay motivo para derivar.
 
-Valoración (columnas tipadas):
-{$contextoJson}
+            Valoración (columnas tipadas):
+            {$contextoJson}
 
-Criterios objetivos:
-{$criteriosJson}
+            Criterios objetivos:
+            {$criteriosJson}
 
-Datos del formulario:
-{$datosJson}
+            Datos del formulario:
+            {$datosJson}
 
-Responde solo JSON con esta forma:
-{
-  "respuesta": "resumen breve para el médico",
-  "campos": {
-    "examen_medico_realizado": true,
-    "hallazgos_propuestos": ["cervical"],
-    "diagnostico_ergonomico": "texto o null",
-    "restricciones": "texto o null",
-    "recomendaciones": "texto o null",
-    "restricciones_laborales": "texto o null",
-    "recomendaciones_examen": "texto o null",
-    "derivacion_especialista": ""
-  },
-  "advertencias": ["texto"]
-}
-PROMPT;
+            Responde solo JSON con esta forma:
+            {
+            "respuesta": "resumen breve para el médico",
+            "campos": {
+                "examen_medico_realizado": true,
+                "hallazgos_propuestos": ["cervical"],
+                "diagnostico_ergonomico": "texto o null",
+                "restricciones": "texto o null",
+                "recomendaciones": "texto o null",
+                "restricciones_laborales": "texto o null",
+                "recomendaciones_examen": "texto o null",
+                "derivacion_especialista": ""
+            },
+            "advertencias": ["texto"]
+            }
+            PROMPT;
+    }
+    
+    // =========================================================
+    // PROMPT DEL EXAMEN (hoja 4, sin instrumento)
+    // =========================================================
+
+    private function construirPromptExamen(array $valoracion, array $datos): string
+    {
+        $contexto = array_diff_key($valoracion, array_flip(['datos_json', 'created_at', 'updated_at', 'folio']));
+        $contextoJson = json_encode($contexto, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '{}';
+
+        $datosJson = mb_substr(
+            json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '{}',
+            0,
+            self::MAX_CARACTERES_DATOS
+        );
+
+        $regionesJson = json_encode(self::REGIONES, JSON_UNESCAPED_UNICODE);
+        $derivacionesJson = json_encode(array_merge([''], self::DERIVACIONES), JSON_UNESCAPED_UNICODE);
+
+        return <<<PROMPT
+            Eres asistente de un médico del trabajo. Redactas la propuesta de los campos del examen médico de una valoración de ergonomía ocupacional. El médico revisará, modificará o completará todo antes de guardar.
+
+            Reglas generales:
+            - Esta propuesta NO decide aptitud, restricciones de puesto ni recomendaciones de puesto. No los incluyas.
+            - No inventes datos. Usa solo lo que aparece en la valoración y el formulario. Si falta información importante, indícalo en "advertencias".
+            - Redacta en español, tono clínico, sin prometer resultados.
+            - observaciones_examen es texto escrito por el médico. No lo devuelvas ni lo reescribas.
+
+            Reglas por campo:
+            - hallazgos_propuestos: solo regiones de esta lista: {$regionesJson}. Inclúyelas únicamente si observaciones_examen describe un hallazgo en esa región.
+            - diagnostico_ergonomico: solo si observaciones_examen describe hallazgos. Usa lenguaje de sospecha ("compatible con", "sugestivo de"). Nunca un diagnóstico definitivo. Si no hay hallazgos, null.
+            - restricciones_laborales: limitaciones de carga, postura o movimientos que se desprendan del examen, los antecedentes y los factores laborales. null si no hay base suficiente.
+            - recomendaciones_examen: acciones clínicas o de seguimiento ligadas a los hallazgos y antecedentes. No repitas textualmente recomendaciones.
+            - derivacion_especialista: uno de estos valores: {$derivacionesJson}. Usa "" si no hay motivo para derivar.
+
+            REGLAS ESTRICTAS:
+            - Fuente de datos: observaciones_examen y las regiones marcadas como true en examenMedico.hallazgos. Ambas cuentan como evidencia.
+            - Si hay al menos una región marcada por el médico o observaciones_examen con texto, puedes proponer diagnostico_ergonomico, recomendaciones_examen, restricciones_laborales y derivacion_especialista basados en esas regiones y en el puesto. Indica en advertencias que el diagnóstico requiere validación clínica.
+            - Si no hay ni observaciones_examen ni regiones marcadas, no propongas hallazgos, diagnóstico_ergonomico ni derivacion_especialista. Deja esos campos vacíos y explica la falta de datos en advertencias.
+            - Los antecedentes personales y heredofamiliares NO son evidencia de hallazgos. No marques regiones a partir de ellos.
+            - No marques regiones que el médico no haya marcado ni mencionado en observaciones_examen.
+            - derivacion_especialista debe usar exactamente uno de los valores válidos del select de la hoja 4. Si no aplica, devuelve cadena vacía.
+            Valoración (columnas tipadas):
+            {$contextoJson}
+
+            Datos del formulario:
+            {$datosJson}
+
+            Responde solo JSON con esta forma:
+            {
+            "respuesta": "resumen breve para el médico",
+            "campos": {
+                "hallazgos_propuestos": ["cervical"],
+                "diagnostico_ergonomico": "texto o null",
+                "restricciones_laborales": "texto o null",
+                "recomendaciones_examen": "texto o null",
+                "derivacion_especialista": ""
+            },
+            "advertencias": ["texto"]
+            }
+            PROMPT;
     }
 
     // =========================================================
@@ -493,6 +582,23 @@ PROMPT;
             'seguimiento_requerido' => $aptitud !== 'Apto',
             'examenMedico' => $examen ?: null,
         ], fn ($valor) => $valor !== null);
+    }
+
+    /** Solo los campos de la hoja 4. No incluye aptitud ni campos de la hoja 5. */
+    private function armarCamposExamen(array $campos): array
+    {
+        $examen = array_filter([
+            'diagnostico_ergonomico' => $campos['diagnostico_ergonomico'],
+            'recomendaciones_examen' => $campos['recomendaciones_examen'],
+            'restricciones_laborales' => $campos['restricciones_laborales'],
+            'derivacion_especialista' => $campos['derivacion_especialista'],
+            'hallazgos' => $campos['hallazgos'] ?: null,
+        ], fn ($valor) => $valor !== null);
+
+        return array_filter(
+            ['examenMedico' => $examen ?: null],
+            fn ($valor) => $valor !== null
+        );
     }
 
     // =========================================================

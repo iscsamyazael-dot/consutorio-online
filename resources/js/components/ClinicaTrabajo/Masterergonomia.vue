@@ -187,7 +187,7 @@
         <div id="hoja4" class="tab-pane fade" role="tabpanel">
           <examen-medico-ergonomia
             :modelValue="form.examenMedico"
-            :sugerencias="sugerenciasIA?.examenMedico || {}"
+            :sugerencias="sugerenciasExamenVisibles"
             @update:modelValue="form.examenMedico = $event"
           ></examen-medico-ergonomia>
 
@@ -210,14 +210,17 @@
             @update:modelValue="form = $event"
           ></selector-instrumento-ergonomia>
 
+          <riesgo-total-ergonomia 
+          :modelValue="form"
+          ></riesgo-total-ergonomia>
+
           <aptitud-dictamen-ergonomia
             :modelValue="form"
             @update:modelValue="form = $event"
-            :sugerencias="sugerenciasIA || {}"
+            :sugerencias="sugerenciasIAVisibles"
             :confirmado="confirmaDictamenIA"
             :cargandoIA="cargandoIA"
             @update:confirmado="confirmaDictamenIA = $event"
-            @proponer="solicitarDictamen"
           ></aptitud-dictamen-ergonomia>
         </div>
       </div>
@@ -242,8 +245,6 @@
 </template>
 
 <script>
-// 1. Componente de Listado (misma carpeta)
-import ListadoValoraciones from './ListadoValoraciones.vue'
 
 // 2. Componentes de Sección (carpeta secciones/ergonomia)
 import DatosBasicoErgonomia from './secciones/ergonomia/DatosBasico.vue'
@@ -257,6 +258,7 @@ import HallazgosErgonomia from './secciones/ergonomia/Hallazgos.vue'
 import SelectorInstrumentoErgonomia from './secciones/ergonomia/SelectorInstrumento.vue'
 import InstrumentoEspecificoErgonomia from './secciones/ergonomia/InstrumentoEspecifico.vue'
 import AptitudDictamenErgonomia from './secciones/ergonomia/AptitudDictamen.vue'
+import RiesgoTotalErgonomia from './secciones/ergonomia/RiesgoTotal.vue'
 
 // 3. Servicio API
 import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
@@ -314,7 +316,6 @@ const VACIO_A_NULL = (valor) => (valor === '' || valor === undefined ? null : va
 export default {
   name: 'MasterErgonomia',
   components: {
-    ListadoValoraciones,
     DatosBasicoErgonomia,
     AntecedentesHeredofamiliares,
     AntecedentesMedicos,
@@ -325,7 +326,8 @@ export default {
     HallazgosErgonomia,
     SelectorInstrumentoErgonomia,
     InstrumentoEspecificoErgonomia,
-    AptitudDictamenErgonomia
+    AptitudDictamenErgonomia,
+    RiesgoTotalErgonomia
   },
   data() {
     return {
@@ -343,6 +345,16 @@ export default {
       confirmaDictamenIA: false,
       sugerenciasIA: null,
       cargandoIA: false,
+      iaTimer: null,
+      iaEnCurso: false,
+      iaPendiente: false,
+      iaFirmaDictamen: null,
+      iaFirmaExamen: null,
+      sugerenciasExamen: null,
+      iaTextosPropuestos: {},
+      iaHallazgos: {},
+      medicoHallazgos: {},
+      iaHallazgosSnapshot: {},
 
       // Estado centralizado del formulario dividido por secciones lógicas
       form: {
@@ -386,7 +398,6 @@ export default {
           consumo_medicamentos: '',
           alergias: '',
           alergias_especifique: '',
-          consumo_medicamentos: '',
           medicamentos_especifique: '',
           am_otros: ''
         },
@@ -445,8 +456,7 @@ export default {
           niosh_es_seguro: false,
           posturas_forzadas: false,
           movimientos_repetitivos: false,
-          manipulacion_cargas: false,
-          carga_maxima_manipulada_kg: null
+          manipulacion_cargas: false
         },
         // Los campos específicos del instrumento se añadirán dinámicamente por SelectorInstrumento
         instrumento_utilizado: '',
@@ -465,6 +475,64 @@ export default {
   computed: {
     folioErgonomia() {
       return this.form.datosBasicos.folio || ''
+    },
+    instrumentoConPuntuacion() {
+      const p = this.construirPayload()
+      return [p.rula_puntuacion, p.reba_puntuacion, p.niosh_indice_levantamiento]
+        .some(v => v !== null && v !== undefined && v !== '')
+    },
+    hayContenidoExamen() {
+      const ex = this.form.examenMedico || {}
+      const hayObservaciones = (ex.observaciones_examen || '').trim() !== ''
+      const hayHallazgosMedico = Object.keys(ex.hallazgos || {}).some(
+        r => ex.hallazgos[r] === true && this.iaHallazgos[r] !== true
+      )
+      return hayObservaciones || hayHallazgosMedico
+    },
+    sugerenciasExamenVisibles() {
+      const s = { ...(this.sugerenciasExamen || {}) }
+      const ex = this.form.examenMedico || {}
+      ;['diagnostico_ergonomico', 'recomendaciones_examen', 'restricciones_laborales', 'derivacion_especialista'].forEach(k => {
+        if (s[k] !== undefined && ex[k] !== this.iaTextosPropuestos[`examenMedico.${k}`]) delete s[k]
+      })
+      if (s.hallazgos) {
+        const h = {}
+        Object.keys(s.hallazgos).forEach(r => {
+          if (!this.medicoHallazgos[r] && this.iaHallazgos[r] === true) h[r] = true
+        })
+        s.hallazgos = h
+      }
+      return s
+    },
+    sugerenciasIAVisibles() {
+        const s = { ...(this.sugerenciasIA || {}) }
+        ;['restricciones', 'recomendaciones'].forEach(k => {
+          if (s[k] !== undefined && this.form[k] !== this.iaTextosPropuestos[k]) delete s[k]
+        })
+        return s
+    }
+  },
+
+  watch: {
+    form: {
+      deep: true,
+      handler() {
+        this.programarConsultaIA()
+      }
+    },
+    'form.examenMedico.hallazgos': {
+      deep: true,
+      handler(nuevo) {
+        const actual = nuevo || {}
+        const previo = this.iaHallazgosSnapshot
+        Object.keys({ ...actual, ...previo }).forEach(r => {
+          if (actual[r] !== previo[r]) {
+            this.medicoHallazgos[r] = true
+            delete this.iaHallazgos[r]
+          }
+        })
+        this.iaHallazgosSnapshot = { ...actual }
+      }
     }
   },
 
@@ -697,7 +765,7 @@ export default {
 
           // Igual que DELLI: solo redirige al crear; al editar se queda en la misma pantalla
           if (!this.valoracionId) {
-            window.location.href = `/ficha-ergonomia/${idGuardado}`
+            window.location.href = `/buscador-pacientes-clinicaTrabajo`
           }
         }
       } catch (error) {
@@ -711,20 +779,91 @@ export default {
       }
     },
 
-   async solicitarDictamen() {
+   
+    contextoCapturado() {
+      const { aptitud, restricciones, recomendaciones, seguimiento_requerido, ...resto } = { ...this.form, ...this.construirPayload() }
+      const examen = { ...(resto.examenMedico || {}) }
+      const hallazgosEx = { ...(examen.hallazgos || {}) }
+        Object.keys(this.iaHallazgos).forEach(r => {
+          if (this.iaHallazgos[r] === hallazgosEx[r]) delete hallazgosEx[r]
+        })
+        examen.hallazgos = hallazgosEx
+      const salidasIA = ['diagnostico_ergonomico', 'recomendaciones_examen', 'restricciones_laborales', 'derivacion_especialista', 'seguimiento_requerido', 'plazo_proximo_seguimiento']
+      salidasIA.forEach(k => delete examen[k])
+      delete resto.diagnostico_relacionado
+      delete resto.acciones_recomendadas
+      delete resto.restricciones_laborales
+      delete resto.restricciones_descripcion
+      delete resto.recomendaciones_puesto
+      return { ...resto, examenMedico: examen }
+    },
+
+    programarConsultaIA() {
+      clearTimeout(this.iaTimer)
+      this.iaTimer = setTimeout(() => this.consultarIAAutomatica(), 2000)
+    },
+
+    contextoExamen() {
+      const contexto = this.contextoCapturado()
+      contexto.hallazgos = { ...(contexto.hallazgos || {}) }
+      CAMPOS_INSTRUMENTO.forEach(c => {
+        delete contexto[c]
+        delete contexto.hallazgos[c]
+      })
+      delete contexto.niosh_peso_real_kg
+      delete contexto.niosh_peso_recomendado_kg
+      delete contexto.instrumento_utilizado
+      return contexto
+    },
+
+    async consultarIAAutomatica() {
+      if (this.iaEnCurso) {
+        this.iaPendiente = true
+        return
+      }
+
+      const conInstrumento = this.instrumentoConPuntuacion
+      if (!conInstrumento) {
+        this.sugerenciasIA = null
+        this.confirmaDictamenIA = false
+        this.iaFirmaDictamen = null
+        if (!this.hayContenidoExamen) return
+      }
+
+      const alcance = conInstrumento ? 'dictamen' : 'examen'
+      const contexto = conInstrumento ? this.contextoCapturado() : this.contextoExamen()
+      const firma = JSON.stringify(contexto)
+      const firmaPrevia = conInstrumento ? this.iaFirmaDictamen : this.iaFirmaExamen
+      if (firma === firmaPrevia) return
+
+      this.iaEnCurso = true
       this.cargandoIA = true
       try {
         const { data } = await clinicaTrabajo.post('/ergonomia-consultarIA', {
           modo: 'recomendar',
-          contexto: this.contextoIA(),
+          alcance,
+          contexto,
           session_uuid: this.sessionUuid,
           valoracion_id: this.valoracionId
         })
-        this.sugerenciasIA = data.campos_completados || {}
-        this.usaIA = true
 
-        // La IA devuelve el seguimiento a nivel superior; lo movemos a examenMedico
-        const campos = { ...(data.campos_completados || {}) }
+        const propuesta = { ...(data.campos_completados || {}) }
+        this.usaIA = true
+        this.sugerenciasExamen = propuesta.examenMedico || {}
+
+        if (conInstrumento) {
+          if (propuesta.aptitud !== this.sugerenciasIA?.aptitud) this.confirmaDictamenIA = false
+          this.sugerenciasIA = propuesta
+          this.iaFirmaDictamen = firma
+          this.iaFirmaExamen = JSON.stringify(this.contextoExamen())
+        } else {
+          this.sugerenciasIA = null
+          this.confirmaDictamenIA = false
+          this.iaFirmaDictamen = null
+          this.iaFirmaExamen = firma
+        }
+
+        const campos = { ...propuesta }
         campos.examenMedico = {
           ...(campos.examenMedico || {}),
           seguimiento_requerido: campos.seguimiento_requerido,
@@ -734,32 +873,69 @@ export default {
         delete campos.plazo_proximo_seguimiento
 
         this.completarDictamen(campos)
+        // Lo que la IA acaba de escribir no debe disparar otra consulta
+        this.iaFirmaExamen = JSON.stringify(this.contextoExamen())
+        if (conInstrumento) this.iaFirmaDictamen = JSON.stringify(this.contextoCapturado())
 
         if (data.advertencias?.length) console.warn('Advertencias de la IA:', data.advertencias)
       } catch (error) {
-        console.error('Error al proponer dictamen:', error)
-        await notificar('error', 'No se pudo proponer el dictamen', error.response?.data?.message || error.message)
+        console.error('Error en la consulta automática a la IA:', error)
       } finally {
+        this.iaEnCurso = false
         this.cargandoIA = false
-      }
-    },
-    
-    completarDictamen(campos) {
-      const rellenar = (destino, origen) => {
-        for (const clave in origen) {
-          const valor = origen[clave]
-          if (valor === null || valor === undefined || valor === '') continue
-          if (typeof valor === 'object' && !Array.isArray(valor)) {
-            destino[clave] = destino[clave] || {}
-            rellenar(destino[clave], valor)
-          } else if (destino[clave] === null || destino[clave] === undefined || destino[clave] === '' || destino[clave] === false) {
-            destino[clave] = valor
-          }
+        if (this.iaPendiente) {
+          this.iaPendiente = false
+          this.programarConsultaIA()
         }
       }
-      const { aptitud, ...resto } = campos
-      rellenar(this.form, resto)
     },
+
+    aplicarPropuestaIA(ruta, nuevo, actual) {
+      if (nuevo === null || nuevo === undefined || nuevo === '') return actual
+      const sinValor = actual === null || actual === undefined || actual === ''
+      const eraDeIA = actual === this.iaTextosPropuestos[ruta]
+      if (!sinValor && !eraDeIA) return actual
+      this.iaTextosPropuestos[ruta] = nuevo
+      return nuevo
+    },
+
+    completarDictamen(campos) {
+      const ex = campos.examenMedico || {}
+      const examen = { ...this.form.examenMedico }
+
+      ;['diagnostico_ergonomico', 'recomendaciones_examen', 'restricciones_laborales', 'derivacion_especialista'].forEach(k => {
+        examen[k] = this.aplicarPropuestaIA(`examenMedico.${k}`, ex[k], examen[k])
+      })
+
+      if (ex.seguimiento_requerido !== undefined && ex.seguimiento_requerido !== null) {
+        examen.seguimiento_requerido = ex.seguimiento_requerido
+      }
+      if (ex.plazo_proximo_seguimiento) {
+        examen.plazo_proximo_seguimiento = ex.plazo_proximo_seguimiento
+      }
+
+      // Pendiente de decisión: ver la pregunta al final
+      if (ex.hallazgos) {
+        const actuales = { ...(examen.hallazgos || {}) }
+        Object.entries(ex.hallazgos).forEach(([region, propuesto]) => {
+          if (this.medicoHallazgos[region]) return
+          if (propuesto && actuales[region] !== true) {
+            actuales[region] = true
+            this.iaHallazgos[region] = true
+          } else if (!propuesto && this.iaHallazgos[region] === true) {
+            actuales[region] = false
+            this.iaHallazgos[region] = false
+          }
+        })
+        examen.hallazgos = actuales
+        this.iaHallazgosSnapshot = { ...actuales }
+      }
+
+      this.form.examenMedico = examen
+      this.form.restricciones = this.aplicarPropuestaIA('restricciones', campos.restricciones, this.form.restricciones)
+      this.form.recomendaciones = this.aplicarPropuestaIA('recomendaciones', campos.recomendaciones, this.form.recomendaciones)
+    },
+    
 
 
     imprimir() {
@@ -806,6 +982,10 @@ export default {
             nombre_puesto: registro.puesto?.nombre || ''
           }
         }
+        this.$nextTick(() => {
+          this.iaFirmaDictamen = this.instrumentoConPuntuacion ? JSON.stringify(this.contextoCapturado()) : null
+          this.iaFirmaExamen = JSON.stringify(this.contextoExamen())
+        })
       } catch (error) {
         console.error('Error al cargar la valoración ergonómica:', error)
         await notificar('error', 'Error al cargar la valoración', error.response?.data?.message || error.message)
@@ -858,6 +1038,10 @@ export default {
         this.cargando = false;
       }
     }
+  },
+
+  beforeUnmount() {
+    clearTimeout(this.iaTimer)
   },
 
   mounted() {

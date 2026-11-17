@@ -8,12 +8,6 @@
         </h3>
       </div>
       <div class="card-body">
-        <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-outline-success" :disabled="cargandoIA" @click="$emit('proponer')">
-              <i class="fas fa-robot mr-1"></i>
-              {{ cargandoIA ? 'Consultando IA...' : 'Proponer dictamen con IA' }}
-            </button>
-        </div>
         <div v-if="sugerencias.aptitud" class="alert alert-info">
           Sugerencia de la IA: <strong>{{ sugerencias.aptitud }}</strong>. Selecciónala solo si estás de acuerdo.
         </div>
@@ -126,7 +120,7 @@ export default {
     confirmado: { type: Boolean, default: false },
     cargandoIA: { type: Boolean, default: false }
   },
-  emits: ['update:modelValue', 'update:confirmado', 'proponer'],
+  emits: ['update:modelValue', 'update:confirmado'],
   data() {
     return {
       aptitudOpciones: [

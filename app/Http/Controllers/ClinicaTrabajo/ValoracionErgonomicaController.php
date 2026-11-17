@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ClinicaTrabajo\PuestoTrabajo;
 use App\Models\ClinicaTrabajo\ValoracionErgonomica;
 use App\Models\Medico;
+use App\Models\Empresa;
 use App\Services\ClinicaTrabajo\IAServiceErgonomia;
 use App\Models\ClinicaTrabajo\ErgonomiaIaMensaje;
 use Illuminate\Support\Str;
@@ -101,11 +102,18 @@ class ValoracionErgonomicaController extends Controller
             ], 422);
         }
 
+        $datos = $request->all();
+
         $valoracion = $this->crearConFolio($validated, [
             'medico_id' => $medico->id,
             'user_id' => $request->user()->id,
-            'datos_json' => json_encode($request->all(), JSON_UNESCAPED_UNICODE),
+            'datos_json' => json_encode($datos, JSON_UNESCAPED_UNICODE),
         ]);
+
+        // El folio del formulario es solo una sugerencia; el definitivo es el de la columna
+        $datos = $this->corregirFolioEnDatos($datos, $valoracion->folio);
+        $valoracion->datos_json = json_encode($datos, JSON_UNESCAPED_UNICODE);
+        $valoracion->save();
 
         if ($request->boolean('usa_ia') && $request->filled('session_uuid')) {
             ErgonomiaIaMensaje::where('session_uuid', $request->input('session_uuid'))
@@ -189,17 +197,16 @@ class ValoracionErgonomicaController extends Controller
     public function imprimir(string $id)
     {
         $valoracion = ValoracionErgonomica::with(self::RELACIONES)->findOrFail($id);
-
         $medico = $valoracion->medico;
-        $medico?->load('configuraciones.ubicacion');
+        $consultorio = $this->datosConsultorio($valoracion);
 
         $pdf = Pdf::loadView('pdf.ClinicaTrabajo.Ergonomia.reporteergonomia', [
             'v' => $valoracion,
             'datos' => json_decode($valoracion->datos_json, true) ?? [],
             'medico' => $medico?->usuario,
             'cedula' => $medico?->cedula_profesional,
-            'ubicacion' => $medico?->configuraciones->first()?->ubicacion,
-            'logoPath' => $this->logoPath(),
+            'ubicacion' => $consultorio['ubicacion'],
+            'logoPath' => $consultorio['logoPath'],
         ])->setPaper('letter');
 
         return $pdf->stream('ergonomia-' . $valoracion->folio . '.pdf');
@@ -223,6 +230,7 @@ class ValoracionErgonomicaController extends Controller
 
         $validated = $request->validate([
             'modo' => 'nullable|in:chat,recomendar',
+            'alcance' => 'nullable|in:examen,dictamen',
             'mensaje' => 'required_if:modo,chat|nullable|string|max:4000',
             'contexto' => 'nullable|array',
             'historial' => 'nullable|array',
@@ -235,7 +243,10 @@ class ValoracionErgonomicaController extends Controller
 
         if ($modo === 'recomendar') {
             // El formulario trae las columnas tipadas en la raíz; por eso se pasa igual en ambos argumentos.
-            $resultado = $ia->proponerDictamen($contexto, $contexto);
+            $alcance = $validated['alcance'] ?? 'dictamen';
+            $resultado = $alcance === 'examen'
+                ? $ia->proponerExamen($contexto, $contexto)
+                : $ia->proponerDictamen($contexto, $contexto);
             $sessionUuid = $validated['session_uuid'] ?? (string) Str::uuid();
 
             $mensaje = ErgonomiaIaMensaje::create([
@@ -296,19 +307,19 @@ class ValoracionErgonomicaController extends Controller
             // RULA
             'rula_puntuacion' => 'nullable|integer|between:1,7',
             'rula_nivel_riesgo' => 'nullable|in:' . implode(',', self::NIVELES_RULA),
-            'rula_areas_evaluadas' => $texto,
+            'rula_areas_evaluadas' => 'nullable|required_if:instrumento_utilizado,RULA|string|max:500',
 
             // REBA
             'reba_puntuacion' => 'nullable|integer|between:1,15',
             'reba_nivel_accion' => 'nullable|in:' . implode(',', self::NIVELES_REBA),
-            'reba_areas_evaluadas' => $texto,
+            'reba_areas_evaluadas' => 'nullable|required_if:instrumento_utilizado,REBA|string|max:500',
 
             // NIOSH
             'niosh_indice_levantamiento' => $numero,
             'niosh_es_seguro' => 'nullable|boolean',
             'niosh_peso_real_kg' => $numero,
             'niosh_peso_recomendado_kg' => $numero,
-            'niosh_variables_evaluadas' => $texto,
+            'niosh_variables_evaluadas' => 'nullable|required_if:instrumento_utilizado,NIOSH|string|max:500',
 
             // Hallazgos
             'posturas_forzadas' => $booleano,
@@ -317,6 +328,17 @@ class ValoracionErgonomicaController extends Controller
             'tiempo_permanencia_posicion' => 'nullable|string|max:100',
             'frecuencia_movimiento' => 'nullable|string|max:100',
             'carga_maxima_manipulada_kg' => $numero,
+
+            'peso_manipulado_kg' => 'nullable|numeric|min:0',
+            'altura_trabajador_cm' => 'nullable|numeric|min:50|max:250',
+            'frecuencia_levantamiento' => 'nullable|in:muy_baja,baja,media,alta,muy_alta',
+            'postura_cuello' => 'nullable|string|max:30',
+            'postura_hombros' => 'nullable|string|max:30',
+            'postura_muneca' => 'nullable|string|max:30',
+            'cargas_maximas_manipuladas' => 'nullable|boolean',
+            'exposicion_calor' => 'nullable|boolean',
+            'exposicion_vibraciones' => 'nullable|boolean',
+            'iluminacion_insuficiente' => 'nullable|boolean',
 
             // Examen médico
             'examen_medico_realizado' => $booleano,
@@ -399,26 +421,78 @@ class ValoracionErgonomicaController extends Controller
         });
     }
 
+    /** Reemplaza el folio sugerido por el definitivo dentro de datos_json. */
+    private function corregirFolioEnDatos(array $datos, string $folio): array
+    {
+        if (isset($datos['datosBasicos']) && is_array($datos['datosBasicos'])) {
+            $datos['datosBasicos']['folio'] = $folio;
+        }
+
+        if (array_key_exists('folio', $datos)) {
+            $datos['folio'] = $folio;
+        }
+
+        return $datos;
+    }
+
     private function formatearFolio(int $id): string
     {
         return 'ERG-' . now()->year . '-' . str_pad($id, 4, '0', STR_PAD_LEFT);
     }
 
     // Solo para mostrar el folio sugerido en el formulario nuevo; el definitivo se asigna al guardar
+        // Solo para mostrar el folio sugerido en el formulario nuevo; el definitivo se asigna al guardar
     private function siguienteFolio(): string
     {
-        $siguienteId = DB::selectOne(
-            "SELECT AUTO_INCREMENT AS id FROM information_schema.TABLES
-            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'valoraciones_ergonomicas'"
-        )->id;
+        // MySQL 8 cachea las estadísticas de la tabla; sin esto devuelve un AUTO_INCREMENT viejo
+        DB::statement('SET SESSION information_schema_stats_expiry = 0');
 
-        return $this->formatearFolio((int) $siguienteId);
+        $tabla = DB::selectOne("SHOW TABLE STATUS LIKE 'valoraciones_ergonomicas'");
+
+        return $this->formatearFolio((int) $tabla->Auto_increment);
     }
 
-    private function logoPath(): ?string
+        /** Sucursal del médico (o empresa si no tiene) y logo del tenant, con respaldo genérico. */
+    private function datosConsultorio(ValoracionErgonomica $valoracion): array
     {
-        $logo = public_path('images/logo.png');
+        $ubicacion = null;
+        $medicoCatalogo = $valoracion->medico;
+        if ($medicoCatalogo) {
+            $medicoCatalogo->load('configuraciones.ubicacion');
+            $ubicacion = $medicoCatalogo->configuraciones->first()?->ubicacion;
+        }
 
-        return file_exists($logo) ? $logo : null;
+        if (!$ubicacion) {
+            $empresa = Empresa::first();
+            if ($empresa) {
+                $ubicacion = (object) [
+                    'nombre'    => $empresa->nombre_empresa,
+                    'direccion' => $empresa->direccion,
+                    'telefono'  => $empresa->telefono,
+                    'imagen'    => $empresa->logo_url,
+                ];
+            }
+        }
+
+        // Logo del tenant: configuracion_empresa.logo_url; si no existe, la imagen de la sucursal
+        $logoRelativo = Empresa::first()?->logo_url ?: $ubicacion?->imagen;
+
+        $logoPath = null;
+        if (!empty($logoRelativo)) {
+            $valorImagen = ltrim($logoRelativo, '/');
+
+            $rutaCandidata = str_starts_with($valorImagen, 'personalisarperfil/')
+                ? public_path($valorImagen)
+                : public_path('personalisarperfil/' . $valorImagen);
+
+            $logoPath = file_exists($rutaCandidata) ? $rutaCandidata : null;
+        }
+
+        if (!$logoPath) {
+            $logoGenerico = public_path('images/logo.png');
+            $logoPath = file_exists($logoGenerico) ? $logoGenerico : null;
+        }
+
+        return ['ubicacion' => $ubicacion, 'logoPath' => $logoPath];
     }
 }

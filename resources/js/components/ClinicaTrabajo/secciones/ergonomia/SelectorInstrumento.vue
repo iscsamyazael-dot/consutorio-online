@@ -49,6 +49,16 @@
           <p class="text-muted small mb-3">
             Los siguientes campos se adaptarán automáticamente según el instrumento seleccionado.
           </p>
+          <div class="mb-4">
+            <label class="font-weight-bold d-block mb-1">Justificación del instrumento</label>
+            <textarea
+              :value="form.justificacion_instrumento"
+              @input="updateField('justificacion_instrumento', $event.target.value)"
+              rows="2"
+              class="form-control"
+              placeholder="Por qué se eligió este instrumento para el puesto"
+            ></textarea>
+          </div>
           <InstrumentoEspecifico
             :modelValue="form"
             @update:modelValue="updateForm"

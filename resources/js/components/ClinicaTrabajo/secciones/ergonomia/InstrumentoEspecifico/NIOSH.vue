@@ -13,6 +13,10 @@
       <label class="block text-sm">Peso Recomendado (kg)</label>
       <div class="input-field w-full bg-light">{{ pesoRecomendadoTexto }}</div>
     </div>
+    <div class="mt-4">
+      <label class="block text-sm">Variables evaluadas</label>
+      <textarea v-model="form.niosh_variables_evaluadas" rows="2" class="input-field w-full" placeholder="Ej. Altura de inicio, distancia horizontal, asimetría"></textarea>
+    </div>
   </div>
 </template>
 <script>
@@ -29,9 +33,22 @@ export default {
     },
     pesoRecomendadoTexto() {
       const indice = this.form.niosh_indice_levantamiento
-      const peso = this.form.peso_manipulado_kg
+      const peso = this.form.hallazgos?.peso_manipulado_kg
       if (!indice || indice <= 0 || !peso) return '—'
       return Math.max(5, 25 / indice).toFixed(1)
+    },
+    esSeguro() {
+      const i = this.form.niosh_indice_levantamiento
+      return i !== null && i !== undefined && i !== '' && i < 1
+    }
+  },
+  watch: {
+    'modelValue.niosh_indice_levantamiento': {
+      immediate: true,
+      handler() {
+        const i = this.form.niosh_indice_levantamiento
+        this.form.niosh_es_seguro = (i === null || i === undefined || i === '') ? null : this.esSeguro
+      }
     }
   }
 }

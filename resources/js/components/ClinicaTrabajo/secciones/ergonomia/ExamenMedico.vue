@@ -174,6 +174,19 @@
               />
             </div>
           </div>
+          
+          <div class="row">
+            <div class="col-12 mb-3">
+              <label class="font-weight-bold d-block mb-1">Observaciones del médico</label>
+              <textarea
+                v-model="form.notas_ergonomo"
+                rows="3"
+                class="form-control"
+                placeholder="Notas que justifican la decisión de seguimiento..."
+              ></textarea>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

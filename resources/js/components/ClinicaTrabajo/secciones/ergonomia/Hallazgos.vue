@@ -12,25 +12,6 @@
           Registro de factores de riesgo ergonómicos observados durante la evaluación. Cada factor tiene una puntuación de riesgo.
         </p>
 
-        <!-- Fila 1: Puntuaciones de instrumentos (se capturan en la hoja 5) -->
-        <div class="row mb-4">
-          <div class="col-md-4 mb-3">
-            <label class="font-weight-bold d-block mb-1">RULA Puntuación</label>
-            <div class="form-control bg-light">{{ instrumento.rula_puntuacion ?? '—' }}</div>
-            <small class="text-muted">Nivel: {{ getRulaNivel }}</small>
-          </div>
-          <div class="col-md-4 mb-3">
-            <label class="font-weight-bold d-block mb-1">REBA Puntuación</label>
-            <div class="form-control bg-light">{{ instrumento.reba_puntuacion ?? '—' }}</div>
-            <small class="text-muted">Nivel: {{ getRebaNivel }}</small>
-          </div>
-          <div class="col-md-4 mb-3">
-            <label class="font-weight-bold d-block mb-1">NIOSH Índice</label>
-            <div class="form-control bg-light">{{ instrumento.niosh_indice_levantamiento ?? '—' }}</div>
-            <small class="text-muted">Seguro: {{ instrumento.niosh_es_seguro ? 'Sí' : 'No' }}</small>
-          </div>
-        </div>
-
         <!-- Fila 2: Pesos y cargas -->
         <div class="row mb-4">
           <div class="col-md-4 mb-3">
@@ -116,58 +97,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Fila 5: Resumen y conclusión -->
-        <div class="mt-4 p-4" style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;">
-          <h4 class="font-weight-bold mb-3" style="color: #9a3412;">
-            <i class="fas fa-chart-bar mr-2"></i>
-            Evaluación de Riesgo Total
-          </h4>
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <label class="font-weight-bold d-block mb-1">Nivel de Riesgo Total</label>
-              <div class="d-flex align-items-center">
-                <span class="badge-riesgo"
-                  :class="{
-                    'badge-bajo': nivelRiesgoTotal === 'bajo',
-                    'badge-medio': nivelRiesgoTotal === 'medio',
-                    'badge-alto': nivelRiesgoTotal === 'alto',
-                    'badge-muy-alto': nivelRiesgoTotal === 'muy_alto'
-                  }">
-                  {{ nivelRiesgoTotal }}
-                </span>
-              </div>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="font-weight-bold d-block mb-1">Acciones Requeridas</label>
-              <div class="d-flex align-items-center">
-                <span class="badge-accion"
-                  :class="{
-                    'badge-ninguna': accionRequerida === 'ninguna',
-                    'badge-monitoreo': accionRequerida === 'monitoreo',
-                    'badge-mejora': accionRequerida === 'mejora',
-                    'badge-intervencion': accionRequerida === 'intervencion'
-                  }">
-                  {{ accionRequerida }}
-                </span>
-              </div>
-            </div>
-            <div class="col-md-4 mb-3">
-              <label class="font-weight-bold d-block mb-1">Prioridad de Intervención</label>
-              <div class="d-flex align-items-center">
-                <span class="badge-prioridad"
-                  :class="{
-                    'badge-baja': prioridadIntervencion === 'baja',
-                    'badge-media': prioridadIntervencion === 'media',
-                    'badge-alta-p': prioridadIntervencion === 'alta',
-                    'badge-urgente': prioridadIntervencion === 'urgente'
-                  }">
-                  {{ prioridadIntervencion }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -216,52 +145,7 @@ export default {
       if (puntuacion <= 10) return 'Alto'
       return 'Muy Alto'
     },
-    nivelRiesgoTotal() {
-      const rula = this.instrumento.rula_puntuacion || 0
-      const reba = this.instrumento.reba_puntuacion || 0
-      const niosh = this.instrumento.niosh_indice_levantamiento || 0
-
-      let riesgoScore = 0
-      if (rula >= 6) riesgoScore += 3
-      else if (rula >= 4) riesgoScore += 2
-      else if (rula >= 2) riesgoScore += 1
-
-      if (reba >= 11) riesgoScore += 3
-      else if (reba >= 8) riesgoScore += 2
-      else if (reba >= 5) riesgoScore += 1
-
-      if (niosh >= 7) riesgoScore += 3
-      else if (niosh >= 4) riesgoScore += 2
-      else if (niosh >= 1) riesgoScore += 1
-
-      const riesgosSeleccionados = this.riesgosErgonomicos.filter(r => this.form[r.key]).length
-      riesgoScore += Math.min(riesgosSeleccionados, 3)
-
-      if (riesgoScore <= 3) return 'bajo'
-      if (riesgoScore <= 6) return 'medio'
-      if (riesgoScore <= 9) return 'alto'
-      return 'muy_alto'
-    },
-    accionRequerida() {
-      const riesgo = this.nivelRiesgoTotal
-      switch (riesgo) {
-        case 'bajo': return 'ninguna'
-        case 'medio': return 'monitoreo'
-        case 'alto': return 'mejora'
-        case 'muy_alto': return 'intervencion'
-        default: return 'ninguna'
-      }
-    },
-    prioridadIntervencion() {
-      const riesgo = this.nivelRiesgoTotal
-      switch (riesgo) {
-        case 'bajo': return 'baja'
-        case 'medio': return 'media'
-        case 'alto': return 'alta'
-        case 'muy_alto': return 'urgente'
-        default: return 'baja'
-      }
-    },
+    
     pesoRecomendado() {
       if (!this.instrumento.niosh_indice_levantamiento) return 'N/A'
       const indice = this.instrumento.niosh_indice_levantamiento
