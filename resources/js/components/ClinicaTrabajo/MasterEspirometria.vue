@@ -128,6 +128,11 @@
             :puestosDisponibles="puestosEmpresa"
             @update:modelValue="form.datosGenerales = $event"
           ></datos-generales-espirometria>
+          <div class="d-flex justify-content-end border-top pt-3 mt-4">
+            <button type="button" class="btn btn-primary" @click="irAHoja(2)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+          </div>
         </div>
 
         <!-- HOJA 2: Parámetros FVL -->
@@ -138,6 +143,14 @@
             @importar-interpretacion="alImportarInterpretacion($event)"
             @importar-datos-generales="fusionarDatosIA({ datosGenerales: $event })"
           ></parametros-fvl-espirometria>
+          <div class="d-flex justify-content-between border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(1)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button type="button" class="btn btn-primary" @click="irAHoja(3)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+          </div>
         </div>
 
         <!-- HOJA 3: Interpretación -->
@@ -152,8 +165,12 @@
             @confirmar-dictamen="confirmarDictamen"
             @update:modelValue="form.interpretacion = $event"
           ></interpretacion-espirometria>
+          <div class="d-flex justify-content-start border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(2)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+          </div>
         </div>
-
       </div>
 
       <!-- 4. BOTONES DE ACCIÓN -->
@@ -726,6 +743,25 @@ export default {
       }
       window.open(`/espirometria-imprimir/${this.valoracionId}`, '_blank')
     },
+    
+    irAHoja(numero) {
+      const pestana = document.querySelector(`a[href="#hoja${numero}"]`)
+      if (!pestana) {
+        console.warn(`No se encontró la pestaña de la hoja ${numero}`)
+        return
+      }
+      if (window.jQuery && window.jQuery.fn.tab) {
+        window.jQuery(pestana).tab('show')
+      } else {
+        pestana.click()
+      }
+      this.hojaActiva = numero
+      this.$nextTick(() => {
+        const barra = document.querySelector('.nav-tabs')
+        if (barra) barra.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    },
+
   },
 
   watch: {

@@ -68,7 +68,7 @@
             <div class="col-md-4 mb-3">
               <label class="font-weight-bold d-block mb-1">Postura Cabeza/Cuello</label>
               <select v-model="form.postura_cuello" class="form-control">
-                <option value="">Normal</option>
+                <option value="normal">Normal</option>
                 <option value="flexion">Flexión</option>
                 <option value="extension">Extensión</option>
                 <option value="rotacion">Rotación</option>
@@ -78,7 +78,7 @@
             <div class="col-md-4 mb-3">
               <label class="font-weight-bold d-block mb-1">Postura Hombros</label>
               <select v-model="form.postura_hombros" class="form-control">
-                <option value="">Neutral</option>
+                <option value="neutral">Neutral</option>
                 <option value="elevacion">Elevación</option>
                 <option value="depresion">Depresión</option>
                 <option value="protraction">Protracción</option>
@@ -88,7 +88,7 @@
             <div class="col-md-4 mb-3">
               <label class="font-weight-bold d-block mb-1">Postura Muñeca</label>
               <select v-model="form.postura_muneca" class="form-control">
-                <option value="">Neutral</option>
+                <option value="neutral">Neutral</option>
                 <option value="flexion">Flexión</option>
                 <option value="extension">Extensión</option>
                 <option value="desviacion_radial">Desviación Radial</option>

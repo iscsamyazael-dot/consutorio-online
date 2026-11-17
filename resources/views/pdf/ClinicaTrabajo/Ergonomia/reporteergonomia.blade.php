@@ -137,6 +137,43 @@
     </tr>
 </table>
 
+{{-- FACTORES DE RIESGO OBSERVADOS --}}
+@php
+    $etiquetasFactores = [
+        'posturas_forzadas' => 'Posturas forzadas',
+        'movimientos_repetitivos' => 'Movimientos repetitivos',
+        'manipulacion_cargas' => 'Manipulación de cargas',
+        'cargas_maximas_manipuladas' => 'Cargas máximas manipuladas',
+        'exposicion_calor' => 'Exposición al calor',
+        'exposicion_vibraciones' => 'Exposición a vibraciones',
+        'iluminacion_insuficiente' => 'Iluminación insuficiente',
+    ];
+    $factoresMarcados = collect($etiquetasFactores)
+        ->filter(fn ($etiqueta, $campo) => (bool) $v->{$campo})
+        ->values()
+        ->implode(', ');
+    $textoPostura = fn ($x) => ($x === null || $x === '') ? '—' : ucfirst(str_replace('_', ' ', $x));
+@endphp
+<div class="title">Factores de riesgo del puesto</div>
+<table class="box">
+    <tr>
+        <td class="lbl">Peso manipulado / altura:</td>
+        <td>{{ $n($v->peso_manipulado_kg, 2) }} kg · {{ $n($v->altura_trabajador_cm, 0) }} cm</td>
+    </tr>
+    <tr>
+        <td class="lbl">Frecuencia de levantamiento:</td>
+        <td>{{ $textoPostura($v->frecuencia_levantamiento) }}</td>
+    </tr>
+    <tr>
+        <td class="lbl">Factores observados:</td>
+        <td>{{ $factoresMarcados !== '' ? $factoresMarcados : 'Ninguno' }}</td>
+    </tr>
+    <tr>
+        <td class="lbl">Cuello / hombros / muñeca:</td>
+        <td>{{ $textoPostura($v->postura_cuello) }} / {{ $textoPostura($v->postura_hombros) }} / {{ $textoPostura($v->postura_muneca) }}</td>
+    </tr>
+</table>
+
 {{-- INSTRUMENTO UTILIZADO --}}
 <div class="title">Evaluación con instrumento: {{ $v->instrumento_utilizado ?? '—' }}</div>
 <table class="box">

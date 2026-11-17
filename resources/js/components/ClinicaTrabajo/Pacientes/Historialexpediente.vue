@@ -609,11 +609,11 @@
               <div class="espiro-acciones">
                 <a :href="`/ergonomia-imprimir/${val.id}`" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
                   <i class="fas fa-print me-1"></i> Imprimir
-                </a>
-                <button type="button" class="btn btn-outline-secondary rounded-pill px-4"
-                        @click="abrirDetalleErgonomia(val)">
+                </a>  
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="abrirDetalleErgonomia(val)">
                   <i class="fas fa-eye me-1"></i> Ver detalle
                 </button>
+
               </div>
 
             </div>
@@ -1200,7 +1200,6 @@
     <!-- AQUI TERMINA EL MODAL DETALLE DE AUDIOLOGÍA - HISTORIA CLÍNICA -->
     
     <!-- INICIA EL MODAL PARA VER LOS DETALLES DE ERGONOMIA -->
-     <!-- MODAL DETALLE DE VALORACIÓN ERGONÓMICA -->
     <div class="modal fade" id="modalDetalleErgonomia" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg" v-if="ergonomiaDetalle">
@@ -1215,6 +1214,7 @@
                 <h5 class="modal-title fw-bold mb-1">
                   Valoración Ergonómica
                   <span class="badge bg-white bg-opacity-25 text-white ms-2 align-middle">
+                    <i class="fas fa-tag me-1" style="font-size: 0.7em;"></i>
                     #{{ ergonomiaDetalle.folio }}
                   </span>
                 </h5>
@@ -1259,7 +1259,7 @@
                   </div>
                   <div class="info-card-content">
                     <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Puntuación</small>
-                    <strong class="d-block text-dark">{{ puntuacionErgonomia(ergonomiaDetalle) }}</strong>
+                    <strong class="d-block text-dark">{{ puntuacionErgonomia(ergonomiaDetalle) }} pts</strong>
                   </div>
                 </div>
               </div>
@@ -1280,13 +1280,14 @@
                     <i class="fas fa-calendar-check"></i>
                   </div>
                   <div class="info-card-content">
-                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Seguimiento</small>
-                    <strong class="d-block text-dark">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Requiere seguimiento</small>
+                    <strong class="d-block" :class="ergonomiaDetalle.seguimiento_requerido ? 'text-warning' : 'text-success'">
+                      <i :class="ergonomiaDetalle.seguimiento_requerido ? 'fas fa-exclamation-circle' : 'fas fa-check-circle'" class="me-1"></i>
                       {{ ergonomiaDetalle.seguimiento_requerido ? 'Sí' : 'No' }}
-                      <span v-if="ergonomiaDetalle.seguimiento_requerido" class="text-muted small">
-                        · {{ ergonomiaDetalle.plazo_proximo_seguimiento || 'Sin plazo' }}
-                      </span>
                     </strong>
+                    <small v-if="ergonomiaDetalle.seguimiento_requerido" class="text-muted d-block mt-1">
+                      <i class="far fa-clock me-1"></i>{{ ergonomiaDetalle.plazo_proximo_seguimiento || 'Sin plazo' }}
+                    </small>
                   </div>
                 </div>
               </div>
@@ -1301,26 +1302,87 @@
                 <h6 class="fw-bold mb-0 text-primary">Trabajador y puesto</h6>
               </div>
               <div class="card-body small">
-                <div class="row g-2">
-                  <div class="col-md-6"><strong>Trabajador:</strong> {{ ergonomiaDetalle.paciente?.nombre || '—' }}</div>
-                  <div class="col-md-6"><strong>Empresa:</strong> {{ ergonomiaDetalle.empresa?.razon_social || '—' }}</div>
-                  <div class="col-md-6"><strong>Puesto:</strong> {{ ergonomiaDetalle.puesto?.nombre || '—' }}</div>
-                  <div class="col-md-6"><strong>Departamento:</strong> {{ ergonomiaDetalle.puesto?.departamento || '—' }}</div>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="fas fa-user-circle text-muted me-2 mt-1"></i>
+                      <div>
+                        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Trabajador</small>
+                        <div class="fw-semibold">{{ ergonomiaDetalle.paciente?.nombre || '—' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="fas fa-building text-muted me-2 mt-1"></i>
+                      <div>
+                        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Empresa</small>
+                        <div class="fw-semibold">{{ ergonomiaDetalle.empresa?.razon_social || '—' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="fas fa-briefcase text-muted me-2 mt-1"></i>
+                      <div>
+                        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Puesto</small>
+                        <div class="fw-semibold">{{ ergonomiaDetalle.puesto?.nombre || '—' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="fas fa-industry text-muted me-2 mt-1"></i>
+                      <div>
+                        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Departamento</small>
+                        <div class="fw-semibold">{{ ergonomiaDetalle.puesto?.departamento || '—' }}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- DIAGNÓSTICO Y EXAMEN -->
-            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-warning">
-              <div class="card-body py-3">
-                <h6 class="fw-bold text-warning mb-2">Diagnóstico y examen médico</h6>
-                <p class="small mb-2"><strong>Hallazgos:</strong>
-                  {{ datosErgonomiaDetalle.examenMedico?.exploracion_osteomuscular_hallazgos || '—' }}</p>
-                <p class="small mb-2"><strong>Diagnóstico relacionado:</strong> {{ ergonomiaDetalle.diagnostico_relacionado || '—' }}</p>
-                <p class="small mb-0"><strong>Regiones con hallazgo:</strong>
-                  <span v-if="regionesErgonomiaDetalle.length">{{ regionesErgonomiaDetalle.join(', ') }}</span>
-                  <span v-else>Ninguna</span>
-                </p>
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-warning">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-2">
+                <div class="info-card-icon bg-warning-soft text-warning me-2" style="width: 32px; height: 32px;">
+                  <i class="fas fa-heartbeat"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-warning">Diagnóstico y examen médico</h6>
+              </div>
+              <div class="card-body small">
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="fas fa-search text-muted me-2 mt-1"></i>
+                      <div>
+                        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Hallazgos</small>
+                        <div>{{ datosErgonomiaDetalle.examenMedico?.exploracion_osteomuscular_hallazgos || '—' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="fas fa-map-marker-alt text-muted me-2 mt-1"></i>
+                      <div>
+                        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Regiones con hallazgo</small>
+                        <div>
+                          <span v-if="regionesErgonomiaDetalle.length">{{ regionesErgonomiaDetalle.join(', ') }}</span>
+                          <span v-else class="text-muted">Ninguna</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <hr class="my-2">
+                <div class="d-flex align-items-start">
+                  <i class="fas fa-stethoscope text-muted me-2 mt-1"></i>
+                  <div>
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Diagnóstico relacionado</small>
+                    <div>{{ ergonomiaDetalle.diagnostico_relacionado || '—' }}</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1333,54 +1395,192 @@
                 <h6 class="fw-bold mb-0 text-primary">Evaluación con instrumento</h6>
               </div>
               <div class="card-body small">
-                <div class="row g-2 mb-2">
-                  <div class="col-md-4"><strong>Instrumento:</strong> {{ ergonomiaDetalle.instrumento_utilizado || '—' }}</div>
-                  <div class="col-md-4"><strong>Puntuación:</strong> {{ puntuacionErgonomia(ergonomiaDetalle) }}</div>
-                  <div class="col-md-4"><strong>Nivel:</strong> {{ nivelErgonomia(ergonomiaDetalle).replace(/_/g, ' ') }}</div>
+                <div class="row g-2 mb-3">
+                  <div class="col-md-4">
+                    <div class="p-2 bg-light rounded">
+                      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Instrumento</small>
+                      <div class="fw-bold">{{ ergonomiaDetalle.instrumento_utilizado || '—' }}</div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-2 bg-light rounded">
+                      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Puntuación</small>
+                      <div class="fw-bold">{{ puntuacionErgonomia(ergonomiaDetalle) }}</div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-2 bg-light rounded">
+                      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Nivel</small>
+                      <div class="fw-bold text-capitalize">{{ nivelErgonomia(ergonomiaDetalle).replace(/_/g, ' ') }}</div>
+                    </div>
+                  </div>
                 </div>
-                <p class="mb-2" style="white-space: pre-line;"><strong>Áreas evaluadas:</strong> {{ areasErgonomiaDetalle(ergonomiaDetalle) }}</p>
-                <p class="mb-0" style="white-space: pre-line;"><strong>Justificación del instrumento:</strong> {{ ergonomiaDetalle.justificacion_instrumento || '—' }}</p>
+                <div class="mb-2">
+                  <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">
+                    <i class="fas fa-crosshairs me-1"></i>Áreas evaluadas
+                  </small>
+                  <p class="mb-0 mt-1" style="white-space: pre-line;">{{ areasErgonomiaDetalle(ergonomiaDetalle) }}</p>
+                </div>
+                <div>
+                  <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">
+                    <i class="fas fa-info-circle me-1"></i>Justificación del instrumento
+                  </small>
+                  <p class="mb-0 mt-1" style="white-space: pre-line;">{{ ergonomiaDetalle.justificacion_instrumento || '—' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- FACTORES DE RIESGO -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-2">
+                <div class="info-card-icon bg-warning-soft text-warning me-2" style="width: 32px; height: 32px;">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-warning">Factores de riesgo del puesto</h6>
+              </div>
+              <div class="card-body small">
+                <!-- Métricas principales -->
+                <div class="row g-2 mb-3">
+                  <div class="col-md-4">
+                    <div class="p-2 bg-light rounded text-center">
+                      <i class="fas fa-weight-hanging text-muted mb-1"></i>
+                      <small class="text-muted text-uppercase fw-semibold d-block" style="font-size: 0.7rem;">Peso manipulado</small>
+                      <strong>{{ ergonomiaDetalle.peso_manipulado_kg ?? '—' }} kg</strong>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-2 bg-light rounded text-center">
+                      <i class="fas fa-ruler-vertical text-muted mb-1"></i>
+                      <small class="text-muted text-uppercase fw-semibold d-block" style="font-size: 0.7rem;">Altura</small>
+                      <strong>{{ ergonomiaDetalle.altura_trabajador_cm ?? '—' }} cm</strong>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-2 bg-light rounded text-center">
+                      <i class="fas fa-redo text-muted mb-1"></i>
+                      <small class="text-muted text-uppercase fw-semibold d-block" style="font-size: 0.7rem;">Frecuencia</small>
+                      <strong>{{ textoErgonomia(ergonomiaDetalle.frecuencia_levantamiento) }}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <hr class="my-2">
+
+                <!-- Factores observados -->
+                <div class="mb-2">
+                  <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">
+                    <i class="fas fa-eye me-1"></i>Factores observados
+                  </small>
+                  <div class="mt-1">
+                    <span v-if="factoresErgonomiaDetalle.length" class="badge bg-light text-dark border me-1 mb-1" v-for="(factor, idx) in factoresErgonomiaDetalle" :key="idx">
+                      {{ factor }}
+                    </span>
+                    <span v-else class="text-muted">Ninguno</span>
+                  </div>
+                </div>
+
+                <!-- Posturas corporales -->
+                <div>
+                  <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">
+                    <i class="fas fa-walking me-1"></i>Posturas corporales
+                  </small>
+                  <div class="d-flex flex-wrap gap-2 mt-2">
+                    <span class="badge" :class="textoErgonomia(ergonomiaDetalle.postura_cuello) === 'Flexion' ? 'bg-warning text-dark' : 'bg-light text-dark border'">
+                      <i class="fas fa-head-side-virus me-1"></i>Cuello: {{ textoErgonomia(ergonomiaDetalle.postura_cuello) }}
+                    </span>
+                    <span class="badge" :class="textoErgonomia(ergonomiaDetalle.postura_hombros) === 'Neutral' ? 'bg-light text-dark border' : 'bg-warning text-dark'">
+                      <i class="fas fa-arrows-alt-h me-1"></i>Hombros: {{ textoErgonomia(ergonomiaDetalle.postura_hombros) }}
+                    </span>
+                    <span class="badge" :class="textoErgonomia(ergonomiaDetalle.postura_muneca) === 'Neutral' ? 'bg-light text-dark border' : 'bg-warning text-dark'">
+                      <i class="fas fa-hand-paper me-1"></i>Muñeca: {{ textoErgonomia(ergonomiaDetalle.postura_muneca) }}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
             <!-- RESTRICCIONES -->
-            <div v-if="ergonomiaDetalle.restricciones_laborales" class="card border-0 shadow-sm mb-3 border-start border-4 border-start-warning bg-warning bg-opacity-10">
+            <div v-if="restriccionesDetalleErgonomia" class="card border-0 shadow-sm mb-3 border-start border-4 border-warning bg-warning bg-opacity-10">
               <div class="card-body py-3">
-                <h6 class="fw-bold text-warning mb-1">Restricciones laborales</h6>
-                <p class="mb-0 text-body" style="white-space: pre-line;">{{ ergonomiaDetalle.restricciones_descripcion || 'Sí' }}</p>
+                <h6 class="fw-bold text-warning mb-1">
+                  <i class="fas fa-ban me-2"></i>Restricciones laborales
+                </h6>
+                <p class="mb-0 text-body" style="white-space: pre-line;">{{ restriccionesDetalleErgonomia }}</p>
               </div>
             </div>
 
             <!-- RECOMENDACIONES -->
             <div v-if="ergonomiaDetalle.acciones_recomendadas || ergonomiaDetalle.recomendaciones_puesto"
-                class="card border-0 shadow-sm mb-3 border-start border-4 border-start-primary">
-              <div class="card-body py-3">
-                <h6 class="fw-bold text-primary mb-2">Recomendaciones</h6>
-                <p v-if="ergonomiaDetalle.acciones_recomendadas" class="mb-2" style="white-space: pre-line;">
-                  {{ ergonomiaDetalle.acciones_recomendadas }}
-                </p>
-                <p v-if="ergonomiaDetalle.recomendaciones_puesto" class="mb-0 small" style="white-space: pre-line;">
-                  <strong>Para el puesto:</strong> {{ ergonomiaDetalle.recomendaciones_puesto }}
-                </p>
+                class="card border-0 shadow-sm mb-3 border-start border-4 border-success">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-2">
+                <div class="info-card-icon bg-success-soft text-success me-2" style="width: 32px; height: 32px;">
+                  <i class="fas fa-lightbulb"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-success">Recomendaciones</h6>
+              </div>
+              <div class="card-body small">
+                <div v-if="ergonomiaDetalle.acciones_recomendadas" class="mb-3">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-check-circle text-success me-2 mt-1"></i>
+                    <div>
+                      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">General</small>
+                      <p class="mb-0 mt-1" style="white-space: pre-line;">{{ ergonomiaDetalle.acciones_recomendadas }}</p>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="ergonomiaDetalle.recomendaciones_puesto">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-user-check text-success me-2 mt-1"></i>
+                    <div>
+                      <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Para el puesto</small>
+                      <p class="mb-0 mt-1" style="white-space: pre-line;">{{ ergonomiaDetalle.recomendaciones_puesto }}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             <!-- SEGUIMIENTO Y OBSERVACIONES -->
-            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-start-primary">
-              <div class="card-body py-3 small">
-                <h6 class="fw-bold text-primary mb-2">Seguimiento y observaciones</h6>
-                <p class="mb-1"><strong>Tipo de seguimiento:</strong> {{ datosErgonomiaDetalle.examenMedico?.tipo_seguimiento || '—' }}</p>
-                <p class="mb-1"><strong>Plazo:</strong> {{ ergonomiaDetalle.plazo_proximo_seguimiento || '—' }}</p>
-                <p class="mb-0" style="white-space: pre-line;"><strong>Notas del ergónomo:</strong> {{ ergonomiaDetalle.notas_ergonomo || '—' }}</p>
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-primary">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-2">
+                <div class="info-card-icon bg-primary-soft text-primary me-2" style="width: 32px; height: 32px;">
+                  <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-primary">Seguimiento y observaciones</h6>
               </div>
-            </div>
-
-            <!-- FIRMA -->
-            <div class="card border-0 shadow-sm mb-3">
-              <div class="card-body small text-center">
-                <div class="border-top border-dark mx-auto mb-2" style="width: 260px;"></div>
-                <div class="fw-bold">{{ ergonomiaDetalle.medico?.name || '—' }}</div>
-                <div class="text-muted">Cédula profesional: {{ ergonomiaDetalle.medico?.cedula || '—' }}</div>
+              <div class="card-body small">
+                <div class="row g-2 mb-3">
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="fas fa-user-md text-muted me-2 mt-1"></i>
+                      <div>
+                        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Tipo de seguimiento</small>
+                        <div>
+                          <span class="badge bg-light text-dark border">
+                            {{ datosErgonomiaDetalle.examenMedico?.tipo_seguimiento || '—' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-start">
+                      <i class="far fa-clock text-muted me-2 mt-1"></i>
+                      <div>
+                        <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Plazo</small>
+                        <div>{{ ergonomiaDetalle.plazo_proximo_seguimiento || '—' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">
+                    <i class="fas fa-comment-medical me-1"></i>Notas del ergónomo
+                  </small>
+                  <div class="p-2 bg-light rounded mt-1" style="white-space: pre-line;">
+                    {{ ergonomiaDetalle.notas_ergonomo || '—' }}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2200,6 +2400,45 @@
     background: #e7f3ff;
   }
 
+  /* Soft backgrounds para iconos */
+.bg-primary-soft { background-color: rgba(13, 110, 253, 0.1); }
+.bg-info-soft { background-color: rgba(13, 202, 240, 0.1); }
+.bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
+.bg-warning-soft { background-color: rgba(255, 193, 7, 0.1); }
+.bg-danger-soft { background-color: rgba(220, 53, 69, 0.1); }
+
+/* Info card mejorado */
+.info-card {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: transform 0.2s;
+}
+.info-card:hover {
+  transform: translateY(-2px);
+}
+.info-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.info-card-content {
+  flex: 1;
+}
+
+/* Bordes semánticos */
+.border-start-warning { border-left-color: #ffc107 !important; }
+.border-start-primary { border-left-color: #0d6efd !important; }
+.border-start-success { border-left-color: #198754 !important; }
+
   /* Responsive */
   @media (max-width: 1200px) {
     .audio-metricas-grid {
@@ -2340,6 +2579,24 @@ export default {
     },
     horaErgonomiaDetalle() {
       return (this.ergonomiaDetalle?.hora_valoracion || '').slice(0, 5)
+    },
+    factoresErgonomiaDetalle() {
+      const etiquetas = {
+        posturas_forzadas: 'Posturas forzadas',
+        movimientos_repetitivos: 'Movimientos repetitivos',
+        manipulacion_cargas: 'Manipulación de cargas',
+        cargas_maximas_manipuladas: 'Cargas máximas manipuladas',
+        exposicion_calor: 'Exposición al calor',
+        exposicion_vibraciones: 'Exposición a vibraciones',
+        iluminacion_insuficiente: 'Iluminación insuficiente'
+      }
+      return Object.entries(etiquetas)
+        .filter(([campo]) => !!this.ergonomiaDetalle?.[campo])
+        .map(([, texto]) => texto)
+    },
+    restriccionesDetalleErgonomia() {
+      const r = (this.ergonomiaDetalle?.restricciones_laborales || '').trim()
+      return r && r.toLowerCase() !== 'ninguna' ? r : ''
     },
   },
 
@@ -2738,6 +2995,11 @@ export default {
       if (val.instrumento_utilizado === 'REBA') return val.reba_areas_evaluadas || '—'
       if (val.instrumento_utilizado === 'NIOSH') return val.niosh_variables_evaluadas || '—'
       return '—'
+    },
+    textoErgonomia(valor) {
+      if (!valor) return '—'
+      const texto = valor.replace(/_/g, ' ')
+      return texto.charAt(0).toUpperCase() + texto.slice(1)
     },
     urlEditarErgonomia(val) {
       return `/ficha-ergonomia/${val.paciente_id}?valoracion=${val.id}`

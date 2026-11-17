@@ -150,6 +150,11 @@
             :modelValue="form.datosBasicos"
             @update:modelValue="form.datosBasicos = $event"
           ></datos-basico-ergonomia>
+          <div class="d-flex justify-content-end border-top pt-3 mt-4">
+            <button type="button" class="btn btn-primary" @click="irAHoja(2)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+          </div>
         </div>
 
         <!-- HOJA 2: ANTECEDENTES -->
@@ -168,6 +173,14 @@
             :modelValue="form.antecedentes"
             @update:modelValue="form.antecedentes = $event"
           ></cirugias-medicamentos>
+          <div class="d-flex justify-content-between border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(1)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button type="button" class="btn btn-primary" @click="irAHoja(3)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+          </div>
         </div>
 
         <!-- HOJA 3: HÁBITOS Y FACTORES LABORALES -->
@@ -181,6 +194,16 @@
             :modelValue="form.factoresLaborales"
             @update:modelValue="form.factoresLaborales = $event"
           ></factores-laborales-ergonomia>
+          
+          <div class="d-flex justify-content-between border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(2)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button type="button" class="btn btn-primary" @click="irAHoja(4)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+
         </div>
 
         <!-- HOJA 4: EXAMEN MÉDICO Y HALLAZGOS -->
@@ -201,6 +224,16 @@
             }"
             @update:modelValue="form.hallazgos = $event"
           ></hallazgos-ergonomia>
+          
+          <div class="d-flex justify-content-between border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(3)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button type="button" class="btn btn-primary" @click="irAHoja(5)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+
         </div>
 
         <!-- HOJA 5: INSTRUMENTOS Y DICTAMEN -->
@@ -222,6 +255,13 @@
             :cargandoIA="cargandoIA"
             @update:confirmado="confirmaDictamenIA = $event"
           ></aptitud-dictamen-ergonomia>
+          
+          <div class="d-flex justify-content-start border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(4)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+          </div>
+
         </div>
       </div>
 
@@ -355,6 +395,7 @@ export default {
       iaHallazgos: {},
       medicoHallazgos: {},
       iaHallazgosSnapshot: {},
+      hojaActiva: 1,
 
       // Estado centralizado del formulario dividido por secciones lógicas
       form: {
@@ -444,8 +485,9 @@ export default {
           recomendaciones_examen: '',
           restricciones_laborales: '',
           derivacion_especialista: '',
+          notas_ergonomo: '',
           derivacion_especialista_otro: '',
-          hallazgos: {} // ← CRÍTICO: inicializar vacío para los checkboxes
+          hallazgos: {}
         },
         hallazgos: {
           rula_puntuacion: null,
@@ -709,7 +751,8 @@ export default {
         diagnostico_relacionado: VACIO_A_NULL(ex.diagnostico_ergonomico),
         acciones_recomendadas: VACIO_A_NULL(ex.recomendaciones_examen),
         restricciones_laborales: VACIO_A_NULL(ex.restricciones_laborales),
-        derivacion_especialista: VACIO_A_NULL(ex.derivacion_especialista)
+        derivacion_especialista: VACIO_A_NULL(ex.derivacion_especialista),
+        notas_ergonomo: VACIO_A_NULL(ex.notas_ergonomo)
       }
     },
 
@@ -1037,7 +1080,24 @@ export default {
       } finally {
         this.cargando = false;
       }
-    }
+    },
+    irAHoja(numero) {
+      const pestana = document.querySelector(`a[href="#hoja${numero}"]`)
+      if (!pestana) {
+        console.warn(`No se encontró la pestaña de la hoja ${numero}`)
+        return
+      }
+      if (window.jQuery && window.jQuery.fn.tab) {
+        window.jQuery(pestana).tab('show')
+      } else {
+        pestana.click()
+      }
+      this.hojaActiva = numero
+      this.$nextTick(() => {
+        const barra = document.querySelector('.nav-tabs')
+        if (barra) barra.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    },
   },
 
   beforeUnmount() {
