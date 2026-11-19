@@ -308,45 +308,70 @@
           </div>
         </div>
 
-        <!-- 5. AUDIOLOGÍA - TRABAJO ALTO RIESGO -->
+                <!-- 5. AUDIOLOGÍA - TRABAJO ALTO RIESGO -->
         <div v-if="tabActiva === 'audiologiaAltoRiesgo'">
           <div class="section-title">
             <h5><i class="fas fa-exclamation-triangle text-danger me-2"></i>Audiología - Trabajo de Alto Riesgo</h5>
-            <small>Evaluaciones audiométricas para puestos con exposición a ruido (NOM-011-STPS-2013).</small>
+            <small>Examen de aptitud para trabajo en altura y espacio confinado.</small>
           </div>
           <div class="valoraciones-scroll">
             <div v-if="infoAudiologiaAltoRiesgo.length === 0" class="alert alert-light border text-center text-muted">
-              <i class="fas fa-clipboard-check me-2"></i> No se encuentran evaluaciones de alto riesgo registradas.
+              <i class="fas fa-clipboard-check me-2"></i> No se encuentran exámenes de alto riesgo registrados.
             </div>
-            <div v-else v-for="val in infoAudiologiaAltoRiesgo" :key="val.id" class="timeline-card">
-              <div class="timeline-dot bg-danger"></div>
-              <div class="flex-grow-1">
-                <div class="d-flex justify-content-between flex-wrap gap-2">
-                  <h6 class="fw-bold mb-0"><i class="fas fa-calendar-alt text-danger me-2"></i>{{ formatearFecha(val.fecha) }}</h6>
-                  <span class="badge rounded-pill px-3 py-2 bg-danger">{{ val.nivel_riesgo || 'Alto Riesgo' }}</span>
+
+            <div v-else v-for="val in infoAudiologiaAltoRiesgo" :key="val.id" class="tr-card">
+              <div class="tr-card-header">
+                <div>
+                  <div class="fw-bold">
+                    <i class="fas fa-calendar-alt text-danger me-1"></i>{{ formatearFecha(val.fecha) }}
+                  </div>
+                  <small class="text-muted">Folio {{ val.folio }} · {{ val.puesto_nombre }}</small>
                 </div>
-                <p class="mt-2 mb-1"><strong>Puesto de trabajo:</strong> {{ val.puesto || 'No especificado' }}</p>
-                <p class="text-muted small mb-1"><strong>Nivel de presión sonora:</strong> {{ val.nivel_presion_sonora || 'N/D' }} dB</p>
-                <p class="text-muted small mb-1"><strong>Umbral auditivo:</strong> {{ val.umbral_auditivo || 'N/D' }} dB</p>
-                <p class="text-muted small mb-2"><strong>Dictamen:</strong> 
-                  <span :class="val.dictamen === 'Apto' ? 'text-success fw-bold' : 'text-danger fw-bold'">
-                    {{ val.dictamen || 'Pendiente' }}
-                  </span>
-                </p>
-                <div class="d-flex gap-2">
-                  <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="verAudiometria(val)">
-                    <i class="fas fa-chart-line me-1"></i> Ver audiometría
-                  </button>
-                  <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @click="verDetalleAudiologia(val)">
-                    <i class="fas fa-eye me-1"></i> Ver expediente
-                  </button>
+                <span class="badge rounded-pill px-3 py-2" :class="colorAptitudTR(val.aptitud)">
+                  {{ val.aptitud || 'Sin aptitud' }}
+                </span>
+              </div>
+
+              <div class="tr-card-riesgos">
+                <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                <strong>Riesgos evaluados:</strong> {{ val.riesgos_texto }}
+              </div>
+
+              <div class="tr-card-metricas">
+                <div class="tr-metrica">
+                  <small class="text-muted">Diagnóstico principal</small>
+                  <strong>{{ val.diagnostico_principal || 'N/D' }}</strong>
                 </div>
+                <div class="tr-metrica">
+                  <small class="text-muted">PTA promedio</small>
+                  <strong>{{ ptaTR(val) }}</strong>
+                </div>
+                <div class="tr-metrica">
+                  <small class="text-muted">Presión · F. cardiaca</small>
+                  <strong>{{ val.presion_arterial || 'N/D' }} · {{ val.frecuencia_cardiaca ? val.frecuencia_cardiaca + ' lpm' : 'N/D' }}</strong>
+                </div>
+              </div>
+
+              <p v-if="val.observaciones" class="small text-muted mb-3">
+                <strong>Observaciones:</strong> {{ resumirTexto(val.observaciones, 160) }}
+              </p>
+
+              <div class="tr-card-acciones">
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @click="abrirDetalleAltoRiesgo(val)">
+                  <i class="fas fa-eye me-1"></i> Ver detalle
+                </button>
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @click="imprimirAltoRiesgo(val)">
+                  <i class="fas fa-print me-1"></i> Imprimir
+                </button>
+                <a :href="urlEditarAltoRiesgo(val)" class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                  <i class="fas fa-pen me-1"></i> Editar
+                </a>
               </div>
             </div>
           </div>
         </div>
 
-     <!-- 6. VALORACIÓN ESPIROMETRÍA -->
+        <!-- 6. VALORACIÓN ESPIROMETRÍA -->
         <div v-if="tabActiva === 'espirometria'">
           <div class="section-title">
             <h5><i class="fas fa-lungs text-danger me-2"></i>Historial de Espirometrías</h5>
@@ -1605,6 +1630,190 @@
       </div>
     </div>
     <!-- AQUI TERMINA EL MODAL DETALLE DE ERGONOMIA-->
+    
+        <!-- MODAL DETALLE ALTO RIESGO -->
+    <div class="modal fade" id="modalDetalleAltoRiesgo" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" v-if="trDetalle">
+
+          <div class="modal-header bg-gradient-medical text-white border-0 py-3">
+            <div class="d-flex align-items-center">
+              <div class="icon-circle bg-white bg-opacity-25 me-3">
+                <i class="fas fa-exclamation-triangle fs-4"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-1">
+                  Trabajo de Alto Riesgo
+                  <span class="badge bg-white bg-opacity-25 text-white ms-2 align-middle">#{{ trDetalle.folio }}</span>
+                </h5>
+                <small class="opacity-75">
+                  <i class="far fa-calendar-alt me-1"></i>{{ formatearFecha(fechaLocalTR(trDetalle.created_at)) }}
+                  <span class="mx-1">•</span>
+                  <i class="fas fa-briefcase me-1"></i>{{ trDetalle.puesto?.nombre || 'Sin puesto' }}
+                </small>
+              </div>
+            </div>
+            <span class="badge rounded-pill px-3 py-2 ms-auto me-3 shadow-sm" :class="colorAptitudTR(trDetalle.aptitud)">
+              {{ trDetalle.aptitud || 'Sin aptitud' }}
+            </span>
+            <button type="button" class="btn-close btn-close-white" @click="cerrarModal('modalDetalleAltoRiesgo')" aria-label="Cerrar"></button>
+          </div>
+
+          <div class="modal-body bg-light-subtle">
+
+            <!-- Riesgos y diagnóstico -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-danger">Riesgos y diagnóstico</h6>
+              </div>
+              <div class="card-body small">
+                <p class="mb-1"><strong>Riesgos evaluados:</strong> {{ listaTR(trDetalle.riesgos) }}</p>
+                <p class="mb-1"><strong>Diagnóstico principal:</strong> {{ trDetalle.diagnostico_principal || 'N/D' }}</p>
+                <p class="mb-0"><strong>Enfermedad profesional:</strong> {{ trDetalle.enfermedad_profesional ? 'Sí' : 'No' }}</p>
+              </div>
+            </div>
+
+            <!-- Antecedentes -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-primary">Antecedentes de salud</h6>
+              </div>
+              <div class="card-body small">
+                <span v-if="trActivos(trDetalle.antecedentes_salud).length">
+                  <span v-for="a in trActivos(trDetalle.antecedentes_salud)" :key="a" class="badge rounded-pill bg-danger text-white me-1 mb-1">{{ a }}</span>
+                </span>
+                <span v-else class="text-muted">Sin antecedentes positivos registrados</span>
+              </div>
+            </div>
+
+            <!-- Signos vitales -->
+            <div class="row g-2 mb-3">
+              <div class="col-6 col-md" v-for="v in signosTR(trDetalle)" :key="v.etiqueta">
+                <div class="text-center p-2 border rounded-3 bg-white h-100">
+                  <small class="text-muted d-block">{{ v.etiqueta }}</small>
+                  <strong>{{ v.valor }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Exploración y estudios -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-primary">Exploración y estudios</h6>
+              </div>
+              <div class="card-body small">
+                <p class="mb-1"><strong>Exploración física:</strong> {{ textoTR(trDetalle.exploracion_fisica) }}</p>
+                <p class="mb-1"><strong>ECG:</strong> {{ textoTR(trDetalle.ecg) }}</p>
+                <p class="mb-1"><strong>Radiografía de tórax:</strong> {{ textoTR(trDetalle.rx_torax) }}</p>
+                <p class="mb-0"><strong>Evaluación visual:</strong> {{ textoTR(trDetalle.evaluacion_visual) }}</p>
+              </div>
+            </div>
+
+            <!-- Audiometría -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-danger">
+              <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-danger">Audiometría</h6>
+              </div>
+              <div class="card-body small">
+                <div class="table-responsive mb-2">
+                  <table class="table table-sm table-bordered text-center mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Hz</th>
+                        <th v-for="f in frecuenciasTR" :key="'h' + f">{{ f }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <th class="table-light">Derecho (dB)</th>
+                        <td v-for="f in frecuenciasTR" :key="'d' + f">{{ trFrecuencia(trDetalle, 'derecho', f) }}</td>
+                      </tr>
+                      <tr>
+                        <th class="table-light">Izquierdo (dB)</th>
+                        <td v-for="f in frecuenciasTR" :key="'i' + f">{{ trFrecuencia(trDetalle, 'izquierdo', f) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="mb-1">
+                  <strong>PTA:</strong> {{ ptaTR(trDetalle) }}
+                  <span class="mx-1">·</span>
+                  <strong>Clasificación:</strong> {{ trDetalle.audiometria?.clasificacion || 'N/D' }}
+                  <span class="mx-1">·</span>
+                  <strong>Tipo:</strong> {{ trDetalle.audiometria?.tipo_hipoacusia || 'N/D' }}
+                </p>
+                <p class="mb-0 text-body">{{ trDetalle.audiometria?.reporte || 'Sin reporte' }}</p>
+              </div>
+            </div>
+
+            <!-- Espirometría -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-primary">Espirometría</h6>
+              </div>
+              <div class="card-body small">
+                <p class="mb-0">{{ textoTR(trDetalle.espirometria) }}</p>
+              </div>
+            </div>
+
+            <!-- Diagnósticos -->
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-white border-bottom py-2">
+                <h6 class="fw-bold mb-0 text-primary">Diagnósticos</h6>
+              </div>
+              <div class="card-body small">
+                <ul class="mb-0" v-if="diagnosticosTR(trDetalle).length">
+                  <li v-for="(dx, i) in diagnosticosTR(trDetalle)" :key="i">{{ textoTR(dx) }}</li>
+                </ul>
+                <span v-else class="text-muted">Sin diagnósticos adicionales</span>
+              </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="card mb-3" style="border-left: 4px solid #f0ad4e;">
+              <div class="card-body">
+                <h6 class="font-weight-bold text-warning mb-2">Observaciones</h6>
+                <p class="mb-3">{{ trDetalle.observaciones || '—' }}</p>
+
+                <h6 class="font-weight-bold text-warning mb-2">Restricciones</h6>
+                <ul v-if="restriccionesTR(trDetalle).length" class="mb-3 pl-3">
+                  <li v-for="(r, i) in restriccionesTR(trDetalle)" :key="i">{{ r }}</li>
+                </ul>
+                <p v-else class="mb-3" :class="trDetalle.aptitud === 'Apto con restricciones' ? 'text-danger' : 'text-muted'">
+                  {{ trDetalle.aptitud === 'Apto con restricciones' ? 'Pendiente: no hay restricciones registradas' : 'No aplica' }}
+                </p>
+
+                <h6 class="font-weight-bold text-warning mb-2">Recomendaciones</h6>
+                <ul v-if="recomendacionesTR(trDetalle).length" class="mb-3 pl-3">
+                  <li v-for="(r, i) in recomendacionesTR(trDetalle)" :key="i">{{ r }}</li>
+                </ul>
+                <p v-else class="mb-3 text-muted">Sin recomendaciones registradas</p>
+
+                <h6 class="font-weight-bold text-warning mb-2">Próxima evaluación</h6>
+                <p class="mb-0">{{ proximaTR(trDetalle) }}</p>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="modal-footer bg-white border-top py-3">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" @click="cerrarModal('modalDetalleAltoRiesgo')">
+              <i class="fas fa-times me-1"></i> Cerrar
+            </button>
+            <div class="ms-auto d-flex gap-2">
+              <button type="button" class="btn btn-outline-primary rounded-pill px-4" @click="imprimirAltoRiesgo(trDetalle)">
+                <i class="fas fa-print me-1"></i> Imprimir
+              </button>
+              <a :href="urlEditarAltoRiesgo(trDetalle)" class="btn btn-warning rounded-pill px-4 shadow-sm">
+                <i class="fas fa-pen-to-square me-1"></i> Editar
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!-- AQUI TERMINA EL MODAL DETALLE ALTO RIESGO -->
   </div>
 </template>
 
@@ -1905,6 +2114,54 @@
   gap: 10px;
   margin-top: 16px;
   padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.tr-card {
+  background: #fff;
+  border: 1px solid #edf0f4;
+  border-left: 4px solid #dc3545;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.tr-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.tr-card-riesgos {
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.tr-card-metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tr-metrica {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.tr-card-acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 12px;
   border-top: 1px solid #e9ecef;
 }
 
@@ -2511,6 +2768,7 @@ export default {
       infoValoracionesEspirometria: [],
       espirometriaDetalle: null,
       ergonomiaDetalle: null,
+      trDetalle: null,
 
       infoValoracionesErgonomicas: [],
       audiologiaDetalle: null,
@@ -2598,6 +2856,9 @@ export default {
       const r = (this.ergonomiaDetalle?.restricciones_laborales || '').trim()
       return r && r.toLowerCase() !== 'ninguna' ? r : ''
     },
+    frecuenciasTR() {
+      return ['125', '250', '500', '1000', '2000', '3000', '4000', '6000', '8000']
+    },
   },
 
   methods: {
@@ -2609,6 +2870,7 @@ export default {
         await this.obtenerEspirometrias()
         await this.obtenerAudiologiaHistoria()
         await this.obtenerErgonomicas()
+        await this.obtenerAudiologiaAltoRiesgo()
         console.log('Datos laborales cargados exitosamente.')
       } catch (error) {
         console.error("Error al cargar datos laborales:", error)
@@ -3005,6 +3267,126 @@ export default {
       return `/ficha-ergonomia/${val.paciente_id}?valoracion=${val.id}`
     },
 
+    // --- AUDIOLOGÍA ALTO RIESGO (TRABAJO DE ALTO RIESGO) ---
+    async obtenerAudiologiaAltoRiesgo() {
+      try {
+        const response = await ApiServiceClinicaTrabajo.get('/AudiologiaTrabajoAltoRiesgo', {
+          params: { paciente_id: this.pacienteId }
+        })
+        // Soporta respuesta paginada (data.data.data) y lista directa (data.data)
+        const lista = response.data.data?.data ?? response.data.data ?? []
+        this.infoAudiologiaAltoRiesgo = lista
+          .filter(f => String(f.paciente_id) === String(this.pacienteId))
+          .map(f => ({
+            ...f,
+            fecha: this.fechaLocalTR(f.created_at),
+            puesto_nombre: f.puesto?.nombre || 'No especificado',
+            riesgos_texto: this.listaTR(f.riesgos) !== 'N/D' ? this.listaTR(f.riesgos) : (f.tipo_trabajo_riesgo || 'N/D')
+          }))
+      } catch (error) {
+        console.error('Error al obtener exámenes de alto riesgo:', error)
+        this.infoAudiologiaAltoRiesgo = []
+      }
+    },
+
+    async abrirDetalleAltoRiesgo(val) {
+      try {
+        const response = await ApiServiceClinicaTrabajo.get(`/AudiologiaTrabajoAltoRiesgo/${val.id}`)
+        this.trDetalle = response.data.data
+      } catch (error) {
+        console.error('Error al cargar el detalle TR:', error)
+        this.trDetalle = val
+      }
+      await this.$nextTick()
+      this.abrirModal('modalDetalleAltoRiesgo')
+    },
+
+    imprimirAltoRiesgo(val) {
+      window.open(`/AudiologiaTrabajoAltoRiesgo-imprimir/${val.id}`, '_blank')
+    },
+
+    urlEditarAltoRiesgo(val) {
+      return `/AudiologiaTrabajoAltoRiesgo/${val.paciente_id}?ficha=${val.id}`
+    },
+
+    colorAptitudTR(aptitud) {
+      if (aptitud === 'Apto') return 'bg-success'
+      if (aptitud === 'Apto con restricciones') return 'bg-warning text-dark'
+      return 'bg-danger'
+    },
+
+    // Convierte valores anidados en texto legible, sin [object Object]
+    textoTR(valor) {
+      if (valor == null || valor === '' || valor === 'N/D') return 'N/D'
+      if (typeof valor === 'boolean') return valor ? 'Sí' : 'No'
+      if (typeof valor !== 'object') return String(valor)
+      return Object.entries(valor)
+        .filter(([, v]) => v != null && v !== '' && v !== 'N/D')
+        .map(([k, v]) => {
+          const etiqueta = k.replace(/_/g, ' ')
+          return `${etiqueta}: ${typeof v === 'object' ? '(' + this.textoTR(v) + ')' : (v === true ? 'Sí' : v === false ? 'No' : v)}`
+        })
+        .join(' · ')
+    },
+
+    // Fecha local de México a partir de created_at (UTC)
+    fechaLocalTR(iso) {
+      if (!iso) return ''
+      return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' })
+    },
+
+    // Riesgos legibles: "espacio_confinado" → "espacio confinado"
+    listaTR(valor) {
+      if (Array.isArray(valor)) return valor.length ? valor.map(r => String(r).replace(/_/g, ' ')).join(', ') : 'N/D'
+      return valor ? String(valor).replace(/_/g, ' ') : 'N/D'
+    },
+
+    // Solo las claves marcadas como true, por ejemplo antecedentes de salud
+    trActivos(obj) {
+      if (!obj || typeof obj !== 'object') return []
+      return Object.entries(obj)
+        .filter(([, v]) => v === true || v === 'true')
+        .map(([k]) => k.replace(/_/g, ' '))
+    },
+
+    signosTR(d) {
+      if (!d) return []
+      return [
+        { etiqueta: 'Peso', valor: d.peso ? d.peso + ' kg' : 'N/D' },
+        { etiqueta: 'Estatura', valor: d.estatura ? d.estatura + ' m' : 'N/D' },
+        { etiqueta: 'IMC', valor: d.imc || 'N/D' },
+        { etiqueta: 'Presión', valor: d.presion_arterial ? d.presion_arterial + ' mmHg' : 'N/D' },
+        { etiqueta: 'F. cardiaca', valor: d.frecuencia_cardiaca ? d.frecuencia_cardiaca + ' lpm' : 'N/D' }
+      ]
+    },
+
+    diagnosticosTR(d) {
+      return (d?.diagnosticos || []).filter(x => x && (typeof x === 'string' ? x.trim() : Object.keys(x).length))
+    },
+
+    ptaTR(val) {
+      const a = val.audiometria || {}
+      if (a.pta_der == null && a.pta_izq == null) return 'N/D'
+      return `D ${a.pta_der ?? 'N/D'} dB · I ${a.pta_izq ?? 'N/D'} dB`
+    },
+    
+    restriccionesTR(d) {
+      const r = d?.datos?.hoja4?.restricciones
+      if (Array.isArray(r)) return r.filter(Boolean)
+      if (!r) return []
+      return String(r).split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+    },
+    recomendacionesTR(d) {
+      const r = d?.datos?.hoja4?.recomendaciones
+      return Array.isArray(r) ? r.filter(Boolean) : []
+    },
+    proximaTR(d) {
+      return d?.datos?.hoja4?.proxima_evaluacion || '—'
+    },
+    trFrecuencia(d, oido, f) {
+      const v = d?.audiometria?.frecuencias?.[oido]?.[f]
+      return v == null ? 'N/D' : v
+    },
 
     // --- UTILIDADES ---
     formatearFecha(fecha) {

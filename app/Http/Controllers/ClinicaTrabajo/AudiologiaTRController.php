@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Services\ClinicaTrabajo\IAServiceAudiologiaTR;
+use App\Services\ClinicaTrabajo\GraficasAudiologia;
 
 class AudiologiaTRController extends Controller
 {
@@ -200,13 +201,29 @@ class AudiologiaTRController extends Controller
 
         $consultorio = $this->datosConsultorio($medico);
 
-        $pdf = Pdf::loadView('pdf.ClinicaTrabajo.Audiologia.reporteaudiologiatr', [
+        // Audiograma (vía aérea) generado como PNG en base64 para el PDF
+        $audiometria = $ficha->audiometria ?? [];
+        $grafica = (new GraficasAudiologia())->audiograma([
+            'derecho' => [
+                'aerea' => $audiometria['frecuencias']['derecho'] ?? [],
+                'osea' => [],
+                'enmascarado' => [],
+            ],
+            'izquierdo' => [
+                'aerea' => $audiometria['frecuencias']['izquierdo'] ?? [],
+                'osea' => [],
+                'enmascarado' => [],
+            ],
+        ]);
+
+        $pdf = Pdf::loadView('pdf.ClinicaTrabajo.Audiologia.reporteaudiologiatrabajoaltoriesgo', [
             'ficha' => $ficha,
             'datos' => $datos,
             'medico' => $medico?->usuario,
             'cedula' => $medico?->cedula_profesional,
             'ubicacion' => $consultorio['ubicacion'],
             'logoPath' => $consultorio['logoPath'],
+            'grafica' => $grafica,
         ])->setPaper('letter');
 
         return $pdf->stream('examen-tr-' . $ficha->folio . '.pdf');
@@ -382,9 +399,14 @@ class AudiologiaTRController extends Controller
         ];
     }
 
+    /** Frecuencias que entran al PTA (igual que Historia Clínica, incluye 3000 Hz). */
+    private const FRECUENCIAS_PTA = ['500', '1000', '2000', '3000'];
+
+    private const CLASIFICACIONES = ['NORMAL', 'HIPOACUSIA LEVE', 'HIPOACUSIA MODERADA', 'HIPOACUSIA SEVERA', 'HIPOACUSIA PROFUNDA'];
+
     /**
-     * Prepara el payload antes de guardar (ej: calcular IMC)
-     */
+    * Prepara el payload antes de guardar: calcula el IMC y el PTA por oído.
+    */
     private function prepararPayload(array $payload, ?int $pacienteId, ?int $fichaId): array
     {
         $h3 = $payload['hoja3'] ?? [];
@@ -393,9 +415,75 @@ class AudiologiaTRController extends Controller
         }
         $payload['hoja3'] = $h3;
 
+        // PTA y clasificación por oído, calculados en el servidor
+        $h4 = $payload['hoja4'] ?? [];
+        if (isset($h4['audiometria']) && is_array($h4['audiometria'])) {
+            $h4['audiometria'] = $this->recalcularPta($h4['audiometria']);
+        }
+        $payload['hoja4'] = $h4;
+
         return $payload;
     }
 
+    /** Recalcula PTA por oído, promedio general y clasificación (la peor de las dos). */
+    private function recalcularPta(array $audio): array
+    {
+        $der = $this->promedioPta($audio['frecuencias']['derecho'] ?? []);
+        $izq = $this->promedioPta($audio['frecuencias']['izquierdo'] ?? []);
+
+        $promedio = ($der !== null && $izq !== null)
+            ? round(($der + $izq) / 2, 1)
+            : ($der ?? $izq);
+
+        $clasDer = $this->clasificarPta($der);
+        $clasIzq = $this->clasificarPta($izq);
+
+        $orden = array_flip(self::CLASIFICACIONES);
+        $peor = '';
+        foreach ([$clasDer, $clasIzq] as $clas) {
+            if ($clas !== '' && ($peor === '' || $orden[$clas] > $orden[$peor])) {
+                $peor = $clas;
+            }
+        }
+
+        return array_merge($audio, [
+            'pta_der' => $der,
+            'pta_izq' => $izq,
+            'pta_promedio' => $promedio,
+            'clasificacion_der' => $clasDer,
+            'clasificacion_izq' => $clasIzq,
+            'clasificacion' => $peor,
+        ]);
+    }
+
+    /** Promedio de 500, 1000, 2000 y 3000 Hz de un oído. Devuelve null si no hay datos. */
+    private function promedioPta(array $umbrales): ?float
+    {
+        $valores = [];
+        foreach (self::FRECUENCIAS_PTA as $f) {
+            $valor = $umbrales[$f] ?? null;
+            if ($valor !== null && $valor !== '') {
+                $valores[] = (float) $valor;
+            }
+        }
+
+        return $valores ? round(array_sum($valores) / count($valores), 1) : null;
+    }
+
+    private function clasificarPta(?float $pta): string
+    {
+        if ($pta === null) {
+            return '';
+        }
+
+        return match (true) {
+            $pta <= 20 => 'NORMAL',
+            $pta <= 40 => 'HIPOACUSIA LEVE',
+            $pta <= 60 => 'HIPOACUSIA MODERADA',
+            $pta <= 90 => 'HIPOACUSIA SEVERA',
+            default => 'HIPOACUSIA PROFUNDA',
+        };
+    }
     /**
      * Datos del consultorio: sucursal del médico, o empresa si no hay sucursal, y logo.
      */

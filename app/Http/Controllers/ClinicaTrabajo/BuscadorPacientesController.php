@@ -20,6 +20,8 @@ use App\Models\ClinicaTrabajo\ValoracionErgonomica;
 use App\Models\ClinicaTrabajo\ValoracionPsicologica;
 use App\Models\ClinicaTrabajo\ValoracionAudiologia;
 use App\Models\ClinicaTrabajo\ValoracionEspirometria;
+use App\Models\ClinicaTrabajo\FichaAudiologiaTR;
+use App\Models\ClinicaTrabajo\FichaAudiologiaDelli;
 
 class BuscadorPacientesController extends Controller
 {
@@ -104,7 +106,7 @@ class BuscadorPacientesController extends Controller
                     ] : null,
                     'fecha_ingreso' => $ultimoEmpleo?->fecha_ingreso_empresa?->format('Y-m-d'),
                     'antiguedad_anos' => $this->calcularAntiguedad($ultimoEmpleo?->fecha_ingreso_empresa),
-                    'ultima_evaluacion' => $this->obtenerUltimaEvaluacion($paciente->id),
+                    'evaluaciones' => $this->obtenerEvaluaciones($paciente->id),
                 ];
             })
             ->filter(function ($item) {
@@ -392,30 +394,57 @@ class BuscadorPacientesController extends Controller
     // MÉTODOS PRIVADOS AUXILIARES
     // =========================================================================
 
-    private function obtenerUltimaEvaluacion(int $pacienteId): ?array
+    private function obtenerEvaluaciones(int $pacienteId): array
     {
         $tablas = [
-            'ocupacional' => [ValoracionOcupacional::class, 'fecha_valoracion', 'dictamen'],
-            'nutricion' => [ValoracionNutricion::class, 'fecha_valoracion', 'aptitud'],
-            'ergonomia' => [ValoracionErgonomica::class, 'fecha_valoracion', 'aptitud'],
-            'psicologia' => [ValoracionPsicologica::class, 'fecha_valoracion', 'aptitud'],
-            'audiologia' => [ValoracionAudiologia::class, 'fecha_valoracion', 'aptitud'],
-            'espirometria' => [ValoracionEspirometria::class, 'fecha_valoracion', 'aptitud'],
+            'ocupacional'  => [ValoracionOcupacional::class, 'dictamen'],
+            'nutricion'    => [ValoracionNutricion::class, 'aptitud'],
+            'ergonomia'    => [ValoracionErgonomica::class, 'aptitud'],
+            'psicologia'   => [ValoracionPsicologica::class, 'aptitud'],
+            'audiologia'   => [ValoracionAudiologia::class, 'aptitud'],
+            'espirometria' => [ValoracionEspirometria::class, 'aptitud'],
         ];
 
-        $ultima = null;
-        foreach ($tablas as $tipo => [$modelo, $campoFecha, $campoResultado]) {
-            $eval = $modelo::where('paciente_id', $pacienteId)->orderByDesc($campoFecha)->first();
-            if ($eval && (!$ultima || $eval->{$campoFecha} > $ultima['fecha'])) {
-                $ultima = [
-                    'tipo' => $tipo,
-                    'fecha' => $eval->{$campoFecha}?->format('Y-m-d'),
-                    'folio' => $eval->folio,
+        $evaluaciones = collect();
+
+        foreach ($tablas as $tipo => [$modelo, $campoResultado]) {
+            $registros = $modelo::where('paciente_id', $pacienteId)
+                ->orderByDesc('fecha_valoracion')
+                ->get();
+
+            foreach ($registros as $eval) {
+                $evaluaciones->push([
+                    'tipo'      => $tipo,
+                    'fecha'     => $eval->fecha_valoracion?->format('Y-m-d'),
+                    'folio'     => $eval->folio,
                     'resultado' => $eval->{$campoResultado},
-                ];
+                ]);
             }
         }
-        return $ultima;
+
+        // Exámenes de Trabajo de Alto Riesgo (tabla propia, sin fecha_valoracion)
+        $fichasTR = FichaAudiologiaTR::where('paciente_id', $pacienteId)->get();
+        foreach ($fichasTR as $ficha) {
+            $evaluaciones->push([
+                'tipo'      => 'audiologia_ar',
+                'fecha'     => $ficha->created_at?->format('Y-m-d'),
+                'folio'     => $ficha->folio,
+                'resultado' => $ficha->aptitud,
+            ]);
+        }
+
+        // Estudios de Audiología DELLI (tabla fichas_audiologia_delli, sin fecha_valoracion)
+        $fichasDelli = FichaAudiologiaDelli::where('paciente_id', $pacienteId)->get();
+        foreach ($fichasDelli as $ficha) {
+            $evaluaciones->push([
+                'tipo'      => 'audiologia_hc',
+                'fecha'     => $ficha->created_at?->format('Y-m-d'),
+                'folio'     => $ficha->folio,
+                'resultado' => $ficha->aptitud,
+            ]);
+        }
+
+        return $evaluaciones->sortByDesc('fecha')->values()->all();
     }
 
     private function calcularAntiguedad(?Carbon $fechaIngreso): ?float

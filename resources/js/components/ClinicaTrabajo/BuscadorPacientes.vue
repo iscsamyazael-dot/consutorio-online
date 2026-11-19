@@ -143,12 +143,11 @@
                   {{ paciente.puesto?.nombre || 'Sin puesto' }}
                 </td>
                 <td class="p-3">
-                  <div v-if="paciente.ultima_evaluacion">
-                    <span class="badge" :class="getBadgeClass(paciente.ultima_evaluacion.tipo)">
-                      {{ paciente.ultima_evaluacion.tipo }}
-                    </span>
-                    <br>
-                    <small class="text-muted">{{ formatearFecha(paciente.ultima_evaluacion.fecha) }}</small>
+                  <div v-if="paciente.evaluaciones && paciente.evaluaciones.length">
+                    <div v-for="ev in paciente.evaluaciones" :key="ev.tipo + ev.fecha" class="mb-1">
+                      <span class="badge" :class="getBadgeClass(ev.tipo)">{{ getEtiqueta(ev.tipo) }}</span>
+                      <small class="text-muted ml-1">{{ formatearFecha(ev.fecha) }}</small>
+                    </div>
                   </div>
                   <span v-else class="text-muted small">Sin evaluaciones previas</span>
                 </td>
@@ -376,6 +375,11 @@ export default {
         month: 'short', 
         day: 'numeric' 
       })
+    },
+
+    getEtiqueta(tipo) {
+      const t = this.tiposEvaluacion.find(x => x.value === tipo)
+      return t ? t.label : (tipo || 'Sin tipo')
     }
   },
   mounted() {
@@ -417,6 +421,11 @@ export default {
   font-size: 0.75rem;
   padding: 0.35rem 0.65rem;
   font-weight: 600;
+}
+
+.badge-purple {
+  background-color: #6f42c1;
+  color: #fff;
 }
 
 .opacity-75 {

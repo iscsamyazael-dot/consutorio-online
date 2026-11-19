@@ -123,6 +123,11 @@
           :modelValue="form.hoja1"
           @update:modelValue="form.hoja1 = $event"
         ></hoja1-identificacionempleo-tr>
+        <div class="d-flex justify-content-end border-top pt-3 mt-4">
+            <button type="button" class="btn btn-primary" @click="irAHoja(2)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
       </div>
 
       <!-- HOJA 2 -->
@@ -131,6 +136,14 @@
           :modelValue="form.hoja2"
           @update:modelValue="form.hoja2 = $event"
         ></hoja2-antecedentessalud-tr>
+        <div class="d-flex justify-content-between border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(1)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button type="button" class="btn btn-primary" @click="irAHoja(3)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
       </div>
 
       <!-- HOJA 3 -->
@@ -139,6 +152,14 @@
           :modelValue="form.hoja3"
           @update:modelValue="form.hoja3 = $event"
         ></hoja3-exploracionfisica-tr>
+        <div class="d-flex justify-content-between border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(2)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button type="button" class="btn btn-primary" @click="irAHoja(4)">
+              Siguiente <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
       </div>
 
       <!-- HOJA 4 -->
@@ -149,6 +170,24 @@
           :ia-diags-propuestos="iaDiagsPropuestos"
           @update:modelValue="form.hoja4 = $event"
         ></hoja4-paraclinicodiagnosticos-tr>
+        <div class="card border-warning mt-3">
+          <div class="card-header font-weight-bold">Dictamen: restricciones y seguimiento</div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="restricciones_tr"><strong>Restricciones</strong> (una por línea)</label>
+              <textarea id="restricciones_tr" class="form-control" rows="4" v-model="form.hoja4.restricciones" placeholder="Ej.: uso obligatorio de doble protección auditiva en áreas con ruido elevado"></textarea>
+            </div>
+            <div class="form-group mb-0">
+              <label for="proxima_eval_tr"><strong>Próxima evaluación</strong></label>
+              <input id="proxima_eval_tr" type="text" class="form-control" v-model="form.hoja4.proxima_evaluacion" placeholder="Ej.: control audiológico semestral, mayo 2027">
+            </div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-start border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" @click="irAHoja(3)">
+              <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+        </div>
       </div>
     </div>
 
@@ -212,6 +251,8 @@ export default {
       conversacion: [],
       mensajeActual: '',
       archivoSeleccionado: null,
+      hojaActiva: 1,
+
 
       form: {
         hoja1: {
@@ -334,7 +375,9 @@ export default {
           diagnostico_principal: '',
           aptitud: '',
           observaciones: '',
-          recomendaciones: []
+          recomendaciones: [],
+          restricciones: '',
+          proxima_evaluacion: ''
         }
       },
       cargando: false
@@ -610,7 +653,9 @@ export default {
           diagnostico_principal: '',
           aptitud: '',
           observaciones: '',
-          recomendaciones: []
+          recomendaciones: [],
+          restricciones: '',
+          proxima_evaluacion: ''
         }
       }
     },
@@ -691,6 +736,11 @@ export default {
       if (!this.form.hoja4.aptitud) {
         return Swal.fire({ icon: 'warning', title: 'Falta la aptitud', text: 'Selecciona la aptitud en la Hoja 4.' })
       }
+      if (this.form.hoja4.aptitud === 'Apto con restricciones' && !(this.form.hoja4.restricciones || '').trim()) {
+        return Swal.fire({ icon: 'warning', title: 'Faltan restricciones', text: 'Captura las restricciones antes de guardar un examen con restricciones.' })
+      }
+      // Decidir una sola vez si es alta o actualización, antes de cualquier await
+      const esNuevo = !this.fichaId
 
       this.guardando = true
       try {
@@ -703,19 +753,19 @@ export default {
           puesto_trabajo_id: this.datosLaboralesActuales?.puesto_trabajo_id ?? null,
         }
 
-        const response = this.fichaId
-          ? await clinicaTrabajo.put(`/AudiologiaTrabajoAltoRiesgo/${this.fichaId}`, payload)
-          : await clinicaTrabajo.post('/AudiologiaTrabajoAltoRiesgo', payload)
+        const response = esNuevo
+          ? await clinicaTrabajo.post('/AudiologiaTrabajoAltoRiesgo', payload)
+          : await clinicaTrabajo.put(`/AudiologiaTrabajoAltoRiesgo/${this.fichaId}`, payload)
 
-        const idGuardado = this.fichaId || response.data.id
-        if (!this.fichaId) {
+        const idGuardado = esNuevo ? response.data.id : this.fichaId
+        if (esNuevo) {
           this.form.hoja1.folio = response.data.folio
           this.fichaId = idGuardado
         }
 
         const decision = await Swal.fire({
           icon: 'success',
-          title: this.fichaId ? 'Examen actualizado' : 'Examen guardado',
+          title: esNuevo ? 'Examen guardado' : 'Examen actualizado',
           text: '¿Deseas imprimir el reporte?',
           showCancelButton: true,
           confirmButtonText: 'Imprimir reporte',
@@ -727,8 +777,10 @@ export default {
           window.open(`/AudiologiaTrabajoAltoRiesgo-imprimir/${idGuardado}`, '_blank')
         }
 
-        if (!this.fichaId) {
-          window.location.href = `/AudiologiaTrabajoAltoRiesgo/${this.pacienteId}?ficha=${idGuardado}`
+        if (esNuevo) {
+          window.location.href = `/buscador-pacientes-clinicaTrabajo`
+        } else {
+          window.location.href = `/ExpedientePacientesClinicaTrabajo/${this.pacienteId}`
         }
       } catch (error) {
         console.error('Error guardando:', error)
@@ -927,6 +979,24 @@ export default {
         this.cargando = false
       }
     },
+
+    irAHoja(numero) {
+      const pestana = document.querySelector(`a[href="#hoja${numero}"]`)
+      if (!pestana) {
+        console.warn(`No se encontró la pestaña de la hoja ${numero}`)
+        return
+      }
+      if (window.jQuery && window.jQuery.fn.tab) {
+        window.jQuery(pestana).tab('show')
+      } else {
+        pestana.click()
+      }
+      this.hojaActiva = numero
+      this.$nextTick(() => {
+        const barra = document.querySelector('.nav-tabs')
+        if (barra) barra.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
   },
 
  async mounted() {

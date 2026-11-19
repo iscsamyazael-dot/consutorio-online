@@ -634,7 +634,7 @@ Route::middleware('auth')->group(function () {
 
             //RUTA PARA ABRIR LAS VISTAS DESDE EL EXPEDIENTE MEDICO LABORAL//
             Route::get('FichaDelliAudiologia/{id}', function($id) { return view('clinica-trabajo.delli-index'); })->name('clinica-trabajo.delli-index');
-            Route::get('FichaTrabajoAltoRiesgo/{id}', function($id) { return view('clinica-trabajo.tr-index'); })->name('clinica-trabajo.delli-index');
+            Route::get('FichaTrabajoAltoRiesgo/{id}', function($id) { return view('clinica-trabajo.tr-index'); })->name('clinica-trabajo.tr-index-id');
             Route::get('ficha-espirometria/{id}', function($id) { return view('clinica-trabajo.Espirometria'); })->name('clinica-trabajo.Espirometria');
             Route::get('ficha-ergonomia/{id}', function($id) { return view('clinica-trabajo.Ergonomia'); })->name('clinica-trabajo.Ergonomia');
             Route::get('ficha-nutricion/{id}', function($id) { return view('clinica-trabajo.Nutricion'); })->name('clinica-trabajo.Nutricion');
