@@ -9,6 +9,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\ClinicaTrabajo\PacientesClinicaTrabajo as Paciente;
 use App\Models\Medico;
+use App\Models\ClinicaTrabajo\EmpresaCliente;
+use App\Models\ClinicaTrabajo\PuestoTrabajo;
+use App\Models\ClinicaTrabajo\NormaOficial;
+use App\Models\ClinicaTrabajo\ValoracionEstudioParaclinico;
+use App\Models\ClinicaTrabajo\ValoracionNormaAplicada;
+use App\Models\ClinicaTrabajo\ValoracionSeguimiento;
 
 class ValoracionOcupacional extends Model
 {
@@ -25,28 +31,32 @@ class ValoracionOcupacional extends Model
         'medico_id',
         'tipo',
         'fecha_valoracion',
+        'hora_valoracion',
         'ta_sistolica',
         'ta_diastolica',
         'fc',
         'fr',
         'spo2',
+        'temperatura_c',
+        'glicemia',
         'estatura_cm',
         'peso_kg',
         'talla_abdomen_cm',
+        'perimetro_cadera_cm',
         'imc',
         'imc_clasificacion',
-        'grasa_visceral',
-        'grasa_corporal_pct',
-        'musculo_pct',
-        'edad_biologica',
-        'antecedentes_heredofamiliares',
-        'antecedentes_patologicos_activos',
-        'estilo_vida_habitos',
-        'exploracion_fisica_funcional',
-        'estudios_paraclinicos_resumen',
+        'estado_nutricional',
+        'complexion_fisica',
+        'anos_puesto',
         'analisis_correlacion_riesgos',
+        'diagnostico_clinico',
+        'cie11_codigo',
+        'cie11_titulo',
         'dictamen',
         'restricciones',
+        'recomendaciones',
+        'derivaciones_especialista',
+        'observaciones',
         'dictamen_justificacion',
         'plan_intervencion',
         'vigencia_hasta',
@@ -68,6 +78,8 @@ class ValoracionOcupacional extends Model
         'firmado_medico_en' => 'datetime',
         'firmado_trabajador_en' => 'datetime',
     ];
+
+    protected $appends = ['esta_firmada'];
 
     public function paciente(): BelongsTo
     {

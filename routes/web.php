@@ -53,6 +53,7 @@ use App\Http\Controllers\ClinicaTrabajo\TriageClinicaTrabajoController;
 use App\Http\Controllers\ClinicaTrabajo\BuscadorPacientesController;
 
 
+
 Route::get('/', function () { return view('auth.login'); });
 
 Route::middleware('auth')->group(function () {
@@ -517,7 +518,10 @@ Route::middleware('auth')->group(function () {
             Route::resource('ergonomia', ValoracionErgonomicaController::class)->except(['edit']);
             Route::get('ergonomia-imprimir/{id}', [ValoracionErgonomicaController::class, 'imprimir']);
             Route::post('ergonomia-consultarIA', [ValoracionErgonomicaController::class, 'consultarIA']);
-            
+            Route::resource('FichaMedicinaOcupacional', FichaOcupacionalController::class)->parameters(['FichaMedicinaOcupacional' => 'ficha'])->except(['destroy']);
+            Route::get('FichaMedicinaOcupacional-imprimir/{id}', [FichaOcupacionalController::class, 'imprimir'])->name('FichaMedicinaOcupacional.imprimir');
+            Route::post('FichaMedicinaOcupacional-consultarIA', [FichaOcupacionalController::class, 'consultarIA'])->name('FichaMedicinaOcupacional.consultarIA');
+            Route::post('FichaMedicinaOcupacional-proponer', [FichaOcupacionalController::class, 'proponer']);
             // =========================================================================
             // RUTAS PARA EL BUSCADOR INTELIGENTE DE PACIENTES (CLÍNICA DE TRABAJO)
             // =========================================================================

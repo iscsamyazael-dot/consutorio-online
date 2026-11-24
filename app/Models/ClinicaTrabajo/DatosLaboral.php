@@ -21,6 +21,8 @@ class DatosLaboral extends Model
         'fecha_ingreso_empresa',
         'tipo_contrato',
         'turno',
+        'modalidad_trabajo',
+        'categoria_laboral',
     ];
 
     protected $casts = [

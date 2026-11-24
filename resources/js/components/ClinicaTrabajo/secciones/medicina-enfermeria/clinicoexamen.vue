@@ -439,10 +439,6 @@
                 </label>
               </div>
             </div>
-            <div class="form-group col-md-6">
-              <label>Exploración física (hallazgos)</label>
-              <textarea v-model="local.sistemas.piel.exploracion" class="form-control" rows="2" placeholder="Resultados del examen físico…"></textarea>
-            </div>
           </div>
 
           <!-- INMUNOLÓGICO -->
@@ -463,10 +459,6 @@
                   <span>Artritis reumatoide</span>
                 </label>
               </div>
-            </div>
-            <div class="form-group col-md-6">
-              <label>Exploración física (hallazgos)</label>
-              <textarea v-model="local.sistemas.inmunologico.exploracion" class="form-control" rows="2" placeholder="Resultados del examen físico…"></textarea>
             </div>
           </div>
 
@@ -544,6 +536,7 @@
 
 <script>
 import modeloSincronizado from '../../mixins/modeloSincronizado'
+import Swal from 'sweetalert2'
 
 const COMORBILIDADES = [
   { key: 'diabetes', label: 'Diabetes' },
@@ -688,8 +681,11 @@ export default {
   },
 
   watch: {
-    'local.antropometria.peso'() { this.calcularIMC() },
-    'local.antropometria.talla'() { this.calcularIMC() },
+     'local.antropometria': {
+      deep: true,
+      immediate: true,
+      handler() { this.calcularIMC() },
+    },
   },
 
   methods: {
@@ -723,10 +719,19 @@ export default {
       this.local.pruebas_complementarias.push({ tipo: '', fecha: '', resultado: '' })
     },
 
-    quitarPrueba(i) {
+    async quitarPrueba(i) {
       const p = this.local.pruebas_complementarias[i]
       const tieneDatos = p.tipo || p.fecha || p.resultado
-      if (tieneDatos && !window.confirm(`¿Quitar la prueba ${i + 1}?`)) return
+      if (tieneDatos) {
+        const { isConfirmed } = await Swal.fire({
+          title: `¿Quitar la prueba ${i + 1}?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, quitar',
+          cancelButtonText: 'Cancelar',
+        })
+        if (!isConfirmed) return
+      }
       this.local.pruebas_complementarias.splice(i, 1)
     },
   },

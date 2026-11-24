@@ -81,9 +81,17 @@
             </div>
           </div>
         </div>
+
+        <button
+          v-if="local.enfermedades_laborales.length < 3"
+          type="button"
+          class="btn btn-sm btn-outline-primary mt-2"
+          @click="agregarEnfermedadLaboral"
+        >
+          <i class="fas fa-plus mr-1"></i>Agregar enfermedad
+        </button>
       </div>
     </div>
-
     <!-- ===================== 2.3 INCAPACIDADES ÚLTIMOS 3 MESES ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
@@ -118,7 +126,7 @@
               </div>
             </div>
           </div>
-          <button type="button" class="btn btn-sm btn-outline-primary mt-2" @click="agregarIncapacidad3m">
+          <button v-if="local.incapacidades_3m.items.length < 2" type="button" class="btn btn-sm btn-outline-primary mt-2" @click="agregarIncapacidad3m">
             <i class="fas fa-plus mr-1"></i>Agregar incapacidad
           </button>
         </template>
@@ -128,7 +136,7 @@
     <!-- ===================== 2.4 HEREDO-FAMILIARES ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-users mr-2"></i>2.2 Antecedentes heredo-familiares</span>
+        <span><i class="fas fa-users mr-2"></i>2.4 Antecedentes heredo-familiares</span>
         <span class="contador">{{ contarPresentes(local.heredo_familiares, heredoKeys) }} marcados</span>
       </div>
       <div class="card-body">
@@ -167,7 +175,7 @@
     <!-- ===================== 2.3 NO PATOLÓGICOS ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-walking mr-2"></i>2.3 Antecedentes personales no patológicos</span>
+        <span><i class="fas fa-walking mr-2"></i>2.5 Antecedentes personales no patológicos</span>
       </div>
       <div class="card-body">
         <p class="instruccion">Seleccione la opción que corresponda. El campo de detalle aparece cuando aplica.</p>
@@ -298,7 +306,7 @@
         </div>
 
         <div class="form-group mt-3 mb-0">
-          <label>Otros vacunación</label>
+          <label>Otras vacunas</label>
           <textarea v-model="local.vacunas.otros" class="form-control" rows="2"
             placeholder="Vacuna y fecha…"></textarea>
         </div>
@@ -308,7 +316,7 @@
     <!-- ===================== 2.4 GINECO / UROLÓGICO ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-venus-mars mr-2"></i>2.4 Antecedentes gineco-obstétricos / urológicos</span>
+        <span><i class="fas fa-venus-mars mr-2"></i>2.6 Antecedentes gineco-obstétricos / urológicos</span>
       </div>
       <div class="card-body">
         <p class="instruccion">Seleccione el sexo biológico para mostrar los antecedentes que correspondan.</p>
@@ -393,7 +401,7 @@
     <!-- ===================== 2.5 PATOLÓGICOS ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-notes-medical mr-2"></i>2.5 Antecedentes personales patológicos</span>
+        <span><i class="fas fa-notes-medical mr-2"></i>2.7 Antecedentes personales patológicos</span>
         <span class="contador">{{ contarPresentes(local.patologicos, patologicosKeys) }} marcadas</span>
       </div>
       <div class="card-body">
@@ -412,12 +420,12 @@
                 <input v-model="local.patologicos[op.key].presente" type="checkbox">
                 <span>{{ op.label }}</span>
               </label>
-              <div v-if="local.patologicos[op.key].presente" class="detalle">
+              <div v-if="local.patologicos[op.key].presente && op.placeholder" class="detalle">
                 <input
                   v-model.trim="local.patologicos[op.key].observaciones"
                   type="text"
                   class="form-control"
-                  :placeholder="op.placeholder || 'Año, estado actual…'"
+                  :placeholder="op.placeholder"
                   :aria-label="`Observaciones: ${op.label}`"
                 >
               </div>
@@ -435,7 +443,7 @@
     <!-- ===================== 2.6 CIRUGÍAS/ACCIDENTES NO LABORALES ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-hospital-user mr-2"></i>2.6 Cirugías / Accidentes no laborales</span>
+        <span><i class="fas fa-hospital-user mr-2"></i>2.8 Cirugías / Accidentes no laborales</span>
       </div>
       <div class="card-body">
         <p class="instruccion">Registre cirugías o accidentes ocurridos fuera del trabajo.</p>
@@ -450,7 +458,7 @@
           <div class="form-row">
             <div class="form-group col-md-12">
               <label>Descripción</label>
-              <textarea v-model.trim="item.descripcion" type="text" class="form-control" placeholder="Cirugía, accidente, motivo, parte del cuerpo, fecha…"></textarea>
+              <textarea v-model.trim="item.descripcion" class="form-control" placeholder="Cirugía, accidente, motivo, parte del cuerpo, fecha…"></textarea>
             </div>
           </div>
         </div>
@@ -463,7 +471,7 @@
     <!-- ===================== 2.7 ALERGIAS ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-star-of-life mr-2"></i>2.7 Alergias</span>
+        <span><i class="fas fa-star-of-life mr-2"></i>2.9 Alergias</span>
       </div>
       <div class="card-body">
         <p class="instruccion">Registre alergias a medicamentos, alimentos o sustancias.</p>
@@ -505,10 +513,10 @@
       </div>
     </div>
 
-    <!-- ===================== 2.8 TRANSUSIONES SANGUÍNEAS ===================== -->
+    <!-- ===================== 2.8 TRANSFUSIONES SANGUÍNEAS ===================== -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
-        <span><i class="fas fa-blood-type mr-2"></i>2.8 Transfusiones sanguíneas</span>
+        <span><i class="fas fa-blood-type mr-2"></i>2.10 Transfusiones sanguíneas</span>
       </div>
       <div class="card-body">
         <p class="instruccion">Registre transfusiones sanguíneas previas.</p>
@@ -542,6 +550,7 @@
 
 <script>
 import modeloSincronizado from '../../mixins/modeloSincronizado'
+import Swal from 'sweetalert2'
 
 // ---------------------------------------------------------------------------
 // Catálogos (las claves coinciden con form.antecedentes del Master)
@@ -567,7 +576,7 @@ const GRUPOS_PATOLOGICOS = [
   {
     titulo: 'Cardiovascular',
     opciones: [
-      { key: 'hipertension', label: 'Hipertensión arterial' },
+      { key: 'hipertension', label: 'Hipertensión arterial', placeholder: 'Año, estado actual…' },
       { key: 'cardiopatia', label: 'Cardiopatía', placeholder: 'Año, tipo…' },
       { key: 'infarto', label: 'Infarto del miocardio', placeholder: 'Año, secuelas…' },
       { key: 'arritmia', label: 'Arritmias cardíacas' },
@@ -659,13 +668,11 @@ const presenteVacio = (campo) => ({ presente: false, [campo]: '' })
 const crearVacio = () => ({
   accidentes: [accidenteVacio()],
   enfermedades_laborales: [
-    { diagnostico: '', fecha: '' },
-    { diagnostico: '', fecha: '' },
     { diagnostico: '', fecha: '' }
   ],
   incapacidades_3m: {
     tiene: false,
-    items: [{ motivo: '', dias: '' }, { motivo: '', dias: '' }]
+    items: [{ motivo: '', dias: '' }]
   },
   vacunas: {
     covid19: { presente: false, fecha: '' },
@@ -677,7 +684,7 @@ const crearVacio = () => ({
     otros: ''
   },
   cirugias_accidentes_no_laborales: [{ descripcion: '' }],
-  alergias: [{ sustancia: '', reaccion: '', hospitalizacion: false }],
+  alergias: [{ sustancia: '', tipo_reaccion: '', hospitalizacion: '' }],
   transfusiones: [{ motivo: '', fecha: '' }],
   heredo_familiares: {
     ...Object.fromEntries(HEREDO.map(h => [h.key, presenteVacio('parentesco')])),
@@ -688,7 +695,7 @@ const crearVacio = () => ({
     tabaquismo_detalles: '',
     alcoholismo: '',
     alcoholismo_detalles: '',
-    drogas_no: true,
+    drogas_no: false,
     drogas_si: false,
     drogas_detalles: '',
     actividad_fisica: '',
@@ -747,6 +754,7 @@ export default {
       ginecoOpciones: GINECO_OPCIONES,
       uroOpciones: URO_OPCIONES,
       vacunas: VACUNAS,
+      conObservaciones: ['hipertension','cardiopatia','infarto','diabetes','tuberculosis','hepatitis','hernia_discal','sindrome_tunel_carpal','epilepsia'],
     }
   },
 
@@ -780,16 +788,39 @@ export default {
     }
   },
 
+  watch: {
+    'datosPuesto.genero': {
+      immediate: true,
+      handler(valor) {
+        if (this.local.genero) return
+        const genero = mapearGenero(valor)
+        if (genero) this.local.genero = genero
+      },
+    },
+  },
+
   methods: {
     agregarAccidente() {
       this.local.accidentes.push(accidenteVacio())
     },
 
-    quitarAccidente(i) {
+    async quitarAccidente(i) {
       const acc = this.local.accidentes[i]
       const tieneDatos = Object.values(acc).some(v => String(v ?? '').trim() !== '')
-      if (tieneDatos && !window.confirm(`¿Quitar el accidente ${i + 1}?`)) return
+      if (tieneDatos && !(await this.confirmarQuitar(`¿Quitar el accidente ${i + 1}?`))) return
       this.local.accidentes.splice(i, 1)
+    },
+
+    async confirmarQuitar(mensaje) {
+      const { isConfirmed } = await Swal.fire({
+        title: '¿Quitar registro?',
+        text: mensaje,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, quitar',
+        cancelButtonText: 'Cancelar',
+      })
+      return isConfirmed
     },
 
     agregarRegistroRepetible(campo) {
@@ -797,16 +828,16 @@ export default {
       if (this.local[campo].length >= max[campo]) return
       const vacios = {
         cirugias_accidentes_no_laborales: { descripcion: '' },
-        alergias: { sustancia: '', tipo_reaccion: '', hospitalizacion: false },
+        alergias: { sustancia: '', tipo_reaccion: '', hospitalizacion: '' },
         transfusiones: { motivo: '', fecha: '' }
       }
       this.local[campo].push(vacios[campo] || {})
     },
 
-    quitarRegistroRepetible(campo, i) {
+    async quitarRegistroRepetible(campo, i) {
       const item = this.local[campo][i]
       const tieneDatos = Object.values(item).some(v => String(v ?? '').trim() !== '')
-      if (tieneDatos && !window.confirm(`¿Quitar el registro ${i + 1}?`)) return
+      if (tieneDatos && !(await this.confirmarQuitar(`¿Quitar el registro ${i + 1}?`))) return
       this.local[campo].splice(i, 1)
     },
 
@@ -815,10 +846,10 @@ export default {
       this.local.incapacidades_3m.items.push({ motivo: '', dias: '' })
     },
 
-    quitarIncapacidad3m(i) {
+    async quitarIncapacidad3m(i) {
       const item = this.local.incapacidades_3m.items[i]
       const tieneDatos = Object.values(item).some(v => String(v ?? '').trim() !== '')
-      if (tieneDatos && !window.confirm(`¿Quitar la incapacidad ${i + 1}?`)) return
+      if (tieneDatos && !(await this.confirmarQuitar(`¿Quitar la incapacidad ${i + 1}?`))) return
       this.local.incapacidades_3m.items.splice(i, 1)
     },
 
@@ -827,10 +858,10 @@ export default {
       this.local.enfermedades_laborales.push({ diagnostico: '', fecha: '' })
     },
 
-    quitarEnfermedadLaboral(i) {
+    async quitarEnfermedadLaboral(i) {
       const item = this.local.enfermedades_laborales[i]
       const tieneDatos = Object.values(item).some(v => String(v ?? '').trim() !== '')
-      if (tieneDatos && !window.confirm(`¿Quitar la enfermedad ${i + 1}?`)) return
+      if (tieneDatos && !(await this.confirmarQuitar(`¿Quitar la enfermedad ${i + 1}?`))) return
       this.local.enfermedades_laborales.splice(i, 1)
     },
 

@@ -1,75 +1,5 @@
 <template>
   <div class="exposicion-riesgos">
-
-    <!-- ===================== 1.1 FICHA DE IDENTIDAD ===================== -->
-    <!-- <div class="card ficha-card">
-      <div class="card-header ficha-header">
-        <span><i class="fas fa-id-card mr-2"></i>1.1 Ficha de identidad</span>
-        <button
-          v-if="datosPuesto"
-          type="button"
-          class="btn btn-sm btn-header"
-          title="Llena estos campos con lo capturado en Datos del puesto"
-          @click="copiarDeDatosPuesto"
-        >
-          <i class="fas fa-copy mr-1"></i>Copiar de datos del puesto
-        </button>
-      </div>
-      <div class="card-body">
-        <div class="form-row">
-          <div class="form-group col-md-4">
-            <label>Primer apellido <span class="text-danger">*</span></label>
-            <input v-model.trim="local.primer_apellido" type="text" class="form-control">
-          </div>
-          <div class="form-group col-md-4">
-            <label>Segundo apellido</label>
-            <input v-model.trim="local.segundo_apellido" type="text" class="form-control">
-          </div>
-          <div class="form-group col-md-4">
-            <label>Nombre(s) <span class="text-danger">*</span></label>
-            <input v-model.trim="local.nombres" type="text" class="form-control">
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group col-md-3">
-            <label>Tipo de sangre</label>
-            <select v-model="local.tipo_sanguineo" class="form-control">
-              <option value="">Seleccionar</option>
-              <option v-for="t in tiposSangre" :key="t" :value="t">{{ t }}</option>
-            </select>
-          </div>
-          <div class="form-group col-md-3">
-            <label>Lugar de nacimiento</label>
-            <input v-model.trim="local.lugar_nacimiento" type="text" class="form-control">
-          </div>
-          <div class="form-group col-md-3">
-            <label>Teléfono</label>
-            <input v-model.trim="local.telefono" type="tel" class="form-control" maxlength="15">
-          </div>
-          <div class="form-group col-md-3">
-            <label>Celular</label>
-            <input v-model.trim="local.celular" type="tel" class="form-control" maxlength="15">
-          </div>
-        </div>
-
-        <div class="form-row mb-n3">
-          <div class="form-group col-md-6">
-            <label>Contacto de emergencia</label>
-            <input v-model.trim="local.emergencia_nombre" type="text" class="form-control" placeholder="Nombre completo">
-          </div>
-          <div class="form-group col-md-3">
-            <label>Teléfono de emergencia</label>
-            <input v-model.trim="local.emergencia_telefono" type="tel" class="form-control" maxlength="15">
-          </div>
-          <div class="form-group col-md-3">
-            <label>Relación</label>
-            <input v-model.trim="local.emergencia_relacion" type="text" class="form-control" placeholder="Padre, hermano…">
-          </div>
-        </div>
-      </div>
-    </div> -->
-
     <!-- ============ 1.2 EXPOSICIÓN OCUPACIONAL (EMPRESAS ANTERIORES) ============ -->
     <div class="card ficha-card">
       <div class="card-header ficha-header">
@@ -216,6 +146,7 @@
 </template>
 
 <script>
+import Swal from 'sweetalert2'
 // ---------------------------------------------------------------------------
 // Catálogos. Si alguna clave no coincide con las que ya guarda tu BD,
 // cámbiala aquí y el resto del componente se ajusta solo.
@@ -275,7 +206,7 @@ const CONDICIONES_RIESGO = [
 ]
 
 const POSTURAS = [
-  { value: 'de_pie', label: 'De pie' },
+  { value: 'pie', label: 'De pie' },
   { value: 'sentado', label: 'Sentado' },
   { value: 'alternando', label: 'Alternando de pie y sentado' },
   { value: 'movimiento_constante', label: 'En movimiento constante' },
@@ -295,10 +226,7 @@ const EXIGENCIAS = [
   { key: 'discriminacion', label: 'Discriminación' },
 ]
 
-const CAMPOS_IDENTIDAD = [
-  'primer_apellido', 'segundo_apellido', 'nombres', 'tipo_sanguineo', 'lugar_nacimiento',
-  'telefono', 'celular', 'emergencia_nombre', 'emergencia_telefono', 'emergencia_relacion',
-]
+
 
 const boolMap = (keys, origen = {}) =>
   keys.reduce((acc, k) => ({ ...acc, [k]: Boolean(origen[k]) }), {})
@@ -308,8 +236,6 @@ export default {
 
   props: {
     modelValue: { type: Object, default: () => ({}) },
-    // Opcional: pásale form.datos_puesto para habilitar "Copiar de datos del puesto"
-    datosPuesto: { type: Object, default: null },
   },
 
   emits: ['update:modelValue'],
@@ -361,12 +287,10 @@ export default {
   methods: {
     normalizar(v = {}) {
       v = v || {}
-      const identidad = CAMPOS_IDENTIDAD.reduce((acc, k) => ({ ...acc, [k]: v[k] ?? '' }), {})
       const agentesKeys = GRUPOS_AGENTES.flatMap(g => g.opciones.map(o => o.key))
       const otras = v.otras_condiciones || {}
 
       return {
-        ...identidad,
         empresas_anteriores: Array.isArray(v.empresas_anteriores)
           ? v.empresas_anteriores.map(e => ({
               nombre: e?.nombre ?? '',
@@ -391,33 +315,20 @@ export default {
       this.local.empresas_anteriores.push({ nombre: '', puesto: '', antiguedad: '' })
     },
 
-    quitarEmpresa(i) {
+    async quitarEmpresa(i) {
       const emp = this.local.empresas_anteriores[i]
       const tieneDatos = emp.nombre || emp.puesto || emp.antiguedad
-      if (tieneDatos && !window.confirm(`¿Quitar la empresa ${i + 1}?`)) return
-      this.local.empresas_anteriores.splice(i, 1)
-    },
-
-    copiarDeDatosPuesto() {
-      const d = this.datosPuesto || {}
-      const mapa = {
-        primer_apellido: d.apellido_paterno,
-        segundo_apellido: d.apellido_materno,
-        nombres: d.nombre,
-        tipo_sanguineo: d.tipo_sanguineo,
-        lugar_nacimiento: d.lugar_nacimiento,
-        telefono: d.telefono,
-        celular: d.celular,
-        emergencia_nombre: d.emergencia_nombre,
-        emergencia_telefono: d.emergencia_telefono,
-        emergencia_relacion: d.emergencia_relacion,
+      if (tieneDatos) {
+        const { isConfirmed } = await Swal.fire({
+          title: `¿Quitar la empresa ${i + 1}?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, quitar',
+          cancelButtonText: 'Cancelar',
+        })
+        if (!isConfirmed) return
       }
-      // Solo copia lo que sí tiene valor, para no borrar lo ya capturado aquí
-      Object.entries(mapa).forEach(([campo, valor]) => {
-        if (valor !== undefined && valor !== null && String(valor).trim() !== '') {
-          this.local[campo] = valor
-        }
-      })
+      this.local.empresas_anteriores.splice(i, 1)
     },
 
     contar(obj, keys) {

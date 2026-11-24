@@ -16,17 +16,18 @@
           <div class="form-group col-md-3">
             <label>Folio *</label>
             <input type="text" v-model="form.folio" class="form-control" readonly />
-            <small class="form-text text-muted">Auto-generado: MED-YYYYMMDD-NNNN</small>
+            <small class="form-text text-muted">Folio sugerido, se asignará al guardar</small>
           </div>
           <div class="form-group col-md-3">
             <label>Tipo Evaluación *</label>
             <select v-model="form.tipo_evaluacion" class="form-control" required>
               <option value="">Seleccionar</option>
-              <option value="inicial">Evaluación Inicial</option>
-              <option value="periodica">Periódica</option>
+              <option value="ingreso">Evaluación Inicial</option>
+              <option value="periodico">Periódica</option>
               <option value="cambio_puesto">Cambio de Puesto</option>
               <option value="retorno_laboral">Retorno Laboral</option>
               <option value="egreso">Egreso</option>
+              <option value="extraordinario">Extraordinaria</option>
             </select>
           </div>
           <div class="form-group col-md-3">
@@ -42,7 +43,7 @@
         <div class="form-row">
           <div class="form-group col-md-12">
             <label>Médico Evaluador *</label>
-            <input type="text" v-model="form.medico_evaluador" class="form-control" required />
+            <input type="text" v-model="form.medico_evaluador" class="form-control" readonly />
           </div>
         </div>
       </div>
@@ -74,7 +75,6 @@
         </div>
 
         <div class="form-row">
-         
           <div class="form-group col-md-3">
             <label>Género *</label>
             <select v-model="form.genero" class="form-control" required>
@@ -112,8 +112,6 @@
         </div>
 
         <div class="form-row">
-          
-          
           <div class="form-group col-md-3">
             <label>Escolaridad</label>
             <select v-model="form.escolaridad" class="form-control">
@@ -213,19 +211,16 @@
         </div>
 
         <div class="form-row">
-          <div class="form-group col-md-3">
-            <label>Antigüedad en el Puesto</label>
-            <input type="text" v-model="form.antiguedad" class="form-control" placeholder="Ej: 2 años 3 meses" />
-          </div>
-          <div class="form-group col-md-3">
-            <label>Antigüedad Laboral Total</label>
-            <input type="text" v-model="form.antiguedad_laboral" class="form-control" placeholder="Ej: 5 años" />
-          </div>
-          <div class="form-group col-md-3">
+          <div class="form-group col-md-4">
             <label>Antigüedad en la Empresa</label>
-            <input type="text" v-model="form.antiguedad_empresa" class="form-control" placeholder="Ej: 5 años" />
+            <input type="text" v-model="form.antiguedad_empresa" class="form-control" readonly />
           </div>
-          <div class="form-group col-md-3">
+          <div class="form-group col-md-4">
+            <label>Antigüedad en el Puesto (años)</label>
+            <input type="number" v-model.number="form.antiguedad" class="form-control" min="0" placeholder="Años" />
+            <small class="form-text text-muted">Déjalo vacío si el paciente no tiene historial de puestos.</small>
+          </div>
+          <div class="form-group col-md-4">
             <label>Tipo Contrato *</label>
             <select v-model="form.tipo_contrato" class="form-control" required>
               <option value="">Seleccionar</option>
@@ -238,17 +233,18 @@
         </div>
 
         <div class="form-row">
-          <div class="form-group col-md-3">
+          <div class="form-group col-md-4">
             <label>Jornada Laboral *</label>
             <select v-model="form.jornada" class="form-control" required>
               <option value="">Seleccionar</option>
-              <option value="diurna">Diurna</option>
-              <option value="nocturna">Nocturna</option>
-              <option value="mixta">Mixta</option>
-              <option value="rotatoria">Rotatoria</option>
+              <option value="matutino">Matutino</option>
+              <option value="vespertino">Vespertino</option>
+              <option value="nocturno">Nocturno</option>
+              <option value="mixto">Mixto</option>
+              <option value="rotativo">Rotativo</option>
             </select>
           </div>
-          <div class="form-group col-md-3">
+          <div class="form-group col-md-4">
             <label>Modalidad de Trabajo *</label>
             <select v-model="form.modalidad_trabajo" class="form-control" required>
               <option value="">Seleccionar</option>
@@ -258,7 +254,7 @@
               <option value="turnos">Por turnos</option>
             </select>
           </div>
-          <div class="form-group col-md-3">
+          <div class="form-group col-md-4">
             <label>Categoría Laboral *</label>
             <select v-model="form.categoria_laboral" class="form-control" required>
               <option value="">Seleccionar</option>
@@ -269,16 +265,12 @@
               <option value="directivo">Directivo</option>
             </select>
           </div>
-          <div class="form-group col-md-3">
-            <label>Antigüedad en el Puesto (años)</label>
-            <input type="number" v-model.number="form.antiguedad" class="form-control" min="0" placeholder="Años" />
-          </div>
         </div>
 
         <div class="form-row">
           <div class="form-group col-md-6">
-            <label>Descripción General del Puesto/Funciones *</label>
-            <textarea v-model="form.descripcion_puesto" class="form-control" rows="3" required></textarea>
+            <label>Descripción General del Puesto/Funciones</label>
+            <textarea v-model="form.descripcion_puesto" class="form-control" rows="3"></textarea>
           </div>
           <div class="form-group col-md-6">
             <label>Riesgos Identificados en el Puesto</label>
@@ -369,7 +361,6 @@ export default {
         departamento: '',
         puesto: '',
         antiguedad: '',
-        antiguedad_laboral: '',
         antiguedad_empresa: '',
         tipo_contrato: '',
         jornada: '',
@@ -491,6 +482,11 @@ export default {
 .form-control:focus {
   border-color: #3B82F6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-control[readonly] {
+  background: #F9FAFB;
+  color: #4B5563;
 }
 
 textarea.form-control {

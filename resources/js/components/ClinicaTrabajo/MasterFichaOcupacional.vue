@@ -1,61 +1,5 @@
 <template>
   <div class="container-fluid py-4">
-    <!-- BÚSQUEDA DE PACIENTES -->
-    <!-- <div v-if="!trabajadorSeleccionado" class="row">
-      <div class="col-lg-8 mx-auto">
-        <div class="card card-primary card-outline shadow-sm">
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="fas fa-id-card mr-2 text-primary"></i>
-              Nueva Ficha Médica Ocupacional (WORLDSTRIDE)
-            </h3>
-          </div>
-          <div class="card-body">
-            <p class="text-muted">Busca y selecciona al trabajador para iniciar la evaluación ocupacional completa.</p>
-            <div class="form-group position-relative">
-              <label class="font-weight-bold">Nombre del Trabajador:</label>
-              <div class="input-group">
-                <div class="input-group-prepend">
-                  <span class="input-group-text"><i class="fas fa-search"></i></span>
-                </div>
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Buscar por nombre o apellido..."
-                  v-model="busqueda"
-                  @input="buscarPacientes"
-                />
-              </div>
-              
-              <div v-if="buscando" class="mt-2 text-muted">
-                <i class="fas fa-spinner fa-spin mr-1"></i> Buscando...
-              </div>
-              
-              <ul v-else-if="resultados.length" class="list-group mt-2">
-                <li
-                  v-for="p in resultados"
-                  :key="p.id"
-                  class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                  style="cursor: pointer;"
-                  @click="seleccionarTrabajador(p)"
-                >
-                  <div>
-                    <strong>{{ p.nombre }} {{ p.apellido_paterno }} {{ p.apellido_materno }}</strong>
-                    <span class="text-muted small d-block">{{ p.edad_formateada || 'Edad no registrada' }}</span>
-                  </div>
-                  <span class="badge badge-primary">Seleccionar</span>
-                </li>
-              </ul>
-              
-              <div v-else-if="busqueda.length >= 2 && !buscando" class="mt-2 text-muted">
-                <i class="fas fa-exclamation-circle mr-1"></i> No se encontraron registros.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div> -->
-
     <!-- EVALUACIÓN ACTIVA -->
     <!-- <div v-else class="row"> -->
     <div class="row">
@@ -202,33 +146,48 @@
             <div v-show="hojaActual === 1">
               <DatosPuesto :modelValue="form.datos_puesto" @update:modelValue="form.datos_puesto = $event" />
               <hr class="my-4">
-              <ExposicionRiesgos :modelValue="form.exposicion_riesgos" @update:modelValue="form.exposicion_riesgos = $event" />
+              <ExposicionRiesgos :modelValue="form.exposicion_riesgos" :datos-puesto="form.datos_puesto" @update:modelValue="form.exposicion_riesgos = $event" />
             </div>
 
             <!-- HOJA 2: ANTECEDENTES MÉDICOS -->
             <div v-show="hojaActual === 2">
-              <Antecedentes :modelValue="form.antecedentes" @update:modelValue="form.antecedentes = $event" />
+              <Antecedentes :modelValue="form.antecedentes" :datos-puesto="form.datos_puesto" @update:modelValue="form.antecedentes = $event" />
             </div>
 
             <!-- HOJA 3: EXAMEN FÍSICO -->
             <div v-show="hojaActual === 3">
-              <ClinicoExamen :modelValue="form.clinico_examen" @update:modelValue="form.clinico_examen = $event" />
+              <ClinicoExamen :modelValue="form.clinico_examen" :datos-puesto="form.datos_puesto" @update:modelValue="form.clinico_examen = $event" />
             </div>
 
             <!-- HOJA 4: APTITUD & DICTAMEN -->
             <div v-show="hojaActual === 4">
-              <AptitudDictamen :modelValue="form.aptitud" @update:modelValue="form.aptitud = $event" />
+              <AptitudDictamen :modelValue="form.aptitud" :sugeridos="sugeridosIA" @update:modelValue="form.aptitud = $event" />
+            </div>
+
+            <!-- NAVEGACIÓN ENTRE HOJAS -->
+            <div class="d-flex justify-content-between border-top pt-3 mt-4">
+              <button v-if="hojaActual > 1" type="button" class="btn btn-outline-secondary" @click="irAHoja(hojaActual - 1)">
+                <i class="fas fa-arrow-left mr-1"></i> Anterior
+              </button>
+              <span v-else></span>
+              <button v-if="hojaActual < 4" type="button" class="btn btn-primary" @click="irAHoja(hojaActual + 1)">
+                Siguiente <i class="fas fa-arrow-right ml-1"></i>
+              </button>
             </div>
 
           </div>
 
           <!-- BOTÓN GUARDAR FIJA EN EL FOOTER -->
-          <div class="card-footer bg-light d-flex justify-content-between align-items-center">
-            <div>
-              <small class="text-muted">Hoja {{ hojaActual }} de 4 completada</small>
-            </div>
-
-            <button class="btn btn-success" @click="guardarFichaCompleta" :disabled="guardando">
+                    <!-- BOTONES DE ACCIÓN -->
+          <div class="card-footer bg-light d-flex justify-content-end align-items-center">
+            <small class="text-muted mr-auto">Hoja {{ hojaActual }} de 4</small>
+            <button class="btn btn-secondary ml-2" @click="cancelar" :disabled="guardando">
+              <i class="fas fa-times mr-2"></i> Cancelar
+            </button>
+            <button v-if="fichaId" class="btn btn-info text-white ml-2" @click="imprimir" :disabled="guardando">
+              <i class="fas fa-print mr-2"></i> Imprimir
+            </button>
+            <button class="btn btn-success ml-2" @click="guardarFichaCompleta" :disabled="guardando">
               <i v-if="!guardando" class="fas fa-save mr-1"></i>
               <i v-if="guardando" class="fas fa-spinner fa-spin mr-1"></i>
               {{ guardando ? 'Guardando...' : 'Guardar Ficha Completa' }}
@@ -250,6 +209,7 @@ import Antecedentes from './secciones/medicina-enfermeria/antecedentes.vue'
 import ClinicoExamen from './secciones/medicina-enfermeria/clinicoexamen.vue'
 import AptitudDictamen from './secciones/medicina-enfermeria/aptituddictamen.vue'
 import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
+import Swal from 'sweetalert2'
 
 export default {
   name: 'MasterFichaOcupacional',
@@ -262,24 +222,37 @@ export default {
   },
   data() {
     return {
-      pacienteId: null,               
-      infoPacientes: null,            
-      datosLaboralesActuales: null,   
-      cargando: false,  
+      pacienteId: null,
+      infoPacientes: null,
+      datosLaboralesActuales: null,
+      cargando: false,
       hojaActual: 1,
       trabajadorSeleccionado: null,
-      busqueda: '',
-      resultados: [],
-      buscando: false,
       escuchando: false,
       guardando: false,
       conversacion: [],
       mensajeActual: '',
       archivoSeleccionado: null,
+      cargandoIA: false,
+      advertenciasIA: [],
+      fichaId: null,
+      propuestaHecha: false,
+      iaCampos: {},            // campos de la hoja 4 llenados por la IA y no editados aún
+      editadosPorMedico: {},   // campos que el médico editó: la IA ya no los sobrescribe
+      snapshotAptitud: {},     // copia para detectar qué cambió el médico
+      ultimaFirmaIA: '',       // datos con los que se hizo la última propuesta
+      recalcularIA: false,     // hubo cambios de hojas 1 a 3 mientras la IA respondía
+      esEdicion: false,
+      form: this.formularioVacio()
+    }
+  },
 
-      form: {
+  methods: {
+    /** Estructura completa del formulario. Se usa al iniciar y al cerrar una ficha. */
+    formularioVacio() {
+      return {
         datos_puesto: {
-          folio: this.generarFolio(),
+          folio:'',
           tipo_evaluacion: '',
           fecha_evaluacion: new Date().toISOString().split('T')[0],
           hora_evaluacion: '',
@@ -310,7 +283,7 @@ export default {
           departamento: '',
           puesto: '',
           antiguedad: '',
-          antiguedad_laboral: '',
+          
           antiguedad_empresa: '',
           tipo_contrato: '',
           jornada: '',
@@ -417,7 +390,7 @@ export default {
             sr: { presente: false, fecha: '' }
           },
           cirugias_accidentes_no_laborales: [{ descripcion: '' }],
-          alergias: [{ sustancia: '', reaccion: '', hospitalizacion: false }],
+          alergias: [{ sustancia: '', tipo_reaccion: '', hospitalizacion: '' }],
           transfusiones: [{ motivo: '', fecha: '' }],
           heredo_familiares: {
             cancer: { presente: false, parentesco: '' },
@@ -441,7 +414,7 @@ export default {
             tabaquismo_detalles: '',
             alcoholismo: '',
             alcoholismo_detalles: '',
-            drogas_no: true,
+            drogas_no: false,
             drogas_si: false,
             drogas_detalles: '',
             actividad_fisica: '',
@@ -600,7 +573,7 @@ export default {
               exploracion: '',
               notas: '',
               hallazgos_genitales: '',
-              puño_percision: ''
+              puño_percusion: ''
             },
             piel: {
               interrogatorio: '',
@@ -628,19 +601,47 @@ export default {
           ]
         },
 
-        aptitud: ''
+        aptitud: {}
       }
-    }
-  },
+    },
+    
+    irAHoja(numero) {
+      if (numero < 1 || numero > 4) return
+      this.hojaActual = numero
+      this.$nextTick(() => {
+        const encabezado = this.$el.querySelector('.card-tabs')
+        if (encabezado) encabezado.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    },
 
-  methods: {
-    generarFolio() {
-      const fecha = new Date()
-      const ano = fecha.getFullYear()
-      const mes = String(fecha.getMonth() + 1).padStart(2, '0')
-      const dia = String(fecha.getDate()).padStart(2, '0')
-      const numero = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
-      return `MED-${ano}${mes}${dia}-${numero}`
+    async cancelar() {
+      const { isConfirmed } = await Swal.fire({
+        icon: 'warning',
+        title: '¿Cancelar la ficha?',
+        text: 'Se perderán los datos no guardados.',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cancelar',
+        cancelButtonText: 'Seguir editando'
+      })
+      if (isConfirmed) window.location.href = '/buscador-pacientes-clinicaTrabajo'
+    },
+
+    imprimir() {
+      if (!this.fichaId) {
+        Swal.fire({ icon: 'warning', title: 'Guarda primero', text: 'El reporte se genera a partir de una ficha guardada.' })
+        return
+      }
+      window.open(`/FichaMedicinaOcupacional-imprimir/${this.fichaId}`, '_blank')
+    },
+
+    async obtenerFolioSugerido() {
+      try {
+        const { data } = await clinicaTrabajo.get('/FichaMedicinaOcupacional/create')
+        this.form.datos_puesto.folio = data.folio
+        this.form.datos_puesto.medico_evaluador = data.medico || ''
+      } catch (error) {
+        console.error('No se pudo obtener el folio sugerido:', error)
+      }
     },
 
     async obtenerPacientes() {
@@ -658,41 +659,62 @@ export default {
         const datosLaborales = data.datos_laborales || []
         const laboral = datosLaborales.length > 0 ? datosLaborales[datosLaborales.length - 1] : null
         this.datosLaboralesActuales = laboral
+        
+        // Helper para calcular antigüedad en texto
+        const partesFecha = (fechaStr) => {
+          if (!fechaStr) return null
+          const [a, m, d] = String(fechaStr).split('T')[0].split('-').map(Number)
+          return { a, m, d }
+        }
 
         // Helper para calcular edad
         const calcularEdad = (fechaStr) => {
-          if (!fechaStr) return ''
+          const f = partesFecha(fechaStr)
+          if (!f) return ''
           const hoy = new Date()
-          const nacimiento = new Date(fechaStr)
-          let edad = hoy.getFullYear() - nacimiento.getFullYear()
-          const mes = hoy.getMonth() - nacimiento.getMonth()
-          if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--
+          let edad = hoy.getFullYear() - f.a
+          const mesHoy = hoy.getMonth() + 1
+          if (mesHoy < f.m || (mesHoy === f.m && hoy.getDate() < f.d)) edad--
           return edad
         }
 
-        // Helper para calcular antigüedad en texto
+        
+
         const calcularAntiguedadTexto = (fechaIngresoStr) => {
-          if (!fechaIngresoStr) return ''
-          const ingreso = new Date(fechaIngresoStr)
+          const f = partesFecha(fechaIngresoStr)
+          if (!f) return ''
           const hoy = new Date()
-          let anos = hoy.getFullYear() - ingreso.getFullYear()
-          let meses = hoy.getMonth() - ingreso.getMonth()
-          if (meses < 0 || (meses === 0 && hoy.getDate() < ingreso.getDate())) {
-            anos--
-            meses += 12
-          }
+          let anos = hoy.getFullYear() - f.a
+          let meses = (hoy.getMonth() + 1) - f.m
+          if (hoy.getDate() < f.d) meses -= 1
+          if (meses < 0) { anos -= 1; meses += 12 }
+          if (anos < 0) return ''
           if (anos > 0 && meses > 0) return `${anos} años, ${meses} meses`
           if (anos > 0) return `${anos} años`
           return `${meses} meses`
         }
 
+        const anosDesde = (fechaStr) => {
+          const f = partesFecha(fechaStr)
+          if (!f) return ''
+          const hoy = new Date()
+          let anos = hoy.getFullYear() - f.a
+          const mesHoy = hoy.getMonth() + 1
+          if (mesHoy < f.m || (mesHoy === f.m && hoy.getDate() < f.d)) anos -= 1
+          return anos < 0 ? '' : anos
+        }
+
         const antiguedadTexto = calcularAntiguedadTexto(laboral?.fecha_ingreso_empresa)
+
+        // Puesto actual: el registro del historial que no tiene fecha_fin
+        const puestoActual = (data.historial_puestos || []).find(h => !h.fecha_fin)
+        const antiguedadPuestoAnios = puestoActual ? anosDesde(puestoActual.fecha_inicio) : ''
 
         // ==========================================
         // HELPERS DE MAPEO PARA COINCIDIR CON LOS <option value=""> DEL HIJO
         // ==========================================
-        const mapGenero = (g) => g === 'Hombre' ? 'M' : (g === 'Mujer' ? 'F' : 'Otro')
-        
+        const mapGenero = (g) => g === 'Hombre' ? 'M' : (g === 'Mujer' ? 'F' : (g === 'Otro' ? 'Otro' : ''))
+
         const mapEstadoCivil = (ec) => {
           const val = (ec || '').toLowerCase().trim()
           if (val.includes('casad')) return 'casado'
@@ -716,7 +738,7 @@ export default {
 
         const mapTipoContrato = (tc) => {
           const val = (tc || '').toLowerCase().trim()
-          if (val.includes('indefinido') || val.includes('planta')) return 'indefinido'
+          if (val.includes('indefinido') || val.includes('indeterminado') || val.includes('planta')) return 'indefinido'
           if (val.includes('temporal') || val.includes('fijo') || val.includes('determinado')) return 'temporal'
           if (val.includes('proyecto') || val.includes('obra')) return 'proyecto'
           if (val.includes('practicante') || val.includes('pasantia') || val.includes('becario')) return 'practicante'
@@ -724,12 +746,8 @@ export default {
         }
 
         const mapJornada = (jor) => {
-          const val = (jor || '').toLowerCase().trim()
-          if (val.includes('matutino') || val.includes('diurno') || val.includes('dia')) return 'diurna'
-          if (val.includes('nocturno') || val.includes('noche')) return 'nocturna'
-          if (val.includes('mixto') || val.includes('mixta')) return 'mixta'
-          if (val.includes('rotativo') || val.includes('rotatoria')) return 'rotatoria'
-          return ''
+          const valores = ['matutino', 'vespertino', 'nocturno', 'mixto', 'rotativo']
+          return valores.includes(jor) ? jor : ''
         }
 
         const mapModalidad = (mod) => {
@@ -756,16 +774,16 @@ export default {
         // ==========================================
         this.form.datos_puesto = {
           ...this.form.datos_puesto,
-          folio: this.form.datos_puesto.folio || this.generarFolio(),
+          folio: this.form.datos_puesto.folio,
           nombre: data.nombre || '',
           fecha_nacimiento: data.fecha_nacimiento ? data.fecha_nacimiento.split('T')[0] : '',
           edad: calcularEdad(data.fecha_nacimiento),
-          
-          // ✅ MAPEO CORREGIDO PARA QUE COINCIDA CON LOS <option value=""> DEL HIJO
+
+          // MAPEO PARA QUE COINCIDA CON LOS <option value=""> DEL HIJO
           genero: mapGenero(data.genero),
           estado_civil: mapEstadoCivil(data.estado_civil),
           escolaridad: mapEscolaridad(data.escolaridad),
-          
+          edad_inicio_vida_laboral: data.edad_inicio_vida_laboral ?? '',
           lugar_nacimiento: data.lugar_nacimiento || '',
           cedula: data.cedula_profesional || '',
           tipo_sanguineo: (data.tipo_sangre && data.rh) ? `${data.tipo_sangre}${data.rh}` : '',
@@ -778,14 +796,14 @@ export default {
           emergencia_relacion: data.relacion_contacto_emergencia || '',
           ultima_consulta_fecha: data.fecha_ultima_consulta_medica ? data.fecha_ultima_consulta_medica.split('T')[0] : '',
           ultima_consulta_motivo: data.motivo_ultima_consulta_medica || '',
-          
+
           // Datos laborales con mapeo correcto
           numero_empleado: laboral?.numero_empleado || '',
           empresa: laboral?.empresa_cliente?.razon_social || '',
           departamento: laboral?.puesto_trabajo?.departamento || '',
           puesto: laboral?.puesto_trabajo?.nombre || '',
           antiguedad_empresa: antiguedadTexto,
-          antiguedad: antiguedadTexto,
+          antiguedad: antiguedadPuestoAnios,
           tipo_contrato: mapTipoContrato(laboral?.tipo_contrato),
           jornada: mapJornada(laboral?.turno),
           modalidad_trabajo: mapModalidad(laboral?.modalidad_trabajo),
@@ -803,21 +821,21 @@ export default {
         if (data.alergias && data.alergias.trim() !== 'Ninguno' && data.alergias.trim() !== '') {
           data.alergias.split(',').forEach(item => {
             if (item.trim()) {
-              alergiasArray.push({ sustancia: item.trim(), tipo_reaccion: '', hospitalizacion: false })
+              alergiasArray.push({ sustancia: item.trim(), tipo_reaccion: '', hospitalizacion: '' })
             }
           })
         }
         if (data.alergia_medicamentos && data.alergia_medicamentos.trim() !== 'Ninguno' && data.alergia_medicamentos.trim() !== '') {
           data.alergia_medicamentos.split(',').forEach(item => {
             if (item.trim()) {
-              alergiasArray.push({ sustancia: item.trim(), tipo_reaccion: 'Medicamento', hospitalizacion: false })
+              alergiasArray.push({ sustancia: `${item.trim()} (medicamento)`, tipo_reaccion: '', hospitalizacion: '' })
             }
           })
         }
         // Asignamos el array o dejamos uno vacío por defecto si no hay alergias
-        this.form.antecedentes.alergias = alergiasArray.length > 0 
-          ? alergiasArray 
-          : [{ sustancia: '', tipo_reaccion: '', hospitalizacion: false }]
+        this.form.antecedentes.alergias = alergiasArray.length > 0
+          ? alergiasArray
+          : [{ sustancia: '', tipo_reaccion: '', hospitalizacion: '' }]
 
         // 2. CIRUGÍAS / ACCIDENTES NO LABORALES
         if (data.antecedentes_quirurgicos && data.antecedentes_quirurgicos.trim() !== 'Ninguno' && data.antecedentes_quirurgicos.trim() !== '') {
@@ -845,58 +863,15 @@ export default {
           puesto: this.form.datos_puesto.puesto
         }
 
-        console.log('✅ Expediente base cargado y mapeado correctamente:', this.form.datos_puesto)
-
       } catch (error) {
-        console.error('❌ Error al obtener paciente:', error)
-        alert('Error al cargar el expediente: ' + (error.response?.data?.message || error.message))
+        console.error('Error al obtener paciente:', error)
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al cargar el expediente',
+          text: error.response?.data?.message || error.message
+        })
       } finally {
         this.cargando = false
-      }
-    },
-
-    async buscarPacientes() {
-      if (this.busqueda.length < 2) {
-        this.resultados = []
-        return
-      }
-      
-      try {
-        this.buscando = true
-        const response = await clinicaTrabajo.buscarPacientes({ q: this.busqueda })
-        this.resultados = response.data || []
-      } catch (error) {
-        console.error('Error buscando pacientes:', error)
-        this.resultados = []
-      } finally {
-        this.buscando = false
-      }
-    },
-
-    seleccionarTrabajador(trabajador) {
-      this.trabajadorSeleccionado = trabajador
-      this.busqueda = ''
-      this.resultados = []
-      this.hojaActual = 1
-      this.conversacion = []
-      
-      // Actualiza datos_puesto con info del trabajador
-      this.form.datos_puesto.nombre = trabajador.nombre || ''
-      this.form.datos_puesto.apellido_paterno = trabajador.apellido_paterno || ''
-      this.form.datos_puesto.apellido_materno = trabajador.apellido_materno || ''
-      this.form.datos_puesto.edad = trabajador.edad || ''
-      this.form.datos_puesto.cedula = trabajador.cedula || ''
-    },
-
-    deseleccionarTrabajador() {
-      this.trabajadorSeleccionado = null
-      this.conversacion = []
-      this.form = {
-        datos_puesto: { /* estructura completa */ },
-        exposicion_riesgos: { /* estructura completa */ },
-        antecedentes: { /* estructura completa */ },
-        clinico_examen: { /* estructura completa */ },
-        aptitud: ''
       }
     },
 
@@ -913,7 +888,7 @@ export default {
       this.mensajeActual = ''
 
       try {
-        const response = await clinicaTrabajo.consultarIA({
+        const response = await clinicaTrabajo.post('/FichaMedicinaOcupacional-consultarIA', {
           mensaje: mensaje,
           paciente_id: this.trabajadorSeleccionado.id,
           contexto: this.form
@@ -921,12 +896,12 @@ export default {
 
         this.conversacion.push({
           sender: 'ia',
-          text: response.data.respuesta || 'No pude procesar tu solicitud.',
+          text: response.data.data.respuesta || 'No pude procesar tu solicitud.',
           timestamp: new Date()
         })
 
-        if (response.data.campos_completados) {
-          Object.assign(this.form, response.data.campos_completados)
+        if (response.data.data.campos_completados) {
+          this.form.aptitud = { ...(this.form.aptitud || {}), ...response.data.data.campos_completados }
         }
 
         this.$nextTick(() => {
@@ -952,46 +927,225 @@ export default {
     },
 
     async guardarFichaCompleta() {
+      
+      if (this.sugeridosIA.length && !this.form.aptitud?.dictamen_confirmado) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Dictamen sin confirmar',
+          text: 'Revisa las sugerencias de la IA y marca "Confirmo que revisé el dictamen" antes de guardar.'
+        })
+        return
+      }
+
+      if (!this.trabajadorSeleccionado || !this.form.datos_puesto.folio) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Datos incompletos',
+          text: 'Selecciona un paciente antes de guardar la ficha.'
+        })
+        return
+      }
+
+      this.guardando = true
       try {
-        this.guardando = true
-
-        if (!this.trabajadorSeleccionado || !this.form.datos_puesto.folio) {
-          alert('Por favor complete los datos requeridos')
-          return
-        }
-
         const datosGuardar = {
-          paciente_id: this.trabajadorSeleccionado.id,
           ...this.form,
+          paciente_id: this.trabajadorSeleccionado.id,
+          aptitud: this.form.aptitud?.aptitud || null,
+          aptitud_hoja: this.form.aptitud,
           conversacion: this.conversacion
         }
+        console.log('aptitud_hoja enviado:', datosGuardar.aptitud_hoja)
+        console.log('datos_puesto.antiguedad_empresa:', datosGuardar.datos_puesto.antiguedad_empresa)
+        const esActualizacion = !!this.fichaId
 
-        const response = await clinicaTrabajo.guardarFichaCompleta(datosGuardar)
+        if (esActualizacion) {
+          await clinicaTrabajo.put(`/FichaMedicinaOcupacional/${this.fichaId}`, datosGuardar)
+        } else {
+          const { data } = await clinicaTrabajo.post('/FichaMedicinaOcupacional', datosGuardar)
+          this.fichaId = data?.data?.id ?? null
+        }
 
-        alert('Ficha médica guardada correctamente')
-        this.deseleccionarTrabajador()
+        const decision = await Swal.fire({
+          icon: 'success',
+          title: esActualizacion ? 'Ficha actualizada' : 'Ficha guardada',
+          text: 'La ficha se guardó correctamente. ¿Deseas imprimir el reporte?',
+          showCancelButton: true,
+          confirmButtonText: 'Imprimir reporte',
+          cancelButtonText: 'Continuar',
+          confirmButtonColor: '#1E88E5',
+          cancelButtonColor: '#6c757d'
+        })
 
+        // El clic en el modal cuenta como acción del usuario, así que el navegador no bloquea la pestaña
+        if (decision.isConfirmed) {
+          window.open(`/FichaMedicinaOcupacional-imprimir/${this.fichaId}`, '_blank')
+        }
+
+        window.location.href = esActualizacion
+          ? `/ExpedientePacientesClinicaTrabajo/${this.pacienteId}`
+          : '/buscador-pacientes-clinicaTrabajo'
       } catch (error) {
         console.error('Error guardando ficha:', error)
-        alert('Error al guardar la ficha: ' + (error.response?.data?.message || error.message))
+        const errores = error.response?.data?.errors
+          ? Object.values(error.response.data.errors).flat().join('\n')
+          : (error.response?.data?.message || error.message)
+
+        await Swal.fire({
+          icon: 'error',
+          title: 'No se pudo guardar la ficha',
+          text: errores
+        })
       } finally {
         this.guardando = false
+      }
+    },
+
+    firmaContextoIA() {
+      return JSON.stringify({
+        dp: this.form.datos_puesto,
+        er: this.form.exposicion_riesgos,
+        an: this.form.antecedentes,
+        ce: this.form.clinico_examen,
+      })
+    },
+
+    async proponerAutomatico() {
+      if (!this.trabajadorSeleccionado) return
+      if (this.cargandoIA) {
+        this.recalcularIA = true
+        return
+      }
+
+      const firma = this.firmaContextoIA()
+      this.cargandoIA = true
+      try {
+        const { data } = await clinicaTrabajo.post('/FichaMedicinaOcupacional-proponer', { ...this.form })
+        const propuesta = data.data.campos_completados || {}
+        const nuevo = { ...(this.form.aptitud || {}) }
+
+        Object.keys(propuesta).forEach(k => {
+          if (this.editadosPorMedico[k] || !this.estaVacio(nuevo[k])) return   // el médico ya lo editó: no se toca
+            nuevo[k] = propuesta[k]
+            this.iaCampos[k] = true
+        })
+
+        // Cualquier propuesta nueva requiere confirmar otra vez
+        nuevo.dictamen_confirmado = false
+
+        // Lo que escribe la IA no cuenta como edición del médico
+        this.form.aptitud = nuevo
+        this.snapshotAptitud = JSON.parse(JSON.stringify(nuevo))
+        this.ultimaFirmaIA = firma
+        this.advertenciasIA = data.data.advertencias || []
+      } catch (error) {
+        console.error('Error en propuesta automática:', error)
+        // Conserve aquí el Swal.fire del catch que ya tiene
+      } finally {
+        this.cargandoIA = false
+        if (this.recalcularIA) {
+          this.recalcularIA = false
+          if (this.firmaContextoIA() !== this.ultimaFirmaIA) this.proponerAutomatico()
+        }
+      }
+    },
+
+    estaVacio(valor) {
+      return valor === null || valor === undefined || valor === ''
+    },
+
+    async cargarValoracion(id) {
+      this.cargando = true
+      try {
+        const { data } = await clinicaTrabajo.get(`/FichaMedicinaOcupacional/${id}/edit`)
+        const registro = data.data
+
+        if (registro.esta_firmada) {
+          await Swal.fire({ icon: 'warning', title: 'Ficha firmada', text: 'Esta ficha ya no se puede modificar.' })
+          window.location.href = '/buscador-pacientes-clinicaTrabajo'
+          return
+        }
+        if (!registro.form) {
+          throw new Error('El backend no devolvió la estructura del formulario. Falta completar edit().')
+        }
+        this.form = registro.form
+        this.fichaId = id
+        this.pacienteId = registro.paciente_id
+        this.trabajadorSeleccionado = { id: registro.paciente_id, nombre: registro.paciente?.nombre || '' }
+        this.snapshotAptitud = {}
+        this.iaCampos = {}
+        this.editadosPorMedico = {}
+      } catch (error) {
+        console.error('Error al cargar la ficha:', error)
+        Swal.fire({ icon: 'error', title: 'Error al cargar la ficha', text: error.response?.data?.message || error.message })
+      } finally {
+        this.cargando = false
       }
     }
   },
 
+  computed: {
+    sugeridosIA() {
+      return Object.keys(this.iaCampos).filter(k => this.iaCampos[k])
+    },
+  },
+
   mounted() {
+    
+    // EDICIÓN: si la URL trae ?valoracion={id}, carga la ficha guardada y termina aquí
+    const valoracionParam = new URLSearchParams(window.location.search).get('valoracion')
+    if (valoracionParam) {
+      this.esEdicion = true
+      this.cargarValoracion(Number(valoracionParam))
+      return
+    }
+
+    this.obtenerFolioSugerido()
     // 1. OBTENER EL ID DE LA URL AUTOMÁTICAMENTE
-    this.pacienteId = this.$route?.params?.id || window.location.pathname.split('/').pop();
+    this.pacienteId = this.$route?.params?.id || window.location.pathname.split('/').pop()
+
 
     // 2. SI HAY UN ID VÁLIDO, CARGAMOS LOS DATOS DEL PACIENTE
     // La condición !isNaN asegura que no intente cargar si la URL termina en texto
+    
     if (this.pacienteId && !isNaN(this.pacienteId) && this.pacienteId !== 'ocupacional') {
-      this.obtenerPacientes();
+      this.obtenerPacientes()
     }
   },
 
-  watch: {}
+  watch: {
+    'form.aptitud': {
+      deep: true,
+      handler(nuevo) {
+        const anterior = this.snapshotAptitud || {}
+
+        // Primera sincronización (al montar el componente): no es edición del médico
+        if (Object.keys(anterior).length === 0) {
+          this.snapshotAptitud = JSON.parse(JSON.stringify(nuevo || {}))
+          return
+        }
+
+        Object.keys(nuevo || {}).forEach(k => {
+          if (JSON.stringify(nuevo[k]) === JSON.stringify(anterior[k])) return
+          // Cualquier cambio del médico protege el campo de futuras propuestas
+          this.editadosPorMedico[k] = true
+          this.iaCampos[k] = false
+          // Si el médico elige un código CIE-11, el término de la IA ya no es sugerencia
+          if (k === 'cie11_codigo' || k === 'cie11_titulo') {
+            this.editadosPorMedico.cie11_termino = true
+            this.iaCampos.cie11_termino = false
+          }
+        })
+        this.snapshotAptitud = JSON.parse(JSON.stringify(nuevo || {}))
+      }
+    },
+    // Cuando el usuario entra a la hoja 4 (aptitud y dictamen), la IA propone sola
+    hojaActual(nuevo) {
+      if (nuevo === 4 && this.firmaContextoIA() !== this.ultimaFirmaIA) {
+        this.proponerAutomatico()
+      }
+    }
+  }
 }
 </script>
 
@@ -1003,5 +1157,9 @@ export default {
 .progress-bar {
   background-color: #007bff;
   transition: width 0.3s ease;
+}
+
+.card-tabs {
+  scroll-margin-top: 70px; /* ajuste a la altura de su barra fija */
 }
 </style>

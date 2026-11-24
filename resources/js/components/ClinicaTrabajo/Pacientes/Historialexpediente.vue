@@ -65,8 +65,8 @@
       <!-- CONTENIDO TABS -->
       <div class="card-body p-4">
 
-        <!-- 1. VALORACIÓN OCUPACIONAL -->
-        <div v-if="tabActiva === 'ocupacional'">
+      <!-- 1. VALORACIÓN OCUPACIONAL -->
+      <div v-if="tabActiva === 'ocupacional'">
           <div class="section-title">
             <h5><i class="fas fa-briefcase-medical text-primary me-2"></i>Valoraciones Ocupacionales</h5>
             <small>Exámenes médicos de ingreso, periódicos, egreso y cambio de puesto.</small>
@@ -75,18 +75,159 @@
             <div v-if="infoValoracionesOcupacionales.length === 0" class="alert alert-light border text-center text-muted">
               <i class="fas fa-clipboard-check me-2"></i> No se encuentran valoraciones ocupacionales registradas.
             </div>
-            <div v-else v-for="val in infoValoracionesOcupacionales" :key="val.id" class="timeline-card">
-              <div class="timeline-dot bg-primary"></div>
-              <div class="flex-grow-1">
-                <div class="d-flex justify-content-between flex-wrap gap-2">
-                  <h6 class="fw-bold mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i>{{ formatearFecha(val.fecha) }}</h6>
-                  <span class="badge rounded-pill px-3 py-2" :class="val.tipo === 'Ingreso' ? 'bg-success' : 'bg-info'">{{ val.tipo || 'Evaluación' }}</span>
+            <div v-else>
+              <div v-for="val in infoValoracionesOcupacionales" :key="val.id" class="val-card">
+
+                <!-- Header -->
+                <div class="val-card-header">
+                  <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="val-fecha">
+                      <i class="fas fa-calendar-alt me-1"></i>
+                      <strong>{{ formatearFecha(val.fecha_valoracion) }}</strong>
+                    </div>
+                    <div class="val-meta-info">
+                      <span class="val-meta-item">
+                        <i class="fas fa-file-invoice me-1"></i>
+                        <span>Folio {{ val.folio }}</span>
+                      </span>
+                      <span class="val-meta-separator">·</span>
+                      <span class="val-meta-item">
+                        <i class="fas fa-clipboard-list me-1"></i>
+                        <span>{{ val.tipo ? val.tipo.replace(/_/g, ' ') : 'Sin tipo' }}</span>
+                      </span>
+                      <span v-if="val.puesto_nombre_snapshot">
+                        <span class="val-meta-separator">·</span>
+                        <span class="val-meta-item">
+                          <i class="fas fa-briefcase me-1"></i>
+                          <span>{{ val.puesto_nombre_snapshot }}</span>
+                        </span>
+                      </span>
+                      <span v-if="val.empresa_cliente">
+                        <span class="val-meta-separator">·</span>
+                        <span class="val-meta-item">
+                          <i class="fas fa-building me-1"></i>
+                          <span>{{ val.empresa_cliente.razon_social }}</span>
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                  <span class="val-badge-dictamen" :class="claseDictamen(val.dictamen)">
+                    <i class="fas fa-clipboard-check me-1"></i>
+                    {{ etiquetaDictamen(val.dictamen) }}
+                  </span>
                 </div>
-                <p class="mt-2 mb-1"><strong>Puesto evaluado:</strong> {{ val.puesto || 'No especificado' }}</p>
-                <p class="text-muted small mb-2"><strong>Dictamen:</strong> {{ val.dictamen || 'Pendiente' }}</p>
-                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @click="verDetalleValoracion(val)">
-                  <i class="fas fa-eye me-1"></i> Ver detalle
-                </button>
+
+                <!-- Grid de Métricas con fondos de color suave -->
+                <div class="val-metricas-grid">
+
+                  <!-- Dictamen - Azul -->
+                  <div class="val-metrica val-metrica-blue">
+                    <div class="val-metrica-label">
+                      <i class="fas fa-user-md"></i>
+                      <span>DICTAMEN</span>
+                    </div>
+                    <div class="val-metrica-valor">
+                      {{ etiquetaDictamen(val.dictamen) }}
+                    </div>
+                  </div>
+
+                  <!-- Próximo examen - Teal -->
+                  <div class="val-metrica val-metrica-teal">
+                    <div class="val-metrica-label">
+                      <i class="fas fa-calendar-check"></i>
+                      <span>PRÓXIMO EXAMEN</span>
+                    </div>
+                    <div class="val-metrica-valor" :class="claseVigencia(val.vigencia_hasta)">
+                      {{ textoVigencia(val.vigencia_hasta) }}
+                    </div>
+                    <small v-if="val.vigencia_hasta" class="val-metrica-subtexto">
+                      {{ formatearFecha(val.vigencia_hasta) }}
+                    </small>
+                  </div>
+
+                  <!-- Presión arterial - Rosa -->
+                  <div class="val-metrica val-metrica-rose">
+                    <div class="val-metrica-label">
+                      <i class="fas fa-heartbeat"></i>
+                      <span>PRESIÓN ARTERIAL</span>
+                    </div>
+                    <div class="val-metrica-valor">
+                      {{ val.ta_sistolica ?? 'N/D' }}/{{ val.ta_diastolica ?? 'N/D' }} mmHg
+                    </div>
+                    <small :class="clasificarPresionOcupacional(val.ta_sistolica, val.ta_diastolica).clase">
+                      {{ clasificarPresionOcupacional(val.ta_sistolica, val.ta_diastolica).texto }}
+                    </small>
+                  </div>
+
+                  <!-- IMC - Ámbar -->
+                  <div class="val-metrica val-metrica-amber">
+                    <div class="val-metrica-label">
+                      <i class="fas fa-weight"></i>
+                      <span>IMC</span>
+                    </div>
+                    <div class="val-metrica-valor" :class="claseImc(val.imc)">
+                      {{ val.imc ?? 'N/D' }}
+                    </div>
+                    <small v-if="val.imc_clasificacion" class="val-metrica-subtexto">
+                      {{ val.imc_clasificacion }}
+                    </small>
+                  </div>
+
+                </div>
+
+                <!-- Banner de Diagnóstico -->
+                <div class="val-banner val-banner-warning" v-if="val.diagnostico_clinico">
+                  <div class="val-banner-icon">
+                    <i class="fas fa-file-medical-alt"></i>
+                  </div>
+                  <div class="val-banner-content">
+                    <strong>Diagnóstico:</strong>
+                    <span>{{ resumirTexto(val.diagnostico_clinico, 220) }}</span>
+                  </div>
+                </div>
+
+                <!-- Banner de Restricciones -->
+                <div class="val-banner val-banner-danger" v-if="val.restricciones">
+                  <div class="val-banner-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <div class="val-banner-content">
+                    <strong>Restricciones:</strong> {{ resumirTexto(val.restricciones, 220) }}
+                  </div>
+                </div>
+
+                <!-- Banner de Recomendaciones -->
+                <div class="val-banner val-banner-primary" v-if="val.recomendaciones">
+                  <div class="val-banner-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                  </div>
+                  <div class="val-banner-content">
+                    <strong>Recomendaciones:</strong>
+                    <div>{{ val.recomendaciones }}</div>
+                  </div>
+                </div>
+
+                <!-- Banner de Plan de intervención -->
+                <div class="val-banner val-banner-primary" v-if="val.plan_intervencion">
+                  <div class="val-banner-icon">
+                    <i class="fas fa-tasks"></i>
+                  </div>
+                  <div class="val-banner-content">
+                    <strong>Plan de intervención:</strong>
+                    <div>{{ val.plan_intervencion }}</div>
+                  </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="val-acciones">
+                  <button class="btn btn-outline-secondary rounded-pill px-3" @click="verDetalleValoracion(val)">
+                    <i class="fas fa-eye me-1"></i> Ver detalle
+                  </button>
+                  <button class="btn btn-outline-primary rounded-pill px-3" @click="imprimirOcupacional(val)">
+                    <i class="fas fa-print me-1"></i> Imprimir
+                  </button>
+                </div>
+
               </div>
             </div>
           </div>
@@ -769,6 +910,410 @@
         </div>
       </div>
     </div>
+
+    
+    <!-- MODAL DETALLE VALORACIÓN OCUPACIONAL MEJORADO -->
+    <div class="modal fade" id="modalDetalleOcupacional" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" v-if="modalOcupacional">
+
+          <!-- HEADER CON GRADIENTE MEJORADO -->
+          <div class="modal-header bg-gradient-medical text-white border-0 py-4">
+            <div class="d-flex align-items-center flex-grow-1">
+              <div class="icon-circle bg-white bg-opacity-25 me-3 p-3 rounded-circle">
+                <i class="fas fa-briefcase-medical fs-3"></i>
+              </div>
+              <div>
+                <h4 class="modal-title fw-bold mb-1">
+                  Valoración ocupacional
+                  <span class="badge bg-white bg-opacity-25 text-white ms-2 align-middle px-3 py-2">
+                    <i class="fas fa-hashtag me-1"></i>
+                    {{ modalOcupacional.folio }}
+                  </span>
+                </h4>
+                <div class="d-flex align-items-center gap-3 opacity-75">
+                  <small>
+                    <i class="far fa-calendar-alt me-1"></i>
+                    {{ formatearFecha(modalOcupacional.fecha_valoracion) }}
+                  </small>
+                  <span class="opacity-50">•</span>
+                  <small>
+                    <i class="fas fa-clipboard-list me-1"></i>
+                    {{ modalOcupacional.tipo ? modalOcupacional.tipo.replace(/_/g, ' ') : 'Sin tipo' }}
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <span class="badge rounded-pill px-4 py-2 shadow-sm" :class="claseDictamen(modalOcupacional.dictamen)">
+                <i class="fas fa-clipboard-check me-2"></i>
+                {{ etiquetaDictamen(modalOcupacional.dictamen) }}
+              </span>
+              <button type="button" class="btn-close btn-close-white" @click="cerrarDetalleOcupacional" aria-label="Cerrar"></button>
+            </div>
+          </div>
+
+          <!-- BODY MEJORADO -->
+          <div class="modal-body bg-light-subtle p-4">
+
+            <!-- TARJETAS DE INFORMACIÓN GENERAL MEJORADAS -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-3">
+                <div class="info-card-modern h-100 border-0 shadow-sm">
+                  <div class="info-card-icon-modern bg-primary-soft text-primary">
+                    <i class="fas fa-briefcase fs-4"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 0.7rem;">
+                      <i class="fas fa-user-tie me-1"></i> Puesto evaluado
+                    </small>
+                    <strong class="d-block text-dark fs-6">{{ modalOcupacional.puesto_nombre_snapshot || 'No registrado' }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card-modern h-100 border-0 shadow-sm">
+                  <div class="info-card-icon-modern bg-success-soft text-success">
+                    <i class="fas fa-building fs-4"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 0.7rem;">
+                      <i class="fas fa-industry me-1"></i> Empresa
+                    </small>
+                    <strong class="d-block text-dark fs-6">{{ modalOcupacional.empresa_cliente?.razon_social || 'No registrada' }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card-modern h-100 border-0 shadow-sm">
+                  <div class="info-card-icon-modern bg-info-soft text-info">
+                    <i class="fas fa-calendar-check fs-4"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 0.7rem;">
+                      <i class="fas fa-clock me-1"></i> Próximo examen
+                    </small>
+                    <strong class="d-block fs-6" :class="claseVigencia(modalOcupacional.vigencia_hasta)">
+                      {{ textoVigencia(modalOcupacional.vigencia_hasta) }}
+                    </strong>
+                    <small v-if="modalOcupacional.vigencia_hasta" class="text-muted d-block mt-1">
+                      <i class="far fa-calendar me-1"></i> {{ formatearFecha(modalOcupacional.vigencia_hasta) }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="info-card-modern h-100 border-0 shadow-sm">
+                  <div class="info-card-icon-modern bg-danger-soft text-danger">
+                    <i class="fas fa-heartbeat fs-4"></i>
+                  </div>
+                  <div class="info-card-content">
+                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 0.7rem;">
+                      <i class="fas fa-stethoscope me-1"></i> Presión arterial
+                    </small>
+                    <strong class="d-block text-dark fs-6">
+                      {{ modalOcupacional.ta_sistolica ?? 'N/D' }}/{{ modalOcupacional.ta_diastolica ?? 'N/D' }} mmHg
+                    </strong>
+                    <span class="small d-block mt-1" :class="clasificarPresionOcupacional(modalOcupacional.ta_sistolica, modalOcupacional.ta_diastolica).clase">
+                      <i class="fas fa-info-circle me-1"></i> {{ clasificarPresionOcupacional(modalOcupacional.ta_sistolica, modalOcupacional.ta_diastolica).texto }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SIGNOS VITALES Y SOMATOMETRÍA MEJORADO -->
+            <div class="card border-0 shadow-sm mb-4">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-3">
+                <div class="info-card-icon-modern bg-primary-soft text-primary me-3">
+                  <i class="fas fa-heartbeat fs-5"></i>
+                </div>
+                <h5 class="fw-bold mb-0 text-primary">
+                  <i class="fas fa-notes-medical me-2"></i>Signos vitales y somatometría
+                </h5>
+              </div>
+              <div class="card-body p-4">
+                <div class="row g-4">
+                  <div class="col-6 col-md-4 col-lg-2">
+                    <div class="vital-sign-box text-center p-3 rounded-3 bg-light">
+                      <i class="fas fa-heart text-danger mb-2 fs-4"></i>
+                      <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.7rem;">Frecuencia cardíaca</small>
+                      <strong class="d-block fs-5 text-dark">{{ modalOcupacional.fc ?? 'N/D' }} <small class="text-muted">lpm</small></strong>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-4 col-lg-2">
+                    <div class="vital-sign-box text-center p-3 rounded-3 bg-light">
+                      <i class="fas fa-lungs text-info mb-2 fs-4"></i>
+                      <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.7rem;">Frecuencia respiratoria</small>
+                      <strong class="d-block fs-5 text-dark">{{ modalOcupacional.fr ?? 'N/D' }} <small class="text-muted">rpm</small></strong>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-4 col-lg-2">
+                    <div class="vital-sign-box text-center p-3 rounded-3 bg-light">
+                      <i class="fas fa-tint text-primary mb-2 fs-4"></i>
+                      <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.7rem;">Saturación O2</small>
+                      <strong class="d-block fs-5 text-dark">{{ modalOcupacional.spo2 ?? 'N/D' }} <small class="text-muted">%</small></strong>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-4 col-lg-2">
+                    <div class="vital-sign-box text-center p-3 rounded-3 bg-light">
+                      <i class="fas fa-thermometer-half text-warning mb-2 fs-4"></i>
+                      <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.7rem;">Temperatura</small>
+                      <strong class="d-block fs-5 text-dark">{{ modalOcupacional.temperatura_c ?? 'N/D' }} <small class="text-muted">°C</small></strong>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-4 col-lg-2">
+                    <div class="vital-sign-box text-center p-3 rounded-3 bg-light">
+                      <i class="fas fa-weight text-secondary mb-2 fs-4"></i>
+                      <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.7rem;">Peso / Talla</small>
+                      <strong class="d-block fs-6 text-dark">
+                        {{ modalOcupacional.peso_kg ?? 'N/D' }} kg
+                        <br>
+                        <small>{{ modalOcupacional.estatura_cm ?? 'N/D' }} cm</small>
+                      </strong>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-4 col-lg-2">
+                    <div class="vital-sign-box text-center p-3 rounded-3 bg-light">
+                      <i class="fas fa-calculator text-success mb-2 fs-4"></i>
+                      <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.7rem;">IMC</small>
+                      <strong class="d-block fs-5" :class="claseImc(modalOcupacional.imc)">
+                        {{ modalOcupacional.imc ?? 'N/D' }}
+                      </strong>
+                      <small v-if="modalOcupacional.imc_clasificacion" class="text-muted d-block mt-1">
+                        {{ modalOcupacional.imc_clasificacion }}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIESGOS DEL PUESTO MEJORADO -->
+            <div class="card border-0 shadow-sm mb-4" v-if="modalOcupacional.riesgos">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-3">
+                <div class="info-card-icon-modern bg-warning-soft text-warning me-3">
+                  <i class="fas fa-hard-hat fs-5"></i>
+                </div>
+                <h5 class="fw-bold mb-0 text-primary">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Riesgos del puesto
+                </h5>
+              </div>
+              <div class="card-body p-4">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="risk-item p-3 rounded-3 bg-light h-100">
+                      <div class="d-flex align-items-start">
+                        <i class="fas fa-wind text-info fs-4 me-3 mt-1"></i>
+                        <div class="flex-grow-1">
+                          <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                            <i class="fas fa-biohazard me-1"></i> Agentes de exposición
+                          </small>
+                          <div class="text-dark">{{ textoRiesgos(modalOcupacional.riesgos.agentes, modalOcupacional.riesgos.agentes_otros) }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="risk-item p-3 rounded-3 bg-light h-100">
+                      <div class="d-flex align-items-start">
+                        <i class="fas fa-exclamation-circle text-danger fs-4 me-3 mt-1"></i>
+                        <div class="flex-grow-1">
+                          <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                            <i class="fas fa-skull-crossbones me-1"></i> Condiciones de riesgo
+                          </small>
+                          <div class="text-dark">{{ textoRiesgos(modalOcupacional.riesgos.condiciones) }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="risk-item p-3 rounded-3 bg-light h-100">
+                      <div class="d-flex align-items-start">
+                        <i class="fas fa-chair text-secondary fs-4 me-3 mt-1"></i>
+                        <div class="flex-grow-1">
+                          <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                            <i class="fas fa-user-md me-1"></i> Postura habitual
+                          </small>
+                          <div class="text-dark">{{ modalOcupacional.riesgos.postura || 'No registrada' }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="risk-item p-3 rounded-3 bg-light h-100">
+                      <div class="d-flex align-items-start">
+                        <i class="fas fa-tasks text-primary fs-4 me-3 mt-1"></i>
+                        <div class="flex-grow-1">
+                          <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                            <i class="fas fa-bolt me-1"></i> Exigencias del puesto
+                          </small>
+                          <div class="text-dark">{{ textoRiesgos(modalOcupacional.riesgos.exigencias) }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- DIAGNÓSTICO Y APTITUD MEJORADO -->
+            <div class="card border-0 shadow-sm mb-4" v-if="modalOcupacional.diagnostico_clinico || modalOcupacional.cie11_codigo || modalOcupacional.analisis_correlacion_riesgos || modalOcupacional.restricciones">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-3">
+                <div class="info-card-icon-modern bg-warning-soft text-warning me-3">
+                  <i class="fas fa-file-medical-alt fs-5"></i>
+                </div>
+                <h5 class="fw-bold mb-0 text-primary">
+                  <i class="fas fa-stethoscope me-2"></i>Diagnóstico y aptitud
+                </h5>
+              </div>
+              <div class="card-body p-4">
+                <div v-if="modalOcupacional.diagnostico_clinico" class="mb-4">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-diagnoses text-primary fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                      <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-notes-medical me-1"></i> Diagnóstico clínico
+                      </small>
+                      <div class="text-dark p-3 bg-light rounded-3" style="white-space: pre-line">{{ modalOcupacional.diagnostico_clinico }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="modalOcupacional.cie11_codigo" class="mb-4">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-code text-info fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                      <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-book-medical me-1"></i> CIE-11
+                      </small>
+                      <div class="text-dark p-3 bg-light rounded-3">
+                        <span class="badge bg-info text-white me-2">{{ modalOcupacional.cie11_codigo }}</span>
+                        {{ modalOcupacional.cie11_titulo }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="modalOcupacional.analisis_correlacion_riesgos" class="mb-4">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-search text-warning fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                      <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-microscope me-1"></i> Hallazgos relevantes para la aptitud
+                      </small>
+                      <div class="text-dark p-3 bg-light rounded-3" style="white-space: pre-line">{{ modalOcupacional.analisis_correlacion_riesgos }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="modalOcupacional.restricciones" class="mb-0">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-ban text-danger fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                      <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-exclamation-triangle me-1"></i> Restricciones y limitaciones
+                      </small>
+                      <div class="text-dark p-3 bg-light rounded-3 border-start border-danger border-4" style="white-space: pre-line">{{ modalOcupacional.restricciones }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RECOMENDACIONES Y SEGUIMIENTO MEJORADO -->
+            <div class="card border-0 shadow-sm mb-4" v-if="modalOcupacional.recomendaciones || modalOcupacional.derivaciones_especialista">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-3">
+                <div class="info-card-icon-modern bg-success-soft text-success me-3">
+                  <i class="fas fa-clipboard-check fs-5"></i>
+                </div>
+                <h5 class="fw-bold mb-0 text-primary">
+                  <i class="fas fa-user-md me-2"></i>Recomendaciones y seguimiento
+                </h5>
+              </div>
+              <div class="card-body p-4">
+                <div v-if="modalOcupacional.recomendaciones" class="mb-4">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-lightbulb text-success fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                      <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-clipboard-list me-1"></i> Recomendaciones médicas
+                      </small>
+                      <div class="text-dark p-3 bg-light rounded-3 border-start border-success border-4" style="white-space: pre-line">{{ modalOcupacional.recomendaciones }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="modalOcupacional.derivaciones_especialista" class="mb-0">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-user-md text-info fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                      <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-hospital me-1"></i> Derivaciones a especialistas
+                      </small>
+                      <div class="text-dark p-3 bg-light rounded-3 border-start border-info border-4" style="white-space: pre-line">{{ modalOcupacional.derivaciones_especialista }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- DICTAMEN FINAL MEJORADO -->
+            <div class="card border-0 shadow-sm mb-4" v-if="modalOcupacional.dictamen_justificacion || modalOcupacional.observaciones">
+              <div class="card-header bg-white border-bottom d-flex align-items-center py-3">
+                <div class="info-card-icon-modern bg-primary-soft text-primary me-3">
+                  <i class="fas fa-file-signature fs-5"></i>
+                </div>
+                <h5 class="fw-bold mb-0 text-primary">
+                  <i class="fas fa-gavel me-2"></i>Dictamen final
+                </h5>
+              </div>
+              <div class="card-body p-4">
+                <div v-if="modalOcupacional.dictamen_justificacion" class="mb-4">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-file-alt text-primary fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                      <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-check-circle me-1"></i> Conclusión médica
+                      </small>
+                      <div class="text-dark p-3 bg-light rounded-3" style="white-space: pre-line">{{ modalOcupacional.dictamen_justificacion }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="modalOcupacional.observaciones" class="mb-0">
+                  <div class="d-flex align-items-start">
+                    <i class="fas fa-comment-medical text-secondary fs-4 me-3 mt-1"></i>
+                    <div class="flex-grow-1">
+                      <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-eye me-1"></i> Observaciones
+                      </small>
+                      <div class="text-dark p-3 bg-light rounded-3 border-start border-secondary border-4" style="white-space: pre-line">{{ modalOcupacional.observaciones }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FOOTER MEJORADO -->
+          <div class="modal-footer bg-white border-top py-4">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 py-2" @click="cerrarDetalleOcupacional">
+              <i class="fas fa-times me-2"></i> Cerrar
+            </button>
+            <div class="ms-auto d-flex gap-2">
+              <button type="button" class="btn btn-outline-primary rounded-pill px-4 py-2" @click="imprimirOcupacional(modalOcupacional)">
+                <i class="fas fa-print me-2"></i> Imprimir
+              </button>
+              <a
+                v-if="!modalOcupacional.esta_firmada"
+                :href="urlEditarOcupacional(modalOcupacional)"
+                class="btn btn-outline-warning rounded-pill px-4 py-2"
+              >
+                <i class="fas fa-edit me-2"></i> Editar
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--AQUI TERMINA EL MODAL DETALLE FICHA OCUPACIONAL-->
 
     <!-- MODAL DETALLE DE ESPIROMETRÍA -->
     <div class="modal fade" id="modalDetalleEspirometria" tabindex="-1" aria-hidden="true">
@@ -1631,7 +2176,7 @@
     </div>
     <!-- AQUI TERMINA EL MODAL DETALLE DE ERGONOMIA-->
     
-        <!-- MODAL DETALLE ALTO RIESGO -->
+    <!-- MODAL DETALLE ALTO RIESGO -->
     <div class="modal fade" id="modalDetalleAltoRiesgo" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg" v-if="trDetalle">
@@ -2735,6 +3280,733 @@
       font-size: 18px;
     }
   }
+
+  /* Estilos personalizados para el modal de valoración ocupacional */
+  .info-card-modern {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .info-card-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
+  }
+
+  .info-card-icon-modern {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .vital-sign-box {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  .vital-sign-box:hover {
+    border-color: #0d6efd;
+    transform: scale(1.05);
+  }
+
+  .risk-item {
+    transition: all 0.3s ease;
+  }
+
+  .risk-item:hover {
+    background-color: #f8f9fa !important;
+    transform: translateX(5px);
+  }
+
+  .bg-gradient-medical {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .bg-primary-soft { background-color: rgba(13, 110, 253, 0.1); }
+  .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
+  .bg-info-soft { background-color: rgba(13, 202, 240, 0.1); }
+  .bg-danger-soft { background-color: rgba(220, 53, 69, 0.1); }
+  .bg-warning-soft { background-color: rgba(255, 193, 7, 0.1); }
+
+  .text-primary { color: #0d6efd !important; }
+  .text-success { color: #198754 !important; }
+  .text-info { color: #0dcaf0 !important; }
+  .text-danger { color: #dc3545 !important; }
+  .text-warning { color: #ffc107 !important; }
+
+  .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .card-header {
+    border-radius: 12px 12px 0 0 !important;
+  }
+
+  .card {
+    border-radius: 12px !important;
+  }
+
+  .badge {
+    font-size: 0.85rem;
+  }
+
+  /* Animaciones suaves */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card {
+    animation: fadeIn 0.3s ease;
+  }
+
+  /* Scrollbar personalizado */
+  .modal-body::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  .modal-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+  }
+
+  .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  /* ============================================
+   TARJETA MODERNA DE VALORACIÓN OCUPACIONAL
+   ============================================ */
+
+/* ============================================
+   TARJETA VALORACIÓN OCUPACIONAL - ESTILO MÉDICO
+   ============================================ */
+
+.espiro-card-modern {
+  background: #ffffff;
+  border: 1px solid #e8ecf1;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.espiro-card-modern:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Header */
+.espiro-card-header-modern {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f0f4f8;
+}
+
+.espiro-fecha-modern {
+  font-size: 1.05rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.espiro-fecha-modern i {
+  color: #7f8c8d;
+}
+
+.espiro-meta-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: #7f8c8d;
+}
+
+.espiro-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.espiro-meta-item i {
+  color: #95a5a6;
+  font-size: 0.8rem;
+}
+
+.espiro-meta-separator {
+  color: #d5dbdb;
+  margin: 0 0.25rem;
+}
+
+/* Badge dictamen */
+.badge-dictamen {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.badge-dictamen.apto {
+  background-color: #e8f8f5;
+  color: #1e8449;
+  border: 1px solid #a9dfbf;
+}
+
+.badge-dictamen.apto-restricciones {
+  background-color: #fef9e7;
+  color: #b7950b;
+  border: 1px solid #f9e79f;
+}
+
+.badge-dictamen.no-apto {
+  background-color: #fdedec;
+  color: #c0392b;
+  border: 1px solid #f5b7b1;
+}
+
+/* ============================================
+   GRID DE MÉTRICAS - SIN FONDOS GRISES
+   ============================================ */
+
+.espiro-metricas-grid-modern {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 992px) {
+  .espiro-metricas-grid-modern {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .espiro-metricas-grid-modern {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tarjeta de métrica - Fondo blanco limpio */
+.metrica-card {
+  background: #ffffff;
+  border: 1.5px solid #e8ecf1;
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.metrica-card:hover {
+  border-color: #aed6f1;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Tarjeta destacada - Dictamen con borde azul médico */
+.metrica-card-dictamen {
+  border: 2px solid #3498db;
+  background: linear-gradient(135deg, #ffffff 0%, #ebf5fb 100%);
+}
+
+.metrica-card-dictamen:hover {
+  border-color: #2980b9;
+  box-shadow: 0 4px 16px rgba(52, 152, 219, 0.15);
+}
+
+.metrica-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Iconos con colores médicos suaves */
+.metrica-icon-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.icon-blue {
+  background-color: #ebf5fb;
+  color: #3498db;
+  border: 1px solid #aed6f1;
+}
+
+.icon-teal {
+  background-color: #e8f8f5;
+  color: #1abc9c;
+  border: 1px solid #a3e4d7;
+}
+
+.icon-rose {
+  background-color: #fdedec;
+  color: #e74c3c;
+  border: 1px solid #f5b7b1;
+}
+
+.icon-amber {
+  background-color: #fef9e7;
+  color: #f39c12;
+  border: 1px solid #f9e79f;
+}
+
+.metrica-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7f8c8d;
+}
+
+.metrica-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metrica-valor {
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1.3;
+}
+
+.metrica-valor-lg {
+  font-size: 1.2rem;
+}
+
+.metrica-subtexto {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+}
+
+/* ============================================
+   BANNERS - COLORES MÉDICOS SUAVES
+   ============================================ */
+
+.banner-modern {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 0.875rem;
+  border-left: 4px solid;
+}
+
+.banner-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.banner-content {
+  flex-grow: 1;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #34495e;
+}
+
+.banner-content strong {
+  margin-right: 0.5rem;
+  color: #2c3e50;
+}
+
+/* Banner Diagnóstico - Ámbar suave */
+.banner-warning {
+  background-color: #fef9e7;
+  border-left-color: #f39c12;
+}
+
+.banner-warning .banner-icon {
+  background-color: #fdebd0;
+  color: #d68910;
+}
+
+/* Banner Restricciones - Rojo suave */
+.banner-danger {
+  background-color: #fdedec;
+  border-left-color: #e74c3c;
+}
+
+.banner-danger .banner-icon {
+  background-color: #fadbd8;
+  color: #cb4335;
+}
+
+/* Banner Recomendaciones - Azul médico */
+.banner-primary {
+  background-color: #ebf5fb;
+  border-left-color: #3498db;
+}
+
+.banner-primary .banner-icon {
+  background-color: #d6eaf8;
+  color: #2980b9;
+}
+
+/* ============================================
+   ACCIONES
+   ============================================ */
+
+.espiro-acciones-modern {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f4f8;
+  margin-top: 0.5rem;
+}
+
+.espiro-acciones-modern .btn {
+  font-size: 0.875rem;
+  padding: 0.5rem 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.espiro-acciones-modern .btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   TARJETA VALORACIÓN OCUPACIONAL - CON FONDOS SUAVES
+   ============================================ */
+
+.val-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Header */
+.val-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 1rem;
+}
+
+.val-fecha {
+  font-size: 1.1rem;
+  color: #1f2937;
+}
+
+.val-fecha strong {
+  font-weight: 700;
+}
+
+.val-fecha i {
+  color: #6b7280;
+}
+
+.val-meta-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.val-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.val-meta-item i {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.val-meta-separator {
+  color: #d1d5db;
+  margin: 0 0.25rem;
+}
+
+/* Badge dictamen */
+.val-badge-dictamen {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.val-badge-dictamen.apto {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.val-badge-dictamen.apto-restricciones {
+  background-color: #fef08a;
+  color: #854d0e;
+  border: 1px solid #fde047;
+}
+
+.val-badge-dictamen.no-apto {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* ============================================
+   GRID DE MÉTRICAS CON FONDOS DE COLOR SUAVE
+   ============================================ */
+
+.val-metricas-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 992px) {
+  .val-metricas-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .val-metricas-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tarjeta base */
+.val-metrica {
+  border: 2px solid;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.val-metrica:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Dictamen - Azul suave */
+.val-metrica-blue {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.val-metrica-blue .val-metrica-label {
+  color: #1e40af;
+}
+
+.val-metrica-blue .val-metrica-label i {
+  color: #3b82f6;
+}
+
+/* Próximo examen - Teal suave */
+.val-metrica-teal {
+  border-color: #14b8a6;
+  background-color: #f0fdfa;
+}
+
+.val-metrica-teal .val-metrica-label {
+  color: #115e59;
+}
+
+.val-metrica-teal .val-metrica-label i {
+  color: #14b8a6;
+}
+
+/* Presión arterial - Rosa/Rojo suave */
+.val-metrica-rose {
+  border-color: #f43f5e;
+  background-color: #fff1f2;
+}
+
+.val-metrica-rose .val-metrica-label {
+  color: #881337;
+}
+
+.val-metrica-rose .val-metrica-label i {
+  color: #f43f5e;
+}
+
+/* IMC - Ámbar suave */
+.val-metrica-amber {
+  border-color: #f59e0b;
+  background-color: #fffbeb;
+}
+
+.val-metrica-amber .val-metrica-label {
+  color: #92400e;
+}
+
+.val-metrica-amber .val-metrica-label i {
+  color: #f59e0b;
+}
+
+/* Label de métrica */
+.val-metrica-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.val-metrica-label i {
+  font-size: 1rem;
+}
+
+/* Valor de métrica */
+.val-metrica-valor {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.3;
+}
+
+.val-metrica-subtexto {
+  font-size: 0.8rem;
+  color: #6b7280;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+/* ============================================
+   BANNERS CON FONDOS SUAVES
+   ============================================ */
+
+.val-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  border-left: 4px solid;
+}
+
+.val-banner-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.val-banner-content {
+  flex-grow: 1;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.val-banner-content strong {
+  margin-right: 0.5rem;
+  color: #1f2937;
+}
+
+/* Banner Diagnóstico - Ámbar */
+.val-banner-warning {
+  background-color: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.val-banner-warning .val-banner-icon {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+/* Banner Restricciones - Rojo */
+.val-banner-danger {
+  background-color: #fff1f2;
+  border-left-color: #f43f5e;
+}
+
+.val-banner-danger .val-banner-icon {
+  background-color: #ffe4e6;
+  color: #e11d48;
+}
+
+/* Banner Recomendaciones/Plan - Azul */
+.val-banner-primary {
+  background-color: #eff6ff;
+  border-left-color: #3b82f6;
+}
+
+.val-banner-primary .val-banner-icon {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+/* ============================================
+   ACCIONES
+   ============================================ */
+
+.val-acciones {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 0.5rem;
+}
+
+.val-acciones .btn {
+  font-size: 0.875rem;
+  padding: 0.5rem 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.val-acciones .btn:hover {
+  transform: translateY(-1px);
+}
+
+.val-badge-dictamen {
+  text-transform: capitalize;
+}
+
 </style>
 
 <script>
@@ -2769,6 +4041,7 @@ export default {
       espirometriaDetalle: null,
       ergonomiaDetalle: null,
       trDetalle: null,
+      modalOcupacional: null,
 
       infoValoracionesErgonomicas: [],
       audiologiaDetalle: null,
@@ -2870,6 +4143,7 @@ export default {
         await this.obtenerEspirometrias()
         await this.obtenerAudiologiaHistoria()
         await this.obtenerErgonomicas()
+        await this.obtenerValoracionesOcupacionales()
         await this.obtenerAudiologiaAltoRiesgo()
         console.log('Datos laborales cargados exitosamente.')
       } catch (error) {
@@ -3192,6 +4466,94 @@ export default {
       return `/FichaDelliAudiologia/${val.paciente_id}?ficha=${val.id}`
     },
 
+    //Metodos para mostrar los datos del resumen y detalles de la ficha Ocupacional//
+    claseDictamen(dictamen) {
+      const clases = {
+        apto: 'bg-success',
+        apto_con_restricciones: 'bg-warning text-dark',
+        temporalmente_no_apto: 'bg-danger',
+        no_apto: 'bg-danger'
+      }
+      return clases[dictamen] || 'bg-secondary'
+    },
+
+    etiquetaDictamen(dictamen) {
+      if (!dictamen) return 'Pendiente';
+      const texto = dictamen.replace(/_/g, ' ');
+      return texto.charAt(0).toUpperCase() + texto.slice(1);
+    },
+    
+    vigenciaVencida(fecha) {
+      return !!fecha && new Date(fecha) < new Date()
+    },
+
+    diasParaVencer(fecha) {
+      if (!fecha) return null
+      const hoy = new Date()
+      hoy.setHours(0, 0, 0, 0)
+      const limite = new Date(String(fecha).split('T')[0] + 'T00:00:00')
+      return Math.round((limite - hoy) / 86400000)
+    },
+
+    textoVigencia(fecha) {
+      const dias = this.diasParaVencer(fecha)
+      if (dias === null) return 'Definir vigencia'
+      if (dias < 0) return `Vencido hace ${Math.abs(dias)} días`
+      if (dias === 0) return 'Vence hoy'
+      return `En ${dias} días`
+    },
+
+    claseVigencia(fecha) {
+      const dias = this.diasParaVencer(fecha)
+      if (dias === null) return 'text-muted'
+      if (dias < 0) return 'text-danger'
+      if (dias <= 30) return 'text-warning'
+      return ''
+    },
+
+    clasificarPresionOcupacional(sistolica, diastolica) {
+      if (sistolica == null || diastolica == null) return { texto: 'Sin dato', clase: 'text-muted' }
+      if (sistolica >= 140 || diastolica >= 90) return { texto: 'Etapa 2', clase: 'text-danger' }
+      if (sistolica >= 130 || diastolica >= 80) return { texto: 'Etapa 1', clase: 'text-warning' }
+      if (sistolica >= 120) return { texto: 'Elevada', clase: 'text-warning' }
+      return { texto: 'Normal', clase: 'text-success' }
+    },
+
+    claseImc(imc) {
+      if (imc == null) return 'text-muted'
+      if (imc >= 30) return 'text-danger'
+      if (imc >= 25 || imc < 18.5) return 'text-warning'
+      return 'text-success'
+    },
+
+    imprimirOcupacional(val) {
+      window.open(`/FichaMedicinaOcupacional-imprimir/${val.id}`, '_blank')
+    },
+
+    urlEditarOcupacional(val) {
+      return `/ficha-ocupacional/${val.paciente_id}?valoracion=${val.id}`
+    },
+
+    textoRiesgos(lista = [], otros = null) {
+      const partes = [...lista]
+      if (otros) partes.push(`Otros: ${otros}`)
+      return partes.length ? partes.join(', ') : 'Ninguno'
+    },
+
+    async obtenerValoracionesOcupacionales() {
+      try {
+        const response = await ApiServiceClinicaTrabajo.get('/FichaMedicinaOcupacional', {
+          params: { paciente_id: this.pacienteId }
+        })
+        this.infoValoracionesOcupacionales = response.data.data || []
+      } catch (error) {
+        console.error('Error al cargar valoraciones ocupacionales:', error)
+        this.infoValoracionesOcupacionales = []
+      }
+    },
+
+    //Aqui termina el metodo para mostrar los datos del resumen y detalles de la ficha Ocupacional//
+
     async obtenerErgonomicas() {
       try {
         const response = await ApiServiceClinicaTrabajo.get('/ergonomia', {
@@ -3427,7 +4789,14 @@ export default {
     },
 
     // --- ACCIONES ESPECÍFICAS ---
-    verDetalleValoracion(val) { console.log('Ver detalle ocupacional:', val); },
+    verDetalleValoracion(val) {
+      this.modalOcupacional = val
+      this.$nextTick(() => this.abrirModal('modalDetalleOcupacional'))
+    },
+
+    cerrarDetalleOcupacional() {
+      this.cerrarModal('modalDetalleOcupacional')
+    },
     verAudiometria(val) { console.log('Ver gráfica de audiometría:', val); },
     verDetalleAudiologia(val) { console.log('Ver detalle de audiología:', val); },
 

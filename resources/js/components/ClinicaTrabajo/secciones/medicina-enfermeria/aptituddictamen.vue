@@ -10,20 +10,41 @@
         <div class="form-row">
           <div class="form-group col-md-8">
             <label>Diagnóstico principal <span class="text-danger">*</span></label>
-            <input
+            <span v-if="esSugerido('diagnostico')" class="badge badge-warning ml-2">Sugerido por IA</span>
+            <textarea
               v-model.trim="local.diagnostico"
-              type="text"
               class="form-control"
+              rows="2"
               placeholder="Ej: Sin hallazgos relevantes, hipertensión controlada…"
-            >
+            ></textarea>
           </div>
-          <div class="form-group col-md-4">
+          <div class="form-group col-md-4 position-relative">
             <label>Código CIE-11 (opcional)</label>
-            <input v-model.trim="local.cie11_codigo" type="text" class="form-control" placeholder="Ej: BA00.0">
+            <span v-if="esSugerido('cie11_termino')" class="badge badge-warning ml-2">Sugerido por IA</span>
+            <div class="position-relative">
+              <input
+                v-model="local.cie11_termino"
+                type="text"
+                class="form-control pr-4"
+                placeholder="Escribe o busca en CIE-11..."
+                @keyup.enter="buscarIcd11Inmediato(local.cie11_termino)"
+              >
+              <i class="fas fa-search cie11-lupa" title="Buscar de nuevo" @click="buscarIcd11Inmediato(local.cie11_termino)"></i>
+            </div>
+            <ul v-if="resultadosIcd.length" class="cie11-dropdown">
+              <li v-for="r in resultadosIcd" :key="r.codigo" @click="seleccionarIcd(r)">
+                <strong>{{ r.codigo }}</strong> — {{ r.titulo }}
+              </li>
+            </ul>
+            <small v-if="buscandoIcd" class="text-muted">Buscando en CIE-11...</small>
+            <small v-if="local.cie11_codigo" class="badge badge-light text-dark mt-1 d-inline-block text-wrap">
+              {{ local.cie11_codigo }} — {{ local.cie11_titulo }}
+            </small>
           </div>
         </div>
         <div class="form-group mb-0">
           <label>Hallazgos relevantes para la aptitud</label>
+          <span v-if="esSugerido('hallazgos_relevantes_aptitud	')" class="badge badge-warning ml-2">Sugerido por IA</span>
           <textarea
             v-model="local.hallazgos_relevantes_aptitud"
             class="form-control"
@@ -38,6 +59,7 @@
     <div class="card ficha-card">
       <div class="card-header ficha-header">
         <span><i class="fas fa-user-check mr-2"></i>4.2 Aptitud laboral</span>
+        <span v-if="esSugerido('aptitud')" class="badge badge-warning ml-2">Sugerido por IA</span>
         <span class="contador">Obligatorio</span>
       </div>
       <div class="card-body">
@@ -65,11 +87,11 @@
 
         <!-- Restricciones: solo si es apto con restricciones -->
         <div v-if="local.aptitud === 'apto_con_restricciones'" class="form-group mt-3 mb-0">
-          <label>Restricciones y limitaciones <span class="text-danger">*</span></label>
+          <label>Restricciones y limitaciones </label>
+          <span v-if="esSugerido('restricciones')" class="badge badge-warning ml-2">Sugerido por IA</span>
           <textarea
             v-model="local.restricciones"
             class="form-control"
-            :class="{ 'campo-pendiente': !local.restricciones.trim() }"
             rows="3"
             placeholder="Limitaciones, prohibiciones y condiciones para desempeñar el puesto…"
           ></textarea>
@@ -81,20 +103,28 @@
     <div class="card ficha-card">
       <div class="card-header ficha-header">
         <span><i class="fas fa-calendar-check mr-2"></i>4.3 Recomendaciones y seguimiento</span>
+        <span v-if="esSugerido('CAMPO')" class="badge badge-warning ml-2">Sugerido por IA</span>
       </div>
       <div class="card-body">
         <div class="form-row">
           <div class="form-group col-md-6">
             <label>Recomendaciones médicas</label>
+            <span v-if="esSugerido('recomendaciones')" class="badge badge-warning ml-2">Sugerido por IA</span>
             <textarea v-model="local.recomendaciones" class="form-control" rows="3" placeholder="Para el trabajador y/o la empresa…"></textarea>
           </div>
           <div class="form-group col-md-6">
             <label>Derivaciones a especialistas</label>
+            <span v-if="esSugerido('derivaciones_especialista')" class="badge badge-warning ml-2">Sugerido por IA</span>
             <textarea v-model="local.derivaciones_especialista" class="form-control" rows="3" placeholder="Especialidad y motivo…"></textarea>
           </div>
         </div>
-
+        <div class="form-group">
+          <label>Plan de intervención</label>
+          <span v-if="esSugerido('plan_intervencion')" class="badge badge-warning ml-2">Sugerido por IA</span>
+          <textarea v-model="local.plan_intervencion" class="form-control" rows="3" placeholder="Acciones concretas, responsables y plazos…"></textarea>
+        </div>
         <h6 class="grupo-titulo">Próximo seguimiento</h6>
+        <span v-if="esSugerido('proximo_seguimiento')" class="badge badge-warning ml-2">Sugerido por IA</span>
         <div class="opciones-grid compacto">
           <label
             v-for="op in opcionesSeguimiento"
@@ -116,7 +146,8 @@
       </div>
       <div class="card-body">
         <div class="form-group">
-          <label>Conclusión médica <span class="text-danger">*</span></label>
+          <label>Conclusión médica </label>
+          <span v-if="esSugerido('dictamen_final')" class="badge badge-warning ml-2">Sugerido por IA</span>
           <textarea
             v-model="local.dictamen_final"
             class="form-control"
@@ -127,7 +158,17 @@
         </div>
         <div class="form-group mb-0">
           <label>Observaciones adicionales</label>
+          <span v-if="esSugerido('observaciones')" class="badge badge-warning ml-2">Sugerido por IA</span>
           <textarea v-model="local.observaciones" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="sugeridos.length" class="card ficha-card">
+      <div class="card-body">
+        <div class="form-check">
+          <input id="confirmo-dictamen" v-model="local.dictamen_confirmado" type="checkbox" class="form-check-input">
+          <label for="confirmo-dictamen" class="form-check-label">Confirmo que revisé el dictamen sugerido por la IA y es correcto</label>
         </div>
       </div>
     </div>
@@ -146,6 +187,7 @@
 
 <script>
 import modeloSincronizado from '../../mixins/modeloSincronizado'
+import clinicaTrabajo from '@/services/ApiServiceClinicaTrabajo'
 
 const OPCIONES_APTITUD = [
   {
@@ -183,29 +225,35 @@ const OPCIONES_SEGUIMIENTO = [
 
 const crearVacio = () => ({
   diagnostico: '',
+  cie11_termino: '',
   cie11_codigo: '',
+  cie11_titulo: '',
   hallazgos_relevantes_aptitud: '',
   aptitud: '',
   restricciones: '',
   recomendaciones: '',
+  plan_intervencion: '',
   proximo_seguimiento: '',
   derivaciones_especialista: '',
   dictamen_final: '',
   observaciones: '',
+  dictamen_confirmado: false,
 })
-
-// El Master hoy inicia form.aptitud como '' (texto). Lo convertimos a objeto.
-const adaptarEntrada = v => (typeof v === 'string' ? { aptitud: v } : v)
 
 export default {
   name: 'AptitudDictamen',
-
-  mixins: [modeloSincronizado(crearVacio, adaptarEntrada)],
-
+  props: {
+    sugeridos: { type: Array, default: () => [] },
+  },
+  mixins: [modeloSincronizado(crearVacio)],
   data() {
     return {
       opcionesAptitud: OPCIONES_APTITUD,
       opcionesSeguimiento: OPCIONES_SEGUIMIENTO,
+      resultadosIcd: [],
+      buscandoIcd: false,
+      debounceCie11: null,
+      ultimaBusqueda: '',
     }
   },
 
@@ -214,6 +262,52 @@ export default {
       return OPCIONES_APTITUD.find(o => o.value === this.local.aptitud) || null
     },
   },
+  
+  watch: {
+    // Se dispara cuando la IA llena cie11_termino o cuando el médico escribe en el buscador
+    'local.cie11_termino'(texto) {
+      clearTimeout(this.debounceCie11)
+      const t = (texto || '').trim()
+      if (t.length < 3) {
+        this.resultadosIcd = []
+        return
+      }
+      if (t === this.ultimaBusqueda) return
+      this.debounceCie11 = setTimeout(() => this.buscarIcd11Inmediato(t), 400)
+    },
+  },
+
+  methods: {
+    async buscarIcd11Inmediato(texto) {
+      const t = (texto || '').trim()
+      if (t.length < 3) return
+      this.ultimaBusqueda = t
+      this.buscandoIcd = true
+      try {
+        const { data } = await clinicaTrabajo.get('/icd11/buscar', { params: { texto: t } })
+        // Descarta respuestas de búsquedas anteriores que llegan tarde
+        if (t !== (this.local.cie11_termino || '').trim()) return
+        this.resultadosIcd = data.resultados || []
+      } catch (error) {
+        console.error('Error al buscar en CIE-11:', error)
+        this.resultadosIcd = []
+      } finally {
+        this.buscandoIcd = false
+      }
+    },
+
+    seleccionarIcd(resultado) {
+      this.local.cie11_codigo = resultado.codigo
+      this.local.cie11_titulo = resultado.titulo
+      this.resultadosIcd = []
+    },
+    
+    esSugerido(campo) {
+      return this.sugeridos.includes(campo)
+    },
+
+  },
+
 }
 </script>
 
@@ -317,4 +411,43 @@ export default {
 .resumen.estado-apto { background: #F0FDF4; border-color: #86EFAC; color: #15803D; }
 .resumen.estado-restricciones { background: #FFFBEB; border-color: #FCD34D; color: #B45309; }
 .resumen.estado-no-apto { background: #FEF2F2; border-color: #FCA5A5; color: #B91C1C; }
+
+/* Los textarea crecen con su contenido */
+textarea.form-control {
+  height: auto;
+  min-height: 70px;
+  field-sizing: content;
+}
+
+.cie11-lupa {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  cursor: pointer;
+}
+.cie11-dropdown {
+  position: absolute;
+  z-index: 10;
+  background: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.cie11-dropdown li {
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.cie11-dropdown li:hover {
+  background: #f1f3f5;
+}
+
 </style>
